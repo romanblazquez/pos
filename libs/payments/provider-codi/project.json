@@ -1,0 +1,25 @@
+{
+  "name": "provider-codi",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/payments/provider-codi/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:payments"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/payments/provider-codi"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/payments/provider-codi"
+      }
+    }
+  }
+}

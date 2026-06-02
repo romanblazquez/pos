@@ -1,0 +1,25 @@
+{
+  "name": "rwp-electron-adapter",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/rwp/rwp-electron-adapter/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:rwp"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/rwp/rwp-electron-adapter"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/rwp/rwp-electron-adapter"
+      }
+    }
+  }
+}

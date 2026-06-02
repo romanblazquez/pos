@@ -1,0 +1,25 @@
+{
+  "name": "workspace-engine",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/workspace-engine/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:platform"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/platform/workspace-engine"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/platform/workspace-engine"
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "pos",
+    "name": "Punto de Venta",
+    "version": "0.1.0",
+    "icon": "🛒",
+    "permissions": ["sales.create"],
+    "category": "sales",
+    "entryPoint": { "kind": "url", "url": "http://localhost:4200", "devPort": 4200 },
+    "capabilities": {
+      "publishes": ["rwp.checkout.started", "rwp.sale.committed", "rwp.payment.completed"],
+      "subscribes": ["rwp.payment.completed"],
+      "raisesIntents": ["StartPayment"],
+      "handlesIntents": ["AddToCart"]
+    },
+    "description": "Cobro rápido, offline-first, con pagos Mercado Pago Point y CoDi."
+  },
+  {
+    "id": "inventory",
+    "name": "Inventario",
+    "version": "0.0.0",
+    "icon": "📦",
+    "permissions": ["inventory.view"],
+    "category": "inventory",
+    "entryPoint": { "kind": "route", "path": "/inventory" },
+    "capabilities": {},
+    "description": "Stock multi-tienda, ajustes y alertas. (Próximamente)"
+  },
+  {
+    "id": "customers",
+    "name": "Clientes / CRM",
+    "version": "0.0.0",
+    "icon": "👥",
+    "permissions": ["customers.view"],
+    "category": "customers",
+    "entryPoint": { "kind": "route", "path": "/customers" },
+    "capabilities": {},
+    "description": "Perfiles, lealtad y segmentos. (Próximamente)"
+  },
+  {
+    "id": "reports",
+    "name": "Reportes",
+    "version": "0.0.0",
+    "icon": "📊",
+    "permissions": ["reports.view"],
+    "category": "reporting",
+    "entryPoint": { "kind": "route", "path": "/reports" },
+    "capabilities": {},
+    "description": "Ventas del día, cortes de caja y desglose de pagos. (Próximamente)"
+  }
+]

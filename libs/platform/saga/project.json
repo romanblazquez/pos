@@ -1,0 +1,25 @@
+{
+  "name": "saga",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/saga/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:platform"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/platform/saga"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/platform/saga"
+      }
+    }
+  }
+}

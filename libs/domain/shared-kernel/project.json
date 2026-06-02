@@ -1,0 +1,17 @@
+{
+  "name": "shared-kernel",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/domain/shared-kernel/src",
+  "projectType": "library",
+  "tags": ["type:domain", "scope:shared-kernel"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "libs/domain/shared-kernel" }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": { "command": "vitest run libs/domain/shared-kernel" }
+    }
+  }
+}

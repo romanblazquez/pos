@@ -1,0 +1,75 @@
+{
+  "name": "retail-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Retail OS — modular, offline-first Retail Operating System (POS-first, ERP-ready)",
+  "license": "UNLICENSED",
+  "main": "apps/desktop-shell/out/main/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.23.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "better-sqlite3",
+      "esbuild"
+    ]
+  },
+    "scripts": {
+    "dev": "node tools/scripts/dev.mjs",
+    "dev:pos:desktop": "node tools/scripts/dev.mjs --standalone=pos",
+    "dev:pos": "vite --config apps/pos/vite.config.mts",
+    "dev:shell": "electron-vite dev --config apps/desktop-shell/electron.vite.config.mts",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "pnpm rebuild better-sqlite3",
+    "build": "pnpm build:pos && pnpm build:shell",
+    "build:pos": "vite build --config apps/pos/vite.config.mts",
+    "build:shell": "electron-vite build --config apps/desktop-shell/electron.vite.config.mts",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "graph": "nx graph",
+    "db:generate": "prisma generate --schema libs/data/db-postgres/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/core": "^10.4.22",
+    "@nestjs/platform-express": "^10.4.22",
+    "@tanstack/react-query": "^5.62.0",
+    "better-sqlite3": "^11.7.0",
+    "dockview": "^1.13.0",
+    "nanoid": "^5.0.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.8.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "electron": "^31.7.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "eslint": "^8.57.1",
+    "nx": "^22.7.0",
+    "prettier": "^3.4.2",
+    "prisma": "^6.1.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  }
+}

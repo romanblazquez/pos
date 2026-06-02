@@ -1,0 +1,30 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# builds
+dist
+out
+build
+.angular
+*.tsbuildinfo
+
+# nx
+.nx/cache
+.nx/workspace-data
+
+# local data
+*.sqlite
+*.sqlite-journal
+*.db
+data/local
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# os / editor
+.DS_Store
+*.log
+coverage

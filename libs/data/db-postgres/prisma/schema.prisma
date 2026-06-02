@@ -1,0 +1,134 @@
+// Retail OS — central PostgreSQL schema (multi-tenant master data, reporting,
+// and the sync ingestion sink). The local SQLite store is the edge source of
+// truth; this database is the consolidated, multi-store system of record.
+//
+// Multi-tenancy: every row is scoped by tenantId (row-level isolation now;
+// schema-per-tenant or RLS policies are a roadmap hardening step).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  stores    Store[]
+  products  Product[]
+  users     User[]
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  currency  String   @default("MXN")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  devices   Device[]
+  sales     Sale[]
+
+  @@index([tenantId])
+}
+
+model Device {
+  id           String   @id
+  tenantId     String
+  storeId      String
+  label        String
+  status       String   @default("pending") // pending | trusted | revoked
+  registeredAt DateTime @default(now())
+  store        Store    @relation(fields: [storeId], references: [id])
+
+  @@index([tenantId, storeId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  name      String
+  roles     String[] // cashier | supervisor | store_manager | admin
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, email])
+}
+
+model Product {
+  id              String  @id @default(cuid())
+  tenantId        String
+  sku             String
+  name            String
+  barcode         String?
+  category        String
+  priceMinorUnits Int
+  currency        String  @default("MXN")
+  taxRatePercent  Float   @default(16)
+  trackInventory  Boolean @default(true)
+  active          Boolean @default(true)
+  tenant          Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, barcode])
+}
+
+model Sale {
+  id              String     @id
+  tenantId        String
+  storeId         String
+  deviceId        String
+  customerId      String?
+  status          String
+  currency        String
+  totalMinorUnits Int
+  taxMinorUnits   Int
+  snapshot        Json
+  committedAt     DateTime
+  ingestedAt      DateTime   @default(now())
+  store           Store      @relation(fields: [storeId], references: [id])
+  lines           SaleLine[]
+  payments        Payment[]
+
+  @@index([tenantId, storeId, committedAt])
+}
+
+model SaleLine {
+  id              String @id @default(cuid())
+  saleId          String
+  productId       String
+  name            String
+  quantity        Float
+  unitPriceMinor  Int
+  discountMinor   Int    @default(0)
+  taxRatePercent  Float
+  lineTotalMinor  Int
+  sale            Sale   @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
+}
+
+model Payment {
+  id          String   @id
+  saleId      String
+  provider    String
+  method      String
+  amountMinor Int
+  status      String
+  providerRef String?
+  createdAt   DateTime @default(now())
+  sale        Sale     @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
+}
+
+// Server-side idempotency ledger so re-delivered outbox messages are no-ops.
+model IngestionKey {
+  key        String   @id
+  tenantId   String
+  saleId     String
+  receivedAt DateTime @default(now())
+}

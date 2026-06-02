@@ -1,0 +1,25 @@
+{
+  "name": "local-db",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/data/local-db/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:data"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/data/local-db"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/data/local-db"
+      }
+    }
+  }
+}

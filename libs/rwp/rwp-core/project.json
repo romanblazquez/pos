@@ -1,0 +1,25 @@
+{
+  "name": "rwp-core",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/rwp/rwp-core/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:rwp"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/rwp/rwp-core"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/rwp/rwp-core"
+      }
+    }
+  }
+}

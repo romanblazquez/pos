@@ -1,0 +1,77 @@
+import { contextBridge, ipcRenderer } from 'electron';
+
+/**
+ * Secure preload bridge (contextIsolation on, nodeIntegration off).
+ *
+ * Exposes exactly two surfaces to every hosted renderer:
+ *  - `window.rwp`        — the Retail Workspace Protocol transport (send/onMessage)
+ *  - `window.retailData` — the data bridge to the main-process SQLite store
+ *
+ * No Node globals or `require` ever reach the renderer. Channel names mirror the
+ * `RWP_IPC` constants in `@retail-os/rwp-electron-adapter`; they are inlined here
+ * to keep the preload bundle free of the bus/rxjs dependency graph.
+ */
+const RWP = { PUBLISH: 'rwp:publish', DELIVER: 'rwp:deliver', REGISTER: 'rwp:register' } as const;
+
+function resolveSource(): string {
+  const sourceArg = process.argv.find((a) => a.startsWith('--retail-source='));
+  if (sourceArg) return sourceArg.split('=')[1];
+  try {
+    const url = new URL(globalThis.location.href);
+    return url.searchParams.get('retailSource') ?? url.searchParams.get('retailAppId') ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+const source = resolveSource();
+
+interface DetachedWorkspacePayload {
+  id: string;
+  name: string;
+  panelIds: string[];
+  layout: unknown | null;
+  sourceWorkspaceId?: string;
+  targetX?: number;
+  targetY?: number;
+}
+
+// Register this window with the main-process RWP broker.
+void ipcRenderer.invoke(RWP.REGISTER, source);
+
+contextBridge.exposeInMainWorld('rwp', {
+  source,
+  send: (envelope: unknown) => ipcRenderer.send(RWP.PUBLISH, envelope),
+  onMessage: (handler: (envelope: unknown) => void) => {
+    const listener = (_e: unknown, envelope: unknown) => handler(envelope);
+    ipcRenderer.on(RWP.DELIVER, listener);
+    return () => ipcRenderer.removeListener(RWP.DELIVER, listener);
+  },
+});
+
+contextBridge.exposeInMainWorld('retailData', {
+  listProducts: () => ipcRenderer.invoke('retail:listProducts'),
+  commitSale: (snapshot: unknown) => ipcRenderer.invoke('retail:commitSale', snapshot),
+  getSyncStatus: () => ipcRenderer.invoke('retail:syncStatus'),
+  getTerminal: () => ipcRenderer.invoke('retail:getTerminal'),
+});
+
+contextBridge.exposeInMainWorld('retailShell', {
+  openApp: (appId: string) => ipcRenderer.invoke('shell:openApp', appId),
+  getPreloadPath: () => ipcRenderer.invoke('shell:getPreloadPath'),
+  openWorkspaceWindow: (payload: DetachedWorkspacePayload) =>
+    ipcRenderer.invoke('shell:openWorkspaceWindow', payload),
+  getWorkspaceWindowPayload: (workspaceWindowId: string) =>
+    ipcRenderer.invoke('shell:getWorkspaceWindowPayload', workspaceWindowId),
+  updateWorkspaceWindowPayload: (payload: DetachedWorkspacePayload) =>
+    ipcRenderer.invoke('shell:updateWorkspaceWindowPayload', payload),
+  recallWorkspaceWindow: (workspaceWindowId: string) =>
+    ipcRenderer.invoke('shell:recallWorkspaceWindow', workspaceWindowId),
+  onWorkspaceWindowClosed: (handler: (payload: DetachedWorkspacePayload) => void) => {
+    const listener = (_e: unknown, payload: DetachedWorkspacePayload) => handler(payload);
+    ipcRenderer.on('shell:workspaceClosed', listener);
+    return () => ipcRenderer.removeListener('shell:workspaceClosed', listener);
+  },
+});
+
+contextBridge.exposeInMainWorld('retailEnv', { inShell: true, appId: source });

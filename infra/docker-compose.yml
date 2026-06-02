@@ -1,0 +1,28 @@
+# Retail OS — local development infrastructure.
+# Brings up the central PostgreSQL (sync sink + reporting). The offline POS demo
+# needs none of this; it's for the API milestone and cloud sync development.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: retail-os-postgres
+    environment:
+      POSTGRES_USER: retail
+      POSTGRES_PASSWORD: retail
+      POSTGRES_DB: retail_os
+    ports:
+      - '5432:5432'
+    volumes:
+      - retail_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U retail -d retail_os']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # OpenTelemetry collector (traces/metrics/logs). Enable when wiring observability.
+  # otel-collector:
+  #   image: otel/opentelemetry-collector:latest
+  #   ports: ['4317:4317', '4318:4318']
+
+volumes:
+  retail_pg:

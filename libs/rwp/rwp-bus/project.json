@@ -1,0 +1,25 @@
+{
+  "name": "rwp-bus",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/rwp/rwp-bus/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:rwp"
+  ],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p tsconfig.json",
+        "cwd": "libs/rwp/rwp-bus"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run libs/rwp/rwp-bus"
+      }
+    }
+  }
+}

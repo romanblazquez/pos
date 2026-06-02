@@ -1,0 +1,14 @@
+[
+  { "id": "p-espresso", "sku": "CAFE-ESP", "name": "Espresso", "barcode": "7501000000011", "category": "Bebidas", "priceMinorUnits": 3500, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-americano", "sku": "CAFE-AME", "name": "Americano", "barcode": "7501000000028", "category": "Bebidas", "priceMinorUnits": 4000, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-capuccino", "sku": "CAFE-CAP", "name": "Cappuccino", "barcode": "7501000000035", "category": "Bebidas", "priceMinorUnits": 5500, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-latte", "sku": "CAFE-LAT", "name": "Latte", "barcode": "7501000000042", "category": "Bebidas", "priceMinorUnits": 5800, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-croissant", "sku": "PAN-CRO", "name": "Croissant", "barcode": "7501000000059", "category": "Panadería", "priceMinorUnits": 4500, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-muffin", "sku": "PAN-MUF", "name": "Muffin de Arándano", "barcode": "7501000000066", "category": "Panadería", "priceMinorUnits": 4200, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-bagel", "sku": "PAN-BAG", "name": "Bagel con Queso Crema", "barcode": "7501000000073", "category": "Panadería", "priceMinorUnits": 6500, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-sandwich", "sku": "COM-SAN", "name": "Sándwich de Pavo", "barcode": "7501000000080", "category": "Comida", "priceMinorUnits": 8900, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-ensalada", "sku": "COM-ENS", "name": "Ensalada César", "barcode": "7501000000097", "category": "Comida", "priceMinorUnits": 9900, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-agua", "sku": "BEB-AGU", "name": "Agua Mineral", "barcode": "7501000000103", "category": "Bebidas", "priceMinorUnits": 2500, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-jugo", "sku": "BEB-JUG", "name": "Jugo de Naranja", "barcode": "7501000000110", "category": "Bebidas", "priceMinorUnits": 3800, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true },
+  { "id": "p-galleta", "sku": "PAN-GAL", "name": "Galleta de Chocolate", "barcode": "7501000000127", "category": "Panadería", "priceMinorUnits": 2800, "currency": "MXN", "taxRatePercent": 16, "trackInventory": true, "active": true }
+]
