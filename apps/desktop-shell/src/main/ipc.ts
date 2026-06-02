@@ -17,9 +17,17 @@ export function registerIpc(store: LocalStore, broker: RwpBroker): void {
   ipcMain.handle('retail:getTerminal', () => store.terminal);
 
   // ── RWP broker relay ──────────────────────────────────────────────────────
+  const registeredWebContents = new Set<number>();
+
   ipcMain.handle(RWP_IPC.REGISTER, (event, source: string) => {
     broker.register(toBrokerTarget(event.sender), source);
-    event.sender.once('destroyed', () => broker.unregister(event.sender.id));
+    if (!registeredWebContents.has(event.sender.id)) {
+      registeredWebContents.add(event.sender.id);
+      event.sender.once('destroyed', () => {
+        registeredWebContents.delete(event.sender.id);
+        broker.unregister(event.sender.id);
+      });
+    }
     return true;
   });
 

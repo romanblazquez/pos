@@ -84,16 +84,6 @@ interface RetailIntentContext {
   session?: VirtualTerminalSessionSnapshot;
 }
 
-function parseRetailContext(raw: string | null): RetailIntentContext | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as RetailIntentContext;
-    return parsed && typeof parsed.type === 'string' ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key);
@@ -170,7 +160,6 @@ export function App() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const detachedWorkspaceId = searchParams.get('detachedWorkspaceId');
   const standaloneAppId = searchParams.get('standaloneAppId');
-  const retailContext = useMemo(() => parseRetailContext(searchParams.get('retailContext')), [searchParams]);
   const [mode, setMode] = useState<ShellMode>('workspace');
   const [preloadPath, setPreloadPath] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState(snapshot.activeTemplateId);
@@ -342,7 +331,9 @@ export function App() {
   }, []);
 
   // Auto-open the Virtual Terminal panel when the POS starts a card payment.
+  // Skip in standalone/detached modes — those windows should not spawn new windows.
   useEffect(() => {
+    if (standaloneAppId || detachedWorkspaceId) return;
     const off = virtualTerminalSessionStore.subscribe((session) => {
       if (!session.order || !session.paymentId) return;
       if (terminalWindowOpenedSequenceRef.current === session.sequence) return;
@@ -353,7 +344,7 @@ export function App() {
       } satisfies RetailIntentContext);
     });
     return off;
-  }, []);
+  }, [standaloneAppId, detachedWorkspaceId]);
 
   useEffect(() => {
     if (detachedWorkspaceId) return undefined;
@@ -403,7 +394,7 @@ export function App() {
   if (standaloneAppId) {
     return (
       <WorkspaceContext.Provider value={contextValue}>
-        <StandaloneAppShell app={registry.getById(standaloneAppId)} context={retailContext} />
+        <StandaloneAppShell app={registry.getById(standaloneAppId)} />
       </WorkspaceContext.Provider>
     );
   }
@@ -709,6 +700,26 @@ function ModuleButton({
 }
 
 function StandaloneAppShell({ app }: { app: AppMetadata | undefined }) {
+  // Hydrate the virtual terminal session from the URL context passed by the main workspace.
+  useEffect(() => {
+    if (app?.id !== 'virtual-terminal') return;
+    try {
+      const raw = new URLSearchParams(window.location.search).get('retailContext');
+      if (!raw) return;
+      const ctx = JSON.parse(raw) as RetailIntentContext;
+      if (ctx.session) virtualTerminalSessionStore.hydrate(ctx.session);
+    } catch { /* malformed context — ignore, terminal will wait for RWP events */ }
+  }, [app?.id]);
+
+  const resolveContent = () => {
+    if (!app) {
+      return <PlaceholderPanel title="Modulo desconocido" detail="Este modulo se abrira aqui cuando tenga una aplicacion propia." />;
+    }
+    if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
+    if (app.id === 'settings') return <SettingsPanel />;
+    return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
+  };
+
   return (
     <div className="standalone-shell">
       <header className="detached-topbar">
@@ -721,11 +732,7 @@ function StandaloneAppShell({ app }: { app: AppMetadata | undefined }) {
         </div>
       </header>
       <main className="standalone-main">
-        <PlaceholderPanel
-          title={app?.name ?? 'Modulo desconocido'}
-          detail={app?.description ?? 'Este modulo se abrira aqui cuando tenga una aplicacion propia.'}
-          app={app}
-        />
+        {resolveContent()}
       </main>
     </div>
   );

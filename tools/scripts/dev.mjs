@@ -10,7 +10,6 @@
  */
 import { spawn, execSync } from 'node:child_process';
 import process from 'node:process';
-import net from 'node:net';
 
 const POS_HOST = 'localhost';
 const POS_PORT = 4200;
@@ -67,12 +66,13 @@ function waitForPort(host, port, timeoutMs = 60_000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
     const attempt = () => {
-      const socket = net.connect(port, host);
-      socket.once('connect', () => { socket.destroy(); resolve(); });
-      socket.once('error', () => {
-        socket.destroy();
+      const url = `http://${host}:${port}/`;
+      fetch(url).then((res) => {
+        if (res.ok) resolve();
+        else throw new Error(`HTTP ${res.status}`);
+      }).catch(() => {
         if (Date.now() - start > timeoutMs) reject(new Error('POS dev server timed out'));
-        else setTimeout(attempt, 400);
+        else setTimeout(attempt, 500);
       });
     };
     attempt();

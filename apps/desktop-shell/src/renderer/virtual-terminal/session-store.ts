@@ -56,6 +56,12 @@ class VirtualTerminalSessionStore {
     return () => this.listeners.delete(listener);
   }
 
+  /** Seed the store with an initial session (e.g. from a standalone window's URL context). */
+  hydrate(session: VirtualTerminalSessionSnapshot): void {
+    if (this.snapshot.order) return; // already active, don't overwrite
+    this.setSnapshot(session);
+  }
+
   clear(): void {
     this.setSnapshot({
       ...EMPTY_SNAPSHOT,
