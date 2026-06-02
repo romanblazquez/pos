@@ -16,6 +16,36 @@
     "description": "Cobro rápido, offline-first, con pagos Mercado Pago Point y CoDi."
   },
   {
+    "id": "virtual-terminal",
+    "name": "Terminal Virtual MP",
+    "version": "0.1.0",
+    "icon": "🖥️",
+    "permissions": [],
+    "category": "sales",
+    "entryPoint": { "kind": "route", "path": "/virtual-terminal" },
+    "capabilities": {
+      "subscribes": ["rwp.payment.requested", "rwp.payment.statusChanged"],
+      "publishes": ["pos.simulator.finalizePayment"]
+    },
+    "description": "Emulador de terminal Mercado Pago Point — simula el ciclo completo de cobro con tarjeta."
+  },
+  {
+    "id": "settings",
+    "name": "Configuración",
+    "version": "0.1.0",
+    "icon": "⚙️",
+    "permissions": ["admin.manage"],
+    "category": "administration",
+    "entryPoint": { "kind": "route", "path": "/settings" },
+    "capabilities": {
+      "publishes": [],
+      "subscribes": [],
+      "raisesIntents": [],
+      "handlesIntents": []
+    },
+    "description": "Proveedores de pago, hardware, impuestos, usuarios y herramientas de desarrollo."
+  },
+  {
     "id": "inventory",
     "name": "Inventario",
     "version": "0.0.0",

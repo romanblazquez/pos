@@ -71,6 +71,17 @@ export class PaymentOrchestrator {
       correlationId: req.correlationId,
     });
 
+    this.bus.publish(
+      'rwp.payment.statusChanged',
+      {
+        saleId: req.saleId,
+        paymentId: intent.paymentId,
+        provider: provider.id,
+        status: intent.status,
+      },
+      { correlationId: req.correlationId },
+    );
+
     const unsubscribe = provider.onStatus(intent.paymentId, (status) => {
       this.bus.publish(
         'rwp.payment.statusChanged',

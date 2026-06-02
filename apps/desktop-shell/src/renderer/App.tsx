@@ -29,9 +29,18 @@ import {
   type DetachedWorkspacePayload,
 } from './shell-bridge.js';
 import 'dockview/dist/styles/dockview.css';
+import { SettingsPanel } from './settings/SettingsPanel.js';
+import { OnboardingWizard } from './onboarding/OnboardingWizard.js';
+import { VirtualTerminalPanel } from './virtual-terminal/VirtualTerminalPanel.js';
+import {
+  virtualTerminalSessionStore,
+  type VirtualTerminalSessionSnapshot,
+} from './virtual-terminal/session-store.js';
 
 type PanelParams = { appId: string };
 type ShellMode = 'workspace' | 'launcher';
+
+const ONBOARDING_DONE_KEY = 'retail-os.onboarding.done';
 
 interface EmbeddedWorkspaceContext {
   apps: AppMetadata[];
@@ -69,6 +78,21 @@ const DEFAULT_SNAPSHOT: WorkspaceSnapshot = {
 };
 
 const WorkspaceContext = createContext<EmbeddedWorkspaceContext>({ apps: [], preloadPath: '' });
+
+interface RetailIntentContext {
+  type: string;
+  session?: VirtualTerminalSessionSnapshot;
+}
+
+function parseRetailContext(raw: string | null): RetailIntentContext | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as RetailIntentContext;
+    return parsed && typeof parsed.type === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -146,6 +170,7 @@ export function App() {
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const detachedWorkspaceId = searchParams.get('detachedWorkspaceId');
   const standaloneAppId = searchParams.get('standaloneAppId');
+  const retailContext = useMemo(() => parseRetailContext(searchParams.get('retailContext')), [searchParams]);
   const [mode, setMode] = useState<ShellMode>('workspace');
   const [preloadPath, setPreloadPath] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState(snapshot.activeTemplateId);
@@ -154,11 +179,16 @@ export function App() {
   const [saveStatus, setSaveStatus] = useState('');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('all');
+  // Onboarding: show wizard on first run (no persisted flag).
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !window.localStorage.getItem(ONBOARDING_DONE_KEY),
+  );
   const [favorites, setFavorites] = useState<string[]>(() => readJson<string[]>(FAVORITES_KEY, ['pos']));
   const [recents, setRecents] = useState<string[]>(() => readJson<string[]>(RECENTS_KEY, []));
   const dockApiRef = useRef<DockviewApi | null>(null);
   const savedLayoutRef = useRef(snapshot.layout);
   const listenersRef = useRef<Array<{ dispose: () => void }>>([]);
+  const terminalWindowOpenedSequenceRef = useRef(0);
 
   useEffect(() => {
     void getPreloadPath().then(setPreloadPath);
@@ -311,6 +341,20 @@ export function App() {
     };
   }, []);
 
+  // Auto-open the Virtual Terminal panel when the POS starts a card payment.
+  useEffect(() => {
+    const off = virtualTerminalSessionStore.subscribe((session) => {
+      if (!session.order || !session.paymentId) return;
+      if (terminalWindowOpenedSequenceRef.current === session.sequence) return;
+      terminalWindowOpenedSequenceRef.current = session.sequence;
+      openApp('virtual-terminal', {
+        type: 'retail.payment.intent',
+        session,
+      } satisfies RetailIntentContext);
+    });
+    return off;
+  }, []);
+
   useEffect(() => {
     if (detachedWorkspaceId) return undefined;
     return onWorkspaceWindowClosed((payload) => {
@@ -359,7 +403,7 @@ export function App() {
   if (standaloneAppId) {
     return (
       <WorkspaceContext.Provider value={contextValue}>
-        <StandaloneAppShell app={registry.getById(standaloneAppId)} />
+        <StandaloneAppShell app={registry.getById(standaloneAppId)} context={retailContext} />
       </WorkspaceContext.Provider>
     );
   }
@@ -410,6 +454,14 @@ export function App() {
               </button>
             )}
             <button className="ghost-btn" onClick={resetWorkspace}>Reset</button>
+            <button
+              className="ghost-btn gear-btn"
+              title="Configuración"
+              aria-label="Abrir configuración"
+              onClick={() => openApp('settings')}
+            >
+              ⚙️
+            </button>
           </div>
         </header>
 
@@ -518,6 +570,18 @@ export function App() {
           </aside>
         </main>
       </div>
+      {/* Onboarding wizard overlay — shown on first run only */}
+      {showOnboarding && createPortal(
+        <div className="onboarding-overlay">
+          <OnboardingWizard
+            onComplete={() => {
+              window.localStorage.setItem(ONBOARDING_DONE_KEY, '1');
+              setShowOnboarding(false);
+            }}
+          />
+        </div>,
+        document.body,
+      )}
     </WorkspaceContext.Provider>
   );
 }
@@ -775,7 +839,10 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
     return <PlaceholderPanel title="Modulo desconocido" detail={params.appId} />;
   }
 
-  if (app.entryPoint.kind !== 'url') {
+  // Built-in route panels render directly as React components inside Dockview.
+  if (app.entryPoint.kind === 'route') {
+    if (app.id === 'settings') return <SettingsPanel />;
+    if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   }
 

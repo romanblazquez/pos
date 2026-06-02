@@ -19,6 +19,8 @@ export interface RwpCommandMap {
   'pos.clearCart': Record<string, never>;
   'pos.focusSearch': Record<string, never>;
   'shell.openApp': { appId: string };
+  /** Virtual terminal emulator → POS: finalize a simulated payment with the given outcome. */
+  'pos.simulator.finalizePayment': { paymentId: string; providerId: string; status: string };
 }
 
 export type RwpCommandName = keyof RwpCommandMap;

@@ -1,6 +1,5 @@
 // Retail OS — central PostgreSQL schema (multi-tenant master data, reporting,
-// and the sync ingestion sink). The local SQLite store is the edge source of
-// truth; this database is the consolidated, multi-store system of record.
+// sync ingestion, provider connections, terminal assignments, and onboarding).
 //
 // Multi-tenancy: every row is scoped by tenantId (row-level isolation now;
 // schema-per-tenant or RLS policies are a roadmap hardening step).
@@ -14,23 +13,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Identity ────────────────────────────────────────────────────────────────
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  stores    Store[]
-  products  Product[]
-  users     User[]
+  id                  String               @id @default(cuid())
+  name                String
+  legalName           String?
+  country             String               @default("MX")
+  taxIdentifier       String?
+  currency            String               @default("MXN")
+  timezone            String               @default("America/Mexico_City")
+  onboardingCompleted Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  stores              Store[]
+  products            Product[]
+  users               User[]
+  providerConnections ProviderConnection[]
+  terminalAssignments TerminalAssignment[]
+  onboardingState     OnboardingState?
 }
 
 model Store {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  currency  String   @default("MXN")
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  devices   Device[]
-  sales     Sale[]
+  id                  String               @id @default(cuid())
+  tenantId            String
+  name                String
+  address             String?
+  storeType           String               @default("retail")
+  currency            String               @default("MXN")
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  devices             Device[]
+  sales               Sale[]
+  terminalAssignments TerminalAssignment[]
 
   @@index([tenantId])
 }
@@ -41,6 +53,7 @@ model Device {
   storeId      String
   label        String
   status       String   @default("pending") // pending | trusted | revoked
+  publicKeyFp  String?
   registeredAt DateTime @default(now())
   store        Store    @relation(fields: [storeId], references: [id])
 
@@ -58,6 +71,7 @@ model User {
   @@unique([tenantId, email])
 }
 
+// ─── Catalog ──────────────────────────────────────────────────────────────────
 model Product {
   id              String  @id @default(cuid())
   tenantId        String
@@ -76,6 +90,7 @@ model Product {
   @@index([tenantId, barcode])
 }
 
+// ─── Sales ────────────────────────────────────────────────────────────────────
 model Sale {
   id              String     @id
   tenantId        String
@@ -112,20 +127,97 @@ model SaleLine {
 }
 
 model Payment {
-  id          String   @id
-  saleId      String
-  provider    String
-  method      String
-  amountMinor Int
-  status      String
-  providerRef String?
-  createdAt   DateTime @default(now())
-  sale        Sale     @relation(fields: [saleId], references: [id])
+  id              String               @id
+  saleId          String
+  tenantId        String
+  provider        String
+  method          String
+  amountMinor     Int
+  status          String
+  providerRef     String?
+  createdAt       DateTime             @default(now())
+  sale            Sale                 @relation(fields: [saleId], references: [id])
+  webhookEvents   PaymentWebhookEvent[]
 
   @@index([saleId])
+  @@index([tenantId])
 }
 
-// Server-side idempotency ledger so re-delivered outbox messages are no-ops.
+// ─── Payment providers ───────────────────────────────────────────────────────
+/// OAuth and credential storage per merchant–provider pair.
+/// Access tokens are stored encrypted; the plaintext never leaves the API process.
+model ProviderConnection {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  provider             String   // 'mercadopago_point' | 'codi' | 'stripe_terminal' | …
+  mode                 String   @default("production") // production | development
+  status               String   @default("pending_oauth") // active | expired | error | pending_oauth | disconnected
+  encryptedAccessToken String?
+  encryptedRefreshToken String?
+  tokenExpiresAt       DateTime?
+  clientId             String?
+  scope                String?
+  providerAccountId    String?  // MP merchant_id after OAuth
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, provider, mode])
+  @@index([tenantId])
+}
+
+/// Maps a physical/virtual terminal to a store.
+model TerminalAssignment {
+  id            String   @id @default(cuid())
+  tenantId      String
+  storeId       String
+  provider      String
+  terminalId    String
+  terminalName  String
+  terminalModel String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  store         Store    @relation(fields: [storeId], references: [id])
+
+  @@unique([tenantId, provider, terminalId])
+  @@index([tenantId, storeId])
+}
+
+/// Append-only log of all inbound provider webhooks for audit and replay.
+model PaymentWebhookEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  provider        String
+  providerEventId String?
+  paymentId       String?
+  rawPayload      Json
+  processed       Boolean  @default(false)
+  processedAt     DateTime?
+  createdAt       DateTime @default(now())
+  payment         Payment? @relation(fields: [paymentId], references: [id])
+
+  @@index([tenantId, provider])
+  @@index([providerEventId])
+}
+
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+/// Persists onboarding wizard progress so it survives restarts and can be resumed.
+model OnboardingState {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  currentStep    String
+  completedSteps String[]
+  data           Json
+  startedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  completedAt    DateTime?
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+// ─── Sync idempotency ─────────────────────────────────────────────────────────
+/// Server-side idempotency ledger so re-delivered outbox messages are no-ops.
 model IngestionKey {
   key        String   @id
   tenantId   String

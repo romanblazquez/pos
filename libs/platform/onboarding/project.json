@@ -1,0 +1,10 @@
+{
+  "name": "onboarding",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/platform/onboarding/src",
+  "projectType": "library",
+  "tags": ["type:lib", "scope:platform"],
+  "targets": {
+    "typecheck": { "executor": "nx:run-commands", "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "libs/platform/onboarding" } }
+  }
+}

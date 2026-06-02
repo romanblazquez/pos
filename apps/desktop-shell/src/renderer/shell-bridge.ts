@@ -14,7 +14,7 @@ export interface DetachedWorkspacePayload {
 declare global {
   interface Window {
     retailShell?: {
-      openApp(appId: string): Promise<void>;
+      openApp(appId: string, context?: unknown): Promise<void>;
       getPreloadPath(): Promise<string>;
       openWorkspaceWindow(payload: DetachedWorkspacePayload): Promise<{ opened: boolean; id: string }>;
       getWorkspaceWindowPayload(workspaceWindowId: string): Promise<DetachedWorkspacePayload | null>;
@@ -25,8 +25,8 @@ declare global {
   }
 }
 
-export function openApp(appId: string): void {
-  void window.retailShell?.openApp(appId);
+export function openApp(appId: string, context?: unknown): void {
+  void window.retailShell?.openApp(appId, context);
 }
 
 export async function getPreloadPath(): Promise<string> {

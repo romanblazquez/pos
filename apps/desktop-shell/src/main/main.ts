@@ -25,7 +25,7 @@ app.whenReady().then(() => {
   registerIpc(store, broker);
 
   const windows = new WindowManager(appDirectory as AppMetadata[]);
-  ipcMain.handle('shell:openApp', (_e, appId: string) => windows.openApp(appId));
+  ipcMain.handle('shell:openApp', (_e, appId: string, context?: unknown) => windows.openApp(appId, context));
   ipcMain.handle('shell:getPreloadPath', () => windows.getPreloadPath());
   ipcMain.handle('shell:openWorkspaceWindow', (_e, payload: DetachedWorkspacePayload) => {
     windows.createWorkspaceWindow(payload);

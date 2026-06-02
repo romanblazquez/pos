@@ -57,7 +57,7 @@ contextBridge.exposeInMainWorld('retailData', {
 });
 
 contextBridge.exposeInMainWorld('retailShell', {
-  openApp: (appId: string) => ipcRenderer.invoke('shell:openApp', appId),
+  openApp: (appId: string, context?: unknown) => ipcRenderer.invoke('shell:openApp', appId, context),
   getPreloadPath: () => ipcRenderer.invoke('shell:getPreloadPath'),
   openWorkspaceWindow: (payload: DetachedWorkspacePayload) =>
     ipcRenderer.invoke('shell:openWorkspaceWindow', payload),

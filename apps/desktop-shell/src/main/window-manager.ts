@@ -67,9 +67,13 @@ export class WindowManager {
   }
 
   /** Open (or focus) a hosted app by id as a standalone BrowserWindow. */
-  openApp(appId: string): void {
+  openApp(appId: string, context?: unknown): void {
     const existing = this.appWindows.get(appId);
     if (existing && !existing.isDestroyed()) {
+      const app = this.apps.find((candidate) => candidate.id === appId);
+      if (app && app.entryPoint.kind === 'route') {
+        void existing.loadURL(this.resolveStandaloneAppUrl(app, context));
+      }
       existing.focus();
       return;
     }
@@ -84,7 +88,7 @@ export class WindowManager {
       webPreferences: secureWebPreferences(`app:${app.id}`),
     });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    void win.loadURL(this.resolveStandaloneAppUrl(app));
+    void win.loadURL(this.resolveStandaloneAppUrl(app, context));
     this.appWindows.set(appId, win);
     win.on('closed', () => this.appWindows.delete(appId));
   }
@@ -132,14 +136,16 @@ export class WindowManager {
     return process.env.ELECTRON_RENDERER_URL ?? `file://${join(__dirname, '../renderer/index.html')}`;
   }
 
-  private resolveStandaloneAppUrl(app: AppMetadata): string {
+  private resolveStandaloneAppUrl(app: AppMetadata, context?: unknown): string {
+    const contextQuery =
+      context === undefined ? '' : `&retailContext=${encodeURIComponent(JSON.stringify(context))}`;
     if (app.entryPoint.kind === 'url') {
       return appendQuery(
         app.entryPoint.url,
-        `retailAppId=${encodeURIComponent(app.id)}&retailSource=${encodeURIComponent(`app:${app.id}`)}`,
+        `retailAppId=${encodeURIComponent(app.id)}&retailSource=${encodeURIComponent(`app:${app.id}`)}${contextQuery}`,
       );
     }
-    return appendQuery(this.getShellUrl(), `standaloneAppId=${encodeURIComponent(app.id)}`);
+    return appendQuery(this.getShellUrl(), `standaloneAppId=${encodeURIComponent(app.id)}${contextQuery}`);
   }
 
   private returnDetachedWorkspace(workspaceWindowId: string): void {
