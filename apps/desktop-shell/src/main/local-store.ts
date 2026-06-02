@@ -55,9 +55,10 @@ export class LocalStore {
     this.sales = new SaleRepository(this.db);
     this.outbox = new OutboxRepository(this.db);
 
-    if (this.products.count() === 0) {
-      this.products.upsertMany(seedProducts as ProductSnapshot[]);
-    }
+    // Re-seed the catalog on every launch so changes to seed-products.json
+    // take effect without requiring a manual database reset.
+    this.db.exec('DELETE FROM products');
+    this.products.upsertMany(seedProducts as ProductSnapshot[]);
 
     // In-memory sync target for the offline demo: sales "ship" locally and the
     // queue drains. Swap for `new HttpSyncTarget(apiBaseUrl)` to sync to NestJS.
