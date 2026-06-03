@@ -74,4 +74,12 @@ contextBridge.exposeInMainWorld('retailShell', {
   },
 });
 
+contextBridge.exposeInMainWorld('retailIntegrations', {
+  tiendanubeConnect: (appId: string, clientSecret: string) =>
+    ipcRenderer.invoke('retail:tiendanube:connect', appId, clientSecret),
+  tiendanubeSync: () => ipcRenderer.invoke('retail:tiendanube:sync'),
+  tiendanubeDisconnect: () => ipcRenderer.invoke('retail:tiendanube:disconnect'),
+  tiendanubeState: () => ipcRenderer.invoke('retail:tiendanube:state'),
+});
+
 contextBridge.exposeInMainWorld('retailEnv', { inShell: true, appId: source });

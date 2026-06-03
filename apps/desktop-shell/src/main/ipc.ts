@@ -34,6 +34,14 @@ export function registerIpc(store: LocalStore, broker: RwpBroker): void {
   ipcMain.on(RWP_IPC.PUBLISH, (event, envelope: RwpEnvelope) => {
     broker.publish(envelope, event.sender.id);
   });
+
+  // ── Tiendanube integration ──────────────────────────────────────────────
+  ipcMain.handle('retail:tiendanube:connect', async (_e, appId: string, clientSecret: string) =>
+    store.tiendanube.connect(appId, clientSecret),
+  );
+  ipcMain.handle('retail:tiendanube:sync', async () => store.tiendanube.syncProducts());
+  ipcMain.handle('retail:tiendanube:disconnect', () => store.tiendanube.disconnect());
+  ipcMain.handle('retail:tiendanube:state', () => store.tiendanube.getState());
 }
 
 function toBrokerTarget(sender: WebContents): BrokerTarget {

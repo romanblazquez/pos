@@ -36,6 +36,7 @@ import {
   virtualTerminalSessionStore,
   type VirtualTerminalSessionSnapshot,
 } from './virtual-terminal/session-store.js';
+import { IntegrationsPanel } from './integrations/IntegrationsPanel.js';
 
 type PanelParams = { appId: string };
 type ShellMode = 'workspace' | 'launcher';
@@ -63,7 +64,7 @@ const registry = new AppRegistry(appDirectory as AppMetadata[]);
 const WORKSPACE_KEY = 'retail-os.shell.workspace.v1';
 const FAVORITES_KEY = 'retail-os.shell.favorites.v1';
 const RECENTS_KEY = 'retail-os.shell.recents.v1';
-const CATEGORIES = ['all', 'sales', 'inventory', 'customers', 'reporting', 'finance', 'administration'] as const;
+const CATEGORIES = ['all', 'sales', 'inventory', 'customers', 'reporting', 'finance', 'channels', 'administration'] as const;
 
 const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = [
   { id: 'store-floor', name: 'Piso de venta', appIds: ['pos', 'customers', 'inventory'] },
@@ -110,6 +111,7 @@ function categoryLabel(category: AppCategory | 'all'): string {
     reporting: 'Reportes',
     administration: 'Admin',
     finance: 'Finanzas',
+    channels: 'Canales',
   };
   return labels[category];
 }
@@ -717,6 +719,7 @@ function StandaloneAppShell({ app }: { app: AppMetadata | undefined }) {
     }
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
     if (app.id === 'settings') return <SettingsPanel />;
+    if (app.id === 'integrations') return <IntegrationsPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   };
 
@@ -850,6 +853,7 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
   if (app.entryPoint.kind === 'route') {
     if (app.id === 'settings') return <SettingsPanel />;
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
+    if (app.id === 'integrations') return <IntegrationsPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   }
 

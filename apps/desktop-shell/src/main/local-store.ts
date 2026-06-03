@@ -11,6 +11,7 @@ import { SyncEngine, InMemorySyncTarget } from '@retail-os/sync-engine';
 import type { ProductSnapshot } from '@retail-os/catalog';
 import type { SaleSnapshot } from '@retail-os/sales';
 import seedProducts from '@config/seed-products.json';
+import { TiendanubeSync } from './tiendanube-sync.js';
 
 export interface Terminal {
   tenantId: string;
@@ -45,6 +46,8 @@ export class LocalStore {
     currency: 'MXN',
   };
 
+  readonly tiendanube: TiendanubeSync;
+
   private readonly engine: SyncEngine;
   private status: SyncStatus = { online: true, pending: 0, lastSyncedAt: null };
 
@@ -54,10 +57,11 @@ export class LocalStore {
     this.products = new ProductRepository(this.db);
     this.sales = new SaleRepository(this.db);
     this.outbox = new OutboxRepository(this.db);
+    this.tiendanube = new TiendanubeSync(this.products, this.db);
 
-    // Re-seed the catalog on every launch so changes to seed-products.json
-    // take effect without requiring a manual database reset.
-    this.db.exec('DELETE FROM products');
+    // Re-seed demo products. Delete only seed-prefixed products so Tiendanube
+    // imports (tn-*) are preserved across restarts.
+    this.db.exec("DELETE FROM products WHERE id LIKE 'p-%'");
     this.products.upsertMany(seedProducts as ProductSnapshot[]);
 
     // In-memory sync target for the offline demo: sales "ship" locally and the

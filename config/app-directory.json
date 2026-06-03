@@ -46,6 +46,17 @@
     "description": "Proveedores de pago, hardware, impuestos, usuarios y herramientas de desarrollo."
   },
   {
+    "id": "integrations",
+    "name": "Integraciones",
+    "version": "0.1.0",
+    "icon": "🔗",
+    "permissions": ["admin.manage"],
+    "category": "channels",
+    "entryPoint": { "kind": "route", "path": "/integrations" },
+    "capabilities": {},
+    "description": "Conecta tu tienda online y sincroniza catalogo automaticamente."
+  },
+  {
     "id": "inventory",
     "name": "Inventario",
     "version": "0.0.0",
