@@ -8,6 +8,14 @@ interface TiendanubeSyncState {
   error: string | null;
 }
 
+interface MercadoPagoSyncState {
+  status: 'disconnected' | 'connecting' | 'connected' | 'error';
+  mode: 'production' | 'development' | null;
+  merchantId: string | null;
+  terminals: Array<{ id: string; name: string; model: string; online: boolean }>;
+  error: string | null;
+}
+
 declare global {
   interface Window {
     retailIntegrations: {
@@ -15,6 +23,11 @@ declare global {
       tiendanubeSync(): Promise<TiendanubeSyncState>;
       tiendanubeDisconnect(): Promise<TiendanubeSyncState>;
       tiendanubeState(): Promise<TiendanubeSyncState>;
+      mercadopagoConnect(clientId: string, clientSecret: string): Promise<MercadoPagoSyncState>;
+      mercadopagoConnectDev(accessToken: string): Promise<MercadoPagoSyncState>;
+      mercadopagoDisconnect(): Promise<MercadoPagoSyncState>;
+      mercadopagoDiscoverTerminals(): Promise<MercadoPagoSyncState>;
+      mercadopagoState(): Promise<MercadoPagoSyncState>;
     };
   }
 }

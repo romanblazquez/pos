@@ -80,6 +80,13 @@ contextBridge.exposeInMainWorld('retailIntegrations', {
   tiendanubeSync: () => ipcRenderer.invoke('retail:tiendanube:sync'),
   tiendanubeDisconnect: () => ipcRenderer.invoke('retail:tiendanube:disconnect'),
   tiendanubeState: () => ipcRenderer.invoke('retail:tiendanube:state'),
+  mercadopagoConnect: (clientId: string, clientSecret: string) =>
+    ipcRenderer.invoke('retail:mercadopago:connect', clientId, clientSecret),
+  mercadopagoConnectDev: (accessToken: string) =>
+    ipcRenderer.invoke('retail:mercadopago:connectDev', accessToken),
+  mercadopagoDisconnect: () => ipcRenderer.invoke('retail:mercadopago:disconnect'),
+  mercadopagoDiscoverTerminals: () => ipcRenderer.invoke('retail:mercadopago:discoverTerminals'),
+  mercadopagoState: () => ipcRenderer.invoke('retail:mercadopago:state'),
 });
 
 contextBridge.exposeInMainWorld('retailEnv', { inShell: true, appId: source });

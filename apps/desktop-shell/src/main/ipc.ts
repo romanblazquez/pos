@@ -42,6 +42,17 @@ export function registerIpc(store: LocalStore, broker: RwpBroker): void {
   ipcMain.handle('retail:tiendanube:sync', async () => store.tiendanube.syncProducts());
   ipcMain.handle('retail:tiendanube:disconnect', () => store.tiendanube.disconnect());
   ipcMain.handle('retail:tiendanube:state', () => store.tiendanube.getState());
+
+  // ── Mercado Pago Point integration ─────────────────────────────────────
+  ipcMain.handle('retail:mercadopago:connect', (_e, clientId: string, clientSecret: string) =>
+    store.mercadopago.connect(clientId, clientSecret),
+  );
+  ipcMain.handle('retail:mercadopago:connectDev', (_e, accessToken: string) =>
+    store.mercadopago.connectDev(accessToken),
+  );
+  ipcMain.handle('retail:mercadopago:disconnect', () => store.mercadopago.disconnect());
+  ipcMain.handle('retail:mercadopago:discoverTerminals', () => store.mercadopago.discoverTerminals());
+  ipcMain.handle('retail:mercadopago:state', () => store.mercadopago.getState());
 }
 
 function toBrokerTarget(sender: WebContents): BrokerTarget {

@@ -12,6 +12,7 @@ import type { ProductSnapshot } from '@retail-os/catalog';
 import type { SaleSnapshot } from '@retail-os/sales';
 import seedProducts from '@config/seed-products.json';
 import { TiendanubeSync } from './tiendanube-sync.js';
+import { MercadoPagoSync } from './mercadopago-sync.js';
 
 export interface Terminal {
   tenantId: string;
@@ -47,6 +48,7 @@ export class LocalStore {
   };
 
   readonly tiendanube: TiendanubeSync;
+  readonly mercadopago: MercadoPagoSync;
 
   private readonly engine: SyncEngine;
   private status: SyncStatus = { online: true, pending: 0, lastSyncedAt: null };
@@ -58,6 +60,10 @@ export class LocalStore {
     this.sales = new SaleRepository(this.db);
     this.outbox = new OutboxRepository(this.db);
     this.tiendanube = new TiendanubeSync(this.products, this.db);
+    this.mercadopago = new MercadoPagoSync(this.db, {
+      tenantId: this.terminal.tenantId,
+      storeId: this.terminal.storeId,
+    });
 
     // Re-seed demo products. Delete only seed-prefixed products so Tiendanube
     // imports (tn-*) are preserved across restarts.
