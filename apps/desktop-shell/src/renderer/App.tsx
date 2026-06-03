@@ -36,7 +36,6 @@ import {
   virtualTerminalSessionStore,
   type VirtualTerminalSessionSnapshot,
 } from './virtual-terminal/session-store.js';
-import { IntegrationsPanel } from './integrations/IntegrationsPanel.js';
 
 type PanelParams = { appId: string };
 type ShellMode = 'workspace' | 'launcher';
@@ -719,7 +718,6 @@ function StandaloneAppShell({ app }: { app: AppMetadata | undefined }) {
     }
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
     if (app.id === 'settings') return <SettingsPanel />;
-    if (app.id === 'integrations') return <IntegrationsPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   };
 
@@ -853,7 +851,6 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
   if (app.entryPoint.kind === 'route') {
     if (app.id === 'settings') return <SettingsPanel />;
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
-    if (app.id === 'integrations') return <IntegrationsPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   }
 

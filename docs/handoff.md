@@ -19,3 +19,12 @@
 ### Validation
 - `pnpm typecheck`: pass
 - `pnpm test`: fails due local native module mismatch (`better-sqlite3` compiled for NODE_MODULE_VERSION 125, runtime expects 127)
+
+### Settings information architecture update
+- Moved Integrations UI from standalone app routing into the Settings app's Integraciones section.
+- Added `integrations` section mapping in `SettingsPanel` to render `IntegrationsPanel` directly within Settings.
+- Removed standalone Integrations route rendering from `App.tsx`.
+- Removed `integrations` app registration from `config/app-directory.json` so configuration lives under Settings.
+
+### Validation (IA move)
+- `pnpm typecheck`: pass

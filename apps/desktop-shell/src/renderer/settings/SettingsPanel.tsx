@@ -3,6 +3,7 @@ import { PLATFORM_SETTINGS_SECTIONS, type SettingsSection } from '@retail-os/pro
 import { PaymentProvidersSettings } from './sections/PaymentProvidersSettings.js';
 import { DeveloperSettings } from './sections/DeveloperSettings.js';
 import { GeneralSettings } from './sections/GeneralSettings.js';
+import { IntegrationsPanel } from '../integrations/IntegrationsPanel.js';
 
 /**
  * SettingsPanel — the main Settings application rendered inside Dockview.
@@ -15,6 +16,7 @@ import { GeneralSettings } from './sections/GeneralSettings.js';
 const SECTION_COMPONENTS: Record<string, React.ComponentType> = {
   general: GeneralSettings,
   payments: PaymentProvidersSettings,
+  integrations: IntegrationsPanel,
   developer: DeveloperSettings,
 };
 
