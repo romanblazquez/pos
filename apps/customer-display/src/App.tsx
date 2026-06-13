@@ -44,17 +44,13 @@ function useClock() {
 export function App() {
   const [screen, setScreen] = useState<Screen>({ kind: 'idle' });
   const [terminalMsg, setTerminalMsg] = useState<string | null>(null);
-  const [debug, setDebug] = useState<string[]>([]);
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saleIdRef = useRef<string | null>(null);
-
-  const log = (msg: string) => setDebug(prev => [...prev.slice(-4), msg]);
 
   const clear = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
   useEffect(() => {
     const onCart = (cart: CartUpdatedPayload) => {
-      log(`cart ${cart.saleId.slice(-4)} lines=${cart.lines.length}`);
       const isNewSale = saleIdRef.current !== null && saleIdRef.current !== cart.saleId;
       saleIdRef.current = cart.saleId;
 
@@ -67,8 +63,6 @@ export function App() {
         return cart.lines.length === 0 ? { kind: 'idle' } : { kind: 'cart', cart };
       });
     };
-
-    log(`bus ready · transport=${typeof window !== 'undefined' && window.rwp ? 'IPC' : 'in-proc'}`);
 
     const subs = [
       bus.subscribe('rwp.cart.updated',   onCart),
@@ -117,12 +111,6 @@ export function App() {
         {screen.kind === 'cart'    && <CartScreen key={screen.cart.saleId} cart={screen.cart} />}
         {screen.kind === 'payment' && <PaymentScreen key={screen.data.saleId + screen.data.method} data={screen.data} terminalMsg={terminalMsg} />}
         {screen.kind === 'result'  && <ResultScreen ok={screen.ok} amount={screen.amount} />}
-        {/* Debug overlay — remove once events are confirmed working */}
-        {debug.length > 0 && (
-          <div style={{ position:'absolute', bottom:4, left:4, fontSize:9, color:'#00d68f', fontFamily:'monospace', opacity:.7, pointerEvents:'none' }}>
-            {debug.map((d, i) => <div key={i}>{d}</div>)}
-          </div>
-        )}
       </main>
     </div>
   );
