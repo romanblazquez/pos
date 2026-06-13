@@ -21,6 +21,7 @@ declare global {
       updateWorkspaceWindowPayload(payload: DetachedWorkspacePayload): Promise<boolean>;
       recallWorkspaceWindow(workspaceWindowId: string): Promise<boolean>;
       onWorkspaceWindowClosed(handler: (payload: DetachedWorkspacePayload) => void): () => void;
+      setTheme(theme: string): Promise<string>;
     };
   }
 }

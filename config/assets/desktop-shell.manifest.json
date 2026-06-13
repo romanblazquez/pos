@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "desktopShell": {
+    "appId": "retail-os-shell",
+    "name": "Retail OS",
+    "title": "Retail OS",
+    "subtitle": "PUNTO DE VENTA",
+    "provider": "retail-os",
+    "providerVersion": "0.1.0",
+    "description": "Sistema de punto de venta moderno para retailers en Latinoamérica.",
+    "icons": {
+      "window": "icons/shell-window.png",
+      "dock":   "icons/shell-dock.png"
+    },
+    "branding": {
+      "productMark": "◆",
+      "accentColor": "#00a884"
+    }
+  }
+}

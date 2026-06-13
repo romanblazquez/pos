@@ -42,6 +42,13 @@ type ShellMode = 'workspace' | 'launcher';
 
 const SIDEBAR_KEY = 'retail-os.shell.sidebar.expanded.v1';
 const INSPECTOR_KEY = 'retail-os.shell.inspector.expanded.v1';
+const THEME_KEY = 'retail-os.shell.theme.v1';
+
+type Theme = 'dark' | 'light';
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset['theme'] = theme === 'light' ? 'light' : '';
+}
 const CATEGORY_ICONS: Record<(typeof CATEGORIES)[number], string> = {
   all: '⊞', sales: '🛒', inventory: '📦', customers: '👤',
   reporting: '📊', finance: '💰', channels: '🔌', administration: '⚙️',
@@ -175,6 +182,13 @@ export function App() {
   const [inspectorExpanded, setInspectorExpanded] = useState(
     () => localStorage.getItem(INSPECTOR_KEY) !== 'false',
   );
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'),
+  );
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
   const [preloadPath, setPreloadPath] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState(snapshot.activeTemplateId);
   const [openPanelIds, setOpenPanelIds] = useState<string[]>(snapshot.openPanelIds);
@@ -280,6 +294,15 @@ export function App() {
     setInspectorExpanded((prev) => {
       const next = !prev;
       localStorage.setItem(INSPECTOR_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next: Theme = prev === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, next);
+      void window.retailShell?.setTheme(next);
       return next;
     });
   }, []);
@@ -483,6 +506,14 @@ export function App() {
               </button>
             )}
             <button className="ghost-btn" onClick={resetWorkspace}>Reset</button>
+            <button
+              className="ghost-btn theme-toggle-btn"
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             <button
               className="ghost-btn gear-btn"
               title="Configuración"

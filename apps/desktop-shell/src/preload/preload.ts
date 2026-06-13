@@ -39,6 +39,16 @@ interface DetachedWorkspacePayload {
 // Register this window with the main-process RWP broker.
 void ipcRenderer.invoke(RWP.REGISTER, source);
 
+// Apply the current theme immediately so every window (shell, webview, detached)
+// starts with the correct data-theme attribute without waiting for a toggle event.
+void ipcRenderer.invoke('shell:getTheme').then((theme: string) => {
+  document.documentElement.dataset['theme'] = theme === 'light' ? 'light' : '';
+});
+// Keep in sync when the shell broadcasts a theme change.
+ipcRenderer.on('shell:themeChanged', (_e, theme: string) => {
+  document.documentElement.dataset['theme'] = theme === 'light' ? 'light' : '';
+});
+
 contextBridge.exposeInMainWorld('rwp', {
   source,
   send: (envelope: unknown) => ipcRenderer.send(RWP.PUBLISH, envelope),
@@ -72,6 +82,7 @@ contextBridge.exposeInMainWorld('retailShell', {
     ipcRenderer.on('shell:workspaceClosed', listener);
     return () => ipcRenderer.removeListener('shell:workspaceClosed', listener);
   },
+  setTheme: (theme: string) => ipcRenderer.invoke('shell:setTheme', theme),
 });
 
 contextBridge.exposeInMainWorld('retailIntegrations', {

@@ -186,8 +186,10 @@ export function VirtualTerminalPanel() {
               <div className="vt-screen-ref">#{order.saleId.slice(-8).toUpperCase()}</div>
               <div className="vt-screen-instruction">Acerca o inserta tu tarjeta</div>
               <div className="vt-card-anim">
+                <span className="vt-ripple" />
+                <span className="vt-ripple" />
+                <span className="vt-ripple" />
                 <span className="vt-card-icon">💳</span>
-                <div className="vt-card-beam" />
               </div>
             </>
           )}

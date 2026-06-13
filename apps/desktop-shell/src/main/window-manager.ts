@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
 import type { AppMetadata } from '@retail-os/app-registry';
+import type { ShellManifest } from './shell-assets-loader.js';
 
 const PRELOAD = join(__dirname, '../preload/preload.js');
 
@@ -43,8 +44,11 @@ export class WindowManager {
   private readonly detachedWorkspaces = new Map<string, DetachedWorkspacePayload>();
   private readonly detachedWindows = new Map<string, BrowserWindow>();
   private shellWindow: BrowserWindow | null = null;
+  private readonly icon: string | undefined;
 
-  constructor(private readonly apps: AppMetadata[]) {}
+  constructor(private readonly apps: AppMetadata[], manifest?: ShellManifest) {
+    this.icon = manifest?.iconWindowPath;
+  }
 
   createLauncher(): BrowserWindow {
     const win = new BrowserWindow({
@@ -52,8 +56,13 @@ export class WindowManager {
       height: 820,
       title: 'Retail OS',
       backgroundColor: '#0f1115',
+      ...(this.icon ? { icon: this.icon } : {}),
       webPreferences: secureWebPreferences('shell', { webviewTag: true }),
     });
+    if (process.platform === 'darwin' && app.dock) {
+      // Re-apply dock icon after window creation to ensure it's set.
+      try { app.dock.setIcon(this.icon ?? ''); } catch { /* icon may not exist yet */ }
+    }
     this.shellWindow = win;
     win.on('closed', () => {
       if (this.shellWindow === win) this.shellWindow = null;
@@ -85,6 +94,7 @@ export class WindowManager {
       height: app.id === 'pos' ? 800 : 700,
       title: `Retail OS — ${app.name}`,
       backgroundColor: '#0f1115',
+      ...(this.icon ? { icon: this.icon } : {}),
       webPreferences: secureWebPreferences(`app:${app.id}`),
     });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -102,6 +112,7 @@ export class WindowManager {
       minHeight: 620,
       title: payload.name,
       backgroundColor: '#0f1115',
+      ...(this.icon ? { icon: this.icon } : {}),
       webPreferences: secureWebPreferences(`workspace:${payload.id}`, { webviewTag: true }),
     });
     const url = appendQuery(this.getShellUrl(), `detachedWorkspaceId=${encodeURIComponent(payload.id)}`);

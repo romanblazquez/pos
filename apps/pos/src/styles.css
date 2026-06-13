@@ -1,8 +1,26 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-3: var(--panel-3);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+}
+
 :root {
   --bg: #111110;
   --panel: #181817;
   --panel-2: #211f1d;
   --panel-3: #2a2723;
+  --surface: #151513;
   --line: #37332e;
   --text: #f3f0ea;
   --muted: #a79f94;
@@ -13,6 +31,22 @@
   --danger: #d85c51;
   --radius: 8px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f4f0;
+  --panel: #ffffff;
+  --panel-2: #f0eeea;
+  --panel-3: #e8e5e0;
+  --surface: #e8e5e0;
+  --line: #dddad4;
+  --text: #1a1916;
+  --muted: #6b675e;
+  --accent: #00a884;
+  --accent-2: #008f74;
+  --ok: #1ea85a;
+  --warn: #c47d00;
+  --danger: #c0392b;
 }
 
 * {
@@ -63,7 +97,7 @@ button {
   gap: 18px;
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
-  background: #151513;
+  background: var(--surface);
 }
 
 .brand {
@@ -166,147 +200,7 @@ button {
   gap: 1px;
 }
 
-.product-grid {
-  min-height: 0;
-  overflow: auto;
-  background: var(--bg);
-  padding: 16px;
-}
-
-.product-toolbar {
-  display: grid;
-  grid-template-columns: minmax(150px, 220px) minmax(220px, 1fr);
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 12px;
-}
-
-.product-toolbar h1 {
-  margin: 0;
-  font-size: 16px;
-  letter-spacing: 0;
-}
-
-.product-toolbar span {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.search {
-  width: 100%;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #151513;
-  color: var(--text);
-  font-size: 15px;
-  outline: none;
-  padding: 0 14px;
-}
-
-.search:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.18);
-}
-
-.category-strip {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  overflow: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-}
-
-.category-strip::-webkit-scrollbar {
-  display: none;
-}
-
-.category-strip button {
-  min-height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel-2);
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 0 12px;
-  white-space: nowrap;
-}
-
-.category-strip button.active {
-  border-color: rgba(215, 154, 45, 0.55);
-  background: rgba(215, 154, 45, 0.14);
-  color: #f4d492;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
-  gap: 10px;
-}
-
-.product-card {
-  display: grid;
-  grid-template-rows: auto minmax(36px, auto) auto auto;
-  align-items: start;
-  min-height: 132px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
-  color: var(--text);
-  cursor: pointer;
-  padding: 12px;
-  text-align: left;
-}
-
-.product-card:hover {
-  border-color: rgba(0, 168, 132, 0.55);
-  background: var(--panel-2);
-}
-
-.product-card .cat,
-.product-card .sku {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.product-card .name {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 7px;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.product-card .sku {
-  margin-top: 10px;
-  text-transform: none;
-}
-
-.product-card .price {
-  margin-top: 8px;
-  color: var(--accent);
-  font-size: 17px;
-  font-weight: 900;
-}
-
-.empty {
-  color: var(--muted);
-  font-size: 14px;
-}
+/* ProductGrid is now fully Tailwind — see ProductGrid.tsx */
 
 .cart {
   display: grid;
@@ -401,7 +295,7 @@ button {
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: #151513;
+  background: var(--surface);
   color: var(--text);
   cursor: pointer;
   font-size: 15px;

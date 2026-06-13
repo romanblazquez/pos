@@ -2,7 +2,7 @@
   "name": "retail-os",
   "version": "0.1.0",
   "private": true,
-  "description": "Retail OS \u2014 modular, offline-first Retail Operating System (POS-first, ERP-ready)",
+  "description": "Retail OS — modular, offline-first Retail Operating System (POS-first, ERP-ready)",
   "license": "UNLICENSED",
   "main": "apps/desktop-shell/out/main/main.js",
   "engines": {
@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
+    "@tailwindcss/vite": "^4.3.1",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
@@ -75,6 +76,7 @@
     "nx": "^22.7.0",
     "prettier": "^3.4.2",
     "prisma": "^6.19.3",
+    "tailwindcss": "^4.3.1",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vite-tsconfig-paths": "^5.1.4",

@@ -1,8 +1,10 @@
+/* ── Dark theme (default) ─────────────────────────────────────────── */
 :root {
   --bg: #111110;
   --panel: #181817;
   --panel-2: #211f1d;
   --panel-3: #282622;
+  --surface: #151513;
   --line: #36332e;
   --text: #f2f0ea;
   --muted: #a7a096;
@@ -13,6 +15,42 @@
   --danger: #d85c51;
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ── Light theme ──────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --bg: #f5f4f0;
+  --panel: #ffffff;
+  --panel-2: #f0eeea;
+  --panel-3: #e8e5e0;
+  --surface: #eae8e4;
+  --line: #dddad4;
+  --text: #1a1916;
+  --muted: #6b675e;
+  --soft: #3d3a34;
+  --accent: #00a884;
+  --accent-2: #008f74;
+  --warn: #c47d00;
+  --danger: #c0392b;
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.10);
+}
+
+/* ── Dockview light theme overrides ──────────────────────────────── */
+:root[data-theme="light"] .retail-dockview {
+  --dv-group-view-background-color: #ffffff;
+  --dv-tabs-and-actions-container-background-color: #f0eeea;
+  --dv-activegroup-visiblepanel-tab-background-color: #ffffff;
+  --dv-activegroup-hiddenpanel-tab-background-color: #e8e5e0;
+  --dv-inactivegroup-visiblepanel-tab-background-color: #f5f4f0;
+  --dv-inactivegroup-hiddenpanel-tab-background-color: #e8e5e0;
+  --dv-tab-divider-color: #dddad4;
+  --dv-activegroup-visiblepanel-tab-color: #1a1916;
+  --dv-activegroup-hiddenpanel-tab-color: rgba(26, 25, 22, 0.65);
+  --dv-inactivegroup-visiblepanel-tab-color: rgba(26, 25, 22, 0.65);
+  --dv-inactivegroup-hiddenpanel-tab-color: rgba(26, 25, 22, 0.35);
+  --dv-separator-border: #dddad4;
+  --dv-paneview-header-border-color: #dddad4;
+  --dv-icon-hover-background-color: rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -56,7 +94,7 @@ button {
   gap: 18px;
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
-  background: #151513;
+  background: var(--surface);
 }
 
 .shell-brand {
@@ -243,7 +281,7 @@ button {
   height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #121211;
+  background: var(--panel-3);
   color: var(--text);
   outline: none;
   padding: 0 12px;
@@ -340,7 +378,7 @@ button {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: #121211;
+  background: var(--panel-3);
   font-size: 18px;
 }
 
@@ -421,7 +459,7 @@ button {
 
 .dock-btn:hover {
   border-color: var(--line);
-  background: #121211;
+  background: var(--panel-3);
   color: var(--accent);
 }
 
@@ -431,14 +469,14 @@ button {
 
 .favorite-btn:hover {
   border-color: var(--line);
-  background: #121211;
+  background: var(--panel-3);
 }
 
 .workspace-host {
   position: relative;
   min-width: 0;
   min-height: 0;
-  background: #0e0e0d;
+  background: var(--bg);
 }
 
 .detached-placeholder {
@@ -451,7 +489,7 @@ button {
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(17, 17, 16, 0.95);
+  background: color-mix(in srgb, var(--panel) 95%, transparent);
   text-align: center;
 }
 
@@ -483,7 +521,7 @@ button {
 }
 
 .retail-dockview .groupview {
-  background: #111110;
+  background: var(--bg);
 }
 
 .retail-dockview .tabs-and-actions-container {
@@ -532,7 +570,7 @@ button {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #151513;
+  background: var(--surface);
   box-shadow: var(--shadow);
 }
 
@@ -588,7 +626,7 @@ button {
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: #10100f;
+  background: var(--panel-3);
 }
 
 .dock-add-option strong,
@@ -650,7 +688,7 @@ button {
 .embedded-panel webview {
   height: 100%;
   width: 100%;
-  background: #0f1115;
+  background: var(--bg);
 }
 
 .launcher-overlay {
@@ -660,7 +698,7 @@ button {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(17, 17, 16, 0.96);
+  background: var(--panel);
   box-shadow: var(--shadow);
   padding: 22px;
 }
@@ -765,7 +803,7 @@ button {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #676056;
+  background: var(--muted);
 }
 
 .inspector-dot.active {
@@ -823,7 +861,7 @@ button {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #676056;
+  background: var(--muted);
 }
 
 .channel-pill.active span {
@@ -838,7 +876,7 @@ button {
   min-height: 320px;
   padding: 32px;
   text-align: center;
-  background: #141412;
+  background: var(--bg);
 }
 
 .placeholder-icon {
@@ -916,7 +954,7 @@ button {
   justify-content: space-between;
   gap: 16px;
   border-bottom: 1px solid var(--line);
-  background: #151513;
+  background: var(--surface);
   padding: 0 16px;
 }
 
@@ -969,6 +1007,7 @@ button {
 
 /* ─── Gear button in workspace header ─────────────────────────────────────── */
 .gear-btn { font-size: 16px; padding: 4px 8px !important; }
+.theme-toggle-btn { font-size: 15px; padding: 4px 8px !important; }
 
 /* ─── Onboarding overlay ───────────────────────────────────────────────────── */
 .onboarding-overlay {
@@ -1147,14 +1186,33 @@ button {
 .vt-screen-ref { font-size: 11px; color: #636b85; font-family: monospace; }
 .vt-screen-instruction { font-size: 13px; color: #8b93a7; }
 
-.vt-card-anim { position: relative; width: 80px; height: 50px; }
-.vt-card-icon { font-size: 36px; }
-.vt-card-beam {
-  position: absolute; top: 50%; left: 60%; width: 40px; height: 2px;
-  background: linear-gradient(to right, #4f8cff, transparent);
-  animation: beam .8s infinite;
+.vt-card-anim {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
 }
-@keyframes beam { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.vt-card-icon {
+  font-size: 40px;
+  position: relative;
+  z-index: 1;
+}
+.vt-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(79, 140, 255, 0.5);
+  animation: vt-ripple 2s ease-out infinite;
+  opacity: 0;
+}
+.vt-ripple:nth-child(2) { animation-delay: .6s; }
+.vt-ripple:nth-child(3) { animation-delay: 1.2s; }
+@keyframes vt-ripple {
+  0%   { transform: scale(.4); opacity: .8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
 
 .vt-status-badge { padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; }
 .vt-status-badge.ok { background: rgba(47,191,113,.15); color: #2fbf71; }
@@ -1219,6 +1277,19 @@ button {
 .vt-tl-time { font-size: 11px; color: var(--muted); }
 .vt-tl-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
 .vt-dev-badge { background: rgba(79,140,255,.12); color: var(--accent); padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+
+/* ── VT device light-theme overrides ────────────────────────────────────── */
+:root[data-theme="light"] .vt-device { background: #2d3142; border-right-color: #c0c5d6; }
+:root[data-theme="light"] .vt-device-header { background: #1f2235; border-bottom-color: #393f5a; }
+:root[data-theme="light"] .vt-device-brand strong { color: #dde1ef; }
+:root[data-theme="light"] .vt-model-badge { background: #393f5a; color: #8b93b8; }
+:root[data-theme="light"] .vt-led { background: #555e80; }
+:root[data-theme="light"] .vt-led-label { color: #8b93b8; }
+:root[data-theme="light"] .vt-btn { background: #3a405e; border-color: #555e80; color: #b0b8d4; }
+:root[data-theme="light"] .vt-btn:hover:not(:disabled) { background: #454c6e; color: #dde1ef; }
+:root[data-theme="light"] .vt-btn-full { background: #454c6e; border-color: #6070a0; color: #c8cdd8; }
+:root[data-theme="light"] .vt-numpad-key { background: #3a405e; border-color: #555e80; color: #c0c8e4; }
+:root[data-theme="light"] .vt-numpad-key:hover { background: #454c6e; }
 
 /* ── Integrations Panel ──────────────────────────────────────────────────── */
 .integrations-shell { display: flex; flex-direction: column; height: 100%; background: var(--bg); overflow-y: auto; }
