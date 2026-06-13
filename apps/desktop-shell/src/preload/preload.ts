@@ -39,15 +39,20 @@ interface DetachedWorkspacePayload {
 // Register this window with the main-process RWP broker.
 void ipcRenderer.invoke(RWP.REGISTER, source);
 
-// Apply the current theme immediately so every window (shell, webview, detached)
-// starts with the correct data-theme attribute without waiting for a toggle event.
+// Apply theme to <html> — guard against the async resolve racing document init.
+function applyTheme(theme: string) {
+  const el = document.documentElement;
+  if (el) el.dataset['theme'] = theme === 'light' ? 'light' : '';
+}
+
 void ipcRenderer.invoke('shell:getTheme').then((theme: string) => {
-  document.documentElement.dataset['theme'] = theme === 'light' ? 'light' : '';
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => applyTheme(theme), { once: true });
+  } else {
+    applyTheme(theme);
+  }
 });
-// Keep in sync when the shell broadcasts a theme change.
-ipcRenderer.on('shell:themeChanged', (_e, theme: string) => {
-  document.documentElement.dataset['theme'] = theme === 'light' ? 'light' : '';
-});
+ipcRenderer.on('shell:themeChanged', (_e, theme: string) => applyTheme(theme));
 
 contextBridge.exposeInMainWorld('rwp', {
   source,

@@ -189,6 +189,13 @@ export function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // On mount, push the persisted theme to main so it broadcasts to webviews.
+  // Main resets currentTheme to 'dark' on every process restart without this.
+  useEffect(() => {
+    void window.retailShell?.setTheme(theme);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [preloadPath, setPreloadPath] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState(snapshot.activeTemplateId);
   const [openPanelIds, setOpenPanelIds] = useState<string[]>(snapshot.openPanelIds);
@@ -995,7 +1002,7 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
           src={src}
           preload={preloadUrl}
           partition={`persist:retail-${app.id}`}
-          allowpopups={false}
+          allowpopups="false"
           style={{ width: '100%', height: '100%', border: 'none' } as CSSProperties}
         />
       ) : (

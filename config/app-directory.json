@@ -77,5 +77,19 @@
     "entryPoint": { "kind": "route", "path": "/reports" },
     "capabilities": {},
     "description": "Ventas del día, cortes de caja y desglose de pagos. (Próximamente)"
+  },
+  {
+    "id": "customer-display",
+    "name": "Pantalla Cliente",
+    "version": "0.1.0",
+    "icon": "🖥",
+    "permissions": [],
+    "category": "sales",
+    "entryPoint": { "kind": "url", "url": "http://localhost:4201", "devPort": 4201 },
+    "capabilities": {
+      "publishes": [],
+      "subscribes": ["rwp.cart.updated", "rwp.payment.screen", "rwp.payment.completed", "rwp.checkout.failed", "rwp.sale.committed"]
+    },
+    "description": "Segunda pantalla orientada al cliente — muestra la compra en tiempo real, QR de pago CoDi y confirmaciones."
   }
 ]

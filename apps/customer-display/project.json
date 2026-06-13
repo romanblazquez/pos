@@ -1,0 +1,16 @@
+{
+  "name": "customer-display",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/customer-display/src",
+  "targets": {
+    "serve": {
+      "command": "vite",
+      "options": { "cwd": "apps/customer-display" }
+    },
+    "build": {
+      "command": "vite build",
+      "options": { "cwd": "apps/customer-display" }
+    }
+  }
+}

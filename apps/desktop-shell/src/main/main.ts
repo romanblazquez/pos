@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, webContents } from 'electron';
 import { join } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { RwpBroker } from '@retail-os/rwp-electron-adapter';
 import { setupSecurity } from './security.js';
 import { LocalStore } from './local-store.js';
@@ -14,10 +15,32 @@ import type { AppMetadata } from '@retail-os/app-registry';
 // works both in dev (repo root) and in a packaged app (app.getAppPath()).
 const MANIFEST_PATH = join(app.getAppPath(), 'config/assets/desktop-shell.manifest.json');
 
-// Theme state persisted across windows in the main process.
+// Theme state — persisted to userData so it survives restarts.
+function getThemeFilePath() {
+  return join(app.getPath('userData'), 'retail-os.theme.json');
+}
+
+function loadPersistedTheme(): 'dark' | 'light' {
+  try {
+    const raw = readFileSync(getThemeFilePath(), 'utf8');
+    const parsed = JSON.parse(raw) as { theme?: string };
+    return parsed.theme === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+function savePersistedTheme(theme: 'dark' | 'light') {
+  try {
+    writeFileSync(getThemeFilePath(), JSON.stringify({ theme }), 'utf8');
+  } catch { /* non-fatal */ }
+}
+
+// Loaded inside whenReady() where app.getPath('userData') is safe to call.
 let currentTheme: 'dark' | 'light' = 'dark';
 
 app.whenReady().then(() => {
+  currentTheme = loadPersistedTheme();
   setupSecurity();
 
   const manifest = ShellAssetsLoader.load(MANIFEST_PATH, app.getVersion());
@@ -55,6 +78,7 @@ app.whenReady().then(() => {
   ipcMain.handle('shell:setTheme', (_e, theme: string) => {
     if (theme !== 'dark' && theme !== 'light') return currentTheme;
     currentTheme = theme;
+    savePersistedTheme(theme);
     for (const wc of webContents.getAllWebContents()) {
       if (!wc.isDestroyed()) wc.send('shell:themeChanged', theme);
     }

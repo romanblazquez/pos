@@ -3,6 +3,19 @@ import { shellBus } from '../shell-bus.js';
 import type { PaymentRequestedPayload } from '@retail-os/rwp-core';
 import { virtualTerminalSessionStore } from './session-store.js';
 
+const STATE_INSTRUCTIONS: Record<string, string> = {
+  ORDER_RECEIVED:  'Orden recibida — iniciando terminal…',
+  WAITING_FOR_CARD:'Acerca o inserta tu tarjeta',
+  CARD_DETECTED:   'Tarjeta detectada',
+  PIN_REQUIRED:    'Ingresa tu NIP',
+  PROCESSING:      'Procesando — no retires la tarjeta',
+  APPROVED:        'Pago aprobado',
+  REJECTED:        'Pago rechazado',
+  CANCELLED:       'Operación cancelada',
+  TIMEOUT:         'Tiempo agotado',
+  NETWORK_ERROR:   'Error de red — intenta de nuevo',
+};
+
 type TerminalUIState =
   | 'IDLE'
   | 'ORDER_RECEIVED'
@@ -91,7 +104,16 @@ export function VirtualTerminalPanel() {
         { label: 'Orden recibida del POS', at: now() },
         ...(session.paymentId ? [{ label: STATE_LABELS.WAITING_FOR_CARD, at: now() }] : []),
       ]);
-      setState(session.paymentId ? 'WAITING_FOR_CARD' : 'ORDER_RECEIVED');
+      const initState: TerminalUIState = session.paymentId ? 'WAITING_FOR_CARD' : 'ORDER_RECEIVED';
+      setState(initState);
+      if (session.paymentId) {
+        shellBus.publish('rwp.terminal.instruction', {
+          saleId: session.order.saleId,
+          paymentId: session.paymentId,
+          state: 'WAITING_FOR_CARD',
+          message: STATE_INSTRUCTIONS.WAITING_FOR_CARD,
+        });
+      }
       return;
     }
 
@@ -101,14 +123,22 @@ export function VirtualTerminalPanel() {
 
     if (session.paymentId && !processingSeenRef.current) {
       processingSeenRef.current = true;
-      if (state === 'ORDER_RECEIVED') push('WAITING_FOR_CARD');
+      if (state === 'ORDER_RECEIVED') push('WAITING_FOR_CARD', session.order, session.paymentId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, paymentId, state]);
 
-  function push(next: TerminalUIState) {
+  function push(next: TerminalUIState, currentOrder = order, currentPaymentId = paymentId) {
     setState(next);
     setTimeline((prev) => [...prev, { label: STATE_LABELS[next], at: now() }]);
+    if (currentOrder && currentPaymentId) {
+      shellBus.publish('rwp.terminal.instruction', {
+        saleId: currentOrder.saleId,
+        paymentId: currentPaymentId,
+        state: next,
+        message: STATE_INSTRUCTIONS[next] ?? STATE_LABELS[next],
+      });
+    }
   }
 
   function doCard(action: CardAction) {

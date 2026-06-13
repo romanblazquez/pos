@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatMoney } from '@retail-os/ui-react';
 import type { Sale } from '@retail-os/sales';
 import {
@@ -8,6 +8,7 @@ import {
   type PaymentCallbackStatus,
   type ProviderChoice,
 } from '../checkout/checkout-service.js';
+import { bus } from '../platform/bus.js';
 
 type Phase = 'choose' | 'processing' | 'done';
 type ActivePayment = { paymentId: string; providerId: string };
@@ -43,6 +44,13 @@ export function PaymentDialog({
   const [activePayment, setActivePayment] = useState<ActivePayment | null>(null);
   const [callbackSent, setCallbackSent] = useState<PaymentCallbackStatus | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [terminalMsg, setTerminalMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    return bus.subscribe('rwp.terminal.instruction', (p) => {
+      setTerminalMsg(p.message);
+    });
+  }, []);
 
   const total = formatMoney({ minorUnits: sale.grandTotal.minorUnits, currency: sale.currency });
   const itemCount = sale.lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -52,13 +60,29 @@ export function PaymentDialog({
     setActivePayment(null);
     setCallbackSent(null);
     setResult(null);
+    if (provider.method === 'cash') {
+      bus.publish('rwp.payment.screen', {
+        saleId: sale.id,
+        provider: 'cash',
+        method: 'cash',
+        amount: { minorUnits: sale.grandTotal.minorUnits, currency: sale.currency },
+      });
+    }
     const saga = await checkoutSaga.run({
       sale,
       providerId: provider.id,
       method: provider.method,
       simulate: provider.method === 'cash' ? 'approved' : 'manual',
-      onPaymentIntent: (intent) =>
-        setActivePayment({ paymentId: intent.paymentId, providerId: intent.provider }),
+      onPaymentIntent: (intent) => {
+        setActivePayment({ paymentId: intent.paymentId, providerId: intent.provider });
+        bus.publish('rwp.payment.screen', {
+          saleId: sale.id,
+          provider: intent.provider,
+          method: provider.method,
+          amount: { minorUnits: sale.grandTotal.minorUnits, currency: sale.currency },
+          qrData: provider.method === 'qr' ? intent.paymentId : undefined,
+        });
+      },
     });
     if (saga.status === 'completed') {
       setResult({ ok: true, message: `Pago aprobado con ${provider.label}` });
@@ -127,6 +151,12 @@ export function PaymentDialog({
                   El panel <strong>Terminal Virtual MP</strong> se abrió automáticamente.<br />
                   Usa los controles del terminal para completar el cobro.
                 </p>
+                {terminalMsg && (
+                  <div className="terminal-instruction">
+                    <span className="terminal-instruction-dot" />
+                    {terminalMsg}
+                  </div>
+                )}
                 {activePayment ? (
                   <div className="terminal-waiting-id">
                     <span className="dot online" />
@@ -143,44 +173,48 @@ export function PaymentDialog({
             {/* CoDi: QR inline */}
             {provider.method === 'qr' && (
               <div className="codi-emulator">
-                <div className="codi-terminal-header">
-                  <span className="codi-brand">CoDi</span>
-                  <span className={`vterm-led${activePayment ? ' online' : ''}`} />
-                </div>
-                <div className="codi-screen">
-                  <div className="codi-amount">{total}</div>
-                  {activePayment ? (
-                    <>
-                      <div className="qr-fake" aria-hidden />
-                      <p className="codi-instruction">Escanea con tu app bancaria</p>
-                      <span className="codi-ref">Ref: {activePayment.paymentId.slice(-10).toUpperCase()}</span>
-                    </>
-                  ) : (
-                    <div className="vterm-hint">Generando QR dinámico…</div>
+                <div className="codi-card">
+                  <div className="codi-terminal-header">
+                    <span className="codi-brand">CoDi</span>
+                    <span className={`vterm-led${activePayment ? ' online' : ''}`} />
+                  </div>
+                  <div className="codi-screen">
+                    <div className="codi-amount">{total}</div>
+                    {activePayment ? (
+                      <>
+                        <div className="qr-fake" aria-hidden />
+                        <p className="codi-instruction">Escanea con tu app bancaria</p>
+                        <span className="codi-ref">Ref: {activePayment.paymentId.slice(-10).toUpperCase()}</span>
+                      </>
+                    ) : (
+                      <div className="vterm-hint">Generando QR dinámico…</div>
+                    )}
+                  </div>
+                  {activePayment && !callbackSent && (
+                    <div className="codi-actions">
+                      <p className="vterm-dev-note">🧪 Simulador — elige resultado:</p>
+                      <div className="vterm-action-row" style={{ marginTop: 5 }}>
+                        {CODI_CALLBACKS.map((cb) => (
+                          <button
+                            key={cb.status}
+                            className={`vterm-key${cb.status === 'approved' ? ' vterm-key-approve' : cb.status === 'rejected' ? ' vterm-key-danger' : ' vterm-key-cancel'}`}
+                            onClick={() => sendCallback(cb.status)}
+                            disabled={Boolean(callbackSent)}
+                          >
+                            {cb.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {callbackSent && (
+                    <div className="codi-actions">
+                      <p className="vterm-dev-note">
+                        Callback: <strong>{callbackSent}</strong> — esperando respuesta…
+                      </p>
+                    </div>
                   )}
                 </div>
-                {activePayment && !callbackSent && (
-                  <div className="codi-actions">
-                    <p className="vterm-dev-note">🧪 Simulador CoDi — elige el resultado:</p>
-                    <div className="vterm-action-row">
-                      {CODI_CALLBACKS.map((cb) => (
-                        <button
-                          key={cb.status}
-                          className={`vterm-key${cb.status === 'approved' ? ' vterm-key-approve' : cb.status === 'rejected' ? ' vterm-key-danger' : ' vterm-key-cancel'}`}
-                          onClick={() => sendCallback(cb.status)}
-                          disabled={Boolean(callbackSent)}
-                        >
-                          {cb.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {callbackSent && (
-                  <p className="vterm-hint" style={{ textAlign: 'center', marginTop: 12 }}>
-                    Callback enviado: <strong>{callbackSent}</strong> — esperando resultado…
-                  </p>
-                )}
               </div>
             )}
           </div>

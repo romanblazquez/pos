@@ -48,6 +48,49 @@ export interface CheckoutFailedPayload {
   reason: string;
 }
 
+// ─── Customer Display ─────────────────────────────────────────────────────────
+
+/** Cart line as seen by customer display */
+export interface CartLineDTO {
+  lineId: string;
+  name: string;
+  quantity: number;
+  unitPrice: MoneyDTO;
+  lineTotal: MoneyDTO;
+}
+
+/** Published on every cart mutation (add/remove/qty change/discount) */
+export interface CartUpdatedPayload {
+  saleId: string;
+  currency: string;
+  lines: CartLineDTO[];
+  subtotal: MoneyDTO;    // net before discounts
+  discount: MoneyDTO;   // total discount
+  taxTotal: MoneyDTO;
+  grandTotal: MoneyDTO;
+  itemCount: number;
+}
+
+/** Published when cashier initiates payment — drives the customer payment screen */
+export interface PaymentScreenPayload {
+  saleId: string;
+  provider: string;      // 'cash' | 'mercadopago_point' | 'codi'
+  method: 'cash' | 'card_terminal' | 'qr';
+  amount: MoneyDTO;
+  qrData?: string;       // for CoDi: the string to QR-encode (paymentId)
+}
+
+// ─── Terminal instructions (live status from card terminal) ──────────────────
+/** Published by the virtual terminal (and real adapters) on every state change. */
+export interface TerminalInstructionPayload {
+  saleId: string;
+  paymentId: string;
+  /** Machine state string, e.g. WAITING_FOR_CARD, PIN_REQUIRED, PROCESSING */
+  state: string;
+  /** Human-readable message in the cashier's locale */
+  message: string;
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 export interface SyncStatusPayload {
   online: boolean;
@@ -63,6 +106,10 @@ export interface RwpEventMap {
   'rwp.checkout.failed': CheckoutFailedPayload;
   'rwp.sale.committed': SaleCommittedPayload;
   'rwp.sync.status': SyncStatusPayload;
+  'rwp.cart.updated': CartUpdatedPayload;
+  'rwp.context.cart': CartUpdatedPayload;
+  'rwp.payment.screen': PaymentScreenPayload;
+  'rwp.terminal.instruction': TerminalInstructionPayload;
 }
 
 export type RwpEventType = keyof RwpEventMap;
