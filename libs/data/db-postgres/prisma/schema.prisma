@@ -73,21 +73,30 @@ model User {
 
 // ─── Catalog ──────────────────────────────────────────────────────────────────
 model Product {
-  id              String  @id @default(cuid())
+  id              String     @id @default(cuid())
   tenantId        String
   sku             String
   name            String
   barcode         String?
   category        String
+  photoUrl        String?
   priceMinorUnits Int
-  currency        String  @default("MXN")
-  taxRatePercent  Float   @default(16)
-  trackInventory  Boolean @default(true)
-  active          Boolean @default(true)
-  tenant          Tenant  @relation(fields: [tenantId], references: [id])
+  currency        String     @default("MXN")
+  taxRatePercent  Float      @default(16)
+  trackInventory  Boolean    @default(true)
+  active          Boolean    @default(true)
+  // Provenance: where this product originally came from.
+  // null = created natively in Retail OS.
+  sourceType      String?    // 'tiendanube' | 'shopify' | 'csv' | 'api'
+  sourceId        String?    // external product id in the source system
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  tenant          Tenant     @relation(fields: [tenantId], references: [id])
+  saleLines       SaleLine[]
 
   @@unique([tenantId, sku])
   @@index([tenantId, barcode])
+  @@index([tenantId, sourceType, sourceId])
 }
 
 // ─── Sales ────────────────────────────────────────────────────────────────────
@@ -112,16 +121,18 @@ model Sale {
 }
 
 model SaleLine {
-  id              String @id @default(cuid())
+  id              String   @id @default(cuid())
   saleId          String
-  productId       String
+  productId       String?
   name            String
+  sku             String?
   quantity        Float
   unitPriceMinor  Int
-  discountMinor   Int    @default(0)
+  discountMinor   Int      @default(0)
   taxRatePercent  Float
   lineTotalMinor  Int
-  sale            Sale   @relation(fields: [saleId], references: [id])
+  sale            Sale     @relation(fields: [saleId], references: [id])
+  product         Product? @relation(fields: [productId], references: [id])
 
   @@index([saleId])
 }

@@ -40,6 +40,13 @@ import {
 type PanelParams = { appId: string };
 type ShellMode = 'workspace' | 'launcher';
 
+const SIDEBAR_KEY = 'retail-os.shell.sidebar.expanded.v1';
+const INSPECTOR_KEY = 'retail-os.shell.inspector.expanded.v1';
+const CATEGORY_ICONS: Record<(typeof CATEGORIES)[number], string> = {
+  all: '⊞', sales: '🛒', inventory: '📦', customers: '👤',
+  reporting: '📊', finance: '💰', channels: '🔌', administration: '⚙️',
+};
+
 const ONBOARDING_DONE_KEY = 'retail-os.onboarding.done';
 
 interface EmbeddedWorkspaceContext {
@@ -66,7 +73,7 @@ const RECENTS_KEY = 'retail-os.shell.recents.v1';
 const CATEGORIES = ['all', 'sales', 'inventory', 'customers', 'reporting', 'finance', 'channels', 'administration'] as const;
 
 const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = [
-  { id: 'store-floor', name: 'Piso de venta', appIds: ['pos', 'customers', 'inventory'] },
+  { id: 'store-floor', name: 'Punto de Venta', appIds: ['pos', 'customers', 'inventory'] },
   { id: 'daily-control', name: 'Control diario', appIds: ['pos', 'reports', 'inventory'] },
   { id: 'crm-service', name: 'Atencion cliente', appIds: ['customers', 'pos', 'reports'] },
 ];
@@ -162,6 +169,12 @@ export function App() {
   const detachedWorkspaceId = searchParams.get('detachedWorkspaceId');
   const standaloneAppId = searchParams.get('standaloneAppId');
   const [mode, setMode] = useState<ShellMode>('workspace');
+  const [sidebarExpanded, setSidebarExpanded] = useState(
+    () => localStorage.getItem(SIDEBAR_KEY) !== 'false',
+  );
+  const [inspectorExpanded, setInspectorExpanded] = useState(
+    () => localStorage.getItem(INSPECTOR_KEY) !== 'false',
+  );
   const [preloadPath, setPreloadPath] = useState('');
   const [activeTemplateId, setActiveTemplateId] = useState(snapshot.activeTemplateId);
   const [openPanelIds, setOpenPanelIds] = useState<string[]>(snapshot.openPanelIds);
@@ -178,7 +191,7 @@ export function App() {
   const dockApiRef = useRef<DockviewApi | null>(null);
   const savedLayoutRef = useRef(snapshot.layout);
   const listenersRef = useRef<Array<{ dispose: () => void }>>([]);
-  const terminalWindowOpenedSequenceRef = useRef(0);
+  const terminalWindowOpenedSequenceRef = useRef(virtualTerminalSessionStore.getSnapshot().sequence);
 
   useEffect(() => {
     void getPreloadPath().then(setPreloadPath);
@@ -254,6 +267,22 @@ export function App() {
     });
     persistWorkspace(api, template.id);
   }, [addPanel, persistWorkspace]);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  const toggleInspector = useCallback(() => {
+    setInspectorExpanded((prev) => {
+      const next = !prev;
+      localStorage.setItem(INSPECTOR_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   const toggleFavorite = useCallback((appId: string) => {
     setFavorites((current) => {
@@ -331,18 +360,26 @@ export function App() {
     };
   }, []);
 
-  // Auto-open the Virtual Terminal panel when the POS starts a card payment.
-  // Skip in standalone/detached modes — those windows should not spawn new windows.
+  // Auto-open the Virtual Terminal when the POS starts a card payment.
+  // If 'virtual-terminal' is already a Dockview panel, focus it in place.
+  // Only open a new Electron window when it is not in the workspace.
+  // Skip entirely in standalone/detached modes.
   useEffect(() => {
     if (standaloneAppId || detachedWorkspaceId) return;
     const off = virtualTerminalSessionStore.subscribe((session) => {
       if (!session.order || !session.paymentId) return;
       if (terminalWindowOpenedSequenceRef.current === session.sequence) return;
       terminalWindowOpenedSequenceRef.current = session.sequence;
-      openApp('virtual-terminal', {
-        type: 'retail.payment.intent',
-        session,
-      } satisfies RetailIntentContext);
+
+      const existingPanel = dockApiRef.current?.getPanel('virtual-terminal');
+      if (existingPanel) {
+        existingPanel.api.setActive();
+      } else {
+        openApp('virtual-terminal', {
+          type: 'retail.payment.intent',
+          session,
+        } satisfies RetailIntentContext);
+      }
     });
     return off;
   }, [standaloneAppId, detachedWorkspaceId]);
@@ -457,51 +494,55 @@ export function App() {
           </div>
         </header>
 
-        <main className="shell-main">
-          <aside className="app-sidebar">
-            <input
-              className="app-search"
-              placeholder="Buscar modulo"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
+        <main className={`shell-main${sidebarExpanded ? '' : ' sidebar-collapsed'}${inspectorExpanded ? '' : ' inspector-collapsed'}`}>
+          <aside className={`app-sidebar${sidebarExpanded ? '' : ' collapsed'}`}>
+            <button
+              className="sidebar-toggle"
+              title={sidebarExpanded ? 'Colapsar sidebar' : 'Expandir sidebar'}
+              aria-label={sidebarExpanded ? 'Colapsar sidebar' : 'Expandir sidebar'}
+              onClick={toggleSidebar}
+            >
+              {sidebarExpanded ? '‹' : '›'}
+            </button>
 
-            <div className="category-list">
-              {CATEGORIES.map((cat) => (
-                <button key={cat} className={category === cat ? 'active' : ''} onClick={() => setCategory(cat)}>
-                  {categoryLabel(cat)}
-                </button>
-              ))}
-            </div>
-
-            {favoriteApps.length > 0 && (
-              <AppGroup
-                title="Favoritos"
-                apps={favoriteApps}
-                onOpen={openApp}
-                onDock={addPanel}
-                onFavorite={toggleFavorite}
-                favorites={favorites}
-              />
+            {sidebarExpanded ? (
+              <>
+                <input
+                  className="app-search"
+                  placeholder="Buscar modulo"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <div className="category-list">
+                  {CATEGORIES.map((cat) => (
+                    <button key={cat} className={category === cat ? 'active' : ''} onClick={() => setCategory(cat)}>
+                      {categoryLabel(cat)}
+                    </button>
+                  ))}
+                </div>
+                {favoriteApps.length > 0 && (
+                  <AppGroup title="Favoritos" apps={favoriteApps} onOpen={openApp} onDock={addPanel} onFavorite={toggleFavorite} favorites={favorites} />
+                )}
+                {recentApps.length > 0 && (
+                  <AppGroup title="Recientes" apps={recentApps} onOpen={openApp} onDock={addPanel} onFavorite={toggleFavorite} favorites={favorites} />
+                )}
+                <AppGroup title="Aplicaciones" apps={visibleApps} onOpen={openApp} onDock={addPanel} onFavorite={toggleFavorite} favorites={favorites} />
+              </>
+            ) : (
+              <div className="sidebar-icons">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`sidebar-icon-btn${category === cat ? ' active' : ''}`}
+                    title={categoryLabel(cat)}
+                    aria-label={categoryLabel(cat)}
+                    onClick={() => { setCategory(cat); toggleSidebar(); }}
+                  >
+                    {CATEGORY_ICONS[cat]}
+                  </button>
+                ))}
+              </div>
             )}
-            {recentApps.length > 0 && (
-              <AppGroup
-                title="Recientes"
-                apps={recentApps}
-                onOpen={openApp}
-                onDock={addPanel}
-                onFavorite={toggleFavorite}
-                favorites={favorites}
-              />
-            )}
-            <AppGroup
-              title="Aplicaciones"
-              apps={visibleApps}
-              onOpen={openApp}
-              onDock={addPanel}
-              onFavorite={toggleFavorite}
-              favorites={favorites}
-            />
           </aside>
 
           <section className="workspace-host">
@@ -532,33 +573,68 @@ export function App() {
             />
           </section>
 
-          <aside className="workspace-inspector">
-            <section>
-              <h2>Workspace</h2>
-              <Metric label="Paneles" value={String(openPanelIds.length)} />
-              <Metric label="Modulos" value={String(allApps.length)} />
-              <Metric label="Protocolo" value="RWP" />
-            </section>
-            <section>
-              <h2>Abiertos</h2>
-              <div className="open-list">
+          <aside className={`workspace-inspector${inspectorExpanded ? '' : ' collapsed'}`}>
+            <button
+              className="inspector-toggle"
+              title={inspectorExpanded ? 'Colapsar inspector' : 'Expandir inspector'}
+              aria-label={inspectorExpanded ? 'Colapsar inspector' : 'Expandir inspector'}
+              onClick={toggleInspector}
+            >
+              {inspectorExpanded ? '›' : '‹'}
+            </button>
+
+            {inspectorExpanded ? (
+              <>
+                <section>
+                  <h2>Workspace</h2>
+                  <Metric label="Paneles" value={String(openPanelIds.length)} />
+                  <Metric label="Modulos" value={String(allApps.length)} />
+                  <Metric label="Protocolo" value="RWP" />
+                </section>
+                <section>
+                  <h2>Abiertos</h2>
+                  <div className="open-list">
+                    {openPanelIds.map((id) => {
+                      const app = registry.getById(id);
+                      if (!app) return null;
+                      return (
+                        <button key={id} onClick={() => dockApiRef.current?.getPanel(id)?.api.setActive()}>
+                          <span>{app.icon}</span>
+                          {app.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                <section>
+                  <h2>Canales</h2>
+                  <div className="channel-pill active"><span /> Tienda centro</div>
+                  <div className="channel-pill"><span /> Backoffice</div>
+                </section>
+              </>
+            ) : (
+              <div className="inspector-icons">
                 {openPanelIds.map((id) => {
                   const app = registry.getById(id);
                   if (!app) return null;
                   return (
-                    <button key={id} onClick={() => dockApiRef.current?.getPanel(id)?.api.setActive()}>
-                      <span>{app.icon}</span>
-                      {app.name}
+                    <button
+                      key={id}
+                      className="inspector-icon-btn"
+                      title={app.name}
+                      aria-label={app.name}
+                      onClick={() => dockApiRef.current?.getPanel(id)?.api.setActive()}
+                    >
+                      {app.icon}
                     </button>
                   );
                 })}
+                <div className="inspector-channel-dots">
+                  <div className="inspector-dot active" title="Tienda centro" />
+                  <div className="inspector-dot" title="Backoffice" />
+                </div>
               </div>
-            </section>
-            <section>
-              <h2>Canales</h2>
-              <div className="channel-pill active"><span /> Tienda centro</div>
-              <div className="channel-pill"><span /> Backoffice</div>
-            </section>
+            )}
           </aside>
         </main>
       </div>
@@ -810,6 +886,30 @@ function DetachedWorkspaceShell({ workspaceId, apps }: { workspaceId: string; ap
 
   useEffect(() => {
     return () => listenersRef.current.forEach((listener) => listener.dispose());
+  }, []);
+
+  // Mirror the main workspace logic: if virtual-terminal is already a panel
+  // in this detached workspace, focus it in place instead of spawning a new window.
+  // Seed the ref with the current sequence so the immediate subscribe replay is skipped —
+  // subscribe() calls the listener synchronously at registration time, before dockApiRef
+  // is populated, which would otherwise always trigger openApp on mount.
+  const terminalWindowOpenedSequenceRef = useRef(virtualTerminalSessionStore.getSnapshot().sequence);
+  useEffect(() => {
+    return virtualTerminalSessionStore.subscribe((session) => {
+      if (!session.order || !session.paymentId) return;
+      if (terminalWindowOpenedSequenceRef.current === session.sequence) return;
+      terminalWindowOpenedSequenceRef.current = session.sequence;
+
+      const existingPanel = dockApiRef.current?.getPanel('virtual-terminal');
+      if (existingPanel) {
+        existingPanel.api.setActive();
+      } else {
+        openApp('virtual-terminal', {
+          type: 'retail.payment.intent',
+          session,
+        } satisfies RetailIntentContext);
+      }
+    });
   }, []);
 
   return (

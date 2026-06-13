@@ -2,7 +2,7 @@
   "name": "retail-os",
   "version": "0.1.0",
   "private": true,
-  "description": "Retail OS — modular, offline-first Retail Operating System (POS-first, ERP-ready)",
+  "description": "Retail OS \u2014 modular, offline-first Retail Operating System (POS-first, ERP-ready)",
   "license": "UNLICENSED",
   "main": "apps/desktop-shell/out/main/main.js",
   "engines": {
@@ -16,7 +16,7 @@
       "esbuild"
     ]
   },
-    "scripts": {
+  "scripts": {
     "dev": "node tools/scripts/dev.mjs",
     "dev:pos:desktop": "node tools/scripts/dev.mjs --standalone=pos",
     "dev:pos": "vite --config apps/pos/vite.config.mts",
@@ -32,12 +32,21 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "graph": "nx graph",
-    "db:generate": "prisma generate --schema libs/data/db-postgres/prisma/schema.prisma"
+    "db:generate": "prisma generate --schema libs/data/db-postgres/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema libs/data/db-postgres/prisma/schema.prisma",
+    "db:push": "prisma db push --schema libs/data/db-postgres/prisma/schema.prisma",
+    "db:studio": "prisma studio --schema libs/data/db-postgres/prisma/schema.prisma",
+    "db:reset": "prisma migrate reset --schema libs/data/db-postgres/prisma/schema.prisma",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f postgres",
+    "dev:api": "DATABASE_URL=postgresql://retail:retail@localhost:5432/retail_os?schema=public tsx --tsconfig apps/api/tsconfig.json apps/api/src/main.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.22",
     "@nestjs/core": "^10.4.22",
     "@nestjs/platform-express": "^10.4.22",
+    "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.62.0",
     "better-sqlite3": "^11.7.0",
     "dockview": "^1.13.0",
@@ -65,7 +74,7 @@
     "eslint": "^8.57.1",
     "nx": "^22.7.0",
     "prettier": "^3.4.2",
-    "prisma": "^6.1.0",
+    "prisma": "^6.19.3",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vite-tsconfig-paths": "^5.1.4",

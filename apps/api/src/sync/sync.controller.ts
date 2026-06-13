@@ -16,7 +16,7 @@ export class SyncController {
   ingestSale(
     @Body() body: SaleIngestionRequest,
     @Headers('idempotency-key') idempotencyKey?: string,
-  ): SaleIngestionResponse {
+  ): Promise<SaleIngestionResponse> {
     return this.sync.ingest(body, idempotencyKey ?? body.idempotencyKey);
   }
 }
