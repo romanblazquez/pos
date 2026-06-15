@@ -1,5 +1,5 @@
 import { formatMoney } from '@retail-os/ui-react';
-import { useCart } from '../store/cart-store.js';
+import { useCart, type HeldCart } from '../store/cart-store.js';
 
 /**
  * CartPanel — the live cart with per-line quantity controls and the running
@@ -7,13 +7,16 @@ import { useCart } from '../store/cart-store.js';
  * Sale aggregate; every mutation bumps the store revision so totals stay exact.
  */
 export function CartPanel({ onCharge }: { onCharge: () => void }) {
-  // Subscribe to rev so this re-renders on every aggregate mutation.
   useCart((s) => s.rev);
   const sale = useCart((s) => s.sale);
+  const heldCarts = useCart((s) => s.heldCarts);
   const changeQty = useCart((s) => s.changeQty);
   const removeLine = useCart((s) => s.removeLine);
   const newSale = useCart((s) => s.newSale);
   const setCartDiscount = useCart((s) => s.setCartDiscount);
+  const holdCart = useCart((s) => s.holdCart);
+  const restoreHeld = useCart((s) => s.restoreHeld);
+  const discardHeld = useCart((s) => s.discardHeld);
 
   if (!sale) return null;
   const currency = sale.currency;
@@ -28,10 +31,35 @@ export function CartPanel({ onCharge }: { onCharge: () => void }) {
           <h2>Venta actual</h2>
           <span>{itemCount} articulos</span>
         </div>
-        <button className="link" onClick={newSale}>
-          Nueva
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            className="link"
+            onClick={holdCart}
+            disabled={sale.isEmpty}
+            title="Apartar venta y abrir nueva"
+          >
+            Apartar
+          </button>
+          <button className="link" onClick={newSale}>
+            Nueva
+          </button>
+        </div>
       </header>
+
+      {/* ── Held carts ── */}
+      {heldCarts.length > 0 && (
+        <div className="held-carts">
+          <span className="held-label">En espera</span>
+          {heldCarts.map((h) => (
+            <HeldCartChip
+              key={h.id}
+              cart={h}
+              onRestore={() => restoreHeld(h.id)}
+              onDiscard={() => discardHeld(h.id)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="lines">
         {sale.lines.length === 0 && <p className="empty">Carrito vacío</p>}
@@ -81,6 +109,35 @@ export function CartPanel({ onCharge }: { onCharge: () => void }) {
         Cobrar {fmt(sale.grandTotal.minorUnits)}
       </button>
     </aside>
+  );
+}
+
+function HeldCartChip({
+  cart,
+  onRestore,
+  onDiscard,
+}: {
+  cart: HeldCart;
+  onRestore: () => void;
+  onDiscard: () => void;
+}) {
+  const itemCount = cart.lines.reduce((s, l) => s + l.quantity, 0);
+  const total = cart.lines.reduce(
+    (s, l) => s + l.unitPriceMinorUnits * l.quantity - l.discountMinorUnits,
+    -cart.cartDiscountMinorUnits,
+  );
+  const fmt = (n: number) => formatMoney({ minorUnits: Math.max(0, n), currency: cart.currency });
+
+  return (
+    <div className="held-chip">
+      <button className="held-restore" onClick={onRestore} title="Recuperar venta">
+        <span className="held-time">{cart.label}</span>
+        <span className="held-meta">{itemCount} art · {fmt(total)}</span>
+      </button>
+      <button className="held-discard" onClick={onDiscard} title="Descartar venta apartada">
+        ×
+      </button>
+    </div>
   );
 }
 

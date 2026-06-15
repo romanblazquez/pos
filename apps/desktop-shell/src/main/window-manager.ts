@@ -16,7 +16,7 @@ export interface DetachedWorkspacePayload {
 }
 
 /** Secure defaults applied to every window (context isolation on, no nodeIntegration). */
-function secureWebPreferences(source: string, options: { webviewTag?: boolean } = {}) {
+function secureWebPreferences(source: string, options: { webviewTag?: boolean; partition?: string } = {}) {
   return {
     preload: PRELOAD,
     contextIsolation: true,
@@ -24,8 +24,11 @@ function secureWebPreferences(source: string, options: { webviewTag?: boolean } 
     sandbox: false,
     webviewTag: options.webviewTag ?? false,
     additionalArguments: [`--retail-source=${source}`],
+    ...(options.partition ? { partition: options.partition } : {}),
   };
 }
+
+const ODOO_PARTITION = 'persist:retail-odoo';
 
 function appendQuery(url: string, query: string): string {
   const hashIndex = url.indexOf('#');
@@ -89,13 +92,16 @@ export class WindowManager {
     const app = this.apps.find((candidate) => candidate.id === appId);
     if (!app) return;
 
+    // ERP/Odoo apps share a session partition so one login covers every module.
+    const partition = app.category === 'erp' ? ODOO_PARTITION : undefined;
+
     const win = new BrowserWindow({
       width: app.id === 'pos' ? 1180 : 980,
       height: app.id === 'pos' ? 800 : 700,
       title: `Retail OS — ${app.name}`,
       backgroundColor: '#0f1115',
       ...(this.icon ? { icon: this.icon } : {}),
-      webPreferences: secureWebPreferences(`app:${app.id}`),
+      webPreferences: secureWebPreferences(`app:${app.id}`, { partition }),
     });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     void win.loadURL(this.resolveStandaloneAppUrl(app, context));
@@ -151,6 +157,8 @@ export class WindowManager {
     const contextQuery =
       context === undefined ? '' : `&retailContext=${encodeURIComponent(JSON.stringify(context))}`;
     if (app.entryPoint.kind === 'url') {
+      // ERP apps load Odoo directly — no retail query params needed or wanted.
+      if (app.category === 'erp') return app.entryPoint.url;
       return appendQuery(
         app.entryPoint.url,
         `retailAppId=${encodeURIComponent(app.id)}&retailSource=${encodeURIComponent(`app:${app.id}`)}${contextQuery}`,

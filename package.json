@@ -38,9 +38,11 @@
     "db:push": "prisma db push --schema libs/data/db-postgres/prisma/schema.prisma",
     "db:studio": "prisma studio --schema libs/data/db-postgres/prisma/schema.prisma",
     "db:reset": "prisma migrate reset --schema libs/data/db-postgres/prisma/schema.prisma",
-    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
-    "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f postgres",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f odoo odoo-db",
+    "infra:ps": "docker compose ps",
+    "infra:reset": "docker compose down -v",
     "dev:api": "DATABASE_URL=postgresql://retail:retail@localhost:5432/retail_os?schema=public tsx --tsconfig apps/api/tsconfig.json apps/api/src/main.ts"
   },
   "dependencies": {

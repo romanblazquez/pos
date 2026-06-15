@@ -32,12 +32,14 @@ import 'dockview/dist/styles/dockview.css';
 import { SettingsPanel } from './settings/SettingsPanel.js';
 import { OnboardingWizard } from './onboarding/OnboardingWizard.js';
 import { VirtualTerminalPanel } from './virtual-terminal/VirtualTerminalPanel.js';
+import { InventoryPanel } from './inventory/InventoryPanel.js';
+import { ProductDetailPanel } from './inventory/ProductDetailPanel.js';
 import {
   virtualTerminalSessionStore,
   type VirtualTerminalSessionSnapshot,
 } from './virtual-terminal/session-store.js';
 
-type PanelParams = { appId: string };
+type PanelParams = { appId: string; productContext?: unknown };
 type ShellMode = 'workspace' | 'launcher';
 
 const SIDEBAR_KEY = 'retail-os.shell.sidebar.expanded.v1';
@@ -51,7 +53,7 @@ function applyTheme(theme: Theme) {
 }
 const CATEGORY_ICONS: Record<(typeof CATEGORIES)[number], string> = {
   all: '⊞', sales: '🛒', inventory: '📦', customers: '👤',
-  reporting: '📊', finance: '💰', channels: '🔌', administration: '⚙️',
+  reporting: '📊', finance: '💰', channels: '🔌', administration: '⚙️', erp: '◉',
 };
 
 const ONBOARDING_DONE_KEY = 'retail-os.onboarding.done';
@@ -77,7 +79,7 @@ const registry = new AppRegistry(appDirectory as AppMetadata[]);
 const WORKSPACE_KEY = 'retail-os.shell.workspace.v1';
 const FAVORITES_KEY = 'retail-os.shell.favorites.v1';
 const RECENTS_KEY = 'retail-os.shell.recents.v1';
-const CATEGORIES = ['all', 'sales', 'inventory', 'customers', 'reporting', 'finance', 'channels', 'administration'] as const;
+const CATEGORIES = ['all', 'sales', 'inventory', 'customers', 'reporting', 'finance', 'channels', 'administration', 'erp'] as const;
 
 const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = [
   { id: 'store-floor', name: 'Punto de Venta', appIds: ['pos', 'customers', 'inventory'] },
@@ -125,6 +127,7 @@ function categoryLabel(category: AppCategory | 'all'): string {
     administration: 'Admin',
     finance: 'Finanzas',
     channels: 'Canales',
+    erp: 'ERP / Odoo',
   };
   return labels[category];
 }
@@ -142,6 +145,8 @@ function appendQuery(url: string, query: string): string {
 
 function resolveAppUrl(app: AppMetadata): string {
   if (app.entryPoint.kind !== 'url') return '';
+  // ERP apps load Odoo directly — don't append retail-specific params Odoo ignores.
+  if (app.category === 'erp') return app.entryPoint.url;
   return appendQuery(
     app.entryPoint.url,
     `retailAppId=${encodeURIComponent(app.id)}&retailSource=${encodeURIComponent(`app:${app.id}`)}`,
@@ -784,7 +789,7 @@ function ModuleButton({
   onDock: (appId: string) => void;
   onFavorite: (appId: string) => void;
 }) {
-  const production = app.id === 'pos';
+  const production = app.status === 'ga';
   return (
     <div className={compact ? 'module-row' : 'module-card'}>
       <button className="module-open" onClick={() => onOpen(app.id)}>
@@ -832,6 +837,8 @@ function StandaloneAppShell({ app }: { app: AppMetadata | undefined }) {
     }
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
     if (app.id === 'settings') return <SettingsPanel />;
+    if (app.id === 'inventory') return <InventoryPanel />;
+    if (app.id === 'product-detail') return <ProductDetailPanel />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   };
 
@@ -977,7 +984,7 @@ function DetachedWorkspaceShell({ workspaceId, apps }: { workspaceId: string; ap
   );
 }
 
-function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
+function RetailAppPanel({ params, containerApi }: IDockviewPanelProps<PanelParams>) {
   const { apps, preloadPath } = useContext(WorkspaceContext);
   const app = apps.find((candidate) => candidate.id === params.appId);
 
@@ -989,11 +996,33 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
   if (app.entryPoint.kind === 'route') {
     if (app.id === 'settings') return <SettingsPanel />;
     if (app.id === 'virtual-terminal') return <VirtualTerminalPanel />;
+    if (app.id === 'inventory') {
+      const openInDock = (card: unknown) => {
+        const c = card as { id: string; name: string };
+        const existing = containerApi.getPanel('product-detail');
+        if (existing) {
+          existing.api.updateParameters({ appId: 'product-detail', productContext: card });
+          existing.api.setTitle(`🏷️ ${c.name}`);
+          existing.api.setActive();
+          return;
+        }
+        containerApi.addPanel<PanelParams>({
+          id: 'product-detail',
+          component: 'retail-app',
+          title: `🏷️ ${c.name}`,
+          params: { appId: 'product-detail', productContext: card },
+        });
+      };
+      return <InventoryPanel onProductOpen={openInDock} />;
+    }
+    if (app.id === 'product-detail') return <ProductDetailPanel context={params.productContext} />;
     return <PlaceholderPanel title={app.name} detail={app.description ?? app.category} app={app} />;
   }
 
   const src = resolveAppUrl(app);
   const preloadUrl = preloadPath ? `file://${preloadPath}` : undefined;
+  // All ERP/Odoo apps share one session partition so a single login covers all modules.
+  const partition = app.category === 'erp' ? 'persist:retail-odoo' : `persist:retail-${app.id}`;
 
   return (
     <div className="embedded-panel">
@@ -1001,8 +1030,8 @@ function RetailAppPanel({ params }: IDockviewPanelProps<PanelParams>) {
         <webview
           src={src}
           preload={preloadUrl}
-          partition={`persist:retail-${app.id}`}
-          allowpopups="false"
+          partition={partition}
+          allowpopups={false}
           style={{ width: '100%', height: '100%', border: 'none' } as CSSProperties}
         />
       ) : (

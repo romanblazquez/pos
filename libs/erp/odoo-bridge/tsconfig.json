@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../../dist/libs/erp/odoo-bridge",
+    "lib": ["ES2022"]
+  },
+  "include": ["src/**/*.ts"]
+}

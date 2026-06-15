@@ -52,6 +52,9 @@
       "@retail-os/shared-types": ["libs/shared/shared-types/src/index.ts"],
       "@retail-os/observability": ["libs/shared/observability/src/index.ts"],
       "@retail-os/ui-react": ["libs/shared/ui-react/src/index.ts"],
+      "@retail-os/erp-core": ["libs/erp/erp-core/src/index.ts"],
+      "@retail-os/erp-platform": ["libs/erp/erp-platform/src/index.ts"],
+      "@retail-os/odoo-bridge": ["libs/erp/odoo-bridge/src/index.ts"],
       "@config/*": ["config/*"]
     }
   },

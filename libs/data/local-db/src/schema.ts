@@ -16,18 +16,26 @@ PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS products (
-  id            TEXT PRIMARY KEY,
-  sku           TEXT NOT NULL,
-  name          TEXT NOT NULL,
-  barcode       TEXT,
-  category      TEXT NOT NULL,
-  price_minor   INTEGER NOT NULL,
-  currency      TEXT NOT NULL,
-  tax_rate      REAL NOT NULL,
-  track_inv     INTEGER NOT NULL DEFAULT 1,
-  active        INTEGER NOT NULL DEFAULT 1
+  id                  TEXT PRIMARY KEY,
+  sku                 TEXT NOT NULL,
+  name                TEXT NOT NULL,
+  barcode             TEXT,
+  category            TEXT NOT NULL,
+  price_minor         INTEGER NOT NULL,
+  currency            TEXT NOT NULL,
+  tax_rate            REAL NOT NULL,
+  track_inv           INTEGER NOT NULL DEFAULT 1,
+  active              INTEGER NOT NULL DEFAULT 1,
+  -- Variant support: products sharing a template_id are variants of the same item.
+  template_id         TEXT,
+  variant_description TEXT,
+  image_url           TEXT,
+  -- Stock: populated for Tiendanube; Odoo stock comes via real-time events.
+  stock_on_hand       INTEGER,
+  stock_locations     TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_products_template ON products(template_id);
 
 CREATE TABLE IF NOT EXISTS sales (
   id            TEXT PRIMARY KEY,
@@ -55,6 +63,24 @@ CREATE TABLE IF NOT EXISTS outbox (
   status        TEXT NOT NULL DEFAULT 'pending'  -- pending | synced | failed
 );
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox(status, next_attempt_at);
+
+-- Durable ERP export queue. A sale and its ERP export request are committed in
+-- the same SQLite transaction; provider adapters apply the remote effect
+-- idempotently and update this row after success.
+CREATE TABLE IF NOT EXISTS erp_sale_exports (
+  sale_id         TEXT PRIMARY KEY,
+  source          TEXT NOT NULL,
+  payload         TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'pending', -- pending | failed | synced
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at TEXT NOT NULL,
+  last_error      TEXT,
+  erp_order_id    TEXT,
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_erp_sale_exports_due
+  ON erp_sale_exports(source, status, next_attempt_at);
 
 CREATE TABLE IF NOT EXISTS saga_log (
   saga_id       TEXT PRIMARY KEY,

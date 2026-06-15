@@ -4,6 +4,7 @@
     "name": "Punto de Venta",
     "version": "0.1.0",
     "icon": "🛒",
+    "status": "ga",
     "permissions": ["sales.create"],
     "category": "sales",
     "entryPoint": { "kind": "url", "url": "http://localhost:4200", "devPort": 4200 },
@@ -16,10 +17,27 @@
     "description": "Cobro rápido, offline-first, con pagos Mercado Pago Point y CoDi."
   },
   {
+    "id": "inventory",
+    "name": "Inventario",
+    "version": "0.1.0",
+    "icon": "📦",
+    "status": "ga",
+    "permissions": ["inventory.view"],
+    "category": "inventory",
+    "entryPoint": { "kind": "route", "path": "/inventory" },
+    "capabilities": {
+      "subscribes": ["erp.inventory.updated", "erp.catalog.synced"],
+      "publishes": [],
+      "raisesIntents": ["SyncInventory", "ImportCatalog"]
+    },
+    "description": "Stock en tiempo real desde Odoo via EWP — niveles por ubicación, alertas y sincronización."
+  },
+  {
     "id": "virtual-terminal",
     "name": "Terminal Virtual MP",
     "version": "0.1.0",
     "icon": "🖥️",
+    "status": "ga",
     "permissions": [],
     "category": "sales",
     "entryPoint": { "kind": "route", "path": "/virtual-terminal" },
@@ -34,6 +52,7 @@
     "name": "Configuración",
     "version": "0.1.0",
     "icon": "⚙️",
+    "status": "ga",
     "permissions": ["admin.manage"],
     "category": "administration",
     "entryPoint": { "kind": "route", "path": "/settings" },
@@ -46,43 +65,179 @@
     "description": "Proveedores de pago, hardware, impuestos, usuarios y herramientas de desarrollo."
   },
   {
-    "id": "inventory",
-    "name": "Inventario",
-    "version": "0.0.0",
-    "icon": "📦",
+    "id": "odoo",
+    "name": "Odoo ERP",
+    "version": "19.0",
+    "icon": "◉",
+    "status": "ga",
+    "permissions": ["admin.manage"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo", "devPort": 8069 },
+    "capabilities": {
+      "publishes": ["erp.catalog.synced", "erp.inventory.updated", "erp.connection.changed"],
+      "subscribes": [],
+      "raisesIntents": [],
+      "handlesIntents": ["ImportCatalog", "SyncInventory", "SyncCustomers", "ExportSale", "ViewErpRecord", "FullErpSync"]
+    },
+    "description": "Suite Odoo 19 completa — acceso al dashboard principal."
+  },
+  {
+    "id": "odoo-inventory",
+    "name": "Odoo Inventario",
+    "version": "19.0",
+    "icon": "🏭",
+    "status": "ga",
+    "permissions": ["inventory.view"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/inventory", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": ["erp.inventory.updated"],
+      "publishes": [],
+      "raisesIntents": ["SyncInventory"]
+    },
+    "description": "Almacén, movimientos de stock, recepciones y envíos en Odoo."
+  },
+  {
+    "id": "odoo-sales",
+    "name": "Odoo Ventas",
+    "version": "19.0",
+    "icon": "💰",
+    "status": "ga",
+    "permissions": ["sales.view"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/sales", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": ["erp.sale.exported"],
+      "publishes": []
+    },
+    "description": "Pedidos de venta, presupuestos y facturación en Odoo."
+  },
+  {
+    "id": "odoo-purchase",
+    "name": "Odoo Compras",
+    "version": "19.0",
+    "icon": "🛍️",
+    "status": "ga",
+    "permissions": ["admin.manage"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/purchase", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Órdenes de compra y proveedores en Odoo."
+  },
+  {
+    "id": "odoo-crm",
+    "name": "Odoo CRM",
+    "version": "19.0",
+    "icon": "🤝",
+    "status": "ga",
+    "permissions": ["customers.view"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/crm", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Pipeline de clientes potenciales y oportunidades de venta."
+  },
+  {
+    "id": "odoo-accounting",
+    "name": "Odoo Contabilidad",
+    "version": "19.0",
+    "icon": "📒",
+    "status": "ga",
+    "permissions": ["admin.manage"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/accounting", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Facturas, pagos, conciliación bancaria y reportes fiscales."
+  },
+  {
+    "id": "odoo-pos",
+    "name": "Odoo Punto de Venta",
+    "version": "19.0",
+    "icon": "🖨️",
+    "status": "ga",
+    "permissions": ["sales.create"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/point-of-sale", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "POS nativo de Odoo — sesiones y reportes de caja."
+  },
+  {
+    "id": "odoo-manufacturing",
+    "name": "Odoo Manufactura",
+    "version": "19.0",
+    "icon": "⚙️",
+    "status": "ga",
+    "permissions": ["admin.manage"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/manufacturing", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Órdenes de producción, listas de materiales y rutas."
+  },
+  {
+    "id": "odoo-contacts",
+    "name": "Odoo Contactos",
+    "version": "19.0",
+    "icon": "👤",
+    "status": "ga",
+    "permissions": ["customers.view"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/contacts", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Clientes, proveedores y contactos del directorio."
+  },
+  {
+    "id": "odoo-project",
+    "name": "Odoo Proyectos",
+    "version": "19.0",
+    "icon": "📋",
+    "status": "ga",
+    "permissions": ["admin.manage"],
+    "category": "erp",
+    "entryPoint": { "kind": "url", "url": "http://localhost:8069/odoo/project", "devPort": 8069 },
+    "capabilities": {
+      "subscribes": [],
+      "publishes": []
+    },
+    "description": "Tareas, hitos y seguimiento de proyectos."
+  },
+  {
+    "id": "product-detail",
+    "name": "Detalle de Producto",
+    "version": "0.1.0",
+    "icon": "🏷️",
+    "status": "ga",
     "permissions": ["inventory.view"],
     "category": "inventory",
-    "entryPoint": { "kind": "route", "path": "/inventory" },
-    "capabilities": {},
-    "description": "Stock multi-tienda, ajustes y alertas. (Próximamente)"
-  },
-  {
-    "id": "customers",
-    "name": "Clientes / CRM",
-    "version": "0.0.0",
-    "icon": "👥",
-    "permissions": ["customers.view"],
-    "category": "customers",
-    "entryPoint": { "kind": "route", "path": "/customers" },
-    "capabilities": {},
-    "description": "Perfiles, lealtad y segmentos. (Próximamente)"
-  },
-  {
-    "id": "reports",
-    "name": "Reportes",
-    "version": "0.0.0",
-    "icon": "📊",
-    "permissions": ["reports.view"],
-    "category": "reporting",
-    "entryPoint": { "kind": "route", "path": "/reports" },
-    "capabilities": {},
-    "description": "Ventas del día, cortes de caja y desglose de pagos. (Próximamente)"
+    "entryPoint": { "kind": "route", "path": "/product-detail" },
+    "capabilities": {
+      "publishes": [],
+      "subscribes": []
+    },
+    "description": "Vista de detalle de un producto — variantes, stock e imágenes."
   },
   {
     "id": "customer-display",
     "name": "Pantalla Cliente",
     "version": "0.1.0",
     "icon": "🖥",
+    "status": "ga",
     "permissions": [],
     "category": "sales",
     "entryPoint": { "kind": "url", "url": "http://localhost:4201", "devPort": 4201 },
@@ -91,5 +246,29 @@
       "subscribes": ["rwp.cart.updated", "rwp.payment.screen", "rwp.payment.completed", "rwp.checkout.failed", "rwp.sale.committed"]
     },
     "description": "Segunda pantalla orientada al cliente — muestra la compra en tiempo real, QR de pago CoDi y confirmaciones."
+  },
+  {
+    "id": "customers",
+    "name": "Clientes / CRM",
+    "version": "0.0.0",
+    "icon": "👥",
+    "status": "roadmap",
+    "permissions": ["customers.view"],
+    "category": "customers",
+    "entryPoint": { "kind": "route", "path": "/customers" },
+    "capabilities": {},
+    "description": "Perfiles, lealtad y segmentos."
+  },
+  {
+    "id": "reports",
+    "name": "Reportes",
+    "version": "0.0.0",
+    "icon": "📊",
+    "status": "roadmap",
+    "permissions": ["reports.view"],
+    "category": "reporting",
+    "entryPoint": { "kind": "route", "path": "/reports" },
+    "capabilities": {},
+    "description": "Ventas del día, cortes de caja y desglose de pagos."
   }
 ]

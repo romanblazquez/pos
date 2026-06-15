@@ -93,9 +93,16 @@ contextBridge.exposeInMainWorld('retailShell', {
 contextBridge.exposeInMainWorld('retailIntegrations', {
   tiendanubeConnect: (appId: string, clientSecret: string) =>
     ipcRenderer.invoke('retail:tiendanube:connect', appId, clientSecret),
+  tiendanubeConnectDirect: (storeId: string, accessToken: string) =>
+    ipcRenderer.invoke('retail:tiendanube:connectDirect', storeId, accessToken),
   tiendanubeSync: () => ipcRenderer.invoke('retail:tiendanube:sync'),
   tiendanubeDisconnect: () => ipcRenderer.invoke('retail:tiendanube:disconnect'),
   tiendanubeState: () => ipcRenderer.invoke('retail:tiendanube:state'),
+  tiendanubeOnCatalogUpdated: (handler: (payload: unknown) => void) => {
+    const listener = (_e: unknown, payload: unknown) => handler(payload);
+    ipcRenderer.on('tiendanube:catalogUpdated', listener);
+    return () => ipcRenderer.removeListener('tiendanube:catalogUpdated', listener);
+  },
   mercadopagoConnect: (clientId: string, clientSecret: string) =>
     ipcRenderer.invoke('retail:mercadopago:connect', clientId, clientSecret),
   mercadopagoConnectDev: (accessToken: string) =>
@@ -103,6 +110,30 @@ contextBridge.exposeInMainWorld('retailIntegrations', {
   mercadopagoDisconnect: () => ipcRenderer.invoke('retail:mercadopago:disconnect'),
   mercadopagoDiscoverTerminals: () => ipcRenderer.invoke('retail:mercadopago:discoverTerminals'),
   mercadopagoState: () => ipcRenderer.invoke('retail:mercadopago:state'),
+});
+
+contextBridge.exposeInMainWorld('retailOdoo', {
+  fetchImage: (url: string) => ipcRenderer.invoke('retail:odoo:fetchImage', url),
+  connect: (config: unknown) => ipcRenderer.invoke('retail:odoo:connect', config),
+  disconnect: () => ipcRenderer.invoke('retail:odoo:disconnect'),
+  getState: () => ipcRenderer.invoke('retail:odoo:state'),
+  syncCatalog: () => ipcRenderer.invoke('retail:odoo:syncCatalog'),
+  syncInventory: () => ipcRenderer.invoke('retail:odoo:syncInventory'),
+  onStateChanged: (handler: (state: unknown) => void) => {
+    const listener = (_e: unknown, state: unknown) => handler(state);
+    ipcRenderer.on('odoo:stateChanged', listener);
+    return () => ipcRenderer.removeListener('odoo:stateChanged', listener);
+  },
+  onInventoryUpdated: (handler: (payload: unknown) => void) => {
+    const listener = (_e: unknown, payload: unknown) => handler(payload);
+    ipcRenderer.on('odoo:inventoryUpdated', listener);
+    return () => ipcRenderer.removeListener('odoo:inventoryUpdated', listener);
+  },
+  onCatalogSynced: (handler: (payload: unknown) => void) => {
+    const listener = (_e: unknown, payload: unknown) => handler(payload);
+    ipcRenderer.on('odoo:catalogSynced', listener);
+    return () => ipcRenderer.removeListener('odoo:catalogSynced', listener);
+  },
 });
 
 contextBridge.exposeInMainWorld('retailEnv', { inShell: true, appId: source });

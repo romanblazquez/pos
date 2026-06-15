@@ -57,6 +57,7 @@ export interface CartLineDTO {
   quantity: number;
   unitPrice: MoneyDTO;
   lineTotal: MoneyDTO;
+  imageUrl?: string;
 }
 
 /** Published on every cart mutation (add/remove/qty change/discount) */

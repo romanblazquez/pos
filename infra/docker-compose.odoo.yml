@@ -1,0 +1,87 @@
+# Legacy compatibility wrapper for the root Odoo ERP stack.
+#
+# Prefer running `docker compose up -d` from the repository root. This file is
+# retained for existing scripts and uses the same initialization behavior.
+#
+# Usage:
+#   docker compose -f infra/docker-compose.odoo.yml up -d
+#   docker compose -f infra/docker-compose.odoo.yml logs -f odoo
+#   docker compose -f infra/docker-compose.odoo.yml down
+#   docker compose -f infra/docker-compose.odoo.yml down -v   # DESTRUCTIVE
+#
+# First boot: browse http://localhost:8069 and create a database.
+# Recommended modules to install: Inventory, Sales, Contacts, Point of Sale.
+#
+# Environment variables (set in .env or export before running):
+#   ODOO_MASTER_PASSWORD   — Odoo master (admin) password  (default: retail-master)
+#   ODOO_PORT              — host port for Odoo web UI      (default: 8069)
+#   ODOO_POSTGRES_USER     — postgres user for Odoo DB      (default: odoo)
+#   ODOO_POSTGRES_PASSWORD — postgres password for Odoo DB  (default: odoo)
+#   ODOO_POSTGRES_DB       — initial database name          (default: odoo)
+
+services:
+  odoo-db:
+    image: postgres:15-alpine
+    container_name: retail-os-odoo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${ODOO_POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${ODOO_POSTGRES_PASSWORD:-odoo}
+      POSTGRES_DB: ${ODOO_POSTGRES_ADMIN_DB:-postgres}
+    volumes:
+      - odoo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${ODOO_POSTGRES_USER:-odoo} -d ${ODOO_POSTGRES_ADMIN_DB:-postgres}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - odoo-net
+
+  odoo:
+    image: odoo:17.0
+    container_name: retail-os-odoo
+    restart: unless-stopped
+    depends_on:
+      odoo-db:
+        condition: service_healthy
+    ports:
+      - '${ODOO_PORT:-8069}:8069'
+      # Long-polling port for Odoo bus (real-time notifications)
+      - '8072:8072'
+    environment:
+      HOST: odoo-db
+      PORT: 5432
+      USER: ${ODOO_POSTGRES_USER:-odoo}
+      PASSWORD: ${ODOO_POSTGRES_PASSWORD:-odoo}
+    command:
+      - --
+      - --database=${ODOO_DATABASE:-odoo}
+      - --db-filter=^${ODOO_DATABASE:-odoo}$
+      - --init=${ODOO_INIT_MODULES:-base,web,base_setup,contacts,calendar,crm,sale_management,point_of_sale,stock,stock_account,purchase,account,project,hr,hr_attendance,hr_expense,hr_holidays,hr_recruitment,hr_skills,fleet,maintenance,mrp,repair,website,website_sale,website_blog,website_event,event,survey,mass_mailing,lunch}
+      - --without-demo=all
+      - --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ./odoo/addons:/mnt/extra-addons
+      - ./odoo/odoo.conf:/etc/odoo/odoo.conf:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'python3 -c "import urllib.request; urllib.request.urlopen(''http://localhost:8069/web/health'', timeout=3)"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - odoo-net
+
+volumes:
+  odoo_pg:
+  odoo_data:
+
+networks:
+  odoo-net:
+    driver: bridge

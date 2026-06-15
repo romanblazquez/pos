@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { RwpBroker } from '@retail-os/rwp-electron-adapter';
 import { setupSecurity } from './security.js';
 import { LocalStore } from './local-store.js';
+import { OdooSync, setupOdooWebviewSession } from './odoo-sync.js';
 import { registerIpc } from './ipc.js';
 import { WindowManager } from './window-manager.js';
 import type { DetachedWorkspacePayload } from './window-manager.js';
@@ -42,6 +43,7 @@ let currentTheme: 'dark' | 'light' = 'dark';
 app.whenReady().then(() => {
   currentTheme = loadPersistedTheme();
   setupSecurity();
+  setupOdooWebviewSession();
 
   const manifest = ShellAssetsLoader.load(MANIFEST_PATH, app.getVersion());
 
@@ -54,7 +56,9 @@ app.whenReady().then(() => {
   store.startSync();
 
   const broker = new RwpBroker();
-  registerIpc(store, broker);
+  const odoo = new OdooSync(store.products, store.db, broker);
+  registerIpc(store, broker, odoo);
+  void odoo.connectSaved();
 
   const windows = new WindowManager(appDirectory as AppMetadata[], manifest);
   ipcMain.handle('shell:openApp', (_e, appId: string, context?: unknown) => windows.openApp(appId, context));

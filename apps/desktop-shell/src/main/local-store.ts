@@ -10,7 +10,6 @@ import {
 import { SyncEngine, InMemorySyncTarget } from '@retail-os/sync-engine';
 import type { ProductSnapshot } from '@retail-os/catalog';
 import type { SaleSnapshot } from '@retail-os/sales';
-import seedProducts from '@config/seed-products.json';
 import { TiendanubeSync } from './tiendanube-sync.js';
 import { MercadoPagoSync } from './mercadopago-sync.js';
 
@@ -65,11 +64,6 @@ export class LocalStore {
       storeId: this.terminal.storeId,
     });
 
-    // Re-seed demo products. Delete only seed-prefixed products so Tiendanube
-    // imports (tn-*) are preserved across restarts.
-    this.db.exec("DELETE FROM products WHERE id LIKE 'p-%'");
-    this.products.upsertMany(seedProducts as ProductSnapshot[]);
-
     // In-memory sync target for the offline demo: sales "ship" locally and the
     // queue drains. Swap for `new HttpSyncTarget(apiBaseUrl)` to sync to NestJS.
     this.engine = new SyncEngine(this.outbox, this.sales, new InMemorySyncTarget(), {
@@ -89,6 +83,7 @@ export class LocalStore {
   /** Persist a committed sale + enqueue its sync outbox row atomically. */
   commitSale(snapshot: SaleSnapshot): { ok: boolean } {
     const tx = this.db.transaction((snap: SaleSnapshot) => {
+      const now = new Date().toISOString();
       this.sales.insert({
         id: snap.saleId,
         status: snap.status,
@@ -106,6 +101,11 @@ export class LocalStore {
         correlationId: snap.saleId,
         payload: snap,
       });
+      this.db.prepare(
+        `INSERT OR IGNORE INTO erp_sale_exports
+          (sale_id, source, payload, status, attempts, next_attempt_at, created_at, updated_at)
+         VALUES (?, 'odoo', ?, 'pending', 0, ?, ?, ?)`,
+      ).run(snap.saleId, JSON.stringify(snap), now, now, now);
     });
     tx(snapshot);
     void this.engine.runOnce();

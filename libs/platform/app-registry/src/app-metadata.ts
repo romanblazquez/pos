@@ -13,7 +13,7 @@ export interface AppMetadata {
   category: AppCategory;
   /** How the shell opens it: a dev URL (React/Angular app) or an internal route. */
   entryPoint: { kind: 'url'; url: string; devPort?: number } | { kind: 'route'; path: string };
-  /** Declared RWP capabilities for wiring and the interop graph. */
+  /** Declared RWP/EWP capabilities for wiring and the interop graph. */
   capabilities: {
     publishes?: string[];
     subscribes?: string[];
@@ -21,6 +21,13 @@ export interface AppMetadata {
     handlesIntents?: string[];
   };
   description?: string;
+  /**
+   * Release status — controls Launcher tile state and sidebar badge.
+   * 'ga' = generally available (clickable, no badge)
+   * 'beta' = available but labelled Beta
+   * 'roadmap' = placeholder, not yet launchable
+   */
+  status?: 'ga' | 'beta' | 'roadmap';
 }
 
 export type AppCategory =
@@ -30,4 +37,5 @@ export type AppCategory =
   | 'reporting'
   | 'administration'
   | 'finance'
-  | 'channels';
+  | 'channels'
+  | 'erp';

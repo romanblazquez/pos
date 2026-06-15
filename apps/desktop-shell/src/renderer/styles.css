@@ -1,3 +1,32 @@
+@import 'tailwindcss';
+@source "../../../../libs/shared/ui-react/src";
+
+/* ── Map CSS design tokens → Tailwind utilities ──────────────────── */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--panel-2);
+  --color-border: var(--line);
+  --color-ring: var(--accent);
+  --color-destructive: var(--danger);
+  --color-bg:      var(--bg);
+  --color-panel:   var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-3: var(--panel-3);
+  --color-surface: var(--surface);
+  --color-line:    var(--line);
+  --color-text:    var(--text);
+  --color-muted:   var(--muted);
+  --color-soft:    var(--soft);
+  --color-accent:  var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-ok:      var(--ok);
+  --color-warn:    var(--warn);
+  --color-danger:  var(--danger);
+}
+
 /* ── Dark theme (default) ─────────────────────────────────────────── */
 :root {
   --bg: #111110;
@@ -11,6 +40,7 @@
   --soft: #d5d0c6;
   --accent: #00a884;
   --accent-2: #008f74;
+  --ok: #2fbf71;
   --warn: #d69b2d;
   --danger: #d85c51;
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
@@ -30,6 +60,7 @@
   --soft: #3d3a34;
   --accent: #00a884;
   --accent-2: #008f74;
+  --ok: #22a65a;
   --warn: #c47d00;
   --danger: #c0392b;
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.10);

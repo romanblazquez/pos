@@ -1,4 +1,6 @@
 import type { AppMetadata } from '@retail-os/app-registry';
+import type { ErpInventoryUpdatedPayload, ErpCatalogSyncedPayload } from '@retail-os/erp-core';
+import type { ProductSnapshot } from '@retail-os/catalog';
 
 export interface DetachedWorkspacePayload {
   id: string;
@@ -10,9 +12,46 @@ export interface DetachedWorkspacePayload {
   targetY?: number;
 }
 
+export interface OdooBridgeState {
+  status: 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error';
+  url: string | null;
+  database: string | null;
+  version: string | null;
+  catalogSource: 'odoo' | 'retail';
+  catalogProductCount: number;
+  pendingSaleExports: number;
+  failedSaleExports: number;
+  lastSyncAt: string | null;
+  error: string | null;
+}
+
+export interface OdooBridgeConfig {
+  url: string;
+  database: string;
+  username: string;
+  password: string;
+  pollIntervalMs: number;
+  warehouseId?: number;
+  catalogSource?: 'odoo' | 'retail';
+}
+
 /** Shell control surface exposed by the preload (`window.retailShell`). */
 declare global {
   interface Window {
+    retailOdoo?: {
+      fetchImage(url: string): Promise<string | null>;
+      connect(config: OdooBridgeConfig): Promise<OdooBridgeState>;
+      disconnect(): Promise<OdooBridgeState>;
+      getState(): Promise<OdooBridgeState>;
+      syncCatalog(): Promise<OdooBridgeState>;
+      syncInventory(): Promise<OdooBridgeState>;
+      onStateChanged(handler: (state: OdooBridgeState) => void): () => void;
+      onInventoryUpdated(handler: (payload: ErpInventoryUpdatedPayload) => void): () => void;
+      onCatalogSynced(handler: (payload: ErpCatalogSyncedPayload) => void): () => void;
+    };
+    retailData?: {
+      listProducts(): Promise<ProductSnapshot[]>;
+    };
     retailShell?: {
       openApp(appId: string, context?: unknown): Promise<void>;
       getPreloadPath(): Promise<string>;

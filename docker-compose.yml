@@ -1,0 +1,89 @@
+# Retail OS — Odoo ERP stack
+#
+# Mirrors the official Odoo Docker quick-start pattern:
+#   https://hub.docker.com/_/odoo
+#
+# ── First run ─────────────────────────────────────────────────────────────────
+#   docker compose up -d
+#
+#   Open http://localhost:8069 → database manager → create database:
+#     Master password : retail-master
+#     Database name   : odoo
+#     Email           : admin@example.com
+#     Password        : (choose your admin password)
+#     Language        : Spanish (Mexico)
+#     Country         : Mexico
+#     ☐ Demo data
+#
+#   Then install modules via Apps menu (only install what you need):
+#     ✅ Contactos       → customer sync
+#     ✅ Inventario      → live stock levels per location
+#     ✅ Ventas          → export POS sales as sale.order
+#     ✅ Compras         → purchase orders (optional)
+#     ✅ Contabilidad    → invoicing (optional)
+#     ✅ Punto de Venta  → Odoo native POS reports (optional)
+#
+# ── Retail OS ↔ Odoo integration ──────────────────────────────────────────────
+#   Settings → Integraciones → Odoo ERP → Conectar
+#     URL      : http://localhost:8069
+#     Database : odoo
+#     User     : admin
+#     Password : (your admin password)
+#
+#   Modules each connection feature needs:
+#     contacts        → res.partner  (customer list)
+#     stock           → stock.quant  (inventory per location)
+#     sale_management → sale.order   (export completed sales)
+#     product         → auto-pulled as dependency of stock + sale
+#
+# ── Day-to-day ────────────────────────────────────────────────────────────────
+#   docker compose up -d        start
+#   docker compose stop         stop (volumes preserved)
+#   docker compose start        restart
+#   docker compose logs -f odoo follow logs
+#   docker compose down         stop + remove containers (volumes preserved)
+#   docker compose down -v      FULL RESET — deletes all data
+#
+name: retail-os
+
+services:
+  db:
+    image: postgres:15
+    container_name: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${ODOO_DB_USER:-odoo}
+      POSTGRES_PASSWORD: ${ODOO_DB_PASSWORD:-odoo}
+      POSTGRES_DB: postgres
+    volumes:
+      - odoo-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ODOO_DB_USER:-odoo}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  odoo:
+    image: odoo
+    container_name: odoo
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db:db
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+      - "${ODOO_LONGPOLLING_PORT:-8072}:8072"
+    volumes:
+      - odoo-data:/var/lib/odoo
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8069/web/health', timeout=5)\""]
+      interval: 15s
+      timeout: 6s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  odoo-db:
+  odoo-data:
