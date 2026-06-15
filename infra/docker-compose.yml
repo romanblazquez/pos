@@ -53,17 +53,38 @@ services:
     volumes:
       - ./backups:/backups
 
-  # Redis — BullMQ queues for async jobs (CFDI, TN write-back, reports).
-  # Uncomment when implementing the job queue milestone.
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: retail-os-redis
-  #   restart: unless-stopped
-  #   ports:
-  #     - '6379:6379'
-  #   volumes:
-  #     - retail_redis:/var/lib/redis/data
-  #   command: redis-server --save 60 1 --loglevel warning
+  redis:
+    image: redis:7-alpine
+    container_name: retail-os-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - retail_redis:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Typesense — fast full-text search for marketplace product/listing search.
+  # typesense/typesense publishes multi-arch images (amd64 + arm64),
+  # so this works on both Raspberry Pi 4/5 and x86_64 without any flags.
+  typesense:
+    image: typesense/typesense:27.1
+    container_name: retail-os-typesense
+    restart: unless-stopped
+    ports:
+      - '${TYPESENSE_PORT:-8108}:8108'
+    volumes:
+      - retail_typesense:/data
+    command: '--data-dir /data --api-key ${TYPESENSE_API_KEY:-dev-typesense-key} --enable-cors'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:8108/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # OpenTelemetry collector. Uncomment when wiring observability.
   # otel-collector:
@@ -72,4 +93,5 @@ services:
 
 volumes:
   retail_pg:
-  # retail_redis:
+  retail_redis:
+  retail_typesense:

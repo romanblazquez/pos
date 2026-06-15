@@ -1,0 +1,21 @@
+{
+  "name": "seller-portal",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/seller-portal/src",
+  "projectType": "application",
+  "tags": ["type:app", "scope:seller"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": { "command": "vite --config apps/seller-portal/vite.config.mts" }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": { "command": "vite build --config apps/seller-portal/vite.config.mts" }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "apps/seller-portal" }
+    }
+  }
+}

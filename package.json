@@ -43,7 +43,13 @@
     "infra:logs": "docker compose logs -f odoo odoo-db",
     "infra:ps": "docker compose ps",
     "infra:reset": "docker compose down -v",
-    "dev:api": "DATABASE_URL=postgresql://retail:retail@localhost:5432/retail_os?schema=public tsx --tsconfig apps/api/tsconfig.json apps/api/src/main.ts"
+    "dev:api": "DATABASE_URL=postgresql://retail:retail@localhost:5432/retail_os?schema=public tsx --tsconfig apps/api/tsconfig.json apps/api/src/main.ts",
+    "dev:web": "concurrently --kill-others-on-fail --names api,market,seller,admin --prefix-colors cyan,green,yellow,magenta \"pnpm dev:api\" \"pnpm dev:marketplace\" \"pnpm dev:seller-portal\" \"pnpm dev:admin\"",
+    "dev:marketplace": "vite --config apps/marketplace/vite.config.mts",
+    "dev:seller-portal": "vite --config apps/seller-portal/vite.config.mts",
+    "dev:admin": "vite --config apps/admin-console/vite.config.mts",
+    "build:marketplace": "vite build --config apps/marketplace/vite.config.mts",
+    "build:seller-portal": "vite build --config apps/seller-portal/vite.config.mts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.22",
@@ -53,6 +59,7 @@
     "@tanstack/react-query": "^5.62.0",
     "better-sqlite3": "^11.7.0",
     "dockview": "^1.13.0",
+    "fast-xml-parser": "^5.9.0",
     "nanoid": "^5.0.9",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
@@ -60,6 +67,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.8.0",
+    "typesense": "^3.0.6",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
@@ -81,6 +89,7 @@
     "prettier": "^3.4.2",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vite-tsconfig-paths": "^5.1.4",

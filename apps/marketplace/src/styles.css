@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-surface: 250 249 247;
+    --color-surface-raised: 255 255 255;
+    --color-border: 229 225 218;
+    --color-accent: 34 85 54;       /* forest green */
+    --color-accent-light: 220 240 228;
+    --color-text: 28 25 23;
+    --color-text-muted: 120 113 108;
+    --color-in-stock: 21 128 61;
+    --color-low-stock: 202 138 4;
+    --color-out-of-stock: 185 28 28;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: rgb(var(--color-surface));
+    color: rgb(var(--color-text));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

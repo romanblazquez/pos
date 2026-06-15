@@ -7,11 +7,21 @@ import { PaymentsController } from './payments/payments.controller.js';
 import { MpOAuthService } from './payments/mp-oauth.service.js';
 import { OnboardingController } from './onboarding/onboarding.controller.js';
 import { CatalogModule } from './catalog/catalog.module.js';
+import { SearchModule } from './search/search.module.js';
+import { MarketplaceModule } from './marketplace/marketplace.module.js';
+import { MktCatalogModule } from './mkt-catalog/mkt-catalog.module.js';
+import { SellersModule } from './sellers/sellers.module.js';
+import { ConnectorsModule } from './connectors/connectors.module.js';
 
 @Module({
   imports: [
-    PrismaModule, // global — PrismaService available in all feature modules
+    PrismaModule,    // @Global — PrismaService available everywhere
+    SearchModule,    // @Global — TypesenseService available everywhere
     CatalogModule,
+    MarketplaceModule,
+    MktCatalogModule,
+    SellersModule,
+    ConnectorsModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [SyncService, MpOAuthService],

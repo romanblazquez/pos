@@ -1,6 +1,6 @@
 import type { AppMetadata } from '@retail-os/app-registry';
 import type { ErpInventoryUpdatedPayload, ErpCatalogSyncedPayload } from '@retail-os/erp-core';
-import type { ProductSnapshot } from '@retail-os/catalog';
+import type { RetailDataApi } from '../../../pos/src/platform/bridge.js';
 
 export interface DetachedWorkspacePayload {
   id: string;
@@ -49,9 +49,7 @@ declare global {
       onInventoryUpdated(handler: (payload: ErpInventoryUpdatedPayload) => void): () => void;
       onCatalogSynced(handler: (payload: ErpCatalogSyncedPayload) => void): () => void;
     };
-    retailData?: {
-      listProducts(): Promise<ProductSnapshot[]>;
-    };
+    retailData?: RetailDataApi;
     retailShell?: {
       openApp(appId: string, context?: unknown): Promise<void>;
       getPreloadPath(): Promise<string>;
