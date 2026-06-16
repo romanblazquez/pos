@@ -99,6 +99,35 @@ export class ConnectorsController {
     return connector.ping(sellerId);
   }
 
+  /**
+   * Register a webhook with the seller's connector so we get real-time
+   * push events (e.g. stock/price changes) without constant polling.
+   */
+  @Post('webhook/register')
+  async registerWebhook(@Param('sellerId') sellerId: string) {
+    const connector = await this.registry.forSeller(sellerId);
+    if (!connector.subscribeInventory) {
+      return { ok: false, message: 'Connector does not support webhooks' };
+    }
+    const callbackUrl = `${API_BASE_URL}/api/v1/webhooks/${connector.connectorType}/${sellerId}`;
+    const result = await connector.subscribeInventory(sellerId, callbackUrl);
+    return { ok: true, ...result };
+  }
+
+  /** Remove the registered webhook from the seller's connector. */
+  @Post('webhook/unregister')
+  async unregisterWebhook(
+    @Param('sellerId') sellerId: string,
+    @Query('webhookId') webhookId: string,
+  ) {
+    const connector = await this.registry.forSeller(sellerId);
+    if (!connector.unsubscribeInventory) {
+      return { ok: false, message: 'Connector does not support webhooks' };
+    }
+    await connector.unsubscribeInventory(sellerId, webhookId);
+    return { ok: true };
+  }
+
   /** Save connector credentials directly (dev / non-OAuth connectors). */
   @Post('credentials')
   saveCredentials(
