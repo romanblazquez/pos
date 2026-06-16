@@ -48,10 +48,17 @@ export class ConnectorRegistryService {
   }
 
   async saveCredentials(sellerId: string, creds: ConnectorCredentials): Promise<void> {
-    const encrypted = encryptCredentials(creds as Record<string, string>);
+    const raw = creds as Record<string, string>;
+    // connectorType is metadata, not a credential — strip before encrypting
+    const { connectorType, ...credFields } = raw;
+    const encrypted = encryptCredentials(credFields);
     await this.prisma.seller.update({
       where: { id: sellerId },
-      data: { connectorConfig: encrypted },
+      data: {
+        connectorConfig: encrypted,
+        // Also persist the connector type so forSeller() can resolve it
+        ...(connectorType ? { connectorType } : {}),
+      },
     });
   }
 }

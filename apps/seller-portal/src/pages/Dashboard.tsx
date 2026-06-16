@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { SellerSession } from '../App.js';
 import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
 import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
@@ -366,24 +366,32 @@ function MpConnectCard({
   onSessionUpdate: (updates: Partial<SellerSession['seller']>) => void;
 }) {
   const [status, setStatus] = useState<{ connected: boolean; merchantId?: string } | null>(null);
-  const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState('');
 
-  // Load MP connection status on mount
-  useState(() => {
+  useEffect(() => {
     fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/status`)
       .then((r) => r.json())
       .then((s) => setStatus(s as { connected: boolean; merchantId?: string }))
       .catch(() => setStatus({ connected: false }));
-  });
+  }, [session.seller.id]);
 
   async function connectMp() {
     setConnecting(true);
+    setConnectError('');
     try {
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/connect`);
-      const { authUrl } = (await res.json()) as { authUrl: string };
-      window.location.href = authUrl;
-    } catch {
+      const body = (await res.json()) as { authUrl: string };
+      // If the authUrl redirects back to the portal with an error, show it inline
+      if (body.authUrl.includes('mp=error')) {
+        const msg = new URL(body.authUrl).searchParams.get('msg') ?? 'Error desconocido';
+        setConnectError(decodeURIComponent(msg));
+        setConnecting(false);
+        return;
+      }
+      window.location.href = body.authUrl;
+    } catch (e) {
+      setConnectError(String(e));
       setConnecting(false);
     }
   }
@@ -424,6 +432,13 @@ function MpConnectCard({
           <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
             ⚠️ Sin conectar — los pagos del marketplace no se acreditarán en tu cuenta hasta que conectes MP.
           </div>
+          {connectError && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              {connectError.includes('CLIENT_ID')
+                ? '🔧 MercadoPago aún no está configurado en esta instalación. Pedile al administrador que configure MERCADOPAGO_CLIENT_ID en el servidor.'
+                : connectError}
+            </div>
+          )}
           <button
             onClick={connectMp}
             disabled={connecting}
