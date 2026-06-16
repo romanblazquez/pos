@@ -1,5 +1,12 @@
 import { Body, Controller, Headers, HttpCode, Inject, Logger, Param, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { Public } from '../auth/auth.guard.js';
 import { ConnectorSyncService } from './sync.service.js';
 import { PrismaService } from '@retail-os/db-postgres';
@@ -31,6 +38,83 @@ export class WebhookController {
    */
   @Post('tiendanube/:sellerId')
   @HttpCode(200)
+  @ApiOperation({
+    summary: 'Receive real-time product events from Tiendanube',
+    description:
+      'Webhook endpoint called by Tiendanube\'s webhook system when a product is created, updated, or deleted. ' +
+      'This endpoint is NOT intended to be called directly by API consumers — it is the callback URL ' +
+      'registered per-seller via the `webhook/register` endpoint. ' +
+      '\n\n' +
+      'Tiendanube identifies itself with the `User-Agent: TiendaNube/Webhooks` header. ' +
+      'Requests from unexpected User-Agents are rejected (returns `{ ok: false }`) but still ' +
+      'return HTTP 200 to prevent Tiendanube from retrying. ' +
+      '\n\n' +
+      'For `product/updated` and `product/created` events, if the payload contains variant data ' +
+      'the listing is updated in-place (stock, price, stockStatus). ' +
+      'If no variant data is present, a targeted incremental catalog sync is triggered. ' +
+      'For `product/deleted` events, the matching listing is deactivated. ' +
+      '\n\n' +
+      'Always returns HTTP 200 with `{ ok: boolean }`. Non-200 responses cause Tiendanube to retry ' +
+      'with exponential backoff, so errors are swallowed after logging.',
+  })
+  @ApiParam({
+    name: 'sellerId',
+    description: 'Seller CUID — identifies which seller\'s listings to update.',
+    example: 'clx1abc2def3ghi4jkl',
+  })
+  @ApiHeader({
+    name: 'User-Agent',
+    description: 'Must contain "TiendaNube" or "tiendanube". Requests from other agents are rejected.',
+    example: 'TiendaNube/Webhooks',
+    required: false,
+  })
+  @ApiBody({
+    description: 'Tiendanube webhook payload. The `product` field contains a partial product object.',
+    schema: {
+      type: 'object',
+      properties: {
+        store_id: { type: 'integer', example: 123456 },
+        event: {
+          type: 'string',
+          description: 'Event type. One of: product/updated | product/deleted | product/created',
+          example: 'product/updated',
+        },
+        product: {
+          type: 'object',
+          properties: {
+            id:        { type: 'integer', example: 987654 },
+            published: { type: 'boolean', example: true },
+            variants: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id:               { type: 'integer', example: 1 },
+                  price:            { type: 'string',  example: '19.99' },
+                  stock:            { type: 'integer', example: 42, nullable: true },
+                  stock_management: { type: 'boolean', example: true },
+                  sku:              { type: 'string',  example: 'SKU-001', nullable: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Always returns 200 to acknowledge receipt. `ok: true` means the event was processed ' +
+      '(or safely skipped). `ok: false` means the request was rejected (e.g. invalid User-Agent) ' +
+      'but the 200 status prevents retries.',
+    schema: {
+      type: 'object',
+      properties: {
+        ok: { type: 'boolean', example: true },
+      },
+    },
+  } as any)
   async tiendanubeWebhook(
     @Param('sellerId') sellerId: string,
     @Body() body: TiendanubeWebhookPayload,

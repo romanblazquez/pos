@@ -1,8 +1,9 @@
 import {
   Body, Controller, Get, Param, Post, Inject, Query, Headers, Redirect,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import { CheckoutService, InitCheckoutDto } from './checkout.service.js';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { CheckoutService } from './checkout.service.js';
+import { InitCheckoutDto, CheckoutResultDto } from './checkout.dto.js';
 import { MpSellerOAuthService } from './mp-seller-oauth.service.js';
 import { Public } from '../auth/auth.guard.js';
 
@@ -21,18 +22,43 @@ export class CheckoutController {
 
   /** Validate cart, create order, return MP Checkout Pro URL. */
   @Post('checkout')
+  @ApiOperation({
+    summary: 'Initiate checkout and get MercadoPago payment URL',
+    description:
+      'Validates the cart (checks stock and locks reservation), creates a MarketplaceOrder in `pending` status, then builds a MercadoPago Checkout Pro preference. Returns the MP redirect URL. Redirect the buyer to `checkoutUrl` to complete payment. The order is confirmed asynchronously via the MercadoPago webhook once payment succeeds.',
+  })
+  @ApiBody({ type: InitCheckoutDto })
+  @ApiResponse({ status: 201, description: 'Order created. Returns { orderId, checkoutUrl, totalMinorUnits }', type: CheckoutResultDto })
+  @ApiResponse({ status: 400, description: 'Validation failed — e.g. insufficient stock, unknown listingId, or empty cart' })
+  @ApiResponse({ status: 409, description: 'Stock reservation conflict — another buyer reserved the last unit' })
   initCheckout(@Body() dto: InitCheckoutDto) {
     return this.svc.initCheckout(dto);
   }
 
   /** Get order status (polled by frontend after payment redirect). */
   @Get('checkout/orders/:id')
+  @ApiOperation({
+    summary: 'Get order status by ID',
+    description:
+      'Poll this endpoint after the buyer returns from MercadoPago to check if payment was captured. Status progresses: pending → reserved → confirmed → shipped → delivered. Returns full order with line items.',
+  })
+  @ApiParam({ name: 'id', description: 'Order CUID returned by POST /checkout', example: 'clxorder789' })
+  @ApiResponse({ status: 200, description: 'Order found. Includes status, totals, lines, and events.' })
+  @ApiResponse({ status: 404, description: 'No order with this ID' })
   getOrder(@Param('id') id: string) {
     return this.svc.getOrder(id);
   }
 
   /** Force-reconcile an order against the MP Payments Search API. */
   @Post('checkout/orders/:id/reconcile')
+  @ApiOperation({
+    summary: 'Force-reconcile an order against MercadoPago',
+    description:
+      'Queries the MercadoPago Payments Search API for payments linked to this order and updates its status accordingly. Use this if the webhook was not received or the order is stuck in `pending`. Idempotent — safe to call multiple times.',
+  })
+  @ApiParam({ name: 'id', example: 'clxorder789' })
+  @ApiResponse({ status: 200, description: 'Reconciliation complete. Returns updated order status.' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
   reconcileOrder(@Param('id') id: string) {
     return this.svc.reconcileOrder(id);
   }
@@ -40,6 +66,14 @@ export class CheckoutController {
   /** Admin: list all orders (most recent first). */
   @ApiTags('admin')
   @Get('checkout/admin/orders')
+  @ApiOperation({
+    summary: 'List all orders (admin)',
+    description:
+      'Returns all marketplace orders across all sellers, newest first. Filter by status to find stuck or failed orders.',
+  })
+  @ApiQuery({ name: 'limit', required: false, description: 'Max results to return', example: 50 })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by order status: pending | reserved | confirmed | shipped | delivered | cancelled | refunded', example: 'pending' })
+  @ApiResponse({ status: 200, description: 'Array of orders with lines and seller info' })
   listOrders(
     @Query('limit') limit?: string,
     @Query('status') status?: string,
@@ -52,6 +86,26 @@ export class CheckoutController {
 
   /** MercadoPago Checkout Pro payment webhook. */
   @Post('checkout/webhooks/mercadopago')
+  @ApiOperation({
+    summary: 'MercadoPago payment notification webhook',
+    description:
+      'Receives IPN (Instant Payment Notification) events from MercadoPago when a payment status changes. Verifies the HMAC signature using the x-signature and x-request-id headers, then fetches payment details and updates the corresponding order. Always returns HTTP 200 — any non-200 causes MP to retry. Do not call this endpoint directly.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', example: 'payment' },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: '1234567890' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Webhook received and queued for processing' })
   handleWebhook(
     @Body() body: { type: string; data: { id: string } },
     @Headers('x-signature') xSignature?: string,
@@ -65,12 +119,26 @@ export class CheckoutController {
 
   /** Return the MP OAuth authorization URL so the seller can connect their account. */
   @Get('sellers/:sellerId/payments/mp/connect')
+  @ApiOperation({
+    summary: 'Get MercadoPago OAuth authorization URL',
+    description:
+      'Returns the URL to redirect the seller to for MercadoPago OAuth. After authorization, MP redirects to /payments/mp/oauth/callback which saves encrypted tokens for split payments.',
+  })
+  @ApiParam({ name: 'sellerId', description: 'Seller CUID', example: 'clxseller123' })
+  @ApiResponse({ status: 200, description: 'Returns { authUrl: string } — redirect seller browser to this URL' })
   getMpAuthUrl(@Param('sellerId') sellerId: string) {
     return { authUrl: this.mpOAuth.getAuthUrl(sellerId) };
   }
 
   /** Get MP connection status for a seller. */
   @Get('sellers/:sellerId/payments/mp/status')
+  @ApiOperation({
+    summary: 'Check MercadoPago connection status',
+    description:
+      'Returns whether the seller has connected their MercadoPago account for marketplace split payments, and their MP merchant ID if connected.',
+  })
+  @ApiParam({ name: 'sellerId', example: 'clxseller123' })
+  @ApiResponse({ status: 200, description: 'Returns { connected: boolean, merchantId?: string }' })
   getMpStatus(@Param('sellerId') sellerId: string) {
     return this.mpOAuth.getConnectionStatus(sellerId);
   }
@@ -81,6 +149,15 @@ export class CheckoutController {
    */
   @Get('payments/mp/oauth/callback')
   @Redirect()
+  @ApiOperation({
+    summary: 'MercadoPago OAuth redirect callback',
+    description:
+      'Redirect target registered with MercadoPago. Exchanges the authorization code for access/refresh tokens, encrypts them with AES-256-GCM, and saves them to the seller\'s record. Redirects to the seller portal with ?mp=success or ?mp=error. Do not call directly.',
+  })
+  @ApiQuery({ name: 'code', required: false, description: 'Authorization code from MP' })
+  @ApiQuery({ name: 'state', required: false, description: 'Opaque state param — contains sellerId for routing' })
+  @ApiQuery({ name: 'error', required: false, description: 'Present when the seller denied authorization' })
+  @ApiResponse({ status: 302, description: 'Redirects to seller portal' })
   async mpOAuthCallback(
     @Query('code') code: string,
     @Query('state') state: string,
