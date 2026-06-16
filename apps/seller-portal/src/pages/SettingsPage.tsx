@@ -302,13 +302,14 @@ function RewardsCard({ session }: { session: SellerSession }) {
                     {Math.round(preview.totalBuyerCashbackPct * 100)}%
                   </p>
                   <p className="text-xs text-emerald-500">
-                    1% marketplace + {storeCashback}% tu tienda
+                    {Math.round(platformCashbackPct * 100)}% desde la comisión + {storeCashback}% tu tienda
                   </p>
                 </div>
               </div>
             )}
 
             {/* Example order breakdown */}
+            {preview && (
             <div className="rounded-xl border border-slate-100 p-4 space-y-2.5">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                 Ejemplo — venta de {fmt(exampleTotal)}
@@ -318,13 +319,26 @@ function RewardsCard({ session }: { session: SellerSession }) {
                   <span className="text-slate-600">Precio de venta</span>
                   <span className="font-medium">{fmt(exampleTotal)}</span>
                 </div>
+
+                {/* Commission block — shows its internal split */}
                 <div className="flex justify-between text-slate-500">
-                  <span>Comisión plataforma ({Math.round((preview?.effectiveCommissionPct ?? 0.05) * 100)}%)</span>
+                  <span>Comisión plataforma ({Math.round(preview.effectiveCommissionPct * 100)}%)</span>
                   <span className="text-red-500">−{fmt(commissionAmt)}</span>
                 </div>
+                <div className="pl-4 space-y-0.5">
+                  <div className="flex justify-between text-xs text-slate-400">
+                    <span>└ ingreso neto plataforma ({Math.round((preview.effectiveCommissionPct - platformCashbackPct) * 100)}%)</span>
+                    <span>{fmt(commissionAmt - platformCbAmt)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-emerald-500">
+                    <span>└ cashback marketplace al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
+                    <span>+{fmt(platformCbAmt)}</span>
+                  </div>
+                </div>
+
                 {storeCbAmt > 0 && (
                   <div className="flex justify-between text-slate-500">
-                    <span>Tu cashback de tienda ({storeCashback}%)</span>
+                    <span>Cashback de tu tienda al comprador ({storeCashback}%)</span>
                     <span className="text-red-500">−{fmt(storeCbAmt)}</span>
                   </div>
                 )}
@@ -333,19 +347,20 @@ function RewardsCard({ session }: { session: SellerSession }) {
                   <span className="text-slate-900">{fmt(payoutAmt)}</span>
                 </div>
               </div>
-              <div className="border-t border-dashed border-slate-200 pt-2 space-y-1 text-sm">
-                <div className="flex justify-between text-emerald-600">
-                  <span>Créditos marketplace que gana el comprador (1%)</span>
-                  <span>+{fmt(platformCbAmt)}</span>
-                </div>
-                {storeCbAmt > 0 && (
+
+              {storeCbAmt > 0 && (
+                <div className="border-t border-dashed border-slate-200 pt-2 text-sm">
                   <div className="flex justify-between text-emerald-600">
-                    <span>Créditos de tu tienda que gana el comprador</span>
-                    <span>+{fmt(storeCbAmt)}</span>
+                    <span>Total cashback que gana el comprador</span>
+                    <span>+{fmt(platformCbAmt + storeCbAmt)}</span>
                   </div>
-                )}
-              </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {fmt(platformCbAmt)} del marketplace · {fmt(storeCbAmt)} de tu tienda
+                  </p>
+                </div>
+              )}
             </div>
+            )}
 
             <div className="flex items-center gap-3">
               <button
