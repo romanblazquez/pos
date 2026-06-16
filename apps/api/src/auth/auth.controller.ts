@@ -1,6 +1,7 @@
 import {
   Body, Controller, Get, HttpCode, Inject, Post, Req, UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService, RegisterSellerDto, RegisterCustomerDto, LoginDto } from './auth.service.js';
 import { AuthGuard, Public, Roles } from './auth.guard.js';
@@ -8,6 +9,8 @@ import type { JwtPayload } from './jwt.js';
 
 type AuthRequest = Request & { user: JwtPayload };
 
+@ApiTags('auth')
+@ApiBearerAuth('seller-jwt')
 @UseGuards(AuthGuard)
 @Controller('api/v1/auth')
 export class AuthController {

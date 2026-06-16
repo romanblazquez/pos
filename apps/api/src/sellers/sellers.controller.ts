@@ -8,9 +8,11 @@ import {
   Query,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SellersService, CreateSellerDto } from './sellers.service.js';
 import { Public } from '../auth/auth.guard.js';
 
+@ApiTags('sellers')
 @Public()
 @Controller('api/v1/sellers')
 export class SellersController {

@@ -14,6 +14,7 @@ import { SellersModule } from './sellers/sellers.module.js';
 import { ConnectorsModule } from './connectors/connectors.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
+import { RankingsModule } from './rankings/rankings.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CheckoutModule } from './checkout/checkout.module.js';
     SellersModule,
     ConnectorsModule,
     CheckoutModule,
+    RankingsModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [SyncService, MpOAuthService],

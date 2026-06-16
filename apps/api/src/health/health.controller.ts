@@ -1,7 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/auth.guard.js';
 
 /** Liveness / readiness probes for orchestration and load balancers. */
+@ApiTags('health')
 @Public()
 @Controller('health')
 export class HealthController {

@@ -191,6 +191,25 @@ export class CheckoutService {
     return { processed: true };
   }
 
+  async listOrders(params: { limit?: number; status?: string } = {}) {
+    const { limit = 50, status } = params;
+    const [orders, total] = await Promise.all([
+      this.prisma.marketplaceOrder.findMany({
+        where: status ? { status } : undefined,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        include: {
+          seller: { select: { name: true } },
+          customer: { select: { email: true } },
+        },
+      }),
+      this.prisma.marketplaceOrder.count({
+        where: status ? { status } : undefined,
+      }),
+    ]);
+    return { orders, total };
+  }
+
   async getOrder(orderId: string) {
     return this.prisma.marketplaceOrder.findUniqueOrThrow({
       where: { id: orderId },

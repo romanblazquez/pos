@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ConnectorSyncService } from './sync.service.js';
 import { ConnectorRegistryService } from './connector-registry.service.js';
 import { Public } from '../auth/auth.guard.js';
 
+@ApiTags('connectors')
 @Public()
 @Controller('api/v1/sellers/:sellerId/connector')
 export class ConnectorsController {
