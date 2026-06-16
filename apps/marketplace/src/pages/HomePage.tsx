@@ -1,37 +1,49 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ProductCard, type Product } from '../components/ProductCard.js';
 
-const FEATURED_CATEGORIES = [
-  { label: 'Estrategia', icon: '⚔️', slug: 'strategy' },
-  { label: 'Familia', icon: '👨‍👩‍👧', slug: 'family' },
-  { label: 'Cooperativo', icon: '🤝', slug: 'cooperative' },
-  { label: 'Fiesta', icon: '🎉', slug: 'party' },
-  { label: 'Económico', icon: '💰', slug: 'economic' },
-  { label: 'Deckbuilding', icon: '🃏', slug: 'deckbuilding' },
-];
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const PAGE_SIZE = 24;
 
-const TRENDING_GAMES = [
-  'Catan', 'Spirit Island', 'Pandemic', 'Terraforming Mars',
-  'Wingspan', '7 Wonders', 'Ticket to Ride', 'Gloomhaven',
-];
+interface ProductsResponse {
+  results: Product[];
+  total: number;
+  source: string;
+}
+
+async function fetchProducts(page: number): Promise<ProductsResponse> {
+  const res = await fetch(`${API}/api/v1/products?limit=${PAGE_SIZE}&page=${page}`);
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<ProductsResponse>;
+}
 
 interface HomePageProps {
   onSearch: (q: string) => void;
   onProduct: (slug: string) => void;
 }
 
-export default function HomePage({ onSearch }: HomePageProps) {
+export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['catalog', page],
+    queryFn: () => fetchProducts(page),
+    placeholderData: (prev) => prev,
+  });
+
+  const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-b from-emerald-900 to-emerald-800 text-white py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center space-y-6">
+      <section className="bg-gradient-to-b from-emerald-900 to-emerald-800 text-white py-12 px-4">
+        <div className="max-w-3xl mx-auto text-center space-y-5">
           <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
             Encuentra el mejor precio para tu juego de mesa
           </h1>
           <p className="text-emerald-200 text-lg">
-            Comparamos disponibilidad, precio y envío entre múltiples tiendas en tiempo real.
+            {data ? `${data.total.toLocaleString('es-AR')} juegos disponibles` : 'Comparamos disponibilidad y precio entre múltiples tiendas.'}
           </p>
           <form
             className="flex gap-2 max-w-lg mx-auto"
@@ -56,75 +68,137 @@ export default function HomePage({ onSearch }: HomePageProps) {
               Buscar
             </button>
           </form>
-          <div className="flex flex-wrap gap-2 justify-center pt-2">
-            {TRENDING_GAMES.map((game) => (
-              <button
-                key={game}
-                onClick={() => onSearch(game)}
-                className="text-sm px-3 py-1 rounded-full bg-emerald-700 hover:bg-emerald-600
-                           text-emerald-100 transition-colors"
-              >
-                {game}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* Value props */}
-      <section className="max-w-6xl mx-auto px-4 py-12 grid sm:grid-cols-3 gap-6">
-        {[
-          { icon: '💰', title: 'Mejor precio', desc: 'Comparamos precios en tiempo real entre todas las tiendas.' },
-          { icon: '📦', title: 'Stock real', desc: 'Verificamos disponibilidad antes de que completes tu compra.' },
-          { icon: '🚚', title: 'Mejor envío', desc: 'Filtra por tiempo de entrega y costo de envío a tu zona.' },
-        ].map((v) => (
-          <div key={v.title} className="text-center p-6 rounded-2xl bg-white border border-stone-200">
-            <div className="text-4xl mb-3">{v.icon}</div>
-            <h3 className="font-semibold text-stone-900 mb-1">{v.title}</h3>
-            <p className="text-sm text-stone-500">{v.desc}</p>
+      {/* Catalog */}
+      <section className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-xl font-bold text-stone-900">Todos los juegos</h2>
+            {data && (
+              <p className="text-sm text-stone-500 mt-0.5">
+                {data.total.toLocaleString('es-AR')} juegos · página {page} de {totalPages}
+              </p>
+            )}
           </div>
-        ))}
-      </section>
-
-      {/* Categories */}
-      <section className="max-w-6xl mx-auto px-4 pb-12">
-        <h2 className="text-xl font-semibold text-stone-800 mb-4">Explorar por categoría</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {FEATURED_CATEGORIES.map((cat) => (
-            <button
-              key={cat.slug}
-              onClick={() => onSearch(cat.label)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white
-                         border border-stone-200 hover:border-emerald-400 hover:shadow-sm
-                         transition-all group"
-            >
-              <span className="text-3xl">{cat.icon}</span>
-              <span className="text-sm font-medium text-stone-700 group-hover:text-emerald-700">
-                {cat.label}
-              </span>
-            </button>
-          ))}
         </div>
+
+        {isLoading && !data && <CatalogSkeleton />}
+
+        {isError && (
+          <div className="text-center py-16 text-stone-500">
+            <p className="text-4xl mb-3">😕</p>
+            <p>No se pudo cargar el catálogo. Intentá de nuevo.</p>
+          </div>
+        )}
+
+        {data && (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {data.results.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onClick={() => onProduct(product.slug)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-10">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-4 py-2 text-sm rounded-lg border border-stone-300 text-stone-700
+                             hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Anterior
+                </button>
+
+                {/* Page number pills — show at most 7 around current */}
+                <div className="flex gap-1">
+                  {getPaginationRange(page, totalPages).map((item, i) =>
+                    item === '…' ? (
+                      <span key={`ellipsis-${i}`} className="px-2 py-2 text-stone-400 text-sm">…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        onClick={() => setPage(item as number)}
+                        className={`w-9 h-9 text-sm rounded-lg border transition-colors ${
+                          item === page
+                            ? 'bg-emerald-700 text-white border-emerald-700 font-semibold'
+                            : 'border-stone-300 text-stone-700 hover:bg-stone-100'
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-4 py-2 text-sm rounded-lg border border-stone-300 text-stone-700
+                             hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
-      {/* CTA for sellers */}
-      <section className="bg-stone-100 border-t border-stone-200 py-12 px-4">
-        <div className="max-w-2xl mx-auto text-center space-y-4">
-          <h2 className="text-2xl font-bold text-stone-900">
+      {/* Seller CTA */}
+      <section className="bg-stone-100 border-t border-stone-200 py-10 px-4 mt-4">
+        <div className="max-w-2xl mx-auto text-center space-y-3">
+          <h2 className="text-xl font-bold text-stone-900">
             ¿Tenés una tienda de juegos de mesa?
           </h2>
-          <p className="text-stone-600">
+          <p className="text-stone-600 text-sm">
             Conectá tu catálogo y empezá a vender en el marketplace sin cambiar tu sistema actual.
           </p>
           <a
-            href="/seller-portal"
-            className="inline-block px-6 py-3 bg-emerald-700 text-white font-semibold
+            href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
+            className="inline-block px-5 py-2.5 bg-emerald-700 text-white font-semibold text-sm
                        rounded-xl hover:bg-emerald-800 transition-colors"
           >
             Registrá tu tienda →
           </a>
         </div>
       </section>
+    </div>
+  );
+}
+
+function getPaginationRange(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | '…')[] = [];
+  const add = (n: number) => { if (!pages.includes(n)) pages.push(n); };
+  add(1);
+  if (current > 3) pages.push('…');
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) add(i);
+  if (current < total - 2) pages.push('…');
+  add(total);
+  return pages;
+}
+
+function CatalogSkeleton() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      {Array.from({ length: 24 }).map((_, i) => (
+        <div key={i} className="rounded-xl border border-stone-200 overflow-hidden animate-pulse">
+          <div className="aspect-square bg-stone-200" />
+          <div className="p-3 space-y-2">
+            <div className="h-3.5 bg-stone-200 rounded w-3/4" />
+            <div className="h-3 bg-stone-200 rounded w-1/2" />
+            <div className="h-4 bg-stone-200 rounded w-2/3 mt-2" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

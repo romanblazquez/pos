@@ -154,9 +154,17 @@ export class ConnectorSyncService {
       });
     }
 
-    // Upsert the listing for this seller × product
+    // Upsert the listing for this seller × product.
+    // Some Tiendanube products share the same SKU across variants; check both
+    // sellerProductId and sellerSku so we update rather than collision-create.
     const existing = await this.prisma.listing.findFirst({
-      where: { sellerId, sellerProductId: raw.externalId },
+      where: {
+        sellerId,
+        OR: [
+          { sellerProductId: raw.externalId },
+          ...(variant.sku ? [{ sellerSku: variant.sku }] : []),
+        ],
+      },
     });
 
     const stock = variant.stock ?? 0;

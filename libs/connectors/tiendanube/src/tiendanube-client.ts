@@ -71,7 +71,6 @@ export class TiendanubeClient {
     const res = await fetch(`${BASE}/${this.creds.storeId}${path}`, {
       method,
       headers: {
-        // Tiendanube uses 'Authorization: Bearer <token>' per HTTP spec
         'Authorization': `Bearer ${this.creds.accessToken}`,
         'User-Agent': APP_USER_AGENT,
         'Content-Type': 'application/json',
@@ -89,7 +88,8 @@ export class TiendanubeClient {
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`Tiendanube ${method} ${path} → ${res.status}: ${text}`);
+      const url = `${BASE}/${this.creds.storeId}${path}`;
+      throw new Error(`Tiendanube ${method} ${url} → ${res.status}: ${text}`);
     }
 
     const data = await res.json() as T;
@@ -97,7 +97,7 @@ export class TiendanubeClient {
   }
 
   async getStore(): Promise<TnStore> {
-    const { data } = await this.req<TnStore>('GET', '');
+    const { data } = await this.req<TnStore>('GET', '/store');
     return data;
   }
 
