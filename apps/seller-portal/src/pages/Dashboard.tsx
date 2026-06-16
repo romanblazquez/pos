@@ -309,6 +309,9 @@ function ConnectorSettings({
         )}
       </div>
 
+      {/* MercadoPago connection */}
+      <MpConnectCard session={session} onSessionUpdate={onSessionUpdate} />
+
       {/* Change / add connector */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
         <h2 className="font-semibold text-stone-900">
@@ -352,6 +355,88 @@ function ConnectorSettings({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function MpConnectCard({
+  session,
+}: {
+  session: SellerSession;
+  onSessionUpdate: (updates: Partial<SellerSession['seller']>) => void;
+}) {
+  const [status, setStatus] = useState<{ connected: boolean; merchantId?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  // Load MP connection status on mount
+  useState(() => {
+    fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/status`)
+      .then((r) => r.json())
+      .then((s) => setStatus(s as { connected: boolean; merchantId?: string }))
+      .catch(() => setStatus({ connected: false }));
+  });
+
+  async function connectMp() {
+    setConnecting(true);
+    try {
+      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/connect`);
+      const { authUrl } = (await res.json()) as { authUrl: string };
+      window.location.href = authUrl;
+    } catch {
+      setConnecting(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="text-2xl">💳</span>
+        <div>
+          <h2 className="font-semibold text-stone-900">MercadoPago — Cobros en el marketplace</h2>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Conectá tu cuenta MP para recibir pagos directamente. La plataforma descuenta la comisión automáticamente.
+          </p>
+        </div>
+      </div>
+
+      {status === null ? (
+        <p className="text-sm text-stone-400">Verificando conexión…</p>
+      ) : status.connected ? (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+          <span className="text-emerald-600 font-bold">✓</span>
+          <div>
+            <p className="text-sm font-medium text-emerald-800">Cuenta conectada</p>
+            {status.merchantId && (
+              <p className="text-xs text-emerald-600">MP ID: {status.merchantId}</p>
+            )}
+          </div>
+          <button
+            onClick={connectMp}
+            disabled={connecting}
+            className="ml-auto text-xs text-stone-500 underline hover:text-stone-700"
+          >
+            Reconectar
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+            ⚠️ Sin conectar — los pagos del marketplace no se acreditarán en tu cuenta hasta que conectes MP.
+          </div>
+          <button
+            onClick={connectMp}
+            disabled={connecting}
+            className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg
+                       hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          >
+            {connecting ? '⏳ Redirigiendo a MercadoPago…' : '🔗 Conectar cuenta de MercadoPago'}
+          </button>
+          <p className="text-xs text-stone-400">
+            Solo necesitás hacerlo una vez. Te pediremos autorización en el sitio de MercadoPago.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

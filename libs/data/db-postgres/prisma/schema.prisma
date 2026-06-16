@@ -268,8 +268,23 @@ model Seller {
   orders          MarketplaceOrder[]
   score           SellerScore?
   syncLogs        ConnectorSyncLog[]
+  mpConnection    SellerMpConnection?
   @@index([status])
   @@index([connectorType])
+}
+
+/// Per-seller MercadoPago OAuth connection for marketplace split payments.
+/// encryptedCreds holds { accessToken, refreshToken, expiresAt } encrypted with
+/// AES-256-GCM (same credential-crypto.ts used for connector creds).
+model SellerMpConnection {
+  id             String   @id @default(cuid())
+  sellerId       String   @unique
+  merchantId     String   // MP user_id (string form of numeric seller ID)
+  scope          String?
+  encryptedCreds Json     // { _enc: "iv:tag:ciphertext" }
+  connectedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  seller         Seller   @relation(fields: [sellerId], references: [id])
 }
 
 model SellerScore {

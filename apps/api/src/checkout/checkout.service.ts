@@ -1,6 +1,7 @@
 import { Injectable, Inject, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { PrismaService } from '@retail-os/db-postgres';
+import { MpSellerOAuthService } from './mp-seller-oauth.service.js';
 
 const MP_BASE = 'https://api.mercadopago.com';
 
@@ -37,7 +38,10 @@ export interface CheckoutResult {
 
 @Injectable()
 export class CheckoutService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(MpSellerOAuthService) private readonly mpOAuth: MpSellerOAuthService,
+  ) {}
 
   async initCheckout(dto: InitCheckoutDto): Promise<CheckoutResult> {
     // 1. Load and validate all listings
@@ -112,9 +116,22 @@ export class CheckoutService {
       },
     });
 
-    // 6. Create MercadoPago Checkout Pro preference
+    // 6. Resolve seller's MP access token (marketplace split) or platform token fallback
+    let sellerMpToken: string | null = null;
+    try {
+      sellerMpToken = await this.mpOAuth.getSellerAccessToken(sellerId);
+    } catch {
+      // Seller hasn't connected MP yet — fall back to platform token
+    }
+
+    const commissionRate = 0.03; // 3% — use seller.commissionRate in production
+    const commissionAmount = Math.round((subtotal / 100) * commissionRate * 100) / 100; // major units
+
+    // 7. Create MercadoPago Checkout Pro preference
     const preference = await this.createMpPreference({
       orderId: order.id,
+      sellerMpToken,
+      marketplaceFee: sellerMpToken ? commissionAmount : undefined,
       items: listings.map((l) => ({
         id: l.id,
         title: l.product.name,
@@ -129,7 +146,7 @@ export class CheckoutService {
       pendingUrl: dto.pendingUrl,
     });
 
-    // 7. Attach preference ID to order
+    // 8. Attach preference ID to order
     await this.prisma.marketplaceOrder.update({
       where: { id: order.id },
       data: {
@@ -315,6 +332,8 @@ export class CheckoutService {
 
   private async createMpPreference(params: {
     orderId: string;
+    sellerMpToken: string | null;
+    marketplaceFee?: number;
     items: Array<{
       id: string; title: string; quantity: number;
       unit_price: number; currency_id: string; picture_url: string;
@@ -324,15 +343,17 @@ export class CheckoutService {
     failureUrl: string;
     pendingUrl: string;
   }): Promise<{ id: string; init_point: string }> {
-    if (!this.mpToken) {
-      // Dev mode: return a fake preference so the rest of the flow can be tested
+    // Use seller's token for marketplace split, fall back to platform token for dev
+    const token = params.sellerMpToken ?? this.mpToken;
+
+    if (!token) {
       return {
         id: `dev-pref-${params.orderId}`,
         init_point: `${params.successUrl}?order_id=${params.orderId}&dev_mode=1`,
       };
     }
 
-    const body = {
+    const body: Record<string, unknown> = {
       external_reference: params.orderId,
       items: params.items,
       payer: params.payer,
@@ -347,12 +368,15 @@ export class CheckoutService {
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     };
 
+    // Marketplace split: declare platform client_id and commission amount
+    if (params.sellerMpToken && params.marketplaceFee) {
+      body['marketplace'] = process.env.MERCADOPAGO_CLIENT_ID;
+      body['marketplace_fee'] = params.marketplaceFee;
+    }
+
     const res = await fetch(`${MP_BASE}/checkout/preferences`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.mpToken}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
 

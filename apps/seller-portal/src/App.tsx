@@ -42,6 +42,19 @@ export default function App() {
     // Strip query params from URL without reloading
     window.history.replaceState({}, '', window.location.pathname);
 
+    // Handle MercadoPago seller OAuth return
+    const mpStatus = params.get('mp');
+    if (mpStatus) {
+      window.history.replaceState({}, '', window.location.pathname);
+      if (mpStatus === 'success') {
+        setOauthBanner({ type: 'success', msg: '¡MercadoPago conectado! Ya podés recibir pagos del marketplace.' });
+      } else {
+        const mpMsg = params.get('msg') ?? 'Error desconocido';
+        setOauthBanner({ type: 'error', msg: `Error al conectar MercadoPago: ${decodeURIComponent(mpMsg)}` });
+      }
+      return;
+    }
+
     if (oauthStatus === 'success') {
       const stored = getStoredSession();
       if (!stored) return;
