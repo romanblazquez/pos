@@ -105,8 +105,8 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
       });
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/listings?${params}`);
-      const data = (await res.json()) as { listings: Listing[]; total: number };
-      setListings(data.listings);
+      const data = (await res.json()) as { data: Listing[]; total: number };
+      setListings(data.data);
       setTotal(data.total);
     } finally {
       setLoading(false);

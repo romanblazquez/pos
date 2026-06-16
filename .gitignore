@@ -29,3 +29,4 @@ data/local
 *.log
 coverage
 infra/backups/
+.claude/

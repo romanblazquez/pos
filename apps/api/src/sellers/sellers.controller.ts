@@ -18,8 +18,10 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { SellersService, CreateSellerDto } from './sellers.service.js';
+import { SellersService } from './sellers.service.js';
+import { CreateSellerDto, UpdateListingDto } from './sellers.dto.js';
 import { Public } from '../auth/auth.guard.js';
+import { paginate } from '../common/pagination.js';
 
 @ApiTags('sellers')
 @ApiBearerAuth('seller-jwt')
@@ -186,7 +188,7 @@ export class SellersController {
     status: 200,
     description: 'Paginated listings result: { listings, total, page, limit }',
   })
-  getListings(
+  async getListings(
     @Param('id') id: string,
     @Query('page') page = '1',
     @Query('limit') limit = '24',
@@ -194,13 +196,10 @@ export class SellersController {
     @Query('status') status?: string,
     @Query('sort') sort?: string,
   ) {
-    return this.svc.getListings(id, {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      q,
-      status,
-      sort,
-    });
+    const p = parseInt(page, 10);
+    const l = parseInt(limit, 10);
+    const result = await this.svc.getListings(id, { page: p, limit: l, q, status, sort });
+    return paginate(result.listings, result.total, p, l);
   }
 
   @Get(':id/orders/stats')
@@ -243,17 +242,16 @@ export class SellersController {
     status: 200,
     description: 'Paginated orders result: { orders, total, page, limit }',
   })
-  getOrders(
+  async getOrders(
     @Param('id') id: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
     @Query('status') status?: string,
   ) {
-    return this.svc.getOrders(id, {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      status,
-    });
+    const p = parseInt(page, 10);
+    const l = parseInt(limit, 10);
+    const result = await this.svc.getOrders(id, { page: p, limit: l, status });
+    return paginate(result.orders, result.total, p, l);
   }
 
   @Get(':id/analytics/top-products')
@@ -317,7 +315,7 @@ export class SellersController {
   updateListing(
     @Param('id') id: string,
     @Param('listingId') listingId: string,
-    @Body() body: { priceMinorUnits?: number; stock?: number; active?: boolean },
+    @Body() body: UpdateListingDto,
   ) {
     return this.svc.updateListing(id, listingId, body);
   }

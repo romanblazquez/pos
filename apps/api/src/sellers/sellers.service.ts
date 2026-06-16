@@ -1,14 +1,6 @@
 import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
-
-export interface CreateSellerDto {
-  name: string;
-  email: string;
-  phone?: string;
-  country?: string;
-  timezone?: string;
-  connectorType?: string;
-}
+import type { CreateSellerDto } from './sellers.dto.js';
 
 function slugify(name: string): string {
   return name

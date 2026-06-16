@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from '@retail-os/db-postgres';
 import { SyncController } from './sync/sync.controller.js';
 import { SyncService } from './sync/sync.service.js';
@@ -18,6 +20,7 @@ import { RankingsModule } from './rankings/rankings.module.js';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]), // 120 req/min global
     PrismaModule,    // @Global — PrismaService available everywhere
     SearchModule,    // @Global — TypesenseService available everywhere
     AuthModule,      // Global JWT guard + seller/customer auth endpoints
@@ -30,6 +33,10 @@ import { RankingsModule } from './rankings/rankings.module.js';
     RankingsModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
-  providers: [SyncService, MpOAuthService],
+  providers: [
+    SyncService,
+    MpOAuthService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

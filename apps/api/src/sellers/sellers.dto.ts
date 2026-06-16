@@ -1,33 +1,45 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength,
+} from 'class-validator';
 
 export class CreateSellerDto {
   @ApiProperty({ type: 'string', description: 'Full store or business name', example: 'Acme Board Games' })
+  @IsString() @MinLength(2) @MaxLength(120)
   name: string;
 
   @ApiProperty({ type: 'string', format: 'email', description: 'Unique seller email', example: 'seller@acme.com' })
+  @IsEmail()
   email: string;
 
   @ApiPropertyOptional({ type: 'string', example: '+52 55 1234 5678' })
+  @IsOptional() @IsString() @MaxLength(30)
   phone?: string;
 
   @ApiPropertyOptional({ type: 'string', description: 'ISO 3166-1 alpha-2 country code', example: 'MX', default: 'MX' })
+  @IsOptional() @IsString() @MaxLength(2)
   country?: string;
 
   @ApiPropertyOptional({ type: 'string', description: 'IANA timezone', example: 'America/Mexico_City', default: 'America/Mexico_City' })
+  @IsOptional() @IsString() @MaxLength(60)
   timezone?: string;
 
   @ApiPropertyOptional({ type: 'string', description: 'Connector platform: tiendanube | shopify | mercadolibre | woocommerce | csv | manual', example: 'tiendanube' })
+  @IsOptional() @IsIn(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce', 'csv', 'manual'])
   connectorType?: string;
 }
 
 export class UpdateListingDto {
   @ApiPropertyOptional({ type: 'integer', description: 'Price in minor currency units (centavos). E.g. 150000 = $1,500.00 ARS', example: 150000 })
+  @IsOptional() @IsInt() @Min(0)
   priceMinorUnits?: number;
 
   @ApiPropertyOptional({ type: 'integer', description: 'Stock count. Use 999 for unlimited/unmanaged stock', example: 10 })
+  @IsOptional() @IsInt() @Min(0)
   stock?: number;
 
   @ApiPropertyOptional({ type: 'boolean', description: 'Whether this listing is visible in the marketplace', example: true })
+  @IsOptional() @IsBoolean()
   active?: boolean;
 }
 

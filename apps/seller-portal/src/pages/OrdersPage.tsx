@@ -74,8 +74,8 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/orders?${params}`, {
         headers: { Authorization: `Bearer ${session.token}` },
       });
-      const data = await res.json() as { orders: Order[]; total: number };
-      setOrders(data.orders ?? []);
+      const data = await res.json() as { data: Order[]; total: number };
+      setOrders(data.data ?? []);
       setTotal(data.total ?? 0);
     } finally {
       setLoading(false);
