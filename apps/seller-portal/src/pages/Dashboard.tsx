@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { SellerSession } from '../App.js';
+import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
+import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
 
 const CONNECTORS = [
   { type: 'tiendanube', label: 'Tiendanube', icon: '☁️' },
@@ -274,46 +276,14 @@ function ConnectorSettings({
   onSessionUpdate: (updates: Partial<SellerSession['seller']>) => void;
 }) {
   const [selected, setSelected] = useState<string>(session.seller.connectorType ?? '');
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [connected, setConnected] = useState(!!session.seller.connectorType);
 
   const current = CONNECTORS.find((c) => c.type === session.seller.connectorType);
-  const isOAuth = selected && OAUTH_CONNECTORS.has(selected);
+  const needsCreds = selected && OAUTH_CONNECTORS.has(selected);
 
-  async function startOAuth() {
-    setConnecting(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${selected}`,
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { authUrl } = (await res.json()) as { authUrl: string };
-      window.location.href = authUrl;
-    } catch (e) {
-      setError(`No se pudo iniciar la conexión: ${String(e)}`);
-      setConnecting(false);
-    }
-  }
-
-  async function saveNonOAuth() {
-    if (!selected) return;
-    setConnecting(true);
-    setError('');
-    try {
-      const res = await fetch(
-        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${selected}`,
-        { headers: { Authorization: `Bearer ${session.token}` } },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      onSessionUpdate({ connectorType: selected });
-      setSaved(true);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setConnecting(false);
-    }
+  function pickConnector(type: string) {
+    setSelected(type);
+    setConnected(type === session.seller.connectorType);
   }
 
   return (
@@ -331,7 +301,7 @@ function ConnectorSettings({
             <span className="text-2xl">{current.icon}</span>
             <div>
               <p className="font-medium text-stone-900">{current.label}</p>
-              <p className="text-xs text-emerald-600">Conectado</p>
+              <p className="text-xs text-emerald-600">Conectado — credenciales guardadas de forma segura</p>
             </div>
           </div>
         ) : (
@@ -339,16 +309,16 @@ function ConnectorSettings({
         )}
       </div>
 
-      {/* Change connector */}
+      {/* Change / add connector */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
         <h2 className="font-semibold text-stone-900">
-          {current ? 'Cambiar conector' : 'Conectar tienda'}
+          {current ? 'Cambiar o reconectar' : 'Conectar tienda'}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {CONNECTORS.map((c) => (
             <button
               key={c.type}
-              onClick={() => { setSelected(c.type); setSaved(false); setError(''); }}
+              onClick={() => pickConnector(c.type)}
               className={`text-left p-3 rounded-xl border-2 transition-all ${
                 selected === c.type
                   ? 'border-emerald-600 bg-emerald-50'
@@ -361,36 +331,63 @@ function ConnectorSettings({
           ))}
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {saved && <p className="text-sm text-emerald-600">✓ Conector actualizado</p>}
+        {selected && needsCreds && (
+          <ConnectorCredentialForm
+            sellerId={session.seller.id}
+            connectorType={selected as ConnectorType}
+            connected={connected}
+            onConnected={() => {
+              setConnected(true);
+              onSessionUpdate({ connectorType: selected });
+            }}
+          />
+        )}
 
-        {selected && (
-          <div className="pt-2">
-            {isOAuth ? (
-              <button
-                onClick={startOAuth}
-                disabled={connecting}
-                className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg
-                           hover:bg-blue-700 disabled:opacity-60 transition-colors"
-              >
-                {connecting
-                  ? '⏳ Conectando...'
-                  : `Autorizar con ${CONNECTORS.find((c) => c.type === selected)?.label} →`}
-              </button>
-            ) : (
-              <button
-                onClick={saveNonOAuth}
-                disabled={connecting || selected === session.seller.connectorType}
-                className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg
-                           hover:bg-emerald-800 disabled:opacity-60 transition-colors"
-              >
-                {connecting ? '⏳ Guardando...' : 'Guardar'}
-              </button>
-            )}
-          </div>
+        {selected && !needsCreds && selected !== session.seller.connectorType && (
+          <SaveManualConnector
+            sellerId={session.seller.id}
+            connectorType={selected}
+            token={session.token}
+            onSaved={() => onSessionUpdate({ connectorType: selected })}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+function SaveManualConnector({
+  sellerId, connectorType, token, onSaved,
+}: { sellerId: string; connectorType: string; token: string; onSaved: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await fetch(`${API}/api/v1/sellers/${sellerId}/connector/credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ connectorType }),
+      });
+      setDone(true);
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (done) return <p className="text-sm text-emerald-600">✓ Guardado</p>;
+
+  return (
+    <button
+      onClick={save}
+      disabled={saving}
+      className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg
+                 hover:bg-emerald-800 disabled:opacity-60 transition-colors"
+    >
+      {saving ? '⏳ Guardando...' : 'Guardar selección'}
+    </button>
   );
 }
 

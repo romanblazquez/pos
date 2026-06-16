@@ -3,7 +3,7 @@ import type { SellerSession } from '../App.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-type ConnectorType =
+export type ConnectorType =
   | 'tiendanube'
   | 'shopify'
   | 'mercadolibre'
@@ -14,6 +14,7 @@ type ConnectorType =
 interface WizardState {
   storeType: 'connect' | 'create' | '';
   connectorType: ConnectorType | '';
+  connectorConnected: boolean;
   catalogImported: boolean;
   shipsFrom: string;
   offersPickup: boolean;
@@ -23,10 +24,78 @@ interface WizardState {
 const INITIAL: WizardState = {
   storeType: '',
   connectorType: '',
+  connectorConnected: false,
   catalogImported: false,
   shipsFrom: '',
   offersPickup: false,
   commissionAccepted: false,
+};
+
+// Per-connector credential fields shown to the seller.
+// Keys become the JSON body sent to POST /connector/credentials.
+const CREDENTIAL_FIELDS: Partial<Record<ConnectorType, { key: string; label: string; placeholder: string; hint: string }[]>> = {
+  tiendanube: [
+    {
+      key: 'userId',
+      label: 'ID de tu tienda',
+      placeholder: 'Ej: 1234567',
+      hint: 'Tiendanube → Mi cuenta → Datos de la cuenta → N° de tienda',
+    },
+    {
+      key: 'accessToken',
+      label: 'Token de acceso',
+      placeholder: 'Pegá tu access token aquí',
+      hint: 'Tiendanube → Configuración → Aplicaciones externas → Crear token de API',
+    },
+  ],
+  shopify: [
+    {
+      key: 'shopUrl',
+      label: 'URL de tu tienda Shopify',
+      placeholder: 'tu-tienda.myshopify.com',
+      hint: 'El subdominio de tu tienda en Shopify (sin https://)',
+    },
+    {
+      key: 'accessToken',
+      label: 'Admin API access token',
+      placeholder: 'shpat_...',
+      hint: 'Shopify Admin → Apps → Develop apps → tu app → Admin API access token',
+    },
+  ],
+  woocommerce: [
+    {
+      key: 'siteUrl',
+      label: 'URL de tu sitio WordPress',
+      placeholder: 'https://tu-tienda.com',
+      hint: 'La URL raíz de tu sitio donde está instalado WooCommerce',
+    },
+    {
+      key: 'consumerKey',
+      label: 'Consumer Key',
+      placeholder: 'ck_...',
+      hint: 'WooCommerce → Ajustes → Avanzado → REST API → Añadir clave',
+    },
+    {
+      key: 'consumerSecret',
+      label: 'Consumer Secret',
+      placeholder: 'cs_...',
+      hint: 'Se genera junto con la Consumer Key',
+    },
+  ],
+  mercadolibre: [
+    {
+      key: 'accessToken',
+      label: 'Access Token de Mercado Libre',
+      placeholder: 'APP_USR-...',
+      hint: 'Mercado Libre Developers → Mis apps → Credenciales → Access token',
+    },
+    {
+      key: 'sellerId',
+      label: 'Tu User ID (Seller ID)',
+      placeholder: 'Ej: 123456789',
+      hint: 'Número de usuario de tu cuenta de Mercado Libre',
+    },
+  ],
 };
 
 const TOTAL_STEPS = 5;
@@ -216,7 +285,7 @@ function Step1StoreType({
   );
 }
 
-const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
+const NEEDS_CREDENTIALS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
 
 function Step2Connect({
   data,
@@ -227,29 +296,6 @@ function Step2Connect({
   session: SellerSession;
   onChange: (d: Partial<WizardState>) => void;
 }) {
-  const [connecting, setConnecting] = useState(false);
-  const [oauthError, setOauthError] = useState('');
-
-  const isOAuth = data.connectorType && OAUTH_CONNECTORS.has(data.connectorType);
-  const connectorMeta = CONNECTORS.find((c) => c.type === data.connectorType);
-
-  async function startOAuth() {
-    if (!data.connectorType) return;
-    setConnecting(true);
-    setOauthError('');
-    try {
-      const res = await fetch(
-        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${data.connectorType}`,
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { authUrl } = (await res.json()) as { authUrl: string };
-      window.location.href = authUrl;
-    } catch (e) {
-      setOauthError(`No se pudo iniciar la conexión: ${String(e)}`);
-      setConnecting(false);
-    }
-  }
-
   return (
     <div className="space-y-5">
       <StepHeader step={2} title="Conectar tu catálogo" desc="¿Dónde están tus productos ahora?" />
@@ -257,7 +303,7 @@ function Step2Connect({
         {CONNECTORS.map((c) => (
           <button
             key={c.type}
-            onClick={() => { onChange({ connectorType: c.type }); setOauthError(''); }}
+            onClick={() => onChange({ connectorType: c.type, connectorConnected: false })}
             className={`text-left p-3 rounded-xl border-2 transition-all ${
               data.connectorType === c.type
                 ? 'border-emerald-600 bg-emerald-50'
@@ -271,23 +317,112 @@ function Step2Connect({
         ))}
       </div>
 
-      {isOAuth && connectorMeta && (
-        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-3">
-          <p className="text-sm text-blue-800">
-            🔐 Para importar tu catálogo necesitamos que autorices el acceso a <strong>{connectorMeta.label}</strong>.
-            Solo pedimos permisos de lectura.
-          </p>
-          {oauthError && <p className="text-xs text-red-600">{oauthError}</p>}
-          <button
-            onClick={startOAuth}
-            disabled={connecting}
-            className="w-full py-2 text-sm bg-blue-600 text-white font-medium rounded-lg
-                       hover:bg-blue-700 disabled:opacity-60 transition-colors"
-          >
-            {connecting ? '⏳ Conectando...' : `Autorizar con ${connectorMeta.label} →`}
-          </button>
-        </div>
+      {data.connectorType && NEEDS_CREDENTIALS.has(data.connectorType) && (
+        <ConnectorCredentialForm
+          sellerId={session.seller.id}
+          connectorType={data.connectorType as ConnectorType}
+          connected={data.connectorConnected}
+          onConnected={() => onChange({ connectorConnected: true })}
+        />
       )}
+    </div>
+  );
+}
+
+// ─── Shared credential form ───────────────────────────────────────────────────
+
+export function ConnectorCredentialForm({
+  sellerId,
+  connectorType,
+  connected,
+  onConnected,
+}: {
+  sellerId: string;
+  connectorType: ConnectorType;
+  connected: boolean;
+  onConnected: () => void;
+}) {
+  const fields = CREDENTIAL_FIELDS[connectorType] ?? [];
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  if (fields.length === 0) return null;
+
+  const connectorLabel = CONNECTORS.find((c) => c.type === connectorType)?.label ?? connectorType;
+
+  async function save() {
+    const missing = fields.find((f) => !values[f.key]?.trim());
+    if (missing) { setError(`El campo "${missing.label}" es obligatorio.`); return; }
+
+    setSaving(true);
+    setError('');
+    try {
+      // 1. Save credentials (encrypted on server)
+      const saveRes = await fetch(`${API}/api/v1/sellers/${sellerId}/connector/credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...values, connectorType }),
+      });
+      if (!saveRes.ok) {
+        const body = await saveRes.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? `HTTP ${saveRes.status}`);
+      }
+
+      // 2. Ping to verify the credentials actually work
+      const pingRes = await fetch(`${API}/api/v1/sellers/${sellerId}/connector/ping`);
+      if (!pingRes.ok) throw new Error('Credenciales guardadas pero la verificación falló. Revisá los datos.');
+
+      onConnected();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (connected) {
+    return (
+      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+        <span className="text-2xl">✅</span>
+        <div>
+          <p className="font-semibold text-emerald-800 text-sm">¡{connectorLabel} conectado!</p>
+          <p className="text-xs text-emerald-600">Las credenciales se verificaron correctamente.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-4">
+      <p className="text-sm font-medium text-stone-700">
+        🔑 Ingresá tus credenciales de <strong>{connectorLabel}</strong>
+      </p>
+
+      {fields.map((f) => (
+        <div key={f.key} className="space-y-1">
+          <label className="text-xs font-medium text-stone-600">{f.label}</label>
+          <input
+            type={f.key.toLowerCase().includes('token') || f.key.toLowerCase().includes('secret') ? 'password' : 'text'}
+            value={values[f.key] ?? ''}
+            onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
+            placeholder={f.placeholder}
+            className={inputCls}
+          />
+          <p className="text-[11px] text-stone-400">{f.hint}</p>
+        </div>
+      ))}
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-full py-2.5 text-sm bg-emerald-700 text-white font-medium rounded-lg
+                   hover:bg-emerald-800 disabled:opacity-60 transition-colors"
+      >
+        {saving ? '⏳ Verificando...' : 'Guardar y verificar conexión'}
+      </button>
     </div>
   );
 }

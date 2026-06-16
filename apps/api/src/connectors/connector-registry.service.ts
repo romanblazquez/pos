@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TiendanubeConnector } from '@retail-os/tiendanube';
 import type { IConnector, ConnectorCredentials } from '@retail-os/connector-contracts';
+import { encryptCredentials, decryptCredentials } from './credential-crypto.js';
 
 /**
  * Central registry and credential loader for all connectors.
@@ -40,19 +41,17 @@ export class ConnectorRegistryService {
     });
 
     if (!seller.connectorConfig) {
-      throw new Error(`Seller ${sellerId} has no connector config`);
+      throw new Error(`Seller ${sellerId} has no connector credentials configured`);
     }
 
-    // In production: decrypt at this point using a KMS key.
-    // For now, connectorConfig is stored as-is (plaintext) for dev.
-    return seller.connectorConfig as unknown as ConnectorCredentials;
+    return decryptCredentials(seller.connectorConfig as Record<string, unknown>) as ConnectorCredentials;
   }
 
   async saveCredentials(sellerId: string, creds: ConnectorCredentials): Promise<void> {
-    // In production: encrypt before saving.
+    const encrypted = encryptCredentials(creds as Record<string, string>);
     await this.prisma.seller.update({
       where: { id: sellerId },
-      data: { connectorConfig: creds as Record<string, string> },
+      data: { connectorConfig: encrypted },
     });
   }
 }
