@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Inject, Post } from '@nestjs/common';
 import type { SaleIngestionRequest, SaleIngestionResponse } from '@retail-os/shared-types';
 import { SyncService } from './sync.service.js';
 import { Public } from '../auth/auth.guard.js';

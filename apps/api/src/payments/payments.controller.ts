@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Headers } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Headers } from '@nestjs/common';
 import { MpOAuthService } from './mp-oauth.service.js';
 import { Public } from '../auth/auth.guard.js';
 
