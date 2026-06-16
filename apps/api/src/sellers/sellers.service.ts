@@ -265,4 +265,10 @@ export class SellersService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async updateProfile(id: string, data: { name?: string; phone?: string; timezone?: string }) {
+    const seller = await this.prisma.seller.findUnique({ where: { id } });
+    if (!seller) throw new NotFoundException(`Seller "${id}" not found`);
+    return this.prisma.seller.update({ where: { id }, data });
+  }
 }

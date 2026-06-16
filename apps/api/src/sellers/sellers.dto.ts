@@ -91,6 +91,20 @@ export class OrderStatsDto {
   daily: DayBucketDto[];
 }
 
+export class UpdateSellerProfileDto {
+  @ApiPropertyOptional({ type: 'string', description: 'Store display name', example: 'Acme Board Games' })
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(120)
+  name?: string;
+
+  @ApiPropertyOptional({ type: 'string', example: '+52 55 1234 5678' })
+  @IsOptional() @IsString() @MaxLength(30)
+  phone?: string;
+
+  @ApiPropertyOptional({ type: 'string', description: 'IANA timezone', example: 'America/Mexico_City' })
+  @IsOptional() @IsString() @MaxLength(60)
+  timezone?: string;
+}
+
 export class SyncResultDto {
   @ApiProperty({ type: 'string', description: 'Seller CUID', example: 'clx1234abcd' })
   sellerId: string;

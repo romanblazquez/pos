@@ -17,6 +17,9 @@ export type SellerSession = {
     connectorType: string | null;
     onboardingStep: string | null;
     emailVerified: boolean;
+    phone?: string | null;
+    country?: string | null;
+    timezone?: string | null;
   };
 };
 

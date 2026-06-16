@@ -5,6 +5,7 @@ import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
 import ListingsPage from './ListingsPage.js';
 import OrdersPage from './OrdersPage.js';
 import AnalyticsPage from './AnalyticsPage.js';
+import { SettingsPage } from './SettingsPage.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
 import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
@@ -87,7 +88,14 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
         {activeNav === 'orders'     && <OrdersPage session={session} />}
         {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
         {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={setActiveNav} />}
-        {activeNav === 'settings'   && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
+        {activeNav === 'settings'   && (
+          <div className="space-y-0">
+            <SettingsPage session={session} onSessionUpdate={onSessionUpdate} />
+            <div className="px-8 pb-8 max-w-2xl">
+              <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />
+            </div>
+          </div>
+        )}
         {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'orders' &&
          activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />

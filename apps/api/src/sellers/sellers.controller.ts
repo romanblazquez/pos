@@ -19,7 +19,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
-import { CreateSellerDto, UpdateListingDto } from './sellers.dto.js';
+import { CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Public } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 
@@ -275,6 +275,18 @@ export class SellersController {
   })
   getTopProducts(@Param('id') id: string, @Query('limit') limit = '5') {
     return this.svc.getTopProducts(id, parseInt(limit, 10));
+  }
+
+  @Patch(':id/profile')
+  @ApiOperation({
+    summary: 'Update seller profile',
+    description: 'Updates the seller display name, phone, or timezone. Email and country cannot be changed here.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiResponse({ status: 200, description: 'Updated seller record.' })
+  @ApiResponse({ status: 404, description: 'Seller not found.' })
+  updateProfile(@Param('id') id: string, @Body() dto: UpdateSellerProfileDto) {
+    return this.svc.updateProfile(id, dto);
   }
 
   @Patch(':id/listings/:listingId')

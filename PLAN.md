@@ -77,10 +77,10 @@ Last updated: 2026-06-16
 ## Backlog — next priorities
 
 ### P0 — Core hardening
-- [ ] Input validation (`class-validator` + `ValidationPipe` on all DTOs)
-- [ ] Rate limiting (`@nestjs/throttler`) on auth and checkout endpoints
-- [ ] Global exception filter — consistent error shape `{ error, message, statusCode }`
-- [ ] Pagination response envelope `{ data[], total, page, limit }` on all list endpoints
+- [x] Input validation (`class-validator` + `ValidationPipe` on all DTOs)
+- [x] Rate limiting (`@nestjs/throttler` — 120 req/min global)
+- [x] Global exception filter — consistent `{ statusCode, error, message, path, timestamp }`
+- [x] Pagination response envelope `{ data[], total, page, limit, pages }` on all list endpoints
 
 ### P1 — Seller Portal UX
 - [ ] Settings page — edit seller profile (name, email, phone, timezone)
