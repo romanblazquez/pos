@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Inject,
   Post,
   Param,
@@ -290,8 +291,9 @@ export class SellersController {
       this.loyalty.getSellerRewardConfig(id),
       this.loyalty.getPlatformConfig(),
     ]);
+    const sellerPctInt = Math.round(config.storeCashbackPct * 100);
     const effectiveCommissionPct = Math.max(
-      platformCfg.baseCommissionPct - config.storeCashbackPct,
+      platformCfg.baseCommissionPct - Math.floor(sellerPctInt / 2) * 0.01,
       platformCfg.minCommissionPct,
     );
     return {
@@ -323,6 +325,72 @@ export class SellersController {
   @ApiResponse({ status: 404, description: 'Seller not found.' })
   updateProfile(@Param('id') id: string, @Body() dto: UpdateSellerProfileDto) {
     return this.svc.updateProfile(id, dto);
+  }
+
+  // ── Per-listing promos ─────────────────────────────────────────────────────
+
+  @Get(':id/listings/:listingId/promos')
+  @ApiOperation({ summary: 'List promos for a listing' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiResponse({ status: 200, description: 'Array of ListingPromo objects.' })
+  getListingPromos(@Param('id') id: string, @Param('listingId') listingId: string) {
+    return this.svc.getListingPromos(id, listingId);
+  }
+
+  @Post(':id/listings/:listingId/promos')
+  @ApiOperation({ summary: 'Create a per-listing bonus cashback promo' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['bonusCashbackPct'],
+      properties: {
+        bonusCashbackPct: { type: 'number', description: 'Extra store-credit % (0–0.50)', example: 0.05 },
+        label: { type: 'string', description: 'Display label for the promo', example: 'Semana del juego' },
+        startsAt: { type: 'string', format: 'date-time', description: 'When the promo starts (null = immediately)' },
+        endsAt:   { type: 'string', format: 'date-time', description: 'When the promo ends (null = indefinite)' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Created ListingPromo.' })
+  createListingPromo(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Body() body: { bonusCashbackPct: number; label?: string; startsAt?: string; endsAt?: string },
+  ) {
+    return this.svc.createListingPromo(id, listingId, body);
+  }
+
+  @Patch(':id/listings/:listingId/promos/:promoId')
+  @ApiOperation({ summary: 'Update a listing promo' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiParam({ name: 'promoId', description: 'Promo CUID' })
+  @ApiResponse({ status: 200, description: 'Updated ListingPromo.' })
+  updateListingPromo(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Param('promoId') promoId: string,
+    @Body() body: { bonusCashbackPct?: number; label?: string; startsAt?: string | null; endsAt?: string | null; active?: boolean },
+  ) {
+    return this.svc.updateListingPromo(id, listingId, promoId, body);
+  }
+
+  @Delete(':id/listings/:listingId/promos/:promoId')
+  @ApiOperation({ summary: 'Delete a listing promo' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiParam({ name: 'promoId', description: 'Promo CUID' })
+  @ApiResponse({ status: 200, description: 'Promo deleted.' })
+  async deleteListingPromo(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Param('promoId') promoId: string,
+  ) {
+    await this.svc.deleteListingPromo(id, listingId, promoId);
+    return { deleted: true };
   }
 
   @Patch(':id/listings/:listingId')

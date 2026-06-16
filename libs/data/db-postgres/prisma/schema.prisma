@@ -359,10 +359,28 @@ model Listing {
   product         MktProduct @relation(fields: [productId], references: [id])
   deliveryOptions DeliveryOption[]
   orderLines      MarketplaceOrderLine[]
+  promos          ListingPromo[]
   @@unique([sellerId, sellerSku])
   @@index([productId, rankScore])
   @@index([sellerId, active])
   @@index([stockStatus])
+}
+
+/// Per-listing promotional cashback — stacks on top of the seller's store-wide rate.
+/// Buyer earns (storeCashbackPct + bonusCashbackPct) in store credits for this listing.
+model ListingPromo {
+  id               String    @id @default(cuid())
+  listingId        String
+  listing          Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  /// Additional store-credit % on top of the seller's global storeCashbackPct (0–0.50)
+  bonusCashbackPct Float     @default(0)
+  label            String?   // e.g. "Promo semana del juego", shown in marketplace UI
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@index([listingId, active])
 }
 
 model DeliveryOption {

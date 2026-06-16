@@ -11,6 +11,15 @@ function cn(...classes: (string | boolean | undefined | null)[]) {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface ListingPromo {
+  id: string;
+  bonusCashbackPct: number;
+  label: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+}
+
 interface Listing {
   id: string;
   sellerSku: string | null;
@@ -57,6 +66,18 @@ function timeAgo(iso: string | null) {
   return `hace ${Math.floor(diff / 86400)} d`;
 }
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function isPromoCurrentlyActive(promo: ListingPromo): boolean {
+  if (!promo.active) return false;
+  const now = new Date();
+  if (promo.startsAt && new Date(promo.startsAt) > now) return false;
+  if (promo.endsAt && new Date(promo.endsAt) < now) return false;
+  return true;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ListingsPage({ session }: { session: SellerSession }) {
@@ -73,6 +94,8 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
 
   const [editListing, setEditListing] = useState<Listing | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // tracks which listing IDs have at least one currently-active promo (lazy, populated when modal opens)
+  const [promoMap, setPromoMap] = useState<Record<string, boolean>>({});
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -130,6 +153,11 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
     } finally {
       setSavingId(null);
     }
+  }
+
+  function handlePromosFetched(listingId: string, promos: ListingPromo[]) {
+    const hasActive = promos.some(isPromoCurrentlyActive);
+    setPromoMap((prev) => ({ ...prev, [listingId]: hasActive }));
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -252,6 +280,7 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
                     onToggleActive={() => toggleActive(listing)}
                     onEdit={() => setEditListing(listing)}
                     isSaving={savingId === listing.id}
+                    hasActivePromo={promoMap[listing.id] ?? false}
                   />
                 ))}
               </tbody>
@@ -294,11 +323,13 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         <EditModal
           listing={editListing}
           sellerId={session.seller.id}
+          token={session.token}
           onClose={() => setEditListing(null)}
           onSaved={(updated) => {
             setListings((prev) => prev.map((l) => l.id === updated.id ? { ...l, ...updated } : l));
             setEditListing(null);
           }}
+          onPromosFetched={handlePromosFetched}
         />
       )}
     </div>
@@ -351,12 +382,13 @@ function StatsBar({
 // ─── Listing row ──────────────────────────────────────────────────────────────
 
 function ListingRow({
-  listing, onToggleActive, onEdit, isSaving,
+  listing, onToggleActive, onEdit, isSaving, hasActivePromo,
 }: {
   listing: Listing;
   onToggleActive: () => void;
   onEdit: () => void;
   isSaving: boolean;
+  hasActivePromo: boolean;
 }) {
   const stockClass =
     listing.stockStatus === 'in_stock'     ? 'text-emerald-700 bg-emerald-50' :
@@ -385,7 +417,14 @@ function ListingRow({
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-medium text-slate-900 truncate max-w-[220px]">{listing.product.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-slate-900 truncate max-w-[200px]">{listing.product.name}</p>
+              {hasActivePromo && (
+                <span className="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                  PROMO
+                </span>
+              )}
+            </div>
             {listing.sellerSku && (
               <p className="text-xs text-slate-400 mt-0.5 font-mono">{listing.sellerSku}</p>
             )}
@@ -455,18 +494,110 @@ function ListingRow({
 // ─── Edit modal ───────────────────────────────────────────────────────────────
 
 function EditModal({
-  listing, sellerId, onClose, onSaved,
+  listing, sellerId, token, onClose, onSaved, onPromosFetched,
 }: {
   listing: Listing;
   sellerId: string;
+  token: string;
   onClose: () => void;
-  onSaved: (updated: Partial<Listing>) => void;
+  onSaved: (updated: Partial<Listing> & { id: string }) => void;
+  onPromosFetched: (listingId: string, promos: ListingPromo[]) => void;
 }) {
   const [price, setPrice] = useState(String(listing.priceMinorUnits / 100));
   const [stock, setStock] = useState(String(listing.stock));
   const [active, setActive] = useState(listing.active);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Promos state
+  const [promos, setPromos] = useState<ListingPromo[]>([]);
+  const [loadingPromos, setLoadingPromos] = useState(true);
+  const [showNewPromo, setShowNewPromo] = useState(false);
+  const [newBonusPct, setNewBonusPct] = useState(5);
+  const [newLabel, setNewLabel] = useState('');
+  const [newStartsAt, setNewStartsAt] = useState('');
+  const [newEndsAt, setNewEndsAt] = useState('');
+  const [savingPromo, setSavingPromo] = useState(false);
+  const [deletingPromoId, setDeletingPromoId] = useState<string | null>(null);
+  const [togglingPromoId, setTogglingPromoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: ListingPromo[]) => {
+        const list = Array.isArray(data) ? data : [];
+        setPromos(list);
+        onPromosFetched(listing.id, list);
+      })
+      .catch(() => setPromos([]))
+      .finally(() => setLoadingPromos(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellerId, listing.id, token]);
+
+  function updatePromos(updated: ListingPromo[]) {
+    setPromos(updated);
+    onPromosFetched(listing.id, updated);
+  }
+
+  async function handleCreatePromo() {
+    setSavingPromo(true);
+    try {
+      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          bonusCashbackPct: newBonusPct / 100,
+          ...(newLabel ? { label: newLabel } : {}),
+          ...(newStartsAt ? { startsAt: newStartsAt } : {}),
+          ...(newEndsAt ? { endsAt: newEndsAt } : {}),
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json() as ListingPromo;
+        updatePromos([created, ...promos]);
+        setShowNewPromo(false);
+        setNewBonusPct(5);
+        setNewLabel('');
+        setNewStartsAt('');
+        setNewEndsAt('');
+      }
+    } finally {
+      setSavingPromo(false);
+    }
+  }
+
+  async function handleTogglePromo(promo: ListingPromo) {
+    setTogglingPromoId(promo.id);
+    try {
+      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promo.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ active: !promo.active }),
+      });
+      if (res.ok) {
+        updatePromos(promos.map((p) => p.id === promo.id ? { ...p, active: !p.active } : p));
+      }
+    } finally {
+      setTogglingPromoId(null);
+    }
+  }
+
+  async function handleDeletePromo(promoId: string) {
+    setDeletingPromoId(promoId);
+    try {
+      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promoId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        updatePromos(promos.filter((p) => p.id !== promoId));
+      }
+    } finally {
+      setDeletingPromoId(null);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -486,6 +617,7 @@ function EditModal({
         setSaved(true);
         setTimeout(() => {
           onSaved({
+            id: listing.id,
             priceMinorUnits: isNaN(priceMinorUnits) ? listing.priceMinorUnits : priceMinorUnits,
             stock: isNaN(stockNum) ? listing.stock : stockNum,
             active,
@@ -510,9 +642,10 @@ function EditModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+
         {/* Modal header */}
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-slate-100">
+        <div className="flex items-start gap-4 px-6 py-5 border-b border-slate-100 shrink-0">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0">
             {listing.product.images[0] ? (
               <img src={listing.product.images[0]} alt={listing.product.name} className="w-full h-full object-cover" />
@@ -539,8 +672,10 @@ function EditModal({
           </button>
         </div>
 
-        {/* Fields */}
-        <div className="px-6 py-5 space-y-4">
+        {/* Scrollable body */}
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+
+          {/* Price */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
               Precio ({listing.currency})
@@ -554,7 +689,7 @@ function EditModal({
                 step="0.01"
                 min="0"
                 className="w-full pl-7 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
+                           focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
               />
             </div>
             <p className="text-xs text-slate-400 mt-1">
@@ -562,6 +697,7 @@ function EditModal({
             </p>
           </div>
 
+          {/* Stock */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
               Stock disponible
@@ -572,11 +708,12 @@ function EditModal({
               onChange={(e) => setStock(e.target.value)}
               min="0"
               className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
+                         focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
             />
             <p className="text-xs text-slate-400 mt-1">Usá 999 para stock ilimitado.</p>
           </div>
 
+          {/* Active toggle */}
           <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200">
             <div>
               <p className="text-sm font-medium text-slate-900">Activo en marketplace</p>
@@ -596,6 +733,207 @@ function EditModal({
             </button>
           </div>
 
+          {/* ── Promos section ── */}
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                  Cashback por producto
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Se suma al cashback base de tu tienda, solo para este producto
+                </p>
+              </div>
+              {!showNewPromo && (
+                <button
+                  onClick={() => setShowNewPromo(true)}
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 transition-colors shrink-0 ml-3"
+                >
+                  + Nueva
+                </button>
+              )}
+            </div>
+
+            {/* Existing promos list */}
+            {loadingPromos ? (
+              <p className="text-xs text-slate-400 py-2">Cargando promos…</p>
+            ) : promos.length === 0 && !showNewPromo ? (
+              <p className="text-xs text-slate-400 py-2 italic">
+                Sin promos — el cashback base de tu tienda aplica normalmente.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {promos.map((promo) => {
+                  const nowActive = isPromoCurrentlyActive(promo);
+                  return (
+                    <div
+                      key={promo.id}
+                      className={cn(
+                        'flex items-center gap-3 p-3 rounded-xl border text-xs transition-colors',
+                        nowActive
+                          ? 'bg-emerald-50 border-emerald-200'
+                          : 'bg-slate-50 border-slate-200'
+                      )}
+                    >
+                      {/* Bonus pct */}
+                      <span className={cn(
+                        'text-base font-bold tabular shrink-0',
+                        nowActive ? 'text-emerald-600' : 'text-slate-400'
+                      )}>
+                        +{Math.round(promo.bonusCashbackPct * 100)}%
+                      </span>
+
+                      {/* Label + dates */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {promo.label && (
+                            <span className="text-slate-700 font-medium truncate">{promo.label}</span>
+                          )}
+                          {nowActive && (
+                            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded shrink-0">
+                              ACTIVA
+                            </span>
+                          )}
+                          {!promo.active && (
+                            <span className="text-[10px] font-medium bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded shrink-0">
+                              PAUSADA
+                            </span>
+                          )}
+                        </div>
+                        {(promo.startsAt || promo.endsAt) && (
+                          <p className="text-slate-400 mt-0.5">
+                            {promo.startsAt ? fmtDate(promo.startsAt) : '∞'} → {promo.endsAt ? fmtDate(promo.endsAt) : '∞'}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleTogglePromo(promo)}
+                          disabled={togglingPromoId === promo.id}
+                          title={promo.active ? 'Pausar' : 'Activar'}
+                          className={cn(
+                            'relative w-8 h-4 rounded-full transition-colors duration-200 disabled:opacity-50',
+                            promo.active ? 'bg-emerald-500' : 'bg-slate-300'
+                          )}
+                        >
+                          <span className={cn(
+                            'absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-200',
+                            promo.active ? 'translate-x-4' : 'translate-x-0.5'
+                          )} />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePromo(promo.id)}
+                          disabled={deletingPromoId === promo.id}
+                          title="Eliminar promo"
+                          className="text-slate-300 hover:text-red-400 transition-colors text-base leading-none disabled:opacity-50"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* New promo form */}
+            {showNewPromo && (
+              <div className="mt-3 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 space-y-3.5">
+                {/* Bonus slider */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                      Cashback extra
+                    </label>
+                    <span className="text-lg font-bold text-emerald-600 tabular">+{newBonusPct}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1} max={15} step={0.5}
+                    value={newBonusPct}
+                    onChange={(e) => setNewBonusPct(parseFloat(e.target.value))}
+                    className="w-full accent-emerald-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                    <span>1%</span><span>15%</span>
+                  </div>
+                </div>
+
+                {/* Label */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Etiqueta <span className="font-normal text-slate-400">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    placeholder="Ej: Liquidación de verano"
+                    maxLength={60}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white
+                               focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                {/* Date range */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Inicio <span className="font-normal text-slate-400">(opcional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={newStartsAt}
+                      onChange={(e) => setNewStartsAt(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Fin <span className="font-normal text-slate-400">(opcional)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={newEndsAt}
+                      onChange={(e) => setNewEndsAt(e.target.value)}
+                      min={newStartsAt || undefined}
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-1">
+                  <button
+                    onClick={() => {
+                      setShowNewPromo(false);
+                      setNewBonusPct(5);
+                      setNewLabel('');
+                      setNewStartsAt('');
+                      setNewEndsAt('');
+                    }}
+                    className="px-3 py-1.5 text-xs text-slate-600 border border-slate-300 rounded-lg
+                               hover:bg-slate-100 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCreatePromo}
+                    disabled={savingPromo}
+                    className="px-4 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg
+                               hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                  >
+                    {savingPromo ? 'Guardando…' : 'Crear promo'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Links */}
           <div className="flex gap-3">
             {listing.sellerUrl && (
               <a
@@ -633,7 +971,7 @@ function EditModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
           <p className="text-xs text-slate-400">Sync: {timeAgo(listing.lastSyncedAt)}</p>
           <div className="flex gap-2">
             <button

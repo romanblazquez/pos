@@ -209,7 +209,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
   // Recompute preview locally as slider moves
   useEffect(() => {
     const pct = storeCashback / 100;
-    const effective = Math.max(0.05 - pct, 0.02);
+    const effective = Math.max(0.05 - Math.floor(storeCashback / 2) * 0.01, 0.03);
     setPreview({
       storeCashbackPct: pct,
       effectiveCommissionPct: effective,
@@ -307,7 +307,10 @@ function RewardsCard({ session }: { session: SellerSession }) {
                     {Math.round(preview.effectiveCommissionPct * 100)}%
                   </p>
                   <p className="text-xs text-slate-400">
-                    {storeCashback > 0 ? 'Reducida de 5% por tus créditos' : 'Comisión base 5%'}
+                    {storeCashback > 0
+                      ? `Reducida ${Math.floor(storeCashback / 2)}% — cada 2% extra = −1% comisión`
+                      : 'Comisión base 5%'
+                    }
                   </p>
                 </div>
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 space-y-0.5">
@@ -334,28 +337,38 @@ function RewardsCard({ session }: { session: SellerSession }) {
                   <span className="font-medium">{fmt(exampleTotal)}</span>
                 </div>
 
-                {/* Commission block */}
-                <div className="flex justify-between text-slate-500">
-                  <span>Comisión plataforma ({Math.round(preview.effectiveCommissionPct * 100)}%)</span>
-                  <span className="text-red-500">−{fmt(commissionAmt)}</span>
-                </div>
-                <div className="pl-4 space-y-0.5">
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>└ ingreso neto plataforma ({Math.round((preview.effectiveCommissionPct - platformCashbackPct) * 100)}%)</span>
-                    <span>{fmt(commissionAmt - platformCbAmt)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-emerald-500">
-                    <span>└ créditos libres al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
-                    <span>+{fmt(platformCbAmt)}</span>
-                  </div>
+                {/* Total deduction = commission + store cashback */}
+                <div className="flex justify-between font-medium text-slate-700">
+                  <span>
+                    Total deducido ({Math.round(preview.effectiveCommissionPct * 100) + storeCashback}%)
+                  </span>
+                  <span className="text-red-500">−{fmt(commissionAmt + storeCbAmt)}</span>
                 </div>
 
-                {storeCbAmt > 0 && (
-                  <div className="flex justify-between text-slate-500">
-                    <span>Créditos de tienda al comprador ({storeCashback}%)</span>
-                    <span className="text-red-500">−{fmt(storeCbAmt)}</span>
+                {/* Commission sub-line */}
+                <div className="pl-4 space-y-0.5">
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>└ comisión plataforma ({Math.round(preview.effectiveCommissionPct * 100)}%)</span>
+                    <span>−{fmt(commissionAmt)}</span>
                   </div>
-                )}
+                  <div className="pl-4 space-y-0.5">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>└ ingreso neto plataforma ({Math.round((preview.effectiveCommissionPct - platformCashbackPct) * 100)}%)</span>
+                      <span>{fmt(commissionAmt - platformCbAmt)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-emerald-500">
+                      <span>└ créditos libres al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
+                      <span>+{fmt(platformCbAmt)}</span>
+                    </div>
+                  </div>
+
+                  {storeCbAmt > 0 && (
+                    <div className="flex justify-between text-xs text-emerald-600">
+                      <span>└ cashback de tu tienda ({storeCashback}%) — solo en tus productos</span>
+                      <span>−{fmt(storeCbAmt)}</span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex justify-between font-semibold border-t border-slate-100 pt-2 mt-1">
                   <span>Tu cobro neto</span>

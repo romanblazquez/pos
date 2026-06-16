@@ -271,4 +271,82 @@ export class SellersService {
     if (!seller) throw new NotFoundException(`Seller "${id}" not found`);
     return this.prisma.seller.update({ where: { id }, data });
   }
+
+  // ── Per-listing promos ───────────────────────────────────────────────────────
+
+  async getListingPromos(sellerId: string, listingId: string) {
+    const listing = await this.prisma.listing.findFirst({ where: { id: listingId, sellerId } });
+    if (!listing) throw new NotFoundException('Listing not found');
+    return this.prisma.listingPromo.findMany({
+      where: { listingId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createListingPromo(
+    sellerId: string,
+    listingId: string,
+    data: { bonusCashbackPct: number; label?: string; startsAt?: string; endsAt?: string },
+  ) {
+    const listing = await this.prisma.listing.findFirst({ where: { id: listingId, sellerId } });
+    if (!listing) throw new NotFoundException('Listing not found');
+    return this.prisma.listingPromo.create({
+      data: {
+        listingId,
+        bonusCashbackPct: data.bonusCashbackPct,
+        label: data.label ?? null,
+        startsAt: data.startsAt ? new Date(data.startsAt) : null,
+        endsAt: data.endsAt ? new Date(data.endsAt) : null,
+        active: true,
+      },
+    });
+  }
+
+  async updateListingPromo(
+    sellerId: string,
+    listingId: string,
+    promoId: string,
+    data: { bonusCashbackPct?: number; label?: string; startsAt?: string | null; endsAt?: string | null; active?: boolean },
+  ) {
+    const promo = await this.prisma.listingPromo.findFirst({
+      where: { id: promoId, listingId, listing: { sellerId } },
+    });
+    if (!promo) throw new NotFoundException('Promo not found');
+    return this.prisma.listingPromo.update({
+      where: { id: promoId },
+      data: {
+        ...(data.bonusCashbackPct !== undefined && { bonusCashbackPct: data.bonusCashbackPct }),
+        ...(data.label !== undefined && { label: data.label }),
+        ...(data.startsAt !== undefined && { startsAt: data.startsAt ? new Date(data.startsAt) : null }),
+        ...(data.endsAt !== undefined && { endsAt: data.endsAt ? new Date(data.endsAt) : null }),
+        ...(data.active !== undefined && { active: data.active }),
+      },
+    });
+  }
+
+  async deleteListingPromo(sellerId: string, listingId: string, promoId: string) {
+    const promo = await this.prisma.listingPromo.findFirst({
+      where: { id: promoId, listingId, listing: { sellerId } },
+    });
+    if (!promo) throw new NotFoundException('Promo not found');
+    await this.prisma.listingPromo.delete({ where: { id: promoId } });
+  }
+
+  /** Returns the active promo (if any) for a listing at the current moment. */
+  async getActivePromo(listingId: string) {
+    const now = new Date();
+    return this.prisma.listingPromo.findFirst({
+      where: {
+        listingId,
+        active: true,
+        OR: [
+          { startsAt: null, endsAt: null },
+          { startsAt: { lte: now }, endsAt: null },
+          { startsAt: null, endsAt: { gte: now } },
+          { startsAt: { lte: now }, endsAt: { gte: now } },
+        ],
+      },
+      orderBy: { bonusCashbackPct: 'desc' },
+    });
+  }
 }

@@ -3,7 +3,7 @@ import { PrismaService } from '@retail-os/db-postgres';
 
 const DEFAULT_CONFIG = {
   baseCommissionPct: 0.05,
-  minCommissionPct: 0.02,
+  minCommissionPct: 0.03,
   platformCashbackPct: 0.01,
 };
 
@@ -48,11 +48,13 @@ export class LoyaltyService {
     });
   }
 
-  /** Compute the effective commission and cashback amounts for an order. */
-  async computeOrderFees(sellerId: string, orderTotalMinor: number): Promise<{
+  /** Compute the effective commission and cashback amounts for an order.
+   *  listingId is optional — when provided, any active per-listing promo is added to storeCashbackPct. */
+  async computeOrderFees(sellerId: string, orderTotalMinor: number, listingId?: string): Promise<{
     effectiveCommissionPct: number;
     platformCashbackPct: number;
     storeCashbackPct: number;
+    bonusCashbackPct: number;
     commissionMinor: number;
     platformCashbackMinor: number;
     storeCashbackMinor: number;
@@ -63,10 +65,34 @@ export class LoyaltyService {
       this.getSellerRewardConfig(sellerId),
     ]);
 
-    const storeCashbackPct = rewardCfg.storeCashbackPct;
-    // Commission reduces 1:1 with seller cashback, but never below floor
+    // Base store cashback from seller's global config
+    let storeCashbackPct = rewardCfg.storeCashbackPct;
+
+    // Add per-listing bonus if there's an active promo
+    let bonusCashbackPct = 0;
+    if (listingId) {
+      const promo = await this.prisma.listingPromo.findFirst({
+        where: {
+          listingId,
+          active: true,
+          OR: [
+            { startsAt: null, endsAt: null },
+            { startsAt: { lte: new Date() }, endsAt: null },
+            { startsAt: null, endsAt: { gte: new Date() } },
+            { startsAt: { lte: new Date() }, endsAt: { gte: new Date() } },
+          ],
+        },
+        orderBy: { bonusCashbackPct: 'desc' },
+      });
+      if (promo) {
+        bonusCashbackPct = promo.bonusCashbackPct;
+        storeCashbackPct += bonusCashbackPct;
+      }
+    }
+    // Only even seller cashback percentages reduce commission (1% for every 2%), never below floor
+    const sellerPctInt = Math.round(storeCashbackPct * 100);
     const effectiveCommissionPct = Math.max(
-      platformCfg.baseCommissionPct - storeCashbackPct,
+      platformCfg.baseCommissionPct - Math.floor(sellerPctInt / 2) * 0.01,
       platformCfg.minCommissionPct,
     );
 
@@ -79,6 +105,7 @@ export class LoyaltyService {
       effectiveCommissionPct,
       platformCashbackPct: platformCfg.platformCashbackPct,
       storeCashbackPct,
+      bonusCashbackPct,
       commissionMinor,
       platformCashbackMinor,
       storeCashbackMinor,
