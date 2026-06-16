@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -13,8 +13,26 @@ const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'ranking',  icon: '⭐', label: 'Ranking' },
 ];
 
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'orders', 'bgg', 'ranking']);
+
+function parseView(): AdminView {
+  const segment = window.location.pathname.replace(/^\//, '') as AdminView;
+  return ADMIN_VIEWS.has(segment) ? segment : 'sellers';
+}
+
 export default function App() {
-  const [view, setView] = useState<AdminView>('sellers');
+  const [view, setView] = useState<AdminView>(parseView);
+
+  useEffect(() => {
+    function onPop() { setView(parseView()); }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  function navigate(v: AdminView) {
+    setView(v);
+    window.history.pushState({}, '', `/${v}`);
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -27,7 +45,7 @@ export default function App() {
           {NAV.map((item) => (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+              onClick={() => navigate(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 view === item.id
                   ? 'bg-slate-700 text-white font-medium'

@@ -37,6 +37,13 @@ const NAV_ITEMS = [
 
 type NavId = (typeof NAV_ITEMS)[number]['id'];
 
+const NAV_IDS = new Set(NAV_ITEMS.map((n) => n.id));
+
+function parseNavFromPath(): NavId {
+  const segment = window.location.pathname.replace(/^\//, '');
+  return NAV_IDS.has(segment as NavId) ? (segment as NavId) : 'dashboard';
+}
+
 interface DashboardProps {
   session: SellerSession;
   onLogout: () => void;
@@ -52,7 +59,18 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
 }
 
 function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) {
-  const [activeNav, setActiveNav] = useState<NavId>('dashboard');
+  const [activeNav, setActiveNav] = useState<NavId>(parseNavFromPath);
+
+  useEffect(() => {
+    function onPop() { setActiveNav(parseNavFromPath()); }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  function navigate(id: NavId) {
+    setActiveNav(id);
+    window.history.pushState({}, '', id === 'dashboard' ? '/' : `/${id}`);
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -75,7 +93,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => navigate(item.id)}
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2 relative
                 ${activeNav === item.id
                   ? 'text-white font-medium'
@@ -119,7 +137,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
         {activeNav === 'listings'   && <ListingsPage session={session} />}
         {activeNav === 'orders'     && <OrdersPage session={session} />}
         {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
-        {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={setActiveNav} />}
+        {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={navigate} />}
         {activeNav === 'settings'   && (
           <div className="space-y-0">
             <SettingsPage session={session} onSessionUpdate={onSessionUpdate} />

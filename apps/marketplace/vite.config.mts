@@ -18,7 +18,6 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
     },
-    historyApiFallback: true,
   },
   build: {
     outDir: resolve(repoRoot, 'dist/apps/marketplace'),
