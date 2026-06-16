@@ -235,11 +235,12 @@ export class TiendanubeConnector implements IConnector {
 
   private async clientFor(sellerId: string): Promise<TiendanubeClient> {
     const creds = await this.loadCreds(sellerId);
-    return new TiendanubeClient({
-      accessToken: creds.accessToken!,
-      storeId: creds.storeId!,
-      userId: creds.userId as string,
-    });
+    // storeId and userId are the same value in Tiendanube (numeric store/user ID).
+    // Fall back to userId for credentials saved before the storeId key was standardised.
+    const storeId = (creds.storeId ?? creds.userId) as string;
+    if (!storeId) throw new Error(`Seller ${sellerId} has no storeId in credentials — re-enter Tiendanube credentials`);
+    if (!creds.accessToken) throw new Error(`Seller ${sellerId} has no accessToken in credentials`);
+    return new TiendanubeClient({ accessToken: creds.accessToken, storeId, userId: storeId });
   }
 
   private toRawProduct(p: TnProduct, currency: string): RawProduct {

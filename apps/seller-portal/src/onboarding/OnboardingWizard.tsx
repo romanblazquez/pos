@@ -36,16 +36,16 @@ const INITIAL: WizardState = {
 const CREDENTIAL_FIELDS: Partial<Record<ConnectorType, { key: string; label: string; placeholder: string; hint: string }[]>> = {
   tiendanube: [
     {
-      key: 'userId',
-      label: 'ID de tu tienda',
+      key: 'storeId',
+      label: 'ID de tu tienda (Store ID)',
       placeholder: 'Ej: 1234567',
-      hint: 'Tiendanube → Mi cuenta → Datos de la cuenta → N° de tienda',
+      hint: 'Tiendanube Admin → tu URL es mitienda.mitiendanube.com — el ID numérico está en Configuración → Datos de la cuenta',
     },
     {
       key: 'accessToken',
       label: 'Token de acceso',
       placeholder: 'Pegá tu access token aquí',
-      hint: 'Tiendanube → Configuración → Aplicaciones externas → Crear token de API',
+      hint: 'Tiendanube Admin → Configuración → Aplicaciones externas → Crear token de API',
     },
   ],
   shopify: [

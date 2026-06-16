@@ -217,8 +217,20 @@ export class ConnectorSyncService {
   }
 
   private async startLog(sellerId: string, syncType: string) {
+    // Verify seller exists first — stale sessions can pass a deleted sellerId
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: { id: true, connectorType: true },
+    });
+    if (!seller) throw new Error(`Seller ${sellerId} not found — please log out and log in again`);
+
     return this.prisma.connectorSyncLog.create({
-      data: { sellerId, connectorType: 'unknown', syncType, status: 'running' },
+      data: {
+        sellerId,
+        connectorType: seller.connectorType ?? 'unknown',
+        syncType,
+        status: 'running',
+      },
     });
   }
 
