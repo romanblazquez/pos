@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service.js';
 import type { UpsertProductDto } from './catalog.dto.js';
 import { Public } from '../auth/auth.guard.js';
@@ -9,7 +9,7 @@ const DEFAULT_TENANT = 'tenant-demo';
 @Public()
 @Controller('catalog')
 export class CatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
 
   @Get('products')
   list(

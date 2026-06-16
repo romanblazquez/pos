@@ -29,7 +29,7 @@ interface WebhookPayload {
 @Public()
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly mpOAuth: MpOAuthService) {}
+  constructor(@Inject(MpOAuthService) private readonly mpOAuth: MpOAuthService) {}
 
   // ─── Mercado Pago OAuth ─────────────────────────────────────────────────────
   /** Step 1: return the URL to which the merchant should be redirected. */

@@ -12,7 +12,7 @@ import { Public } from '../auth/auth.guard.js';
 @Public()
 @Controller('sync')
 export class SyncController {
-  constructor(private readonly sync: SyncService) {}
+  constructor(@Inject(SyncService) private readonly sync: SyncService) {}
 
   @Post('sales')
   ingestSale(

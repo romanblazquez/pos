@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import type { ProductFilters, UpsertProductDto } from './catalog.dto.js';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async listProducts(tenantId: string, filters: ProductFilters = {}) {
     return this.prisma.product.findMany({

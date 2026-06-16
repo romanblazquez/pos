@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import type { SaleIngestionRequest, SaleIngestionResponse } from '@retail-os/shared-types';
 
@@ -35,7 +35,7 @@ interface SaleSnapshot {
 export class SyncService {
   private readonly logger = new Logger(SyncService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async ingest(req: SaleIngestionRequest, idempotencyKey: string): Promise<SaleIngestionResponse> {
     // Idempotency: if we've already processed this key, return the original result.
