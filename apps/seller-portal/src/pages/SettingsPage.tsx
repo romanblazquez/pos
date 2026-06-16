@@ -248,7 +248,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
       <CardHeader>
         <CardTitle>Programa de recompensas</CardTitle>
         <p className="text-xs text-slate-500 mt-0.5">
-          Ofrecé cashback a tus compradores y reducí tu comisión de plataforma.
+          Ofrecé créditos exclusivos de tu tienda y reducí tu comisión de plataforma.
         </p>
       </CardHeader>
       <CardContent className="pt-0 space-y-6">
@@ -256,11 +256,27 @@ function RewardsCard({ session }: { session: SellerSession }) {
           <p className="text-sm text-slate-400">Cargando…</p>
         ) : (
           <>
+            {/* Credit types explained */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1">
+                <p className="font-semibold text-slate-700">Créditos de plataforma</p>
+                <p className="text-slate-400 leading-relaxed">
+                  {Math.round(platformCashbackPct * 100)}% que aporta el marketplace. El comprador los puede usar en <strong className="text-slate-600">cualquier tienda</strong>.
+                </p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2.5 space-y-1">
+                <p className="font-semibold text-emerald-800">Créditos de tu tienda</p>
+                <p className="text-emerald-700/70 leading-relaxed">
+                  El % que vos configurás. Solo se pueden canjear en <strong className="text-emerald-800">tus productos</strong>. Nunca en otra tienda.
+                </p>
+              </div>
+            </div>
+
             {/* Slider */}
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
                 <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  Cashback de tienda para compradores
+                  Créditos de tienda que ofrecés
                 </label>
                 <span className="text-2xl font-semibold text-slate-900">{storeCashback}%</span>
               </div>
@@ -291,18 +307,16 @@ function RewardsCard({ session }: { session: SellerSession }) {
                     {Math.round(preview.effectiveCommissionPct * 100)}%
                   </p>
                   <p className="text-xs text-slate-400">
-                    {storeCashback > 0
-                      ? `Reducida de 5% por tu cashback`
-                      : 'Comisión base 5%'}
+                    {storeCashback > 0 ? 'Reducida de 5% por tus créditos' : 'Comisión base 5%'}
                   </p>
                 </div>
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 space-y-0.5">
-                  <p className="text-xs text-emerald-600">Cashback total del comprador</p>
+                  <p className="text-xs text-emerald-600">Beneficio total del comprador</p>
                   <p className="text-2xl font-semibold text-emerald-700">
                     {Math.round(preview.totalBuyerCashbackPct * 100)}%
                   </p>
                   <p className="text-xs text-emerald-500">
-                    {Math.round(platformCashbackPct * 100)}% desde la comisión + {storeCashback}% tu tienda
+                    {Math.round(platformCashbackPct * 100)}% libre + {storeCashback}% solo en tu tienda
                   </p>
                 </div>
               </div>
@@ -320,7 +334,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
                   <span className="font-medium">{fmt(exampleTotal)}</span>
                 </div>
 
-                {/* Commission block — shows its internal split */}
+                {/* Commission block */}
                 <div className="flex justify-between text-slate-500">
                   <span>Comisión plataforma ({Math.round(preview.effectiveCommissionPct * 100)}%)</span>
                   <span className="text-red-500">−{fmt(commissionAmt)}</span>
@@ -331,34 +345,37 @@ function RewardsCard({ session }: { session: SellerSession }) {
                     <span>{fmt(commissionAmt - platformCbAmt)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-emerald-500">
-                    <span>└ cashback marketplace al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
+                    <span>└ créditos libres al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
                     <span>+{fmt(platformCbAmt)}</span>
                   </div>
                 </div>
 
                 {storeCbAmt > 0 && (
                   <div className="flex justify-between text-slate-500">
-                    <span>Cashback de tu tienda al comprador ({storeCashback}%)</span>
+                    <span>Créditos de tienda al comprador ({storeCashback}%)</span>
                     <span className="text-red-500">−{fmt(storeCbAmt)}</span>
                   </div>
                 )}
+
                 <div className="flex justify-between font-semibold border-t border-slate-100 pt-2 mt-1">
                   <span>Tu cobro neto</span>
                   <span className="text-slate-900">{fmt(payoutAmt)}</span>
                 </div>
               </div>
 
-              {storeCbAmt > 0 && (
-                <div className="border-t border-dashed border-slate-200 pt-2 text-sm">
-                  <div className="flex justify-between text-emerald-600">
-                    <span>Total cashback que gana el comprador</span>
-                    <span>+{fmt(platformCbAmt + storeCbAmt)}</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {fmt(platformCbAmt)} del marketplace · {fmt(storeCbAmt)} de tu tienda
-                  </p>
+              {/* Credits summary */}
+              <div className="border-t border-dashed border-slate-200 pt-2.5 space-y-1.5">
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>Créditos libres que gana (marketplace)</span>
+                  <span className="text-emerald-600 font-medium">+{fmt(platformCbAmt)} — cualquier tienda</span>
                 </div>
-              )}
+                {storeCbAmt > 0 && (
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>Créditos exclusivos que gana (tu tienda)</span>
+                    <span className="text-emerald-600 font-medium">+{fmt(storeCbAmt)} — solo en tus productos</span>
+                  </div>
+                )}
+              </div>
             </div>
             )}
 
