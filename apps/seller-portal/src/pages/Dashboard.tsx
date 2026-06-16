@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { SellerSession } from '../App.js';
 import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
 import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
+import ListingsPage from './ListingsPage.js';
 
 const CONNECTORS = [
   { type: 'tiendanube', label: 'Tiendanube', icon: '☁️' },
@@ -72,9 +73,10 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
       {/* Main */}
       <main className="flex-1 bg-stone-50 overflow-auto">
         {activeNav === 'dashboard' && <DashboardHome sellerName={session.seller.name} />}
+        {activeNav === 'listings' && <ListingsPage session={session} />}
         {activeNav === 'sync' && <SyncHealth session={session} onNavigate={setActiveNav} />}
         {activeNav === 'settings' && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
-        {activeNav !== 'dashboard' && activeNav !== 'sync' && activeNav !== 'settings' && (
+        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
       </main>

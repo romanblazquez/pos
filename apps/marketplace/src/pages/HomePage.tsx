@@ -12,7 +12,8 @@ interface ProductsResponse {
 }
 
 async function fetchProducts(page: number): Promise<ProductsResponse> {
-  const res = await fetch(`${API}/api/v1/products?limit=${PAGE_SIZE}&page=${page}`);
+  const offset = (page - 1) * PAGE_SIZE;
+  const res = await fetch(`${API}/api/v1/products?limit=${PAGE_SIZE}&offset=${offset}`);
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<ProductsResponse>;
 }

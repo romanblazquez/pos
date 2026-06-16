@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Patch,
   Inject,
   Post,
   Param,
@@ -46,5 +47,37 @@ export class SellersController {
   @Get(':id/sync/status')
   getSyncHealth(@Param('id') id: string) {
     return this.svc.getSyncHealth(id);
+  }
+
+  @Get(':id/listings/stats')
+  getListingStats(@Param('id') id: string) {
+    return this.svc.getListingStats(id);
+  }
+
+  @Get(':id/listings')
+  getListings(
+    @Param('id') id: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '24',
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.svc.getListings(id, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      q,
+      status,
+      sort,
+    });
+  }
+
+  @Patch(':id/listings/:listingId')
+  updateListing(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Body() body: { priceMinorUnits?: number; stock?: number; active?: boolean },
+  ) {
+    return this.svc.updateListing(id, listingId, body);
   }
 }
