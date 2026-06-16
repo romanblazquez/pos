@@ -83,10 +83,11 @@ Last updated: 2026-06-16
 - [x] Pagination response envelope `{ data[], total, page, limit, pages }` on all list endpoints
 
 ### P1 — Seller Portal UX
-- [ ] Settings page — edit seller profile (name, email, phone, timezone)
+- [x] Settings page — edit seller profile (name, email, phone, timezone)
+- [x] Rewards card — seller cashback slider with live commission/payout preview
+- [x] Toast notifications — sync complete/error, webhook register feedback
 - [ ] MercadoPago connect flow in portal (OAuth redirect + status indicator)
 - [ ] Real-time sync progress (SSE or WebSocket) instead of polling
-- [ ] Toast notifications for sync/webhook actions
 - [ ] Dark mode toggle
 
 ### P1 — Multi-connector support
@@ -95,12 +96,23 @@ Last updated: 2026-06-16
 - [ ] CSV import connector — parse + bulk upsert
 - [ ] Connector selection UI in portal settings
 
+### Loyalty system (shipped)
+- [x] PlatformConfig — commission 5%, floor 2%, platform cashback 1%
+- [x] SellerRewardConfig — per-seller store cashback (reduces commission 1:1)
+- [x] CustomerWallet + StoreCredit + WalletTransaction — two-wallet ledger
+- [x] LoyaltyService.computeOrderFees / awardCashback / redeemCredits
+- [x] Cashback wired into checkout: awarded on payment_confirmed webhook + reconcile
+- [x] Cashback badge on marketplace product cards
+- [x] Cashback "+X%" shown on each seller listing row in ProductPage
+
 ### P2 — Marketplace front-end (http://localhost:4300)
-- [ ] Product search page — Typesense-powered with filters (category, price range, players)
-- [ ] Product detail page — all seller listings, add to cart
-- [ ] Cart + checkout flow — calls `POST /api/v1/checkout`
-- [ ] Order confirmation + status polling page
-- [ ] Customer register/login UI
+- [x] Product search page — Typesense-powered
+- [x] Product detail page — ranked seller listings, add to cart
+- [x] Cart drawer + MercadoPago checkout flow
+- [x] Order confirmation + status polling page
+- [ ] Customer register/login UI (wallet balance, order history)
+- [ ] Category filter sidebar on search/home
+- [ ] Wallet balance in header for logged-in customers
 
 ### P2 — Admin Console (http://localhost:4500)
 - [ ] BGG import UI — search by name, import single/bulk

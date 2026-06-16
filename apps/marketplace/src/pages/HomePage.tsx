@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ProductCard, type Product } from '../components/ProductCard.js';
+import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 24;
@@ -26,6 +27,8 @@ interface HomePageProps {
 export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const { data: platformCfg } = usePlatformConfig();
+  const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['catalog', page],
@@ -101,6 +104,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  cashbackPct={cashbackPct}
                   onClick={() => onProduct(product.slug)}
                 />
               ))}

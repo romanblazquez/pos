@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ProductCard, type Product } from '../components/ProductCard.js';
+import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 
 interface SearchPageProps {
   query: string;
@@ -15,6 +16,9 @@ async function searchProducts(q: string): Promise<{ results: Product[]; total: n
 }
 
 export default function SearchPage({ query, onProduct }: SearchPageProps) {
+  const { data: platformCfg } = usePlatformConfig();
+  const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['search', query],
     queryFn: () => searchProducts(query),
@@ -57,6 +61,7 @@ export default function SearchPage({ query, onProduct }: SearchPageProps) {
             <ProductCard
               key={product.id}
               product={product}
+              cashbackPct={cashbackPct}
               onClick={() => onProduct(product.slug)}
             />
           ))}

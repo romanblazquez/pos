@@ -11,6 +11,7 @@ import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
 import { Progress } from '../components/ui/index.js';
 import { Separator } from '../components/ui/index.js';
+import { ToastProvider, useToast } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -43,6 +44,14 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ session, onLogout, onSessionUpdate }: DashboardProps) {
+  return (
+    <ToastProvider>
+      <DashboardInner session={session} onLogout={onLogout} onSessionUpdate={onSessionUpdate} />
+    </ToastProvider>
+  );
+}
+
+function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) {
   const [activeNav, setActiveNav] = useState<NavId>('dashboard');
 
   return (
@@ -316,6 +325,7 @@ function relTime(iso: string | null): string {
 }
 
 function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigate: (id: NavId) => void }) {
+  const { toast } = useToast();
   const [syncing, setSyncing] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatusRow[]>([]);
   const [runResults, setRunResults] = useState<Record<string, { items: number; ok: boolean }>>({});
@@ -341,7 +351,13 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
         headers: { Authorization: `Bearer ${session.token}` },
       });
       const body = await res.json().catch(() => ({})) as { itemsSynced?: number };
-      setRunResults((r) => ({ ...r, [type]: { items: body.itemsSynced ?? 0, ok: res.ok } }));
+      const ok = res.ok;
+      setRunResults((r) => ({ ...r, [type]: { items: body.itemsSynced ?? 0, ok } }));
+      if (ok) {
+        toast(`Sincronización de ${type} completada — ${body.itemsSynced ?? 0} items`, 'success');
+      } else {
+        toast(`Error al sincronizar ${type}`, 'error');
+      }
       // refresh status after sync
       fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
         headers: { Authorization: `Bearer ${session.token}` },
@@ -351,6 +367,7 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
         .catch(() => null);
     } catch {
       setRunResults((r) => ({ ...r, [type]: { items: 0, ok: false } }));
+      toast(`Error de conexión al sincronizar ${type}`, 'error');
     } finally {
       setSyncing(null);
     }
@@ -650,6 +667,7 @@ function MpConnectCard({
 }
 
 function WebhookRegisterCard({ session }: { session: SellerSession }) {
+  const { toast } = useToast();
   const [registering, setRegistering] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message?: string; webhookId?: string } | null>(null);
 
@@ -663,8 +681,14 @@ function WebhookRegisterCard({ session }: { session: SellerSession }) {
       );
       const body = await res.json() as { ok: boolean; message?: string; webhookId?: string };
       setResult(body);
+      if (body.ok) {
+        toast('Webhook registrado correctamente', 'success');
+      } else {
+        toast(body.message ?? 'Error al registrar webhook', 'error');
+      }
     } catch (e) {
       setResult({ ok: false, message: String(e) });
+      toast('Error de conexión al registrar webhook', 'error');
     } finally {
       setRegistering(false);
     }

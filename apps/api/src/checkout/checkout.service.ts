@@ -2,6 +2,7 @@ import { Injectable, Inject, BadRequestException, NotFoundException, Unauthorize
 import { createHmac } from 'node:crypto';
 import { PrismaService } from '@retail-os/db-postgres';
 import { MpSellerOAuthService } from './mp-seller-oauth.service.js';
+import { LoyaltyService } from '../loyalty/loyalty.service.js';
 
 const MP_BASE = 'https://api.mercadopago.com';
 
@@ -41,6 +42,7 @@ export class CheckoutService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(MpSellerOAuthService) private readonly mpOAuth: MpSellerOAuthService,
+    @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
   ) {}
 
   async initCheckout(dto: InitCheckoutDto): Promise<CheckoutResult> {
@@ -227,11 +229,16 @@ export class CheckoutService {
     const newStatus = statusMap[latest.status];
     if (!newStatus || newStatus === order.status) return { status: order.status, updated: false };
 
+    const fees = await this.loyalty.computeOrderFees(order.sellerId, order.totalMinorUnits);
+
     await this.prisma.marketplaceOrder.update({
       where: { id: orderId },
       data: {
         status: newStatus,
         paymentId: String(latest.id),
+        commissionMinorUnits: fees.commissionMinor,
+        platformCashbackMinor: fees.platformCashbackMinor,
+        storeCashbackMinor: fees.storeCashbackMinor,
         events: {
           create: {
             type: `reconciled_${latest.status}`,
@@ -240,6 +247,16 @@ export class CheckoutService {
         },
       },
     });
+
+    if (newStatus === 'confirmed' && order.customerId) {
+      await this.loyalty.awardCashback({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId,
+        platformCashbackMinor: fees.platformCashbackMinor,
+        storeCashbackMinor: fees.storeCashbackMinor,
+      });
+    }
 
     return { status: newStatus, updated: true };
   }
@@ -270,12 +287,20 @@ export class CheckoutService {
     };
 
     const newStatus = statusMap[payment.status] ?? order.status;
+    const fees = newStatus === 'confirmed'
+      ? await this.loyalty.computeOrderFees(order.sellerId, order.totalMinorUnits)
+      : null;
 
     await this.prisma.marketplaceOrder.update({
       where: { id: orderId },
       data: {
         status: newStatus,
         paymentId,
+        ...(fees && {
+          commissionMinorUnits: fees.commissionMinor,
+          platformCashbackMinor: fees.platformCashbackMinor,
+          storeCashbackMinor: fees.storeCashbackMinor,
+        }),
         events: {
           create: {
             type: `payment_${payment.status}`,
@@ -284,6 +309,16 @@ export class CheckoutService {
         },
       },
     });
+
+    if (newStatus === 'confirmed' && order.customerId && fees) {
+      await this.loyalty.awardCashback({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId,
+        platformCashbackMinor: fees.platformCashbackMinor,
+        storeCashbackMinor: fees.storeCashbackMinor,
+      });
+    }
 
     return { processed: true };
   }

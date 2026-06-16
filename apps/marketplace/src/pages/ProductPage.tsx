@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useCart } from '../cart/CartContext.js';
+import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 
 interface ProductPageProps {
   slug: string;
@@ -71,6 +72,9 @@ function formatPrice(minor: number, currency = 'MXN') {
 }
 
 export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
+  const { data: platformCfg } = usePlatformConfig();
+  const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['product', slug],
     queryFn: () => fetchProduct(slug),
@@ -190,6 +194,7 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
                 rank={idx + 1}
                 productName={p.name}
                 productImage={p.images[0]}
+                platformCashbackPct={platformCashback}
                 onAddToCart={() => {
                   add({
                     listingId: listing.id,
@@ -212,12 +217,13 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
 }
 
 function ListingRow({
-  listing: l, rank, productName: _pn, productImage: _pi, onAddToCart,
+  listing: l, rank, productName: _pn, productImage: _pi, onAddToCart, platformCashbackPct = 0.01,
 }: {
   listing: ListingDetail;
   rank: number;
   productName: string;
   productImage?: string;
+  platformCashbackPct?: number;
   onAddToCart: () => void;
 }) {
   const [showScore, setShowScore] = useState(false);
@@ -290,13 +296,20 @@ function ListingRow({
 
       {/* Price + CTA */}
       <div className="flex items-center gap-3 shrink-0 ml-auto">
-        <span className="text-xl font-bold text-stone-900">
-          {new Intl.NumberFormat('es-MX', {
-            style: 'currency',
-            currency: l.currency,
-            maximumFractionDigits: 0,
-          }).format(l.priceMinorUnits / 100)}
-        </span>
+        <div className="text-right">
+          <span className="text-xl font-bold text-stone-900 block">
+            {new Intl.NumberFormat('es-MX', {
+              style: 'currency',
+              currency: l.currency,
+              maximumFractionDigits: 0,
+            }).format(l.priceMinorUnits / 100)}
+          </span>
+          {platformCashbackPct > 0 && l.stockStatus !== 'out_of_stock' && (
+            <span className="text-xs text-emerald-600 font-medium">
+              +{Math.round(platformCashbackPct * 100)}% cashback
+            </span>
+          )}
+        </div>
         {l.stockStatus !== 'out_of_stock' && (
           <button
             onClick={onAddToCart}

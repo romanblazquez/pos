@@ -31,9 +31,11 @@ export function formatPrice(minor: number, currency = 'ARS') {
 export function ProductCard({
   product,
   onClick,
+  cashbackPct = 0.01,
 }: {
   product: Product;
   onClick: () => void;
+  cashbackPct?: number;
 }) {
   const hasStock = product.inStockListings > 0;
   const samePrice = product.minPriceMinor === product.maxPriceMinor;
@@ -73,6 +75,13 @@ export function ProductCard({
           <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5
                            bg-white/90 text-stone-600 rounded-full border border-stone-200 truncate max-w-[80%]">
             {product.category}
+          </span>
+        )}
+        {/* Cashback badge */}
+        {hasStock && cashbackPct > 0 && (
+          <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5
+                           bg-emerald-500 text-white rounded-full shadow-sm">
+            {Math.round(cashbackPct * 100)}% cashback
           </span>
         )}
         {!hasStock && (
