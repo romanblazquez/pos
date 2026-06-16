@@ -14,18 +14,24 @@ import type {
 } from '@retail-os/connector-contracts';
 import type { IConnector } from '@retail-os/connector-contracts';
 import { TiendanubeClient } from './tiendanube-client.js';
-import type { TnProduct } from './tiendanube-client.js';
+import type { TnProduct, TnStore } from './tiendanube-client.js';
 
 export class TiendanubeConnector implements IConnector {
   readonly connectorType = 'tiendanube';
 
+  constructor(loader: (sellerId: string) => Promise<ConnectorCredentials>) {
+    this.loadCreds = loader;
+  }
+
+  private loadCreds: (sellerId: string) => Promise<ConnectorCredentials>;
+
   getCapabilities(): ConnectorCapabilities {
     return {
       supportsWebhooks: true,
-      supportsReservation: false,     // TN has no reservation/hold API
-      supportsDeliveryOptions: false, // delivery fetched separately
+      supportsReservation: false,
+      supportsDeliveryOptions: false,
       supportsPartialStockLevels: true,
-      minSyncIntervalSeconds: 300,    // 5 min minimum
+      minSyncIntervalSeconds: 300,
     };
   }
 
@@ -62,9 +68,7 @@ export class TiendanubeConnector implements IConnector {
 
     if (!res.ok) throw new Error(`TN token exchange failed: ${res.status}`);
 
-    const data = await res.json() as {
-      access_token: string; user_id: string;
-    };
+    const data = await res.json() as { access_token: string; user_id: string };
 
     return {
       accessToken: data.access_token,
@@ -84,7 +88,7 @@ export class TiendanubeConnector implements IConnector {
   }
 
   async refreshCredentials(sellerId: string): Promise<ConnectorCredentials> {
-    // Tiendanube tokens don't expire — return existing credentials
+    // Tiendanube access tokens do not expire (as of current docs).
     return this.loadCreds(sellerId);
   }
 
@@ -92,17 +96,20 @@ export class TiendanubeConnector implements IConnector {
 
   async *fetchCatalog(sellerId: string): AsyncGenerator<RawProduct[]> {
     const client = await this.clientFor(sellerId);
-    let page = 1;
+    // Fetch store first to get the canonical currency
+    const store = await client.getStore();
+    const currency = store.main_currency;
 
+    let page = 1;
     while (true) {
       const { products, nextPage } = await client.getProducts(page);
       if (products.length === 0) break;
 
-      yield products.map((p) => this.toRawProduct(p));
+      yield products.map((p) => this.toRawProduct(p, currency));
 
       if (!nextPage) break;
       page = nextPage;
-      await sleep(500); // respect rate limits between pages
+      await sleep(500);
     }
   }
 
@@ -159,6 +166,9 @@ export class TiendanubeConnector implements IConnector {
 
   async fetchPrices(sellerId: string): Promise<PriceItem[]> {
     const client = await this.clientFor(sellerId);
+    const store = await client.getStore();
+    const currency = store.main_currency;
+
     const items: PriceItem[] = [];
     let page = 1;
 
@@ -175,7 +185,7 @@ export class TiendanubeConnector implements IConnector {
             originalPriceMinorUnits: v.compare_at_price
               ? Math.round(parseFloat(v.compare_at_price) * 100)
               : undefined,
-            currency: 'ARS', // TN defaults to seller's store currency
+            currency,
           });
         }
       }
@@ -189,15 +199,11 @@ export class TiendanubeConnector implements IConnector {
   }
 
   // ─── Orders ───────────────────────────────────────────────────────────────
-  // Tiendanube doesn't support reservation. Orders are placed via their checkout.
-  // We notify the seller out-of-band and track via our own order system.
 
   async confirmOrder(
     _sellerId: string,
     order: OrderConfirmation,
   ): Promise<SellerOrderId> {
-    // For TN sellers without reservation, we use our own order ID as the reference.
-    // In a future version this could create a draft order via TN API if they add it.
     return { externalOrderId: order.marketplaceOrderId };
   }
 
@@ -227,17 +233,10 @@ export class TiendanubeConnector implements IConnector {
     });
   }
 
-  // In production this will decrypt credentials from DB.
-  // Injected from the NestJS connector registry service.
-  private loadCreds: (sellerId: string) => Promise<ConnectorCredentials>;
-
-  constructor(loader: (sellerId: string) => Promise<ConnectorCredentials>) {
-    this.loadCreds = loader;
-  }
-
-  private toRawProduct(p: TnProduct): RawProduct {
+  private toRawProduct(p: TnProduct, currency: string): RawProduct {
     const name = p.name.es ?? p.name.pt ?? Object.values(p.name)[0] ?? '';
-    const description = p.description.es ?? p.description.pt ?? Object.values(p.description)[0];
+    const description =
+      p.description.es ?? p.description.pt ?? Object.values(p.description)[0];
     const images = p.images
       .sort((a, b) => a.position - b.position)
       .map((i) => i.src);
@@ -253,11 +252,15 @@ export class TiendanubeConnector implements IConnector {
       variants: p.variants.map((v) => ({
         externalId: String(v.id),
         sku: v.sku ?? undefined,
-        name: v.values.map((val) => val.es ?? Object.values(val)[0] ?? '').join(' / '),
+        name: v.values.map((val) => val.es ?? val.pt ?? Object.values(val).find(Boolean) ?? '').join(' / '),
         priceMinorUnits: Math.round(parseFloat(v.price) * 100),
-        currency: 'ARS',
+        currency,
         stock: v.stock_management ? (v.stock ?? 0) : 999,
-        attributes: {},
+        attributes: {
+          ...(v.weight ? { weight_kg: v.weight } : {}),
+          ...(p.brand ? { brand: p.brand } : {}),
+          ...(p.free_shipping ? { free_shipping: 'true' } : {}),
+        },
       })),
     };
   }
