@@ -1,95 +1,103 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSellerDto {
-  @ApiProperty({ description: 'Full store or business name', example: 'Acme Board Games' })
+  @ApiProperty({ type: 'string', description: 'Full store or business name', example: 'Acme Board Games' })
   name: string;
 
-  @ApiProperty({ description: 'Unique seller email', example: 'seller@acme.com', format: 'email' })
+  @ApiProperty({ type: 'string', format: 'email', description: 'Unique seller email', example: 'seller@acme.com' })
   email: string;
 
-  @ApiPropertyOptional({ example: '+52 55 1234 5678' })
+  @ApiPropertyOptional({ type: 'string', example: '+52 55 1234 5678' })
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'ISO 3166-1 alpha-2 country code', example: 'MX', default: 'MX' })
+  @ApiPropertyOptional({ type: 'string', description: 'ISO 3166-1 alpha-2 country code', example: 'MX', default: 'MX' })
   country?: string;
 
-  @ApiPropertyOptional({ description: 'IANA timezone', example: 'America/Mexico_City', default: 'America/Mexico_City' })
+  @ApiPropertyOptional({ type: 'string', description: 'IANA timezone', example: 'America/Mexico_City', default: 'America/Mexico_City' })
   timezone?: string;
 
-  @ApiPropertyOptional({ description: 'Connector platform', example: 'tiendanube', enum: ['tiendanube', 'shopify', 'mercadolibre', 'woocommerce', 'csv', 'manual'] })
+  @ApiPropertyOptional({ type: 'string', description: 'Connector platform: tiendanube | shopify | mercadolibre | woocommerce | csv | manual', example: 'tiendanube' })
   connectorType?: string;
 }
 
 export class UpdateListingDto {
-  @ApiPropertyOptional({ description: 'New price in minor currency units (centavos). E.g. 150000 = $1,500.00 ARS', example: 150000 })
+  @ApiPropertyOptional({ type: 'integer', description: 'Price in minor currency units (centavos). E.g. 150000 = $1,500.00 ARS', example: 150000 })
   priceMinorUnits?: number;
 
-  @ApiPropertyOptional({ description: 'New stock count. Use 999 for unlimited/unmanaged stock', example: 10 })
+  @ApiPropertyOptional({ type: 'integer', description: 'Stock count. Use 999 for unlimited/unmanaged stock', example: 10 })
   stock?: number;
 
-  @ApiPropertyOptional({ description: 'Whether this listing is visible in the marketplace', example: true })
+  @ApiPropertyOptional({ type: 'boolean', description: 'Whether this listing is visible in the marketplace', example: true })
   active?: boolean;
 }
 
 export class ListingStatsDto {
-  @ApiProperty({ description: 'Total number of listings for this seller', example: 982 })
+  @ApiProperty({ type: 'integer', description: 'Total listings for this seller', example: 982 })
   total: number;
 
-  @ApiProperty({ description: 'Listings currently active (visible in marketplace)', example: 910 })
+  @ApiProperty({ type: 'integer', description: 'Listings currently active (visible in marketplace)', example: 910 })
   active: number;
 
-  @ApiProperty({ description: 'Listings with zero stock', example: 12 })
+  @ApiProperty({ type: 'integer', description: 'Listings with zero stock', example: 12 })
   outOfStock: number;
 
-  @ApiProperty({ description: 'Listings with stock ≤ 3 units', example: 18 })
+  @ApiProperty({ type: 'integer', description: 'Listings with stock ≤ 3 units', example: 18 })
   lowStock: number;
 }
 
+export class DayBucketDto {
+  @ApiProperty({ type: 'string', format: 'date', description: 'ISO 8601 date', example: '2026-06-09' })
+  date: string;
+
+  @ApiProperty({ type: 'integer', description: 'Number of non-cancelled orders on this day', example: 2 })
+  orders: number;
+
+  @ApiProperty({ type: 'integer', description: 'Revenue in minor units on this day', example: 120000 })
+  revenueMinor: number;
+}
+
 export class OrderStatsDto {
-  @ApiProperty({ example: 47 })
+  @ApiProperty({ type: 'integer', description: 'Total orders ever placed with this seller', example: 47 })
   total: number;
 
-  @ApiProperty({ description: 'Orders awaiting payment confirmation', example: 3 })
+  @ApiProperty({ type: 'integer', description: 'Orders awaiting payment confirmation', example: 3 })
   pending: number;
 
-  @ApiProperty({ example: 38 })
+  @ApiProperty({ type: 'integer', example: 38 })
   confirmed: number;
 
-  @ApiProperty({ example: 5 })
+  @ApiProperty({ type: 'integer', example: 5 })
   shipped: number;
 
-  @ApiProperty({ example: 1 })
+  @ApiProperty({ type: 'integer', example: 1 })
   cancelled: number;
 
-  @ApiProperty({ description: 'Total revenue in minor currency units from non-cancelled orders', example: 4750000 })
+  @ApiProperty({ type: 'integer', description: 'Cumulative revenue in minor units from non-cancelled orders', example: 4750000 })
   revenueMinorUnits: number;
 
-  @ApiProperty({
-    description: 'Daily revenue and order count for the last 7 days',
-    example: [{ date: '2026-06-09', orders: 2, revenueMinor: 120000 }],
-  })
-  daily: { date: string; orders: number; revenueMinor: number }[];
+  @ApiProperty({ type: [DayBucketDto], description: 'Daily revenue and order count for the last 7 days' })
+  daily: DayBucketDto[];
 }
 
 export class SyncResultDto {
-  @ApiProperty({ example: 'clx1234abcd' })
+  @ApiProperty({ type: 'string', description: 'Seller CUID', example: 'clx1234abcd' })
   sellerId: string;
 
-  @ApiProperty({ example: 'catalog', description: 'catalog | inventory | prices' })
+  @ApiProperty({ type: 'string', description: 'catalog | inventory | prices', example: 'catalog' })
   syncType: string;
 
-  @ApiProperty({ example: 'success', description: 'success | partial | failed' })
+  @ApiProperty({ type: 'string', description: 'success | partial | failed', example: 'success' })
   status: string;
 
-  @ApiProperty({ example: 982 })
+  @ApiProperty({ type: 'integer', description: 'Number of items successfully synced', example: 982 })
   itemsSynced: number;
 
-  @ApiProperty({ example: 0 })
+  @ApiProperty({ type: 'integer', description: 'Number of items that failed to sync', example: 0 })
   itemsFailed: number;
 
-  @ApiProperty({ type: [String], example: [] })
+  @ApiProperty({ type: 'array', items: { type: 'string' }, description: 'Error messages for failed items', example: [] })
   errors: string[];
 
-  @ApiProperty({ description: 'Wall-clock time of the sync in milliseconds', example: 4231 })
+  @ApiProperty({ type: 'integer', description: 'Total wall-clock duration of the sync in milliseconds', example: 4231 })
   durationMs: number;
 }
