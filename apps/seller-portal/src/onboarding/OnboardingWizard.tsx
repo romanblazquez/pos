@@ -46,8 +46,13 @@ interface OnboardingWizardProps {
 }
 
 export default function OnboardingWizard({ session, onComplete }: OnboardingWizardProps) {
-  const [step, setStep] = useState(1);
-  const [data, setData] = useState<WizardState>(INITIAL);
+  // If the seller already has a connector (e.g. returning from OAuth), skip to step 3
+  const initialStep = session.seller.connectorType ? 3 : 1;
+  const [step, setStep] = useState(initialStep);
+  const [data, setData] = useState<WizardState>({
+    ...INITIAL,
+    connectorType: (session.seller.connectorType as ConnectorType) || '',
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -124,7 +129,7 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
             <Step1StoreType data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 2 && (
-            <Step2Connect data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step2Connect data={data} session={session} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 3 && (
             <Step3Catalog data={data} session={session} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
@@ -211,7 +216,40 @@ function Step1StoreType({
   );
 }
 
-function Step2Connect({ data, onChange }: { data: WizardState; onChange: (d: Partial<WizardState>) => void }) {
+const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
+
+function Step2Connect({
+  data,
+  session,
+  onChange,
+}: {
+  data: WizardState;
+  session: SellerSession;
+  onChange: (d: Partial<WizardState>) => void;
+}) {
+  const [connecting, setConnecting] = useState(false);
+  const [oauthError, setOauthError] = useState('');
+
+  const isOAuth = data.connectorType && OAUTH_CONNECTORS.has(data.connectorType);
+  const connectorMeta = CONNECTORS.find((c) => c.type === data.connectorType);
+
+  async function startOAuth() {
+    if (!data.connectorType) return;
+    setConnecting(true);
+    setOauthError('');
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${data.connectorType}`,
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { authUrl } = (await res.json()) as { authUrl: string };
+      window.location.href = authUrl;
+    } catch (e) {
+      setOauthError(`No se pudo iniciar la conexión: ${String(e)}`);
+      setConnecting(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <StepHeader step={2} title="Conectar tu catálogo" desc="¿Dónde están tus productos ahora?" />
@@ -219,7 +257,7 @@ function Step2Connect({ data, onChange }: { data: WizardState; onChange: (d: Par
         {CONNECTORS.map((c) => (
           <button
             key={c.type}
-            onClick={() => onChange({ connectorType: c.type })}
+            onClick={() => { onChange({ connectorType: c.type }); setOauthError(''); }}
             className={`text-left p-3 rounded-xl border-2 transition-all ${
               data.connectorType === c.type
                 ? 'border-emerald-600 bg-emerald-50'
@@ -232,10 +270,22 @@ function Step2Connect({ data, onChange }: { data: WizardState; onChange: (d: Par
           </button>
         ))}
       </div>
-      {data.connectorType && !['csv', 'manual'].includes(data.connectorType) && (
-        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-sm text-blue-800">
-          🔐 Te redirigiremos a <strong>{CONNECTORS.find((c) => c.type === data.connectorType)?.label}</strong> para
-          autorizar el acceso. Solo leemos catálogo e inventario.
+
+      {isOAuth && connectorMeta && (
+        <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-3">
+          <p className="text-sm text-blue-800">
+            🔐 Para importar tu catálogo necesitamos que autorices el acceso a <strong>{connectorMeta.label}</strong>.
+            Solo pedimos permisos de lectura.
+          </p>
+          {oauthError && <p className="text-xs text-red-600">{oauthError}</p>}
+          <button
+            onClick={startOAuth}
+            disabled={connecting}
+            className="w-full py-2 text-sm bg-blue-600 text-white font-medium rounded-lg
+                       hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          >
+            {connecting ? '⏳ Conectando...' : `Autorizar con ${connectorMeta.label} →`}
+          </button>
         </div>
       )}
     </div>

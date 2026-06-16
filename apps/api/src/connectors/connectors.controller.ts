@@ -1,17 +1,69 @@
-import { Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Redirect } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ConnectorSyncService } from './sync.service.js';
 import { ConnectorRegistryService } from './connector-registry.service.js';
+import { SellersService } from '../sellers/sellers.service.js';
 import { Public } from '../auth/auth.guard.js';
+
+const SELLER_PORTAL_URL = process.env.SELLER_PORTAL_URL ?? 'http://localhost:4400';
+const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:3000';
 
 @ApiTags('connectors')
 @Public()
 @Controller('api/v1/sellers/:sellerId/connector')
 export class ConnectorsController {
   constructor(
-    @Inject(ConnectorSyncService)      private readonly sync: ConnectorSyncService,
-    @Inject(ConnectorRegistryService)  private readonly registry: ConnectorRegistryService,
+    @Inject(ConnectorSyncService)     private readonly sync: ConnectorSyncService,
+    @Inject(ConnectorRegistryService) private readonly registry: ConnectorRegistryService,
+    @Inject(SellersService)           private readonly sellers: SellersService,
   ) {}
+
+  /** Save connector type to seller record, then return OAuth start URL. */
+  @Get('oauth/start')
+  async oauthStart(
+    @Param('sellerId') sellerId: string,
+    @Query('type') connectorType?: string,
+  ) {
+    // Persist the chosen connector type before building the connector instance
+    if (connectorType) {
+      await this.sellers.setConnectorType(sellerId, connectorType);
+    }
+
+    const connector = await this.registry.forSeller(sellerId);
+    const redirectUri = `${API_BASE_URL}/api/v1/sellers/${sellerId}/connector/oauth/callback`;
+    const result = await connector.startOAuth(sellerId, redirectUri);
+    return result; // { authUrl, state }
+  }
+
+  /**
+   * OAuth callback — Tiendanube (and other connectors) redirect here after the
+   * seller authorises the app. Exchanges the code for credentials, persists them,
+   * then sends the seller back to the portal with a success flag.
+   */
+  @Get('oauth/callback')
+  @Redirect()
+  async oauthCallback(
+    @Param('sellerId') sellerId: string,
+    @Query('code') code: string,
+    @Query('state') state: string,
+  ) {
+    try {
+      const connector = await this.registry.forSeller(sellerId);
+      const creds = await connector.exchangeCode(sellerId, code, state);
+      await this.registry.saveCredentials(sellerId, creds);
+
+      return {
+        url: `${SELLER_PORTAL_URL}?oauth=success&seller=${sellerId}`,
+        statusCode: 302,
+      };
+    } catch (err) {
+      const msg = encodeURIComponent(String(err));
+      return {
+        url: `${SELLER_PORTAL_URL}?oauth=error&msg=${msg}`,
+        statusCode: 302,
+      };
+    }
+  }
 
   /** Manual trigger: sync catalog for a seller. */
   @Post('sync/catalog')
@@ -38,22 +90,12 @@ export class ConnectorsController {
     return connector.ping(sellerId);
   }
 
-  /** Save connector credentials (called after OAuth callback). */
+  /** Save connector credentials directly (dev / non-OAuth connectors). */
   @Post('credentials')
   saveCredentials(
     @Param('sellerId') sellerId: string,
     @Body() body: Record<string, string>,
   ) {
     return this.registry.saveCredentials(sellerId, body);
-  }
-
-  /** Start OAuth flow — returns redirect URL for the seller. */
-  @Get('oauth/start')
-  async oauthStart(
-    @Param('sellerId') sellerId: string,
-  ) {
-    const connector = await this.registry.forSeller(sellerId);
-    const redirectUri = `${process.env.API_BASE_URL ?? 'http://localhost:3000'}/api/v1/sellers/${sellerId}/connector/oauth/callback`;
-    return connector.startOAuth(sellerId, redirectUri);
   }
 }

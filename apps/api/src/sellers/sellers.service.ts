@@ -77,6 +77,14 @@ export class SellersService {
     return { sellerId, syncs: byType };
   }
 
+  async setConnectorType(sellerId: string, connectorType: string) {
+    return this.prisma.seller.update({
+      where: { id: sellerId },
+      data: { connectorType },
+      select: { id: true, connectorType: true },
+    });
+  }
+
   async list(params: { status?: string; limit?: number; offset?: number }) {
     const { status, limit = 50, offset = 0 } = params;
     return this.prisma.seller.findMany({

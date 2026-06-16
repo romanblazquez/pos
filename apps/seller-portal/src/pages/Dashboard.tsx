@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import type { SellerSession } from '../App.js';
 
+const CONNECTORS = [
+  { type: 'tiendanube', label: 'Tiendanube', icon: '☁️' },
+  { type: 'shopify',    label: 'Shopify',    icon: '🛍️' },
+  { type: 'mercadolibre', label: 'Mercado Libre', icon: '🛒' },
+  { type: 'woocommerce', label: 'WooCommerce', icon: '🔌' },
+  { type: 'csv',    label: 'CSV / Excel', icon: '📄' },
+  { type: 'manual', label: 'Manual',      icon: '✏️' },
+] as const;
+
+const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
+
 const NAV_ITEMS = [
   { icon: '📊', label: 'Dashboard', id: 'dashboard' },
   { icon: '📦', label: 'Productos', id: 'listings' },
@@ -15,9 +26,10 @@ type NavId = (typeof NAV_ITEMS)[number]['id'];
 interface DashboardProps {
   session: SellerSession;
   onLogout: () => void;
+  onSessionUpdate: (updates: Partial<SellerSession['seller']>) => void;
 }
 
-export default function Dashboard({ session, onLogout }: DashboardProps) {
+export default function Dashboard({ session, onLogout, onSessionUpdate }: DashboardProps) {
   const [activeNav, setActiveNav] = useState<NavId>('dashboard');
 
   return (
@@ -58,8 +70,9 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       {/* Main */}
       <main className="flex-1 bg-stone-50 overflow-auto">
         {activeNav === 'dashboard' && <DashboardHome sellerName={session.seller.name} />}
-        {activeNav === 'sync' && <SyncHealth session={session} />}
-        {activeNav !== 'dashboard' && activeNav !== 'sync' && (
+        {activeNav === 'sync' && <SyncHealth session={session} onNavigate={setActiveNav} />}
+        {activeNav === 'settings' && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
+        {activeNav !== 'dashboard' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
       </main>
@@ -137,7 +150,7 @@ function DashboardHome({ sellerName }: { sellerName: string }) {
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-function SyncHealth({ session }: { session: SellerSession }) {
+function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigate: (id: NavId) => void }) {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { items: number; ok: boolean }>>({});
 
@@ -185,7 +198,14 @@ function SyncHealth({ session }: { session: SellerSession }) {
 
       {!hasConnector && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
-          ⚠️ No tenés un conector configurado. Completá el onboarding para conectar tu tienda.
+          ⚠️ No tenés un conector configurado.{' '}
+          <button
+            className="underline font-medium hover:text-amber-900"
+            onClick={() => onNavigate('settings')}
+          >
+            Ir a Configuración
+          </button>{' '}
+          para conectar tu tienda.
         </div>
       )}
 
@@ -241,6 +261,134 @@ function SyncHealth({ session }: { session: SellerSession }) {
           <li>📊 Inventario — cada 5 minutos</li>
           <li>💰 Precios — cada 15 minutos</li>
         </ul>
+      </div>
+    </div>
+  );
+}
+
+function ConnectorSettings({
+  session,
+  onSessionUpdate,
+}: {
+  session: SellerSession;
+  onSessionUpdate: (updates: Partial<SellerSession['seller']>) => void;
+}) {
+  const [selected, setSelected] = useState<string>(session.seller.connectorType ?? '');
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const current = CONNECTORS.find((c) => c.type === session.seller.connectorType);
+  const isOAuth = selected && OAUTH_CONNECTORS.has(selected);
+
+  async function startOAuth() {
+    setConnecting(true);
+    setError('');
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${selected}`,
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { authUrl } = (await res.json()) as { authUrl: string };
+      window.location.href = authUrl;
+    } catch (e) {
+      setError(`No se pudo iniciar la conexión: ${String(e)}`);
+      setConnecting(false);
+    }
+  }
+
+  async function saveNonOAuth() {
+    if (!selected) return;
+    setConnecting(true);
+    setError('');
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/oauth/start?type=${selected}`,
+        { headers: { Authorization: `Bearer ${session.token}` } },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      onSessionUpdate({ connectorType: selected });
+      setSaved(true);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6 max-w-2xl">
+      <div>
+        <h1 className="text-2xl font-bold text-stone-900">Configuración</h1>
+        <p className="text-stone-500 text-sm mt-1">Administrá el conector de tu tienda.</p>
+      </div>
+
+      {/* Current connector */}
+      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+        <h2 className="font-semibold text-stone-900">Conector activo</h2>
+        {current ? (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+            <span className="text-2xl">{current.icon}</span>
+            <div>
+              <p className="font-medium text-stone-900">{current.label}</p>
+              <p className="text-xs text-emerald-600">Conectado</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-stone-500">Ningún conector configurado.</p>
+        )}
+      </div>
+
+      {/* Change connector */}
+      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+        <h2 className="font-semibold text-stone-900">
+          {current ? 'Cambiar conector' : 'Conectar tienda'}
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {CONNECTORS.map((c) => (
+            <button
+              key={c.type}
+              onClick={() => { setSelected(c.type); setSaved(false); setError(''); }}
+              className={`text-left p-3 rounded-xl border-2 transition-all ${
+                selected === c.type
+                  ? 'border-emerald-600 bg-emerald-50'
+                  : 'border-stone-200 hover:border-stone-300'
+              }`}
+            >
+              <span className="text-xl block mb-1">{c.icon}</span>
+              <p className="font-medium text-sm text-stone-900">{c.label}</p>
+            </button>
+          ))}
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {saved && <p className="text-sm text-emerald-600">✓ Conector actualizado</p>}
+
+        {selected && (
+          <div className="pt-2">
+            {isOAuth ? (
+              <button
+                onClick={startOAuth}
+                disabled={connecting}
+                className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg
+                           hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              >
+                {connecting
+                  ? '⏳ Conectando...'
+                  : `Autorizar con ${CONNECTORS.find((c) => c.type === selected)?.label} →`}
+              </button>
+            ) : (
+              <button
+                onClick={saveNonOAuth}
+                disabled={connecting || selected === session.seller.connectorType}
+                className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg
+                           hover:bg-emerald-800 disabled:opacity-60 transition-colors"
+              >
+                {connecting ? '⏳ Guardando...' : 'Guardar'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
