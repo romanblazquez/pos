@@ -19,8 +19,8 @@ export function setupSecurity(): void {
           "default-src 'self' http://localhost:* ws://localhost:*; " +
             "script-src 'self' 'unsafe-inline' http://localhost:*; " +
             "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: http://localhost:*; " +
-            "connect-src 'self' http://localhost:* ws://localhost:*;",
+            "img-src 'self' data: blob: http://localhost:* https:; " +
+            "connect-src 'self' http://localhost:* ws://localhost:* https:;",
         ],
       },
     });
