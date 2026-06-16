@@ -3,6 +3,8 @@ import type { SellerSession } from '../App.js';
 import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
 import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
 import ListingsPage from './ListingsPage.js';
+import OrdersPage from './OrdersPage.js';
+import AnalyticsPage from './AnalyticsPage.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
 import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
@@ -80,11 +82,14 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        {activeNav === 'dashboard' && <DashboardHome session={session} />}
-        {activeNav === 'listings'  && <ListingsPage session={session} />}
-        {activeNav === 'sync'      && <SyncHealth session={session} onNavigate={setActiveNav} />}
-        {activeNav === 'settings'  && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
-        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'sync' && activeNav !== 'settings' && (
+        {activeNav === 'dashboard'  && <DashboardHome session={session} />}
+        {activeNav === 'listings'   && <ListingsPage session={session} />}
+        {activeNav === 'orders'     && <OrdersPage session={session} />}
+        {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
+        {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={setActiveNav} />}
+        {activeNav === 'settings'   && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
+        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'orders' &&
+         activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
       </main>
@@ -500,6 +505,10 @@ function ConnectorSettings({
 
       <MpConnectCard session={session} onSessionUpdate={onSessionUpdate} />
 
+      {session.seller.connectorType && (
+        <WebhookRegisterCard session={session} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>{current ? 'Cambiar conector' : 'Conectar tienda'}</CardTitle>
@@ -627,6 +636,54 @@ function MpConnectCard({
             </p>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function WebhookRegisterCard({ session }: { session: SellerSession }) {
+  const [registering, setRegistering] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message?: string; webhookId?: string } | null>(null);
+
+  async function register() {
+    setRegistering(true);
+    setResult(null);
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/webhook/register`,
+        { method: 'POST', headers: { Authorization: `Bearer ${session.token}` } },
+      );
+      const body = await res.json() as { ok: boolean; message?: string; webhookId?: string };
+      setResult(body);
+    } catch (e) {
+      setResult({ ok: false, message: String(e) });
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Webhooks en tiempo real</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Registrá un webhook en tu tienda para recibir actualizaciones de stock y precio
+          en tiempo real, sin esperar al ciclo de sincronización.
+        </p>
+        {result && (
+          <div className={`p-3 rounded-lg text-sm ${result.ok
+            ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+            : 'bg-red-50 border border-red-200 text-red-700'}`}>
+            {result.ok
+              ? `Webhook registrado${result.webhookId ? ` (ID: ${result.webhookId})` : ''}`
+              : (result.message ?? 'Error al registrar el webhook')}
+          </div>
+        )}
+        <Button variant="outline" size="sm" onClick={register} disabled={registering}>
+          {registering ? 'Registrando…' : 'Registrar webhook'}
+        </Button>
       </CardContent>
     </Card>
   );

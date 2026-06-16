@@ -72,6 +72,30 @@ export class SellersController {
     });
   }
 
+  @Get(':id/orders/stats')
+  getOrderStats(@Param('id') id: string) {
+    return this.svc.getOrderStats(id);
+  }
+
+  @Get(':id/orders')
+  getOrders(
+    @Param('id') id: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('status') status?: string,
+  ) {
+    return this.svc.getOrders(id, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      status,
+    });
+  }
+
+  @Get(':id/analytics/top-products')
+  getTopProducts(@Param('id') id: string, @Query('limit') limit = '5') {
+    return this.svc.getTopProducts(id, parseInt(limit, 10));
+  }
+
   @Patch(':id/listings/:listingId')
   updateListing(
     @Param('id') id: string,

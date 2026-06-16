@@ -162,6 +162,107 @@ export class SellersService {
     return this.prisma.listing.update({ where: { id: listingId }, data: patch });
   }
 
+  async getOrderStats(sellerId: string) {
+    const [total, pending, confirmed, shipped, cancelled, revenue] = await Promise.all([
+      this.prisma.marketplaceOrder.count({ where: { sellerId } }),
+      this.prisma.marketplaceOrder.count({ where: { sellerId, status: 'pending' } }),
+      this.prisma.marketplaceOrder.count({ where: { sellerId, status: 'confirmed' } }),
+      this.prisma.marketplaceOrder.count({ where: { sellerId, status: 'shipped' } }),
+      this.prisma.marketplaceOrder.count({ where: { sellerId, status: 'cancelled' } }),
+      this.prisma.marketplaceOrder.aggregate({
+        where: { sellerId, status: { notIn: ['cancelled', 'refunded'] } },
+        _sum: { totalMinorUnits: true },
+      }),
+    ]);
+
+    // Last 7 days daily breakdown
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentOrders = await this.prisma.marketplaceOrder.findMany({
+      where: { sellerId, createdAt: { gte: since }, status: { notIn: ['cancelled', 'refunded'] } },
+      select: { createdAt: true, totalMinorUnits: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Aggregate into daily buckets
+    const dailyMap = new Map<string, { orders: number; revenueMinor: number }>();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      dailyMap.set(d.toISOString().slice(0, 10), { orders: 0, revenueMinor: 0 });
+    }
+    for (const o of recentOrders) {
+      const key = o.createdAt.toISOString().slice(0, 10);
+      const bucket = dailyMap.get(key);
+      if (bucket) {
+        bucket.orders++;
+        bucket.revenueMinor += o.totalMinorUnits;
+      }
+    }
+
+    return {
+      total,
+      pending,
+      confirmed,
+      shipped,
+      cancelled,
+      revenueMinorUnits: revenue._sum.totalMinorUnits ?? 0,
+      daily: Array.from(dailyMap.entries()).map(([date, v]) => ({ date, ...v })),
+    };
+  }
+
+  async getOrders(sellerId: string, params: { page: number; limit: number; status?: string }) {
+    const where: Record<string, unknown> = { sellerId };
+    if (params.status && params.status !== 'all') where['status'] = params.status;
+
+    const [orders, total] = await Promise.all([
+      this.prisma.marketplaceOrder.findMany({
+        where,
+        include: {
+          lines: {
+            include: {
+              listing: {
+                include: {
+                  product: { select: { name: true, images: true, slug: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: params.limit,
+        skip: (params.page - 1) * params.limit,
+      }),
+      this.prisma.marketplaceOrder.count({ where }),
+    ]);
+
+    return { orders, total, page: params.page, limit: params.limit };
+  }
+
+  async getTopProducts(sellerId: string, limit = 5) {
+    const lines = await this.prisma.marketplaceOrderLine.findMany({
+      where: { order: { sellerId, status: { notIn: ['cancelled', 'refunded'] } } },
+      include: {
+        listing: {
+          include: { product: { select: { name: true, images: true } } },
+        },
+      },
+    });
+
+    const byProduct = new Map<string, { name: string; image: string | null; units: number; revenueMinor: number }>();
+    for (const line of lines) {
+      const name = line.listing.product.name;
+      const image = line.listing.product.images[0] ?? null;
+      const key = line.listing.productId;
+      const existing = byProduct.get(key) ?? { name, image, units: 0, revenueMinor: 0 };
+      existing.units += line.quantity;
+      existing.revenueMinor += line.lineTotalMinor;
+      byProduct.set(key, existing);
+    }
+
+    return Array.from(byProduct.values())
+      .sort((a, b) => b.revenueMinor - a.revenueMinor)
+      .slice(0, limit);
+  }
+
   async list(params: { status?: string; limit?: number; offset?: number }) {
     const { status, limit = 50, offset = 0 } = params;
     return this.prisma.seller.findMany({
