@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useCart } from '../cart/CartContext.js';
 
 interface ProductPageProps {
   slug: string;
+  onCartOpen: () => void;
 }
 
 interface ListingDetail {
@@ -68,13 +70,14 @@ function formatPrice(minor: number, currency = 'MXN') {
     .format(minor / 100);
 }
 
-export default function ProductPage({ slug }: ProductPageProps) {
+export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['product', slug],
     queryFn: () => fetchProduct(slug),
   });
 
   const [selectedImage, setSelectedImage] = useState(0);
+  const { add } = useCart();
 
   if (isLoading) return <ProductSkeleton />;
   if (isError || !data) return <NotFound />;
@@ -181,7 +184,25 @@ export default function ProductPage({ slug }: ProductPageProps) {
         ) : (
           <div className="space-y-3">
             {p.listings.map((listing, idx) => (
-              <ListingRow key={listing.id} listing={listing} rank={idx + 1} />
+              <ListingRow
+                key={listing.id}
+                listing={listing}
+                rank={idx + 1}
+                productName={p.name}
+                productImage={p.images[0]}
+                onAddToCart={() => {
+                  add({
+                    listingId: listing.id,
+                    productName: p.name,
+                    sellerName: listing.sellerName,
+                    priceMinorUnits: listing.priceMinorUnits,
+                    currency: listing.currency,
+                    quantity: 1,
+                    imageUrl: p.images[0],
+                  });
+                  onCartOpen();
+                }}
+              />
             ))}
           </div>
         )}
@@ -190,7 +211,15 @@ export default function ProductPage({ slug }: ProductPageProps) {
   );
 }
 
-function ListingRow({ listing: l, rank }: { listing: ListingDetail; rank: number }) {
+function ListingRow({
+  listing: l, rank, productName: _pn, productImage: _pi, onAddToCart,
+}: {
+  listing: ListingDetail;
+  rank: number;
+  productName: string;
+  productImage?: string;
+  onAddToCart: () => void;
+}) {
   const [showScore, setShowScore] = useState(false);
   const bestDelivery = l.deliveryOptions.reduce(
     (best, d) => (d.estimatedDaysMin < best.estimatedDaysMin ? d : best),
@@ -270,10 +299,11 @@ function ListingRow({ listing: l, rank }: { listing: ListingDetail; rank: number
         </span>
         {l.stockStatus !== 'out_of_stock' && (
           <button
+            onClick={onAddToCart}
             className="px-4 py-2 bg-emerald-700 text-white text-sm font-semibold
                        rounded-lg hover:bg-emerald-800 transition-colors"
           >
-            Comprar
+            Agregar 🛒
           </button>
         )}
       </div>

@@ -13,6 +13,7 @@ import { MktCatalogModule } from './mkt-catalog/mkt-catalog.module.js';
 import { SellersModule } from './sellers/sellers.module.js';
 import { ConnectorsModule } from './connectors/connectors.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { CheckoutModule } from './checkout/checkout.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AuthModule } from './auth/auth.module.js';
     MktCatalogModule,
     SellersModule,
     ConnectorsModule,
+    CheckoutModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [SyncService, MpOAuthService],

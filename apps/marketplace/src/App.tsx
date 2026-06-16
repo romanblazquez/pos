@@ -2,15 +2,25 @@ import { useState } from 'react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
+import { CartProvider, useCart } from './cart/CartContext.js';
+import CartDrawer from './cart/CartDrawer.js';
 
-// Minimal client-side router — will be replaced with React Router in Epic 5
 type Route =
   | { page: 'home' }
   | { page: 'search'; q: string }
   | { page: 'product'; slug: string };
 
 export default function App() {
+  return (
+    <CartProvider>
+      <AppInner />
+    </CartProvider>
+  );
+}
+
+function AppInner() {
   const [route, setRoute] = useState<Route>({ page: 'home' });
+  const [cartOpen, setCartOpen] = useState(false);
 
   function navigate(r: Route) {
     setRoute(r);
@@ -22,6 +32,7 @@ export default function App() {
       <Header
         onSearch={(q) => navigate({ page: 'search', q })}
         onHome={() => navigate({ page: 'home' })}
+        onCartOpen={() => setCartOpen(true)}
       />
       <main>
         {route.page === 'home' && (
@@ -37,9 +48,13 @@ export default function App() {
           />
         )}
         {route.page === 'product' && (
-          <ProductPage slug={route.slug} />
+          <ProductPage
+            slug={route.slug}
+            onCartOpen={() => setCartOpen(true)}
+          />
         )}
       </main>
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }
@@ -47,14 +62,17 @@ export default function App() {
 function Header({
   onSearch,
   onHome,
+  onCartOpen,
 }: {
   onSearch: (q: string) => void;
   onHome: () => void;
+  onCartOpen: () => void;
 }) {
   const [q, setQ] = useState('');
+  const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-sm">
+    <header className="sticky top-0 z-40 bg-white border-b border-stone-200 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
         <button
           onClick={onHome}
@@ -85,10 +103,24 @@ function Header({
             Buscar
           </button>
         </form>
-        <nav className="hidden sm:flex gap-4 text-sm text-stone-600 shrink-0">
-          <a href="/seller-portal" className="hover:text-emerald-700">
+        <nav className="hidden sm:flex items-center gap-4 text-sm text-stone-600 shrink-0">
+          <a href="http://localhost:4301" className="hover:text-emerald-700">
             Soy vendedor
           </a>
+          <button
+            onClick={onCartOpen}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                       hover:bg-stone-100 transition-colors font-medium"
+          >
+            🛒
+            {count > 0 && (
+              <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-emerald-600 text-white
+                               text-[10px] font-bold rounded-full flex items-center justify-center
+                               min-w-[1.1rem] px-0.5">
+                {count}
+              </span>
+            )}
+          </button>
         </nav>
       </div>
     </header>
