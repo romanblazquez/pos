@@ -2,7 +2,9 @@ import {
   Controller, Get, Inject, Param, Query, NotFoundException,
 } from '@nestjs/common';
 import { MarketplaceService } from './marketplace.service.js';
+import { Public } from '../auth/auth.guard.js';
 
+@Public()
 @Controller('api/v1/products')
 export class MarketplaceController {
   constructor(

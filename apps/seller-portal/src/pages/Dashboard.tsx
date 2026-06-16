@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import type { SellerSession } from '../App.js';
+
 const NAV_ITEMS = [
   { icon: '📊', label: 'Dashboard', id: 'dashboard' },
   { icon: '📦', label: 'Productos', id: 'listings' },
@@ -9,9 +12,12 @@ const NAV_ITEMS = [
 
 type NavId = (typeof NAV_ITEMS)[number]['id'];
 
-import { useState } from 'react';
+interface DashboardProps {
+  session: SellerSession;
+  onLogout: () => void;
+}
 
-export default function Dashboard() {
+export default function Dashboard({ session, onLogout }: DashboardProps) {
   const [activeNav, setActiveNav] = useState<NavId>('dashboard');
 
   return (
@@ -39,8 +45,11 @@ export default function Dashboard() {
           ))}
         </nav>
         <div className="p-4 border-t border-emerald-800">
-          <p className="text-xs text-emerald-400">El Dado Mágico</p>
-          <button className="text-xs text-emerald-500 hover:text-white mt-0.5">
+          <p className="text-xs text-emerald-400">{session.seller.name}</p>
+          <button
+            onClick={onLogout}
+            className="text-xs text-emerald-500 hover:text-white mt-0.5"
+          >
             Cerrar sesión
           </button>
         </div>
@@ -48,8 +57,8 @@ export default function Dashboard() {
 
       {/* Main */}
       <main className="flex-1 bg-stone-50 overflow-auto">
-        {activeNav === 'dashboard' && <DashboardHome />}
-        {activeNav === 'sync' && <SyncHealth />}
+        {activeNav === 'dashboard' && <DashboardHome sellerName={session.seller.name} />}
+        {activeNav === 'sync' && <SyncHealth session={session} />}
         {activeNav !== 'dashboard' && activeNav !== 'sync' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
@@ -58,7 +67,7 @@ export default function Dashboard() {
   );
 }
 
-function DashboardHome() {
+function DashboardHome({ sellerName }: { sellerName: string }) {
   const kpis = [
     { label: 'Productos activos', value: '47', icon: '📦', trend: null },
     { label: 'Pedidos hoy', value: '3', icon: '📋', trend: '+2 vs ayer' },
@@ -69,7 +78,7 @@ function DashboardHome() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-900">Bienvenido 👋</h1>
+        <h1 className="text-2xl font-bold text-stone-900">Bienvenido, {sellerName} 👋</h1>
         <p className="text-stone-500 text-sm mt-1">
           Tu tienda está activa en el marketplace.
         </p>
@@ -126,44 +135,101 @@ function DashboardHome() {
   );
 }
 
-function SyncHealth() {
-  const syncs = [
-    { type: 'Catálogo', status: 'success', time: 'Hace 2h', items: 47, errors: 0 },
-    { type: 'Inventario', status: 'success', time: 'Hace 4 min', items: 47, errors: 0 },
-    { type: 'Precios', status: 'success', time: 'Hace 4 min', items: 47, errors: 0 },
-  ];
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+function SyncHealth({ session }: { session: SellerSession }) {
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, { items: number; ok: boolean }>>({});
+
+  const connectorName = session.seller.connectorType ?? 'manual';
+  const connectorIcon = connectorName === 'tiendanube' ? '☁️' : connectorName === 'shopify' ? '🛍️' : '🔌';
+  const hasConnector = !!session.seller.connectorType;
+
+  async function triggerSync(type: 'catalog' | 'inventory' | 'prices') {
+    setSyncing(type);
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/sync/${type}`,
+        { method: 'POST', headers: { Authorization: `Bearer ${session.token}` } },
+      );
+      const body = await res.json().catch(() => ({}));
+      setResults((r) => ({
+        ...r,
+        [type]: { items: (body as { itemsSynced?: number }).itemsSynced ?? 0, ok: res.ok },
+      }));
+    } catch {
+      setResults((r) => ({ ...r, [type]: { items: 0, ok: false } }));
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  const SYNC_ROWS = [
+    { key: 'catalog', label: 'Catálogo', freq: 'cada 4 horas' },
+    { key: 'inventory', label: 'Inventario', freq: 'cada 5 min' },
+    { key: 'prices', label: 'Precios', freq: 'cada 15 min' },
+  ] as const;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-stone-900">Estado de sincronización</h1>
-        <button className="px-4 py-2 text-sm bg-emerald-700 text-white rounded-lg hover:bg-emerald-800">
-          🔄 Sincronizar ahora
+        <button
+          onClick={() => triggerSync('catalog')}
+          disabled={syncing !== null || !hasConnector}
+          className="px-4 py-2 text-sm bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 disabled:opacity-50"
+        >
+          {syncing === 'catalog' ? '⏳ Sincronizando...' : '🔄 Sincronizar ahora'}
         </button>
       </div>
+
+      {!hasConnector && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          ⚠️ No tenés un conector configurado. Completá el onboarding para conectar tu tienda.
+        </div>
+      )}
 
       {/* Connector status */}
       <div className="bg-white rounded-xl border border-stone-200 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">☁️</span>
+          <span className="text-2xl">{connectorIcon}</span>
           <div>
-            <p className="font-semibold text-stone-900">Tiendanube</p>
-            <p className="text-xs text-stone-400">mi-tienda.tiendanube.com</p>
+            <p className="font-semibold text-stone-900 capitalize">{connectorName}</p>
+            <p className="text-xs text-stone-400">Conector activo</p>
           </div>
-          <span className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
-            ● Conectado
+          <span className={`ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+            hasConnector
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-stone-100 text-stone-500'
+          }`}>
+            ● {hasConnector ? 'Conectado' : 'Sin configurar'}
           </span>
         </div>
 
         <div className="divide-y divide-stone-100">
-          {syncs.map((s) => (
-            <div key={s.type} className="py-3 flex items-center gap-4 text-sm">
-              <span className="text-stone-500 w-24 shrink-0">{s.type}</span>
-              <span className="text-emerald-600 font-medium">✓ OK</span>
-              <span className="text-stone-400 text-xs">{s.time}</span>
-              <span className="ml-auto text-stone-400 text-xs">{s.items} ítems</span>
-            </div>
-          ))}
+          {SYNC_ROWS.map((s) => {
+            const r = results[s.key];
+            return (
+              <div key={s.key} className="py-3 flex items-center gap-4 text-sm">
+                <span className="text-stone-500 w-28 shrink-0">{s.label}</span>
+                {r ? (
+                  r.ok
+                    ? <span className="text-emerald-600 font-medium">✓ {r.items} ítems</span>
+                    : <span className="text-red-500 font-medium">✗ Error</span>
+                ) : (
+                  <span className="text-stone-400">—</span>
+                )}
+                <span className="ml-auto text-stone-400 text-xs">{s.freq}</span>
+                <button
+                  onClick={() => triggerSync(s.key)}
+                  disabled={syncing !== null || !hasConnector}
+                  className="text-xs text-emerald-600 hover:underline disabled:opacity-40"
+                >
+                  {syncing === s.key ? '...' : 'Sincronizar'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

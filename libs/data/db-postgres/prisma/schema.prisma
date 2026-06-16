@@ -257,6 +257,9 @@ model Seller {
   tier            String    @default("starter") // starter | growth | pro | platform
   status          String    @default("pending") // pending | active | suspended | churned
   commissionRate  Decimal   @default(0.03) @db.Decimal(5, 4)
+  passwordHash    String?
+  emailVerified   Boolean   @default(false)
+  verifyToken     String?   @unique
   onboardingStep  String?   // current step if onboarding not complete
   onboardingData  Json?
   createdAt       DateTime  @default(now())
@@ -369,6 +372,9 @@ model MktCustomer {
   phone            String?
   preferredRegion  String?
   preferredCurrency String   @default("MXN")
+  passwordHash     String?
+  emailVerified    Boolean   @default(false)
+  verifyToken      String?   @unique
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   orders           MarketplaceOrder[]

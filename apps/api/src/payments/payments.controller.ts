@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, Headers } from '@nestjs/common';
 import { MpOAuthService } from './mp-oauth.service.js';
+import { Public } from '../auth/auth.guard.js';
 
 interface DevCredentialsDto {
   merchantId: string;
@@ -25,6 +26,7 @@ interface WebhookPayload {
  * Access tokens never reach the frontend. In production, wrap all endpoints with
  * a JWT auth guard and limit dev-credentials endpoints to internal IPs.
  */
+@Public()
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly mpOAuth: MpOAuthService) {}

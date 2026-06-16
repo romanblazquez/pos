@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from '../auth/auth.guard.js';
 
 /** Liveness / readiness probes for orchestration and load balancers. */
+@Public()
 @Controller('health')
 export class HealthController {
   @Get()

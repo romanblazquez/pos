@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Inject, Param, Post } from '@nestjs/common';
 import { ConnectorSyncService } from './sync.service.js';
 import { ConnectorRegistryService } from './connector-registry.service.js';
+import { Public } from '../auth/auth.guard.js';
 
+@Public()
 @Controller('api/v1/sellers/:sellerId/connector')
 export class ConnectorsController {
   constructor(

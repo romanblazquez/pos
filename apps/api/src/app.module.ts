@@ -12,11 +12,13 @@ import { MarketplaceModule } from './marketplace/marketplace.module.js';
 import { MktCatalogModule } from './mkt-catalog/mkt-catalog.module.js';
 import { SellersModule } from './sellers/sellers.module.js';
 import { ConnectorsModule } from './connectors/connectors.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
     PrismaModule,    // @Global — PrismaService available everywhere
     SearchModule,    // @Global — TypesenseService available everywhere
+    AuthModule,      // Global JWT guard + seller/customer auth endpoints
     CatalogModule,
     MarketplaceModule,
     MktCatalogModule,

@@ -9,7 +9,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SellersService, CreateSellerDto } from './sellers.service.js';
+import { Public } from '../auth/auth.guard.js';
 
+@Public()
 @Controller('api/v1/sellers')
 export class SellersController {
   constructor(@Inject(SellersService) private readonly svc: SellersService) {}

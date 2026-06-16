@@ -45,8 +45,8 @@ const COLLECTION_SCHEMA = {
     { name: 'bggWeight',       type: 'float'   as const, optional: true },
     { name: 'minPriceMinor',   type: 'int32'   as const, optional: true, sort: true },
     { name: 'maxPriceMinor',   type: 'int32'   as const, optional: true },
-    { name: 'totalListings',   type: 'int32'   as const, optional: true },
-    { name: 'inStockListings', type: 'int32'   as const, optional: true, sort: true },
+    { name: 'totalListings',   type: 'int32'   as const, optional: false, sort: true },
+    { name: 'inStockListings', type: 'int32'   as const, optional: false, sort: true },
     { name: 'images',          type: 'string[]' as const, optional: true },
   ],
   default_sorting_field: 'inStockListings',
@@ -75,8 +75,15 @@ export class TypesenseService implements OnModuleInit {
 
   private async ensureCollection() {
     try {
-      await this.client.collections(COLLECTION).retrieve();
-      this.log.log('Typesense collection ready');
+      const existing = await this.client.collections(COLLECTION).retrieve();
+      // Check if default_sorting_field matches; if not, recreate.
+      if ((existing as { default_sorting_field?: string }).default_sorting_field !== 'inStockListings') {
+        await this.client.collections(COLLECTION).delete();
+        await this.client.collections().create(COLLECTION_SCHEMA);
+        this.log.log('Typesense collection recreated (schema updated)');
+      } else {
+        this.log.log('Typesense collection ready');
+      }
     } catch {
       try {
         await this.client.collections().create(COLLECTION_SCHEMA);

@@ -2,7 +2,9 @@ import {
   Body, Controller, Get, Inject, Param, Post, Query,
 } from '@nestjs/common';
 import { MktCatalogService } from './mkt-catalog.service.js';
+import { Public } from '../auth/auth.guard.js';
 
+@Public()
 @Controller('api/v1/admin/catalog')
 export class MktCatalogController {
   constructor(

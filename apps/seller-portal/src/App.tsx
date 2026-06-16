@@ -1,27 +1,65 @@
 import { useState } from 'react';
 import OnboardingWizard from './onboarding/OnboardingWizard.js';
 import Dashboard from './pages/Dashboard.js';
+import AuthGate from './auth/AuthGate.js';
 
-type PortalView = 'onboarding' | 'dashboard';
+export type SellerSession = {
+  token: string;
+  seller: {
+    id: string;
+    name: string;
+    slug: string;
+    email: string;
+    status: string;
+    tier: string;
+    connectorType: string | null;
+    onboardingStep: string | null;
+    emailVerified: boolean;
+  };
+};
 
-// Temporary auth stub — will be replaced with real JWT auth in Epic 2
-function useSellerAuth() {
-  const stored = localStorage.getItem('seller-portal.seller-id');
-  return { sellerId: stored, isOnboarded: !!stored };
+function getStoredSession(): SellerSession | null {
+  try {
+    const raw = localStorage.getItem('seller-portal.session');
+    return raw ? (JSON.parse(raw) as SellerSession) : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function App() {
-  const { isOnboarded } = useSellerAuth();
-  const [view, setView] = useState<PortalView>(
-    isOnboarded ? 'dashboard' : 'onboarding',
-  );
+  const [session, setSession] = useState<SellerSession | null>(getStoredSession);
+
+  function handleAuth(s: SellerSession) {
+    localStorage.setItem('seller-portal.session', JSON.stringify(s));
+    setSession(s);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('seller-portal.session');
+    setSession(null);
+  }
+
+  if (!session) {
+    return <AuthGate onAuth={handleAuth} />;
+  }
+
+  const needsOnboarding = session.seller.onboardingStep !== 'complete';
 
   return (
     <div className="min-h-screen">
-      {view === 'onboarding' && (
-        <OnboardingWizard onComplete={() => setView('dashboard')} />
+      {needsOnboarding ? (
+        <OnboardingWizard
+          session={session}
+          onComplete={(updated) => {
+            const next = { ...session, seller: { ...session.seller, ...updated } };
+            localStorage.setItem('seller-portal.session', JSON.stringify(next));
+            setSession(next);
+          }}
+        />
+      ) : (
+        <Dashboard session={session} onLogout={handleLogout} />
       )}
-      {view === 'dashboard' && <Dashboard />}
     </div>
   );
 }

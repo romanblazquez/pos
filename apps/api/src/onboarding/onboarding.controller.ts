@@ -1,11 +1,13 @@
 import { Body, Controller, Get, Post, Param } from '@nestjs/common';
 import type { WizardState } from '@retail-os/onboarding';
+import { Public } from '../auth/auth.guard.js';
 
 /**
  * OnboardingController — persists and retrieves onboarding wizard progress
  * on the central API. The local shell also stores state in SQLite so the wizard
  * works offline; this endpoint synchronizes it after connectivity is restored.
  */
+@Public()
 @Controller('onboarding')
 export class OnboardingController {
   // TODO(production): inject OnboardingRepository (Prisma) here.

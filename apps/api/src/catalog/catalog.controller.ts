@@ -1,10 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service.js';
 import type { UpsertProductDto } from './catalog.dto.js';
+import { Public } from '../auth/auth.guard.js';
 
 // Tenant resolution is a stub: in production this comes from JWT auth middleware.
 const DEFAULT_TENANT = 'tenant-demo';
 
+@Public()
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}

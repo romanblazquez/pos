@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import type { SellerSession } from '../App.js';
+
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 type ConnectorType =
   | 'tiendanube'
@@ -9,33 +12,24 @@ type ConnectorType =
   | 'manual';
 
 interface WizardState {
-  // Step 1
-  name: string;
-  email: string;
-  phone: string;
-  // Step 2
   storeType: 'connect' | 'create' | '';
-  // Step 3
   connectorType: ConnectorType | '';
-  // Step 4
   catalogImported: boolean;
-  // Step 5
   shipsFrom: string;
   offersPickup: boolean;
-  // Step 6
   commissionAccepted: boolean;
 }
 
 const INITIAL: WizardState = {
-  name: '', email: '', phone: '',
   storeType: '',
   connectorType: '',
   catalogImported: false,
-  shipsFrom: '', offersPickup: false,
+  shipsFrom: '',
+  offersPickup: false,
   commissionAccepted: false,
 };
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
 
 const CONNECTORS: { type: ConnectorType; label: string; icon: string; desc: string }[] = [
   { type: 'tiendanube', label: 'Tiendanube', icon: '☁️', desc: 'Sincroniza tu tienda Tiendanube automáticamente.' },
@@ -47,40 +41,62 @@ const CONNECTORS: { type: ConnectorType; label: string; icon: string; desc: stri
 ];
 
 interface OnboardingWizardProps {
-  onComplete: () => void;
+  session: SellerSession;
+  onComplete: (updates: Partial<SellerSession['seller']>) => void;
 }
 
-export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({ session, onComplete }: OnboardingWizardProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardState>(INITIAL);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  function next() {
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  }
-  function prev() {
-    setStep((s) => Math.max(s - 1, 1));
-  }
+  function next() { setStep((s) => Math.min(s + 1, TOTAL_STEPS)); }
+  function prev() { setStep((s) => Math.max(s - 1, 1)); }
 
   async function finish() {
     setIsSubmitting(true);
+    setError('');
     try {
-      // In Epic 2 this will POST to /api/v1/sellers/onboard
-      await new Promise((r) => setTimeout(r, 800));
-      localStorage.setItem('seller-portal.seller-id', 'demo-seller-001');
-      onComplete();
+      const res = await fetch(`${API}/api/v1/auth/seller/onboarding`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({
+          step: 'complete',
+          data: {
+            storeType: data.storeType,
+            connectorType: data.connectorType || null,
+            shipsFrom: data.shipsFrom,
+            offersPickup: data.offersPickup,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError((body as { message?: string }).message ?? 'Error al guardar. Intenta de nuevo.');
+        return;
+      }
+
+      onComplete({ onboardingStep: 'complete', status: 'active' });
+    } catch {
+      setError('No se pudo conectar con el servidor.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-stone-50">
       <div className="w-full max-w-lg">
-        {/* Logo */}
         <div className="text-center mb-8">
           <p className="text-2xl font-bold text-emerald-800">🎲 BoardGame Market</p>
-          <p className="text-stone-500 text-sm mt-1">Portal de Vendedores</p>
+          <p className="text-stone-500 text-sm mt-1">
+            Hola, <strong>{session.seller.name}</strong> — completá tu perfil
+          </p>
         </div>
 
         {/* Progress bar */}
@@ -97,29 +113,30 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           </div>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8">
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {step === 1 && (
-            <Step1Account data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step1StoreType data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 2 && (
-            <Step2StoreType data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step2Connect data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 3 && (
-            <Step3Connect data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step3Catalog data={data} session={session} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 4 && (
-            <Step4Catalog data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step4Delivery data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
           {step === 5 && (
-            <Step5Delivery data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
-          )}
-          {step === 6 && (
-            <Step6Commission data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
+            <Step5Commission data={data} onChange={(d) => setData((s) => ({ ...s, ...d }))} />
           )}
         </div>
 
-        {/* Nav buttons */}
         <div className="flex justify-between mt-6">
           {step > 1 ? (
             <button
@@ -156,7 +173,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
 
 // ─── Step components ──────────────────────────────────────────────────────────
 
-function Step1Account({
+function Step1StoreType({
   data,
   onChange,
 }: {
@@ -165,70 +182,11 @@ function Step1Account({
 }) {
   return (
     <div className="space-y-5">
-      <StepHeader
-        step={1}
-        title="Crear tu cuenta"
-        desc="Empecemos con los datos básicos de tu tienda."
-      />
-      <Field label="Nombre de tu tienda">
-        <input
-          type="text"
-          value={data.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Ej: El Dado Mágico"
-          className={inputCls}
-        />
-      </Field>
-      <Field label="Email de contacto">
-        <input
-          type="email"
-          value={data.email}
-          onChange={(e) => onChange({ email: e.target.value })}
-          placeholder="tu@tienda.com"
-          className={inputCls}
-        />
-      </Field>
-      <Field label="WhatsApp / Teléfono (opcional)">
-        <input
-          type="tel"
-          value={data.phone}
-          onChange={(e) => onChange({ phone: e.target.value })}
-          placeholder="+52 55 1234 5678"
-          className={inputCls}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step2StoreType({
-  data,
-  onChange,
-}: {
-  data: WizardState;
-  onChange: (d: Partial<WizardState>) => void;
-}) {
-  return (
-    <div className="space-y-5">
-      <StepHeader
-        step={2}
-        title="¿Cómo querés participar?"
-        desc="Elegí la opción que mejor se adapte a tu situación."
-      />
+      <StepHeader step={1} title="¿Cómo querés participar?" desc="Elegí la opción que mejor se adapte a tu situación." />
       <div className="grid gap-3">
         {[
-          {
-            value: 'connect' as const,
-            icon: '🔗',
-            title: 'Conectar mi tienda existente',
-            desc: 'Tengo Tiendanube, Shopify, Mercado Libre u otro sistema. Solo conecto y listo.',
-          },
-          {
-            value: 'create' as const,
-            icon: '🚀',
-            title: 'Crear una tienda nueva',
-            desc: 'Quiero vender online. Me doy de alta en el marketplace y el sistema me da una tienda propia.',
-          },
+          { value: 'connect' as const, icon: '🔗', title: 'Conectar mi tienda existente', desc: 'Tengo Tiendanube, Shopify, Mercado Libre u otro sistema.' },
+          { value: 'create' as const, icon: '🚀', title: 'Crear una tienda nueva', desc: 'Quiero vender online sin tener una tienda previa.' },
         ].map((opt) => (
           <button
             key={opt.value}
@@ -253,20 +211,10 @@ function Step2StoreType({
   );
 }
 
-function Step3Connect({
-  data,
-  onChange,
-}: {
-  data: WizardState;
-  onChange: (d: Partial<WizardState>) => void;
-}) {
+function Step2Connect({ data, onChange }: { data: WizardState; onChange: (d: Partial<WizardState>) => void }) {
   return (
     <div className="space-y-5">
-      <StepHeader
-        step={3}
-        title="Conectar tu catálogo"
-        desc="¿Dónde están tus productos ahora?"
-      />
+      <StepHeader step={2} title="Conectar tu catálogo" desc="¿Dónde están tus productos ahora?" />
       <div className="grid grid-cols-2 gap-3">
         {CONNECTORS.map((c) => (
           <button
@@ -284,55 +232,78 @@ function Step3Connect({
           </button>
         ))}
       </div>
-      {data.connectorType && data.connectorType !== 'csv' && data.connectorType !== 'manual' && (
+      {data.connectorType && !['csv', 'manual'].includes(data.connectorType) && (
         <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-sm text-blue-800">
-          🔐 Te redirigiremos a <strong>{CONNECTORS.find(c => c.type === data.connectorType)?.label}</strong> para
-          autorizar el acceso. Solo necesitamos leer tu catálogo e inventario.
+          🔐 Te redirigiremos a <strong>{CONNECTORS.find((c) => c.type === data.connectorType)?.label}</strong> para
+          autorizar el acceso. Solo leemos catálogo e inventario.
         </div>
       )}
     </div>
   );
 }
 
-function Step4Catalog({
+function Step3Catalog({
   data,
+  session,
   onChange,
 }: {
   data: WizardState;
+  session: SellerSession;
   onChange: (d: Partial<WizardState>) => void;
 }) {
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(data.catalogImported);
+  const [result, setResult] = useState<{ synced: number } | null>(null);
 
-  function simulateImport() {
+  async function triggerImport() {
     setImporting(true);
-    setTimeout(() => {
-      setImporting(false);
+    try {
+      const res = await fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/connector/sync/catalog`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.token}` },
+        },
+      );
+      const body = await res.json().catch(() => ({}));
+      setResult({ synced: (body as { itemsSynced?: number }).itemsSynced ?? 0 });
       setDone(true);
       onChange({ catalogImported: true });
-    }, 2000);
+    } catch {
+      setResult({ synced: 0 });
+      setDone(true);
+      onChange({ catalogImported: true });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  if (['csv', 'manual', ''].includes(data.connectorType)) {
+    return (
+      <div className="space-y-5">
+        <StepHeader step={3} title="Importar catálogo" desc="Podés cargar productos manualmente desde el panel." />
+        <div className="text-center py-6">
+          <p className="text-4xl mb-3">✏️</p>
+          <p className="text-sm text-stone-600">Añadirás tus productos después de activar la cuenta.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5">
-      <StepHeader
-        step={4}
-        title="Importar catálogo"
-        desc="Vamos a traer tus productos al marketplace."
-      />
+      <StepHeader step={3} title="Importar catálogo" desc="Vamos a traer tus productos al marketplace." />
       {!done ? (
         <div className="text-center py-6">
           <p className="text-4xl mb-3">📦</p>
           <p className="text-stone-600 text-sm mb-4">
-            Conectaremos con{' '}
-            <strong>{CONNECTORS.find((c) => c.type === data.connectorType)?.label ?? 'tu tienda'}</strong>{' '}
+            Conectaremos con <strong>{CONNECTORS.find((c) => c.type === data.connectorType)?.label ?? 'tu tienda'}</strong>{' '}
             y traeremos todos tus productos.
           </p>
           <button
-            onClick={simulateImport}
+            onClick={triggerImport}
             disabled={importing}
-            className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg
-                       hover:bg-emerald-800 disabled:opacity-60"
+            className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg hover:bg-emerald-800 disabled:opacity-60"
           >
             {importing ? '⏳ Importando...' : 'Importar productos'}
           </button>
@@ -341,39 +312,33 @@ function Step4Catalog({
         <div className="text-center py-6">
           <p className="text-4xl mb-3">✅</p>
           <p className="font-semibold text-stone-900">¡Catálogo importado!</p>
-          <p className="text-sm text-stone-500 mt-1">
-            Encontramos <strong>47 productos</strong>. Los revisaremos y
-            publicaremos en el marketplace en las próximas horas.
-          </p>
+          {result && (
+            <p className="text-sm text-stone-500 mt-1">
+              {result.synced > 0
+                ? <>Sincronizamos <strong>{result.synced} productos</strong>. Los revisaremos y publicaremos pronto.</>
+                : 'Tu catálogo se sincronizará automáticamente cuando el conector esté configurado.'}
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function Step5Delivery({
-  data,
-  onChange,
-}: {
-  data: WizardState;
-  onChange: (d: Partial<WizardState>) => void;
-}) {
+function Step4Delivery({ data, onChange }: { data: WizardState; onChange: (d: Partial<WizardState>) => void }) {
   return (
     <div className="space-y-5">
-      <StepHeader
-        step={5}
-        title="Envíos y retiro"
-        desc="¿Desde dónde enviás? Los clientes verán el tiempo estimado de entrega."
-      />
-      <Field label="Ciudad / Código postal desde donde enviás">
+      <StepHeader step={4} title="Envíos y retiro" desc="¿Desde dónde enviás?" />
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-stone-700">Ciudad o código postal de origen</label>
         <input
           type="text"
           value={data.shipsFrom}
           onChange={(e) => onChange({ shipsFrom: e.target.value })}
-          placeholder="Ej: Buenos Aires, CABA o 1425"
+          placeholder="Ej: Buenos Aires, CABA"
           className={inputCls}
         />
-      </Field>
+      </div>
       <label className="flex items-start gap-3 cursor-pointer">
         <input
           type="checkbox"
@@ -390,20 +355,10 @@ function Step5Delivery({
   );
 }
 
-function Step6Commission({
-  data,
-  onChange,
-}: {
-  data: WizardState;
-  onChange: (d: Partial<WizardState>) => void;
-}) {
+function Step5Commission({ data, onChange }: { data: WizardState; onChange: (d: Partial<WizardState>) => void }) {
   return (
     <div className="space-y-5">
-      <StepHeader
-        step={6}
-        title="Comisión y términos"
-        desc="Una comisión solo se cobra cuando vendés."
-      />
+      <StepHeader step={5} title="Comisión y términos" desc="Una comisión solo se cobra cuando vendés." />
       <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-stone-600">Comisión por venta</span>
@@ -420,7 +375,6 @@ function Step6Commission({
         <hr className="border-stone-200" />
         <p className="text-xs text-stone-400">
           La comisión se descuenta de cada venta realizada a través del marketplace.
-          No hay costos de alta ni cuota fija.
         </p>
       </div>
       <label className="flex items-start gap-3 cursor-pointer">
@@ -431,9 +385,7 @@ function Step6Commission({
           className="mt-0.5 w-4 h-4 accent-emerald-600"
         />
         <p className="text-sm text-stone-700">
-          Acepto los{' '}
-          <a href="#" className="underline text-emerald-700">términos y condiciones</a>{' '}
-          del marketplace y la comisión del 3% por venta.
+          Acepto los <a href="#" className="underline text-emerald-700">términos y condiciones</a> y la comisión del 3%.
         </p>
       </label>
     </div>
@@ -445,20 +397,9 @@ function Step6Commission({
 function StepHeader({ step, title, desc }: { step: number; title: string; desc: string }) {
   return (
     <div>
-      <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide mb-1">
-        Paso {step}
-      </p>
+      <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide mb-1">Paso {step}</p>
       <h2 className="text-xl font-bold text-stone-900">{title}</h2>
       <p className="text-sm text-stone-500 mt-1">{desc}</p>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-sm font-medium text-stone-700">{label}</label>
-      {children}
     </div>
   );
 }
