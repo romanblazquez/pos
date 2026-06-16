@@ -52,20 +52,73 @@ export default function AuthGate({ onAuth }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-stone-50">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <p className="text-2xl font-bold text-emerald-800">🎲 BoardGame Market</p>
-          <p className="text-stone-500 text-sm mt-1">Portal de Vendedores</p>
+    <div className="min-h-screen flex">
+      {/* Left panel — brand / social proof */}
+      <div className="hidden lg:flex lg:w-[420px] shrink-0 bg-emerald-900 flex-col p-10 justify-between">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-xs">BG</span>
+          </div>
+          <div>
+            <p className="text-white font-semibold text-sm leading-none">BGMarket</p>
+            <p className="text-emerald-400 text-xs mt-0.5">Portal de Vendedores</p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-8">
-          <h2 className="text-lg font-bold text-stone-900 mb-6">
-            {mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+        {/* Tagline */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-light leading-relaxed text-white">
+            Vendé más,<br />gestioná menos.
           </h2>
+          <p className="text-emerald-300 text-sm mt-2 leading-relaxed">
+            Conectá tu tienda y aparecé en el marketplace automáticamente.
+          </p>
+
+          {/* Social proof stats */}
+          <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-emerald-800">
+            {[
+              { value: '12k+', label: 'Juegos' },
+              { value: '340+', label: 'Tiendas' },
+              { value: '4 h',  label: 'Sync'   },
+            ].map(({ value, label }) => (
+              <div key={label}>
+                <p className="text-2xl font-bold text-white tabular">{value}</p>
+                <p className="text-xs text-emerald-400 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-emerald-800 text-xs">© 2025 BGMarket</p>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 bg-white flex items-center justify-center">
+        <div className="max-w-sm mx-auto w-full px-6 py-12">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
+              <span className="text-white font-bold text-xs">BG</span>
+            </div>
+            <div>
+              <p className="text-slate-900 font-semibold text-sm leading-none">BGMarket</p>
+              <p className="text-emerald-600 text-xs mt-0.5">Portal de Vendedores</p>
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-bold text-slate-900">
+            {mode === 'login' ? 'Bienvenido' : 'Creá tu cuenta'}
+          </h2>
+          <p className="text-slate-500 text-sm mt-1 mb-8">
+            {mode === 'login'
+              ? 'Accedé a tu portal de vendedor'
+              : 'Completá los datos para empezar'}
+          </p>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+            <div className="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -108,8 +161,7 @@ export default function AuthGate({ onAuth }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-emerald-700 text-white text-sm font-semibold rounded-lg
-                         hover:bg-emerald-800 disabled:opacity-50 transition-colors"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-50 text-sm"
             >
               {loading
                 ? '...'
@@ -119,7 +171,7 @@ export default function AuthGate({ onAuth }: Props) {
             </button>
           </form>
 
-          <p className="text-center text-sm text-stone-500 mt-5">
+          <p className="text-center text-sm text-slate-500 mt-6">
             {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
             <button
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
@@ -136,13 +188,13 @@ export default function AuthGate({ onAuth }: Props) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <label className="text-sm font-medium text-stone-700">{label}</label>
+    <div>
+      <label className="text-sm font-medium text-slate-700 mb-1.5 block">{label}</label>
       {children}
     </div>
   );
 }
 
 const inputCls =
-  'w-full px-4 py-2.5 text-sm rounded-lg border border-stone-300 ' +
-  'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent';
+  'w-full px-4 py-2.5 text-sm rounded-lg border border-slate-300 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors';

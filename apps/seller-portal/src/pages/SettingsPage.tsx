@@ -61,12 +61,12 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
   ];
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Perfil de la tienda</h1>
-        <p className="text-sm text-slate-500">
-          Información pública de tu tienda. El email y país no se pueden cambiar aquí.
-        </p>
+    <div className="p-8 max-w-2xl space-y-6 page-enter">
+      {/* Page header */}
+      <div className="space-y-1 mb-8">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Configuración</p>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Perfil de la tienda</h1>
+        <p className="text-sm text-slate-400">Información pública y programa de recompensas.</p>
       </div>
 
       <Card>
@@ -87,7 +87,7 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
                   required
                   minLength={2}
                   maxLength={120}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                 />
               </div>
 
@@ -101,7 +101,7 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
                   onChange={(e) => setPhone(e.target.value)}
                   maxLength={30}
                   placeholder="+52 55 1234 5678"
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
@@ -113,7 +113,7 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
               <select
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white"
               >
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>{tz}</option>
@@ -271,7 +271,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
                 step={1}
                 value={storeCashback}
                 onChange={(e) => setStoreCashback(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-slate-900"
+                className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-emerald-600"
               />
               <div className="flex justify-between text-xs text-slate-400">
                 <span>0%</span>

@@ -57,35 +57,58 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-52 shrink-0 bg-slate-900 text-slate-300 flex flex-col">
-        <div className="px-5 py-5 border-b border-slate-800">
-          <p className="text-sm font-semibold text-white tracking-tight">BoardGame Market</p>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-widest">Portal</p>
+      <aside className="w-56 shrink-0 bg-slate-900 text-slate-300 flex flex-col">
+        {/* Logo area */}
+        <div className="px-5 pt-6 pb-5 border-b border-white/5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
+              <span className="text-white font-bold text-xs">BG</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white leading-none">BGMarket</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Retail OS</p>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto sidebar-scroll">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveNav(item.id)}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                activeNav === item.id
-                  ? 'bg-slate-700 text-white font-medium'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2 relative
+                ${activeNav === item.id
+                  ? 'text-white font-medium'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
             >
+              {activeNav === item.id && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-emerald-400 rounded-full -ml-3" />
+              )}
               {item.label}
             </button>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 space-y-1">
-          <p className="text-xs font-medium text-slate-300 truncate">{session.seller.name}</p>
+        {/* Bottom user area */}
+        <div className="p-4 border-t border-white/5">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-semibold">
+                {session.seller.name.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-200 truncate">{session.seller.name}</p>
+              <p className={`text-[10px] font-medium mt-0.5 ${session.seller.connectorType ? 'text-emerald-400' : 'text-slate-500'}`}>
+                {session.seller.connectorType ? `● ${session.seller.connectorType}` : '○ Sin conector'}
+              </p>
+            </div>
+          </div>
           <button
             onClick={onLogout}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            className="text-xs text-slate-600 hover:text-slate-300 transition-colors"
           >
-            Cerrar sesión
+            Cerrar sesión →
           </button>
         </div>
       </aside>
@@ -139,27 +162,29 @@ function DashboardHome({ session }: { session: SellerSession }) {
     ? Math.round((stats.active / stats.total) * 100)
     : null;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const firstName = session.seller.name.split(' ')[0];
+
   return (
-    <div className="p-8 max-w-6xl space-y-8">
-      {/* Header */}
-      <div className="space-y-1">
+    <div className="p-8 max-w-6xl page-enter">
+      {/* Greeting header */}
+      <div className="space-y-1 mb-8">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
           {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
-          {session.seller.name}
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          {greeting}, {firstName}
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-400 mt-1">
           {session.seller.connectorType
-            ? `Conectado a ${session.seller.connectorType}`
-            : 'Sin conector configurado'}
+            ? `Sincronizado con ${session.seller.connectorType}`
+            : 'Configurá un conector para empezar a vender'}
         </p>
       </div>
 
-      <Separator />
-
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <MetricCard
           label="Total de productos"
           value={loadingStats ? '—' : String(stats?.total ?? 0)}
@@ -169,7 +194,7 @@ function DashboardHome({ session }: { session: SellerSession }) {
           label="Activos en catálogo"
           value={loadingStats ? '—' : String(stats?.active ?? 0)}
           sub={stats && stats.total > 0 ? `de ${stats.total} totales` : undefined}
-          highlight={stats && stats.active > 0}
+          highlight={stats ? stats.active > 0 : false}
         />
         <MetricCard
           label="Sin stock"
@@ -187,31 +212,46 @@ function DashboardHome({ session }: { session: SellerSession }) {
 
       {/* Catalog health */}
       {stats && stats.total > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Salud del catálogo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <HealthBar
-              label="Productos activos"
-              value={stats.active}
-              total={stats.total}
-              color="bg-emerald-500"
-            />
-            <HealthBar
-              label="Sin stock"
-              value={stats.outOfStock}
-              total={stats.total}
-              color="bg-red-400"
-            />
-            <HealthBar
-              label="Stock bajo"
-              value={stats.lowStock}
-              total={stats.total}
-              color="bg-amber-400"
-            />
-          </CardContent>
-        </Card>
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Salud del catálogo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Stacked bar */}
+                <div className="flex h-2 rounded-full overflow-hidden gap-px bg-slate-100">
+                  {stats.active > 0 && (
+                    <div style={{ flex: stats.active }} className="bg-emerald-500 rounded-full" />
+                  )}
+                  {stats.lowStock > 0 && (
+                    <div style={{ flex: stats.lowStock }} className="bg-amber-400 rounded-full" />
+                  )}
+                  {stats.outOfStock > 0 && (
+                    <div style={{ flex: stats.outOfStock }} className="bg-red-400 rounded-full" />
+                  )}
+                </div>
+                {/* Legend — 4 numbers */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: 'Total',      value: stats.total,        color: 'text-slate-900',  dot: 'bg-slate-300'  },
+                    { label: 'Activos',    value: stats.active,       color: 'text-emerald-700', dot: 'bg-emerald-500' },
+                    { label: 'Stock bajo', value: stats.lowStock,     color: 'text-amber-600',  dot: 'bg-amber-400'  },
+                    { label: 'Sin stock',  value: stats.outOfStock,   color: 'text-red-600',    dot: 'bg-red-400'    },
+                  ].map(({ label, value, color, dot }) => (
+                    <div key={label}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+                        <span className="text-xs text-slate-400">{label}</span>
+                      </div>
+                      <p className={`text-2xl font-bold tabular ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Two-column bottom row */}
@@ -223,17 +263,17 @@ function DashboardHome({ session }: { session: SellerSession }) {
           </CardHeader>
           <CardContent>
             {session.seller.connectorType ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-800 capitalize">
-                    {session.seller.connectorType}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                  <span className="text-emerald-700 font-bold text-sm uppercase">
+                    {session.seller.connectorType.slice(0, 2)}
                   </span>
-                  <Badge variant="success">Activo</Badge>
                 </div>
-                <Separator />
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Las credenciales están cifradas en reposo. La sincronización se ejecuta automáticamente según la frecuencia configurada.
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 capitalize">{session.seller.connectorType}</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Activo · Cifrado AES-256</p>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Activo</span>
               </div>
             ) : (
               <div className="py-2 space-y-3">
@@ -246,17 +286,18 @@ function DashboardHome({ session }: { session: SellerSession }) {
           </CardContent>
         </Card>
 
-        {/* Recent activity placeholder */}
+        {/* Recent orders */}
         <Card>
           <CardHeader>
             <CardTitle>Pedidos recientes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="py-6 text-center space-y-1">
-              <p className="text-sm font-medium text-slate-400">Sin pedidos</p>
-              <p className="text-xs text-slate-400">
-                Los pedidos del marketplace aparecerán aquí.
-              </p>
+            <div className="py-4 text-center space-y-3">
+              <p className="text-3xl">📦</p>
+              <div>
+                <p className="text-sm font-medium text-slate-600">Sin pedidos aún</p>
+                <p className="text-xs text-slate-400 mt-0.5">Los pedidos del marketplace aparecerán aquí cuando empieces a vender.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -275,33 +316,15 @@ function MetricCard({
   alert?: boolean;
   warn?: boolean;
 }) {
+  const accent = alert ? 'bg-red-400' : warn ? 'bg-amber-400' : highlight ? 'bg-emerald-500' : 'bg-slate-100';
+  const valueColor = alert ? 'text-red-600' : warn ? 'text-amber-600' : highlight ? 'text-emerald-700' : 'text-slate-900';
   return (
-    <Card>
-      <CardContent className="pt-5 pb-4 px-5 space-y-2">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-        <p className={`text-3xl font-semibold tabular tracking-tight ${
-          alert ? 'text-red-600' : warn ? 'text-amber-600' : highlight ? 'text-emerald-700' : 'text-slate-900'
-        }`}>
-          {value}
-        </p>
-        {sub && (
-          <p className="text-xs text-slate-400">{sub}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function HealthBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-600">{label}</span>
-        <span className="tabular text-slate-500 text-xs">{value} <span className="text-slate-400">/ {total}</span></span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className={`h-1 w-full ${accent}`} />
+      <div className="px-5 pt-4 pb-5">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide leading-none">{label}</p>
+        <p className={`text-4xl font-bold tabular tracking-tight mt-2.5 ${valueColor}`}>{value}</p>
+        {sub && <p className="text-xs text-slate-400 mt-1.5">{sub}</p>}
       </div>
     </div>
   );
@@ -374,18 +397,21 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
   }
 
   const SYNC_ROWS = [
-    { key: 'catalog'   as const, label: 'Catálogo',  freq: 'cada 4 horas', canForce: true },
+    { key: 'catalog'   as const, label: 'Catálogo',   freq: 'cada 4 horas', canForce: true  },
     { key: 'inventory' as const, label: 'Inventario', freq: 'cada 5 min',   canForce: false },
     { key: 'prices'    as const, label: 'Precios',    freq: 'cada 15 min',  canForce: false },
   ];
 
   return (
-    <div className="p-8 max-w-3xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sincronización</h1>
-          <p className="text-sm text-slate-500">Estado en tiempo real de la sincronización con el conector.</p>
-        </div>
+    <div className="p-8 max-w-3xl page-enter">
+      {/* Page header */}
+      <div className="space-y-1 mb-8">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Sincronización</p>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Estado del conector</h1>
+        <p className="text-sm text-slate-400">Sincronización automática de catálogo, inventario y precios.</p>
+      </div>
+
+      <div className="mb-6">
         <Button
           variant="primary"
           onClick={() => triggerSync('catalog')}
@@ -396,7 +422,7 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
       </div>
 
       {!hasConnector && (
-        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+        <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
           Sin conector configurado.{' '}
           <button className="underline font-medium hover:text-amber-900" onClick={() => onNavigate('settings')}>
             Ir a Configuración
@@ -404,82 +430,84 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
         </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>{connectorName}</CardTitle>
-            <Badge variant={hasConnector ? 'success' : 'secondary'}>
-              {hasConnector ? 'Conectado' : 'Sin configurar'}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="divide-y divide-slate-100">
-            {SYNC_ROWS.map((s) => {
-              const status = syncStatus.find((r) => r.type === s.key);
-              const run = runResults[s.key];
-              return (
-                <div key={s.key} className="py-3.5 grid grid-cols-[7rem_1fr_auto] items-center gap-4 text-sm">
-                  <span className="text-slate-700 font-medium">{s.label}</span>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{connectorName}</CardTitle>
+              <Badge variant={hasConnector ? 'success' : 'secondary'}>
+                {hasConnector ? 'Conectado' : 'Sin configurar'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="divide-y divide-slate-100">
+              {SYNC_ROWS.map((s) => {
+                const status = syncStatus.find((r) => r.type === s.key);
+                const run = runResults[s.key];
+                return (
+                  <div key={s.key} className="py-3.5 grid grid-cols-[7rem_1fr_auto] items-center gap-4 text-sm">
+                    <span className="text-slate-700 font-medium">{s.label}</span>
 
-                  <div className="space-y-0.5">
-                    {run ? (
-                      run.ok
-                        ? <span className="text-emerald-700">{run.items} ítems sincronizados</span>
-                        : <span className="text-red-600">Error en la última ejecución</span>
-                    ) : status ? (
-                      <div>
-                        <span className={status.status === 'success' ? 'text-emerald-700' : 'text-red-600'}>
-                          {status.status === 'success'
-                            ? `${status.itemsSynced.toLocaleString('es-AR')} ítems`
-                            : 'Error'}
-                        </span>
-                        <span className="text-slate-400 text-xs ml-2">{relTime(status.lastRun)}</span>
-                        {status.itemsFailed > 0 && (
-                          <span className="text-amber-600 text-xs ml-2">{status.itemsFailed} fallidos</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Sin ejecuciones previas</span>
-                    )}
-                    <p className="text-xs text-slate-400">{s.freq}</p>
-                  </div>
+                    <div className="space-y-0.5">
+                      {run ? (
+                        run.ok
+                          ? <span className="text-emerald-700">{run.items} ítems sincronizados</span>
+                          : <span className="text-red-600">Error en la última ejecución</span>
+                      ) : status ? (
+                        <div>
+                          <span className={status.status === 'success' ? 'text-emerald-700' : 'text-red-600'}>
+                            {status.status === 'success'
+                              ? `${status.itemsSynced.toLocaleString('es-AR')} ítems`
+                              : 'Error'}
+                          </span>
+                          <span className="text-slate-400 text-xs ml-2">{relTime(status.lastRun)}</span>
+                          {status.itemsFailed > 0 && (
+                            <span className="text-amber-600 text-xs ml-2">{status.itemsFailed} fallidos</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-xs">Sin ejecuciones previas</span>
+                      )}
+                      <p className="text-xs text-slate-400">{s.freq}</p>
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => triggerSync(s.key)}
-                      disabled={syncing !== null || !hasConnector}
-                      className="text-xs text-slate-600 underline hover:text-slate-900 disabled:opacity-40"
-                    >
-                      {syncing === s.key ? '…' : 'Ejecutar'}
-                    </button>
-                    {s.canForce && (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => triggerSync(s.key, true)}
+                        onClick={() => triggerSync(s.key)}
                         disabled={syncing !== null || !hasConnector}
-                        className="text-xs text-slate-400 hover:text-slate-700 disabled:opacity-40"
-                        title="Ignorar sincronización incremental y descargar todo el catálogo"
+                        className="text-xs text-slate-600 underline hover:text-slate-900 disabled:opacity-40"
                       >
-                        Completa
+                        {syncing === s.key ? '…' : 'Ejecutar'}
                       </button>
-                    )}
+                      {s.canForce && (
+                        <button
+                          onClick={() => triggerSync(s.key, true)}
+                          disabled={syncing !== null || !hasConnector}
+                          className="text-xs text-slate-400 hover:text-slate-700 disabled:opacity-40"
+                          title="Ignorar sincronización incremental y descargar todo el catálogo"
+                        >
+                          Completa
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Modo de sincronización</p>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            El catálogo usa <strong className="text-slate-700">sincronización incremental</strong> — solo se descargan los productos modificados desde la última ejecución exitosa, reduciendo el tiempo y el uso de la API.
-            Usá <em>Completa</em> para forzar una descarga de todos los productos cuando sea necesario.
-          </p>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Modo de sincronización</p>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              El catálogo usa <strong className="text-slate-700">sincronización incremental</strong> — solo se descargan los productos modificados desde la última ejecución exitosa, reduciendo el tiempo y el uso de la API.
+              Usá <em>Completa</em> para forzar una descarga de todos los productos cuando sea necesario.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -503,10 +531,12 @@ function ConnectorSettings({
   }
 
   return (
-    <div className="p-8 max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Configuración</h1>
-        <p className="text-sm text-slate-500">Administrá el conector y los métodos de pago.</p>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="space-y-1 mb-8">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Configuración</p>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Conectores y pagos</h1>
+        <p className="text-sm text-slate-400">Administrá tu conector de inventario y métodos de pago.</p>
       </div>
 
       <Card>
