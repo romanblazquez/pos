@@ -42,6 +42,7 @@ async function bootstrap(): Promise<void> {
     .addTag('health', 'Liveness and readiness probes')
     .addTag('webhooks', 'Inbound webhooks from connector platforms (Tiendanube, MercadoPago)')
     .addTag('rankings', 'Ranking engine — score computation for marketplace listings')
+    .addTag('loyalty', 'Loyalty, cashback, and commission config — platform and seller rewards')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

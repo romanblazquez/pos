@@ -17,6 +17,7 @@ import { ConnectorsModule } from './connectors/connectors.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
 import { RankingsModule } from './rankings/rankings.module.js';
+import { LoyaltyModule } from './loyalty/loyalty.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { RankingsModule } from './rankings/rankings.module.js';
     ConnectorsModule,
     CheckoutModule,
     RankingsModule,
+    LoyaltyModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [

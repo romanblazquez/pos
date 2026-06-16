@@ -269,6 +269,8 @@ model Seller {
   score           SellerScore?
   syncLogs        ConnectorSyncLog[]
   mpConnection    SellerMpConnection?
+  rewardConfig    SellerRewardConfig?
+  storeCredits    StoreCredit[]
   @@index([status])
   @@index([connectorType])
 }
@@ -394,6 +396,7 @@ model MktCustomer {
   updatedAt        DateTime  @updatedAt
   orders           MarketplaceOrder[]
   addresses        MktAddress[]
+  wallet           CustomerWallet?
 }
 
 model MktAddress {
@@ -420,7 +423,11 @@ model MarketplaceOrder {
   subtotalMinorUnits  Int
   shippingMinorUnits  Int       @default(0)
   totalMinorUnits     Int
-  commissionMinorUnits Int      @default(0)
+  commissionMinorUnits     Int   @default(0)
+  platformCashbackMinor    Int   @default(0)  // credited to buyer's platform wallet
+  storeCashbackMinor       Int   @default(0)  // credited to buyer's store wallet
+  platformCreditsApplied   Int   @default(0)  // platform credits used at checkout
+  storeCreditsApplied      Int   @default(0)  // store credits used at checkout
   reservationId       String?   // seller-side hold ID
   reservationExpiresAt DateTime?
   checkoutSessionId   String?
@@ -457,6 +464,67 @@ model OrderEvent {
   payload   Json?
   createdAt DateTime         @default(now())
   order     MarketplaceOrder @relation(fields: [orderId], references: [id])
+  @@index([orderId])
+}
+
+// ─── Loyalty & Commissions ────────────────────────────────────────────────────
+
+/// Singleton row (id = 'default') — platform-wide commission and cashback config.
+model PlatformConfig {
+  id                 String   @id @default("default")
+  baseCommissionPct  Float    @default(0.05)   // 5% — charged to seller on every sale
+  minCommissionPct   Float    @default(0.02)   // 2% floor — seller can never pay less
+  platformCashbackPct Float   @default(0.01)   // 1% — credited to buyer from platform revenue
+  updatedAt          DateTime @updatedAt
+}
+
+/// Per-seller loyalty program config. Seller-funded cashback reduces their commission.
+/// effectiveCommission = max(baseCommission - storeCashbackPct, minCommission)
+model SellerRewardConfig {
+  id               String   @id @default(cuid())
+  sellerId         String   @unique
+  seller           Seller   @relation(fields: [sellerId], references: [id])
+  storeCashbackPct Float    @default(0)  // 0–0.15 (0%–15%)
+  updatedAt        DateTime @updatedAt
+}
+
+/// One wallet per customer. platformCreditsMinor usable on any seller.
+model CustomerWallet {
+  id                   String             @id @default(cuid())
+  customerId           String             @unique
+  customer             MktCustomer        @relation(fields: [customerId], references: [id])
+  platformCreditsMinor Int                @default(0)
+  updatedAt            DateTime           @updatedAt
+  transactions         WalletTransaction[]
+  storeCredits         StoreCredit[]
+}
+
+/// Store credits per customer×seller pair — only redeemable with that seller.
+model StoreCredit {
+  id           String         @id @default(cuid())
+  walletId     String
+  wallet       CustomerWallet @relation(fields: [walletId], references: [id])
+  sellerId     String
+  seller       Seller         @relation(fields: [sellerId], references: [id])
+  balanceMinor Int            @default(0)
+  updatedAt    DateTime       @updatedAt
+  @@unique([walletId, sellerId])
+  @@index([walletId])
+}
+
+/// Append-only ledger for all wallet movements.
+model WalletTransaction {
+  id          String         @id @default(cuid())
+  walletId    String
+  wallet      CustomerWallet @relation(fields: [walletId], references: [id])
+  /// earn_platform | redeem_platform | earn_store | redeem_store
+  type        String
+  amountMinor Int            // positive = credit, negative = debit
+  sellerId    String?
+  orderId     String?
+  description String?
+  createdAt   DateTime       @default(now())
+  @@index([walletId, createdAt])
   @@index([orderId])
 }
 
