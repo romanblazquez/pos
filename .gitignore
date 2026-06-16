@@ -28,3 +28,4 @@ data/local
 .DS_Store
 *.log
 coverage
+infra/backups/
