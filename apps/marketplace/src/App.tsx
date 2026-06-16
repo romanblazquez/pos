@@ -12,6 +12,24 @@ type Route =
   | { page: 'search'; q: string }
   | { page: 'product'; slug: string };
 
+function parseRoute(pathname: string, search: string): Route {
+  if (pathname.startsWith('/product/')) {
+    const slug = pathname.slice('/product/'.length);
+    if (slug) return { page: 'product', slug };
+  }
+  if (pathname === '/search') {
+    const q = new URLSearchParams(search).get('q') ?? '';
+    return { page: 'search', q };
+  }
+  return { page: 'home' };
+}
+
+function pushRoute(r: Route) {
+  if (r.page === 'home') window.history.pushState({}, '', '/');
+  else if (r.page === 'search') window.history.pushState({}, '', `/search?q=${encodeURIComponent(r.q)}`);
+  else window.history.pushState({}, '', `/product/${r.slug}`);
+}
+
 export default function App() {
   return (
     <CartProvider>
@@ -27,9 +45,21 @@ type CheckoutReturn =
   | { state: 'failed'; message: string };
 
 function AppInner() {
-  const [route, setRoute] = useState<Route>({ page: 'home' });
+  const [route, setRoute] = useState<Route>(() =>
+    parseRoute(window.location.pathname, window.location.search)
+  );
   const [cartOpen, setCartOpen] = useState(false);
   const [checkout, setCheckout] = useState<CheckoutReturn>({ state: 'idle' });
+
+  // Sync route on browser back/forward
+  useEffect(() => {
+    function onPop() {
+      setRoute(parseRoute(window.location.pathname, window.location.search));
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Detect return from MercadoPago (back_urls redirect)
   useEffect(() => {
@@ -84,6 +114,7 @@ function AppInner() {
 
   function navigate(r: Route) {
     setRoute(r);
+    pushRoute(r);
     window.scrollTo(0, 0);
   }
 
