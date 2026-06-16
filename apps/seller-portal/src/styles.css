@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --radius: 0.5rem;
+  }
+
   * { box-sizing: border-box; }
+
   body {
-    background-color: #f8f7f5;
-    color: #1c1917;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: hsl(240 5% 97%);
+    color: #0f172a;
+    font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
+
+/* Tabular numeric figures */
+.tabular { font-variant-numeric: tabular-nums; }

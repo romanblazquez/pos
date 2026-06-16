@@ -3,25 +3,32 @@ import type { SellerSession } from '../App.js';
 import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
 import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
 import ListingsPage from './ListingsPage.js';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
+import { Badge } from '../components/ui/index.js';
+import { Button } from '../components/ui/index.js';
+import { Progress } from '../components/ui/index.js';
+import { Separator } from '../components/ui/index.js';
+
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 const CONNECTORS = [
-  { type: 'tiendanube', label: 'Tiendanube', icon: '☁️' },
-  { type: 'shopify',    label: 'Shopify',    icon: '🛍️' },
-  { type: 'mercadolibre', label: 'Mercado Libre', icon: '🛒' },
-  { type: 'woocommerce', label: 'WooCommerce', icon: '🔌' },
-  { type: 'csv',    label: 'CSV / Excel', icon: '📄' },
-  { type: 'manual', label: 'Manual',      icon: '✏️' },
+  { type: 'tiendanube',   label: 'Tiendanube'   },
+  { type: 'shopify',      label: 'Shopify'       },
+  { type: 'mercadolibre', label: 'Mercado Libre' },
+  { type: 'woocommerce',  label: 'WooCommerce'   },
+  { type: 'csv',          label: 'CSV / Excel'   },
+  { type: 'manual',       label: 'Manual'        },
 ] as const;
 
 const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
 
 const NAV_ITEMS = [
-  { icon: '📊', label: 'Dashboard', id: 'dashboard' },
-  { icon: '📦', label: 'Productos', id: 'listings' },
-  { icon: '📋', label: 'Pedidos', id: 'orders' },
-  { icon: '🔄', label: 'Sincronización', id: 'sync' },
-  { icon: '📈', label: 'Analíticas', id: 'analytics' },
-  { icon: '⚙️', label: 'Configuración', id: 'settings' },
+  { label: 'Visión general', id: 'dashboard' },
+  { label: 'Productos',      id: 'listings'  },
+  { label: 'Pedidos',        id: 'orders'    },
+  { label: 'Sincronización', id: 'sync'      },
+  { label: 'Analíticas',     id: 'analytics' },
+  { label: 'Configuración',  id: 'settings'  },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]['id'];
@@ -36,34 +43,35 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
   const [activeNav, setActiveNav] = useState<NavId>('dashboard');
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-emerald-900 text-white flex flex-col">
-        <div className="px-5 py-5 border-b border-emerald-800">
-          <p className="text-sm font-bold">🎲 BoardGame Market</p>
-          <p className="text-xs text-emerald-400 mt-0.5">Portal de Vendedores</p>
+      <aside className="w-52 shrink-0 bg-slate-900 text-slate-300 flex flex-col">
+        <div className="px-5 py-5 border-b border-slate-800">
+          <p className="text-sm font-semibold text-white tracking-tight">BoardGame Market</p>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium uppercase tracking-widest">Portal</p>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+
+        <nav className="flex-1 p-3 space-y-0.5">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveNav(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                 activeNav === item.id
-                  ? 'bg-emerald-700 text-white font-medium'
-                  : 'text-emerald-300 hover:bg-emerald-800 hover:text-white'
+                  ? 'bg-slate-700 text-white font-medium'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
               }`}
             >
-              <span>{item.icon}</span>
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-emerald-800">
-          <p className="text-xs text-emerald-400">{session.seller.name}</p>
+
+        <div className="p-4 border-t border-slate-800 space-y-1">
+          <p className="text-xs font-medium text-slate-300 truncate">{session.seller.name}</p>
           <button
             onClick={onLogout}
-            className="text-xs text-emerald-500 hover:text-white mt-0.5"
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
           >
             Cerrar sesión
           </button>
@@ -71,11 +79,11 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
       </aside>
 
       {/* Main */}
-      <main className="flex-1 bg-stone-50 overflow-auto">
-        {activeNav === 'dashboard' && <DashboardHome sellerName={session.seller.name} />}
-        {activeNav === 'listings' && <ListingsPage session={session} />}
-        {activeNav === 'sync' && <SyncHealth session={session} onNavigate={setActiveNav} />}
-        {activeNav === 'settings' && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
+      <main className="flex-1 overflow-auto">
+        {activeNav === 'dashboard' && <DashboardHome session={session} />}
+        {activeNav === 'listings'  && <ListingsPage session={session} />}
+        {activeNav === 'sync'      && <SyncHealth session={session} onNavigate={setActiveNav} />}
+        {activeNav === 'settings'  && <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />}
         {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
@@ -84,82 +92,204 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
   );
 }
 
-function DashboardHome({ sellerName }: { sellerName: string }) {
-  const kpis = [
-    { label: 'Productos activos', value: '47', icon: '📦', trend: null },
-    { label: 'Pedidos hoy', value: '3', icon: '📋', trend: '+2 vs ayer' },
-    { label: 'Ranking promedio', value: '#2.4', icon: '⭐', trend: null },
-    { label: 'Sincronización', value: '✓ OK', icon: '🔄', trend: 'Hace 4 min' },
-  ];
+interface ListingStats {
+  total: number;
+  active: number;
+  outOfStock: number;
+  lowStock: number;
+}
+
+function DashboardHome({ session }: { session: SellerSession }) {
+  const [stats, setStats] = useState<ListingStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    })
+      .then((r) => r.json())
+      .then((s) => setStats(s as ListingStats))
+      .catch(() => setStats(null))
+      .finally(() => setLoadingStats(false));
+  }, [session.seller.id, session.token]);
+
+  const activeRate = stats && stats.total > 0
+    ? Math.round((stats.active / stats.total) * 100)
+    : null;
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Bienvenido, {sellerName} 👋</h1>
-        <p className="text-stone-500 text-sm mt-1">
-          Tu tienda está activa en el marketplace.
+    <div className="p-8 max-w-6xl space-y-8">
+      {/* Header */}
+      <div className="space-y-1">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+          {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
+        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+          {session.seller.name}
+        </h1>
+        <p className="text-sm text-slate-500">
+          {session.seller.connectorType
+            ? `Conectado a ${session.seller.connectorType}`
+            : 'Sin conector configurado'}
         </p>
       </div>
 
-      {/* KPIs */}
+      <Separator />
+
+      {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className="bg-white rounded-xl border border-stone-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-stone-500">{kpi.label}</p>
-              <span className="text-xl">{kpi.icon}</span>
-            </div>
-            <p className="text-2xl font-bold text-stone-900">{kpi.value}</p>
-            {kpi.trend && (
-              <p className="text-xs text-emerald-600 mt-1">{kpi.trend}</p>
+        <MetricCard
+          label="Total de productos"
+          value={loadingStats ? '—' : String(stats?.total ?? 0)}
+          sub={activeRate !== null ? `${activeRate}% activos` : undefined}
+        />
+        <MetricCard
+          label="Activos en catálogo"
+          value={loadingStats ? '—' : String(stats?.active ?? 0)}
+          sub={stats && stats.total > 0 ? `de ${stats.total} totales` : undefined}
+          highlight={stats && stats.active > 0}
+        />
+        <MetricCard
+          label="Sin stock"
+          value={loadingStats ? '—' : String(stats?.outOfStock ?? 0)}
+          sub="requieren reposición"
+          alert={stats ? stats.outOfStock > 0 : false}
+        />
+        <MetricCard
+          label="Stock bajo"
+          value={loadingStats ? '—' : String(stats?.lowStock ?? 0)}
+          sub="por debajo del umbral"
+          warn={stats ? stats.lowStock > 0 : false}
+        />
+      </div>
+
+      {/* Catalog health */}
+      {stats && stats.total > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Salud del catálogo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <HealthBar
+              label="Productos activos"
+              value={stats.active}
+              total={stats.total}
+              color="bg-emerald-500"
+            />
+            <HealthBar
+              label="Sin stock"
+              value={stats.outOfStock}
+              total={stats.total}
+              color="bg-red-400"
+            />
+            <HealthBar
+              label="Stock bajo"
+              value={stats.lowStock}
+              total={stats.total}
+              color="bg-amber-400"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Two-column bottom row */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Connector status */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Conector</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {session.seller.connectorType ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-800 capitalize">
+                    {session.seller.connectorType}
+                  </span>
+                  <Badge variant="success">Activo</Badge>
+                </div>
+                <Separator />
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Las credenciales están cifradas en reposo. La sincronización se ejecuta automáticamente según la frecuencia configurada.
+                </p>
+              </div>
+            ) : (
+              <div className="py-2 space-y-3">
+                <p className="text-sm text-slate-500">No hay conector configurado.</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Configurá un conector en Ajustes para comenzar a sincronizar tu catálogo.
+                </p>
+              </div>
             )}
-          </div>
-        ))}
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* Quick actions */}
-      <div className="bg-white rounded-xl border border-stone-200 p-5">
-        <h2 className="font-semibold text-stone-900 mb-4">Acciones rápidas</h2>
-        <div className="grid sm:grid-cols-3 gap-3">
-          {[
-            { icon: '🔄', label: 'Sincronizar ahora', desc: 'Actualizar stock y precios' },
-            { icon: '➕', label: 'Agregar producto', desc: 'Carga manual de un juego' },
-            { icon: '📊', label: 'Ver ranking', desc: 'Cómo aparecés en el marketplace' },
-          ].map((a) => (
-            <button
-              key={a.label}
-              className="text-left p-4 rounded-xl border border-stone-200 hover:border-emerald-400
-                         hover:bg-emerald-50/40 transition-all"
-            >
-              <span className="text-2xl block mb-2">{a.icon}</span>
-              <p className="font-medium text-sm text-stone-900">{a.label}</p>
-              <p className="text-xs text-stone-400 mt-0.5">{a.desc}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent activity placeholder */}
-      <div className="bg-white rounded-xl border border-stone-200 p-5">
-        <h2 className="font-semibold text-stone-900 mb-4">Últimos pedidos</h2>
-        <div className="text-center py-8 text-stone-400">
-          <p className="text-3xl mb-2">📋</p>
-          <p className="text-sm">Todavía no recibiste pedidos desde el marketplace.</p>
-          <p className="text-xs mt-1">Aparecerán aquí en cuanto se realice una compra.</p>
-        </div>
+        {/* Recent activity placeholder */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pedidos recientes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="py-6 text-center space-y-1">
+              <p className="text-sm font-medium text-slate-400">Sin pedidos</p>
+              <p className="text-xs text-slate-400">
+                Los pedidos del marketplace aparecerán aquí.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+function MetricCard({
+  label, value, sub, highlight, alert, warn,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  highlight?: boolean;
+  alert?: boolean;
+  warn?: boolean;
+}) {
+  return (
+    <Card>
+      <CardContent className="pt-5 pb-4 px-5 space-y-2">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+        <p className={`text-3xl font-semibold tabular tracking-tight ${
+          alert ? 'text-red-600' : warn ? 'text-amber-600' : highlight ? 'text-emerald-700' : 'text-slate-900'
+        }`}>
+          {value}
+        </p>
+        {sub && (
+          <p className="text-xs text-slate-400">{sub}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function HealthBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-slate-600">{label}</span>
+        <span className="tabular text-slate-500 text-xs">{value} <span className="text-slate-400">/ {total}</span></span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
 
 function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigate: (id: NavId) => void }) {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { items: number; ok: boolean }>>({});
 
   const connectorName = session.seller.connectorType ?? 'manual';
-  const connectorIcon = connectorName === 'tiendanube' ? '☁️' : connectorName === 'shopify' ? '🛍️' : '🔌';
   const hasConnector = !!session.seller.connectorType;
 
   async function triggerSync(type: 'catalog' | 'inventory' | 'prices') {
@@ -182,90 +312,96 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
   }
 
   const SYNC_ROWS = [
-    { key: 'catalog', label: 'Catálogo', freq: 'cada 4 horas' },
-    { key: 'inventory', label: 'Inventario', freq: 'cada 5 min' },
-    { key: 'prices', label: 'Precios', freq: 'cada 15 min' },
+    { key: 'catalog',   label: 'Catálogo',    freq: 'cada 4 horas'  },
+    { key: 'inventory', label: 'Inventario',   freq: 'cada 5 min'    },
+    { key: 'prices',    label: 'Precios',      freq: 'cada 15 min'   },
   ] as const;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-stone-900">Estado de sincronización</h1>
-        <button
+    <div className="p-8 max-w-3xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sincronización</h1>
+          <p className="text-sm text-slate-500">Estado y control de la sincronización con el conector.</p>
+        </div>
+        <Button
+          variant="primary"
           onClick={() => triggerSync('catalog')}
           disabled={syncing !== null || !hasConnector}
-          className="px-4 py-2 text-sm bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 disabled:opacity-50"
         >
-          {syncing === 'catalog' ? '⏳ Sincronizando...' : '🔄 Sincronizar ahora'}
-        </button>
+          {syncing === 'catalog' ? 'Sincronizando…' : 'Sincronizar ahora'}
+        </Button>
       </div>
 
       {!hasConnector && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
-          ⚠️ No tenés un conector configurado.{' '}
+        <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          Sin conector configurado.{' '}
           <button
             className="underline font-medium hover:text-amber-900"
             onClick={() => onNavigate('settings')}
           >
             Ir a Configuración
-          </button>{' '}
-          para conectar tu tienda.
+          </button>
         </div>
       )}
 
-      {/* Connector status */}
-      <div className="bg-white rounded-xl border border-stone-200 p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">{connectorIcon}</span>
-          <div>
-            <p className="font-semibold text-stone-900 capitalize">{connectorName}</p>
-            <p className="text-xs text-stone-400">Conector activo</p>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>{connectorName}</CardTitle>
+            <Badge variant={hasConnector ? 'success' : 'secondary'}>
+              {hasConnector ? 'Conectado' : 'Sin configurar'}
+            </Badge>
           </div>
-          <span className={`ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-            hasConnector
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-stone-100 text-stone-500'
-          }`}>
-            ● {hasConnector ? 'Conectado' : 'Sin configurar'}
-          </span>
-        </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="divide-y divide-slate-100">
+            {SYNC_ROWS.map((s) => {
+              const r = results[s.key];
+              return (
+                <div key={s.key} className="py-3 flex items-center gap-4 text-sm">
+                  <span className="text-slate-600 w-28 shrink-0">{s.label}</span>
+                  {r ? (
+                    r.ok
+                      ? <span className="text-emerald-700 font-medium">{r.items} ítems sincronizados</span>
+                      : <span className="text-red-600 font-medium">Error</span>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                  <span className="ml-auto text-slate-400 text-xs">{s.freq}</span>
+                  <button
+                    onClick={() => triggerSync(s.key as 'catalog' | 'inventory' | 'prices')}
+                    disabled={syncing !== null || !hasConnector}
+                    className="text-xs text-slate-600 underline hover:text-slate-900 disabled:opacity-40"
+                  >
+                    {syncing === s.key ? '…' : 'Ejecutar'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="divide-y divide-stone-100">
-          {SYNC_ROWS.map((s) => {
-            const r = results[s.key];
-            return (
-              <div key={s.key} className="py-3 flex items-center gap-4 text-sm">
-                <span className="text-stone-500 w-28 shrink-0">{s.label}</span>
-                {r ? (
-                  r.ok
-                    ? <span className="text-emerald-600 font-medium">✓ {r.items} ítems</span>
-                    : <span className="text-red-500 font-medium">✗ Error</span>
-                ) : (
-                  <span className="text-stone-400">—</span>
-                )}
-                <span className="ml-auto text-stone-400 text-xs">{s.freq}</span>
-                <button
-                  onClick={() => triggerSync(s.key)}
-                  disabled={syncing !== null || !hasConnector}
-                  className="text-xs text-emerald-600 hover:underline disabled:opacity-40"
-                >
-                  {syncing === s.key ? '...' : 'Sincronizar'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Schedule info */}
-      <div className="bg-stone-100 rounded-xl p-4 text-sm text-stone-600">
-        <p className="font-medium text-stone-700 mb-1">Frecuencia de sincronización</p>
-        <ul className="space-y-1 text-xs">
-          <li>📦 Catálogo — cada 4 horas</li>
-          <li>📊 Inventario — cada 5 minutos</li>
-          <li>💰 Precios — cada 15 minutos</li>
-        </ul>
-      </div>
+      <Card>
+        <CardContent className="pt-5 pb-4">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Frecuencia programada</p>
+          <div className="space-y-2 text-sm text-slate-600">
+            <div className="flex justify-between">
+              <span>Catálogo</span>
+              <span className="text-slate-400">cada 4 horas</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Inventario</span>
+              <span className="text-slate-400">cada 5 minutos</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Precios</span>
+              <span className="text-slate-400">cada 15 minutos</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -289,74 +425,76 @@ function ConnectorSettings({
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Configuración</h1>
-        <p className="text-stone-500 text-sm mt-1">Administrá el conector de tu tienda.</p>
+    <div className="p-8 max-w-2xl space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Configuración</h1>
+        <p className="text-sm text-slate-500">Administrá el conector y los métodos de pago.</p>
       </div>
 
-      {/* Current connector */}
-      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
-        <h2 className="font-semibold text-stone-900">Conector activo</h2>
-        {current ? (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-            <span className="text-2xl">{current.icon}</span>
-            <div>
-              <p className="font-medium text-stone-900">{current.label}</p>
-              <p className="text-xs text-emerald-600">Conectado — credenciales guardadas de forma segura</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Conector activo</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {current ? (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <div>
+                <p className="font-medium text-sm text-slate-900">{current.label}</p>
+                <p className="text-xs text-emerald-700 mt-0.5">Credenciales cifradas en reposo</p>
+              </div>
+              <Badge variant="success">Activo</Badge>
             </div>
-          </div>
-        ) : (
-          <p className="text-sm text-stone-500">Ningún conector configurado.</p>
-        )}
-      </div>
+          ) : (
+            <p className="text-sm text-slate-500 py-1">Ningún conector configurado.</p>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* MercadoPago connection */}
       <MpConnectCard session={session} onSessionUpdate={onSessionUpdate} />
 
-      {/* Change / add connector */}
-      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
-        <h2 className="font-semibold text-stone-900">
-          {current ? 'Cambiar o reconectar' : 'Conectar tienda'}
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {CONNECTORS.map((c) => (
-            <button
-              key={c.type}
-              onClick={() => pickConnector(c.type)}
-              className={`text-left p-3 rounded-xl border-2 transition-all ${
-                selected === c.type
-                  ? 'border-emerald-600 bg-emerald-50'
-                  : 'border-stone-200 hover:border-stone-300'
-              }`}
-            >
-              <span className="text-xl block mb-1">{c.icon}</span>
-              <p className="font-medium text-sm text-stone-900">{c.label}</p>
-            </button>
-          ))}
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{current ? 'Cambiar conector' : 'Conectar tienda'}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {CONNECTORS.map((c) => (
+              <button
+                key={c.type}
+                onClick={() => pickConnector(c.type)}
+                className={`text-left px-3 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                  selected === c.type
+                    ? 'border-slate-800 bg-slate-900 text-white'
+                    : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
 
-        {selected && needsCreds && (
-          <ConnectorCredentialForm
-            sellerId={session.seller.id}
-            connectorType={selected as ConnectorType}
-            connected={connected}
-            onConnected={() => {
-              setConnected(true);
-              onSessionUpdate({ connectorType: selected });
-            }}
-          />
-        )}
+          {selected && needsCreds && (
+            <ConnectorCredentialForm
+              sellerId={session.seller.id}
+              connectorType={selected as ConnectorType}
+              connected={connected}
+              onConnected={() => {
+                setConnected(true);
+                onSessionUpdate({ connectorType: selected });
+              }}
+            />
+          )}
 
-        {selected && !needsCreds && selected !== session.seller.connectorType && (
-          <SaveManualConnector
-            sellerId={session.seller.id}
-            connectorType={selected}
-            token={session.token}
-            onSaved={() => onSessionUpdate({ connectorType: selected })}
-          />
-        )}
-      </div>
+          {selected && !needsCreds && selected !== session.seller.connectorType && (
+            <SaveManualConnector
+              sellerId={session.seller.id}
+              connectorType={selected}
+              token={session.token}
+              onSaved={() => onSessionUpdate({ connectorType: selected })}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -384,7 +522,6 @@ function MpConnectCard({
     try {
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/connect`);
       const body = (await res.json()) as { authUrl: string };
-      // If the authUrl redirects back to the portal with an error, show it inline
       if (body.authUrl.includes('mp=error')) {
         const msg = new URL(body.authUrl).searchParams.get('msg') ?? 'Error desconocido';
         setConnectError(decodeURIComponent(msg));
@@ -399,62 +536,51 @@ function MpConnectCard({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">💳</span>
-        <div>
-          <h2 className="font-semibold text-stone-900">MercadoPago — Cobros en el marketplace</h2>
-          <p className="text-xs text-stone-500 mt-0.5">
-            Conectá tu cuenta MP para recibir pagos directamente. La plataforma descuenta la comisión automáticamente.
-          </p>
-        </div>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>MercadoPago</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-4">
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Conectá tu cuenta MP para recibir pagos directamente. La comisión de la plataforma se descuenta automáticamente.
+        </p>
 
-      {status === null ? (
-        <p className="text-sm text-stone-400">Verificando conexión…</p>
-      ) : status.connected ? (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-          <span className="text-emerald-600 font-bold">✓</span>
-          <div>
-            <p className="text-sm font-medium text-emerald-800">Cuenta conectada</p>
-            {status.merchantId && (
-              <p className="text-xs text-emerald-600">MP ID: {status.merchantId}</p>
-            )}
-          </div>
-          <button
-            onClick={connectMp}
-            disabled={connecting}
-            className="ml-auto text-xs text-stone-500 underline hover:text-stone-700"
-          >
-            Reconectar
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
-            ⚠️ Sin conectar — los pagos del marketplace no se acreditarán en tu cuenta hasta que conectes MP.
-          </div>
-          {connectError && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
-              {connectError.includes('CLIENT_ID')
-                ? '🔧 MercadoPago aún no está configurado en esta instalación. Pedile al administrador que configure MERCADOPAGO_CLIENT_ID en el servidor.'
-                : connectError}
+        {status === null ? (
+          <p className="text-sm text-slate-400">Verificando…</p>
+        ) : status.connected ? (
+          <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+            <div>
+              <p className="text-sm font-medium text-emerald-800">Cuenta conectada</p>
+              {status.merchantId && (
+                <p className="text-xs text-emerald-600 mt-0.5">ID: {status.merchantId}</p>
+              )}
             </div>
-          )}
-          <button
-            onClick={connectMp}
-            disabled={connecting}
-            className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg
-                       hover:bg-blue-700 disabled:opacity-60 transition-colors"
-          >
-            {connecting ? '⏳ Redirigiendo a MercadoPago…' : '🔗 Conectar cuenta de MercadoPago'}
-          </button>
-          <p className="text-xs text-stone-400">
-            Solo necesitás hacerlo una vez. Te pediremos autorización en el sitio de MercadoPago.
-          </p>
-        </div>
-      )}
-    </div>
+            <Button variant="ghost" size="sm" onClick={connectMp} disabled={connecting}>
+              Reconectar
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              Sin conectar — los pagos no se acreditarán hasta que conectes tu cuenta MP.
+            </div>
+            {connectError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+                {connectError.includes('CLIENT_ID')
+                  ? 'MercadoPago no está configurado en esta instalación. Contactá al administrador.'
+                  : connectError}
+              </div>
+            )}
+            <Button variant="outline" onClick={connectMp} disabled={connecting}>
+              {connecting ? 'Redirigiendo a MercadoPago…' : 'Conectar cuenta de MercadoPago'}
+            </Button>
+            <p className="text-xs text-slate-400">
+              Solo necesitás hacerlo una vez. Serás redirigido al sitio de MercadoPago.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -479,27 +605,21 @@ function SaveManualConnector({
     }
   }
 
-  if (done) return <p className="text-sm text-emerald-600">✓ Guardado</p>;
+  if (done) return <p className="text-sm text-emerald-700 font-medium">Guardado correctamente</p>;
 
   return (
-    <button
-      onClick={save}
-      disabled={saving}
-      className="px-6 py-2.5 bg-emerald-700 text-white text-sm font-medium rounded-lg
-                 hover:bg-emerald-800 disabled:opacity-60 transition-colors"
-    >
-      {saving ? '⏳ Guardando...' : 'Guardar selección'}
-    </button>
+    <Button variant="primary" onClick={save} disabled={saving}>
+      {saving ? 'Guardando…' : 'Guardar selección'}
+    </Button>
   );
 }
 
 function ComingSoon({ section }: { section: string }) {
   return (
-    <div className="flex items-center justify-center h-full min-h-96">
-      <div className="text-center text-stone-400">
-        <p className="text-4xl mb-3">🚧</p>
-        <p className="font-medium text-stone-600">{section}</p>
-        <p className="text-sm mt-1">Próximamente disponible</p>
+    <div className="flex items-center justify-center min-h-96">
+      <div className="text-center space-y-2">
+        <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest">{section}</p>
+        <p className="text-xs text-slate-400">Próximamente disponible</p>
       </div>
     </div>
   );
