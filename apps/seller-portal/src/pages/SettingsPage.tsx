@@ -183,6 +183,7 @@ interface RewardPreview {
 
 function RewardsCard({ session }: { session: SellerSession }) {
   const [storeCashback, setStoreCashback] = useState(0);
+  const [platformCashbackPct, setPlatformCashbackPct] = useState(0.01);
   const [preview, setPreview] = useState<RewardPreview | null>(null);
   const [saving, setRewardSaving] = useState(false);
   const [saved, setRewardSaved] = useState(false);
@@ -190,24 +191,32 @@ function RewardsCard({ session }: { session: SellerSession }) {
 
   useEffect(() => {
     fetch(`${API}/api/v1/sellers/${session.seller.id}/rewards`)
-      .then((r) => r.json())
-      .then((d: RewardPreview & { storeCashbackPct: number }) => {
-        setStoreCashback(Math.round(d.storeCashbackPct * 100));
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json() as Promise<RewardPreview>;
+      })
+      .then((d) => {
+        if (!d) return;
+        const cbPct = d.platformCashbackPct ?? 0.01;
+        setPlatformCashbackPct(cbPct);
+        setStoreCashback(Math.round((d.storeCashbackPct ?? 0) * 100));
         setPreview(d);
       })
+      .catch(() => null)
       .finally(() => setLoading(false));
   }, [session.seller.id]);
 
-  // Update preview as slider moves (no API call — computed locally from known rates)
+  // Recompute preview locally as slider moves
   useEffect(() => {
-    if (!preview) return;
     const pct = storeCashback / 100;
-    const base = preview.platformCashbackPct;
-    // effectiveCommission = max(5% - storeCashback, 2%)
     const effective = Math.max(0.05 - pct, 0.02);
-    setPreview((p) => p ? { ...p, storeCashbackPct: pct, effectiveCommissionPct: effective, totalBuyerCashbackPct: base + pct } : p);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeCashback]);
+    setPreview({
+      storeCashbackPct: pct,
+      effectiveCommissionPct: effective,
+      platformCashbackPct,
+      totalBuyerCashbackPct: platformCashbackPct + pct,
+    });
+  }, [storeCashback, platformCashbackPct]);
 
   async function saveRewards() {
     setRewardSaving(true);
@@ -279,7 +288,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
                 <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 space-y-0.5">
                   <p className="text-xs text-slate-500">Tu comisión efectiva</p>
                   <p className="text-2xl font-semibold text-slate-900">
-                    {(preview.effectiveCommissionPct * 100).toFixed(0)}%
+                    {Math.round(preview.effectiveCommissionPct * 100)}%
                   </p>
                   <p className="text-xs text-slate-400">
                     {storeCashback > 0
@@ -290,7 +299,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 space-y-0.5">
                   <p className="text-xs text-emerald-600">Cashback total del comprador</p>
                   <p className="text-2xl font-semibold text-emerald-700">
-                    {(preview.totalBuyerCashbackPct * 100).toFixed(0)}%
+                    {Math.round(preview.totalBuyerCashbackPct * 100)}%
                   </p>
                   <p className="text-xs text-emerald-500">
                     1% marketplace + {storeCashback}% tu tienda
@@ -310,7 +319,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
                   <span className="font-medium">{fmt(exampleTotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Comisión plataforma ({(preview?.effectiveCommissionPct ?? 0.05) * 100}%)</span>
+                  <span>Comisión plataforma ({Math.round((preview?.effectiveCommissionPct ?? 0.05) * 100)}%)</span>
                   <span className="text-red-500">−{fmt(commissionAmt)}</span>
                 </div>
                 {storeCbAmt > 0 && (

@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Inject, Param, Patch } from '@nestjs/common';
 import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiBody,
+  ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBody,
 } from '@nestjs/swagger';
 import { IsNumber, Min, Max } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LoyaltyService } from './loyalty.service.js';
 import { Public } from '../auth/auth.guard.js';
 
@@ -19,12 +19,6 @@ class UpdatePlatformConfigDto {
   @ApiPropertyOptional({ type: 'number', description: 'Platform-funded cashback given to buyers (0–0.10)', example: 0.01 })
   @IsNumber() @Min(0) @Max(0.10)
   platformCashbackPct?: number;
-}
-
-class UpdateSellerRewardsDto {
-  @ApiProperty({ type: 'number', description: 'Seller-funded store cashback rate (0–0.15). Reduces commission 1:1 until floor.', example: 0.02 })
-  @IsNumber() @Min(0) @Max(0.15)
-  storeCashbackPct: number;
 }
 
 @ApiTags('loyalty')
@@ -60,49 +54,6 @@ export class LoyaltyController {
   @ApiResponse({ status: 200, description: 'Updated platform config.' })
   updatePlatformConfig(@Body() dto: UpdatePlatformConfigDto) {
     return this.svc.updatePlatformConfig(dto);
-  }
-
-  // ── Seller reward config ─────────────────────────────────────────────────
-
-  @Get('sellers/:sellerId/rewards')
-  @ApiOperation({
-    summary: 'Get seller reward program config',
-    description:
-      'Returns the seller\'s store cashback rate and the resulting effective commission. ' +
-      'Sellers who offer store cashback pay lower platform commission (1:1 reduction). ' +
-      'storeCashbackPct 0%→5% commission, 1%→4%, 2%→3%, 3%→2% (floor).',
-  })
-  @ApiParam({ name: 'sellerId', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
-  @ApiResponse({ status: 200, description: 'Seller reward config with effective commission preview.' })
-  async getSellerRewards(@Param('sellerId') sellerId: string) {
-    const [config, platformCfg] = await Promise.all([
-      this.svc.getSellerRewardConfig(sellerId),
-      this.svc.getPlatformConfig(),
-    ]);
-    const effectiveCommissionPct = Math.max(
-      platformCfg.baseCommissionPct - config.storeCashbackPct,
-      platformCfg.minCommissionPct,
-    );
-    return { ...config, effectiveCommissionPct, platformCfg };
-  }
-
-  @Patch('sellers/:sellerId/rewards')
-  @ApiOperation({
-    summary: 'Update seller store cashback rate',
-    description:
-      'Sets the seller\'s store-funded cashback percentage. ' +
-      'Buyers earn this as store credits redeemable only at this seller. ' +
-      'Each 1% of store cashback reduces the seller\'s platform commission by 1% (floor: 2%). ' +
-      'Seller cost stays constant — they trade commission for a loyalty program.',
-  })
-  @ApiParam({ name: 'sellerId', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
-  @ApiBody({ type: UpdateSellerRewardsDto })
-  @ApiResponse({ status: 200, description: 'Updated reward config.' })
-  updateSellerRewards(
-    @Param('sellerId') sellerId: string,
-    @Body() dto: UpdateSellerRewardsDto,
-  ) {
-    return this.svc.updateSellerRewardConfig(sellerId, dto.storeCashbackPct);
   }
 
   // ── Customer wallet ──────────────────────────────────────────────────────

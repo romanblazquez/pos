@@ -22,13 +22,17 @@ import { SellersService } from './sellers.service.js';
 import { CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Public } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
+import { LoyaltyService } from '../loyalty/loyalty.service.js';
 
 @ApiTags('sellers')
 @ApiBearerAuth('seller-jwt')
 @Public()
 @Controller('api/v1/sellers')
 export class SellersController {
-  constructor(@Inject(SellersService) private readonly svc: SellersService) {}
+  constructor(
+    @Inject(SellersService) private readonly svc: SellersService,
+    @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -275,6 +279,38 @@ export class SellersController {
   })
   getTopProducts(@Param('id') id: string, @Query('limit') limit = '5') {
     return this.svc.getTopProducts(id, parseInt(limit, 10));
+  }
+
+  @Get(':id/rewards')
+  @ApiOperation({ summary: 'Get seller reward program config' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiResponse({ status: 200, description: 'Flat reward config: { sellerId, storeCashbackPct, effectiveCommissionPct, platformCashbackPct, totalBuyerCashbackPct }' })
+  async getRewards(@Param('id') id: string) {
+    const [config, platformCfg] = await Promise.all([
+      this.loyalty.getSellerRewardConfig(id),
+      this.loyalty.getPlatformConfig(),
+    ]);
+    const effectiveCommissionPct = Math.max(
+      platformCfg.baseCommissionPct - config.storeCashbackPct,
+      platformCfg.minCommissionPct,
+    );
+    return {
+      sellerId: id,
+      storeCashbackPct: config.storeCashbackPct,
+      effectiveCommissionPct,
+      platformCashbackPct: platformCfg.platformCashbackPct,
+      totalBuyerCashbackPct: platformCfg.platformCashbackPct + config.storeCashbackPct,
+    };
+  }
+
+  @Patch(':id/rewards')
+  @ApiOperation({ summary: 'Update seller store cashback rate' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiBody({ schema: { type: 'object', properties: { storeCashbackPct: { type: 'number', example: 0.02 } } } })
+  @ApiResponse({ status: 200, description: 'Updated reward config.' })
+  async updateRewards(@Param('id') id: string, @Body() body: { storeCashbackPct: number }) {
+    await this.loyalty.updateSellerRewardConfig(id, body.storeCashbackPct ?? 0);
+    return this.getRewards(id);
   }
 
   @Patch(':id/profile')
