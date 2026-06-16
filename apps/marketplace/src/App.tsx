@@ -104,7 +104,10 @@ function Header({
           </button>
         </form>
         <nav className="hidden sm:flex items-center gap-4 text-sm text-stone-600 shrink-0">
-          <a href="http://localhost:4301" className="hover:text-emerald-700">
+          <a
+            href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
+            className="hover:text-emerald-700"
+          >
             Soy vendedor
           </a>
           <button
