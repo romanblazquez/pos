@@ -1,4 +1,5 @@
-import { Injectable, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { createHmac } from 'node:crypto';
 import { PrismaService } from '@retail-os/db-postgres';
 
 const MP_BASE = 'https://api.mercadopago.com';
@@ -145,6 +146,85 @@ export class CheckoutService {
       checkoutSessionId: preference.id,
       expiresAt,
     };
+  }
+
+  /**
+   * Verify MercadoPago webhook signature.
+   * Header format: "ts=<unix_ts>,v1=<hmac_sha256_hex>"
+   * Manifest: "id:<data.id>;request-id:<x-request-id>;ts:<ts>;"
+   */
+  verifyWebhookSignature(
+    xSignature: string | undefined,
+    xRequestId: string | undefined,
+    dataId: string,
+  ): void {
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+    if (!secret) return; // skip verification in dev when secret not set
+
+    if (!xSignature) throw new UnauthorizedException('Missing x-signature header');
+
+    const parts = Object.fromEntries(
+      xSignature.split(',').map((p) => p.split('=')),
+    ) as Record<string, string>;
+    const ts = parts['ts'];
+    const v1 = parts['v1'];
+    if (!ts || !v1) throw new UnauthorizedException('Malformed x-signature');
+
+    const manifest = `id:${dataId};request-id:${xRequestId ?? ''};ts:${ts};`;
+    const expected = createHmac('sha256', secret).update(manifest).digest('hex');
+
+    if (expected !== v1) throw new UnauthorizedException('Webhook signature mismatch');
+  }
+
+  /** Force-reconcile an order against the MP Payments Search API. */
+  async reconcileOrder(orderId: string): Promise<{ status: string; updated: boolean }> {
+    const order = await this.prisma.marketplaceOrder.findUniqueOrThrow({
+      where: { id: orderId },
+    });
+
+    if (order.status !== 'pending') {
+      return { status: order.status, updated: false };
+    }
+
+    if (!this.mpToken) {
+      return { status: order.status, updated: false };
+    }
+
+    // Search MP for payments with this order as external_reference
+    const res = await fetch(
+      `${MP_BASE}/v1/payments/search?external_reference=${orderId}&sort=date_created&criteria=desc&range=date_created&begin_date=NOW-1HOURS&end_date=NOW`,
+      { headers: { Authorization: `Bearer ${this.mpToken}` } },
+    );
+
+    if (!res.ok) return { status: order.status, updated: false };
+
+    const { results } = (await res.json()) as { results: Array<{ id: number; status: string; transaction_amount: number }> };
+    const latest = results?.[0];
+    if (!latest) return { status: order.status, updated: false };
+
+    const statusMap: Record<string, string> = {
+      approved: 'confirmed',
+      rejected: 'cancelled',
+      cancelled: 'cancelled',
+    };
+    const newStatus = statusMap[latest.status];
+    if (!newStatus || newStatus === order.status) return { status: order.status, updated: false };
+
+    await this.prisma.marketplaceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: newStatus,
+        paymentId: String(latest.id),
+        events: {
+          create: {
+            type: `reconciled_${latest.status}`,
+            payload: { paymentId: latest.id, mpStatus: latest.status, amount: latest.transaction_amount },
+          },
+        },
+      },
+    });
+
+    return { status: newStatus, updated: true };
   }
 
   async handlePaymentWebhook(payload: {

@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, Post, Inject, Query,
+  Body, Controller, Get, Param, Post, Inject, Query, Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CheckoutService, InitCheckoutDto } from './checkout.service.js';
@@ -36,9 +36,24 @@ export class CheckoutController {
     });
   }
 
+  /**
+   * Force-reconcile an order against the MP Payments Search API.
+   * Called by the frontend when it returns from the MP redirect and the
+   * webhook hasn't fired yet.
+   */
+  @Post('orders/:id/reconcile')
+  reconcileOrder(@Param('id') id: string) {
+    return this.svc.reconcileOrder(id);
+  }
+
   /** MercadoPago Checkout Pro payment webhook. */
   @Post('webhooks/mercadopago')
-  handleWebhook(@Body() body: { type: string; data: { id: string } }) {
+  handleWebhook(
+    @Body() body: { type: string; data: { id: string } },
+    @Headers('x-signature') xSignature?: string,
+    @Headers('x-request-id') xRequestId?: string,
+  ) {
+    this.svc.verifyWebhookSignature(xSignature, xRequestId, body.data?.id ?? '');
     return this.svc.handlePaymentWebhook(body);
   }
 }
