@@ -65,10 +65,19 @@ export class ConnectorsController {
     }
   }
 
-  /** Manual trigger: sync catalog for a seller. */
+  /** Last sync result per type (catalog / inventory / prices). */
+  @Get('sync/status')
+  syncStatus(@Param('sellerId') sellerId: string) {
+    return this.sync.getSyncStatus(sellerId);
+  }
+
+  /** Manual trigger: sync catalog. Pass ?force=true to skip incremental and pull full catalog. */
   @Post('sync/catalog')
-  syncCatalog(@Param('sellerId') sellerId: string) {
-    return this.sync.syncCatalog(sellerId);
+  syncCatalog(
+    @Param('sellerId') sellerId: string,
+    @Query('force') force?: string,
+  ) {
+    return this.sync.syncCatalog(sellerId, { force: force === 'true' });
   }
 
   /** Manual trigger: sync inventory for a seller. */

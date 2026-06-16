@@ -14,7 +14,7 @@ import type {
 } from '@retail-os/connector-contracts';
 import type { IConnector } from '@retail-os/connector-contracts';
 import { TiendanubeClient } from './tiendanube-client.js';
-import type { TnProduct, TnStore } from './tiendanube-client.js';
+import type { TnProduct } from './tiendanube-client.js';
 
 export class TiendanubeConnector implements IConnector {
   readonly connectorType = 'tiendanube';
@@ -103,15 +103,17 @@ export class TiendanubeConnector implements IConnector {
 
   // ─── Catalog ──────────────────────────────────────────────────────────────
 
-  async *fetchCatalog(sellerId: string): AsyncGenerator<RawProduct[]> {
+  async *fetchCatalog(sellerId: string, cursor?: string): AsyncGenerator<RawProduct[]> {
     const client = await this.clientFor(sellerId);
-    // Fetch store first to get the canonical currency
     const store = await client.getStore();
     const currency = store.main_currency;
 
+    // cursor = ISO timestamp — only fetch products updated after that point
+    const updatedSince = cursor ?? undefined;
+
     let page = 1;
     while (true) {
-      const { products, nextPage } = await client.getProducts(page);
+      const { products, nextPage } = await client.getProducts(page, 200, updatedSince);
       if (products.length === 0) break;
 
       yield products.map((p) => this.toRawProduct(p, currency));

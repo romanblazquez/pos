@@ -104,10 +104,18 @@ export class TiendanubeClient {
   async getProducts(
     page = 1,
     perPage = 200,
+    updatedSince?: string,
   ): Promise<{ products: TnProduct[]; nextPage: number | null }> {
+    const qs = new URLSearchParams({
+      page: String(page),
+      per_page: String(perPage),
+      published: 'true',
+    });
+    if (updatedSince) qs.set('updated_at_min', updatedSince);
+
     const { data: products, headers } = await this.req<TnProduct[]>(
       'GET',
-      `/products?page=${page}&per_page=${perPage}&published=true`,
+      `/products?${qs}`,
     );
 
     // Tiendanube uses Link header for pagination: <url>; rel="next"

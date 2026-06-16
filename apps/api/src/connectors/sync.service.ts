@@ -24,7 +24,7 @@ export class ConnectorSyncService {
     @Inject(MktCatalogService)         private readonly catalog: MktCatalogService,
   ) {}
 
-  async syncCatalog(sellerId: string): Promise<SyncResult> {
+  async syncCatalog(sellerId: string, opts?: { force?: boolean }): Promise<SyncResult> {
     const start = Date.now();
     const log = await this.startLog(sellerId, 'catalog');
     let synced = 0;
@@ -33,7 +33,22 @@ export class ConnectorSyncService {
     try {
       const connector = await this.registry.forSeller(sellerId);
 
-      for await (const batch of connector.fetchCatalog(sellerId)) {
+      // Incremental: use the completedAt of the last successful catalog sync as cursor.
+      // Pass force=true to bypass and pull the full catalog.
+      let cursor: string | undefined;
+      if (!opts?.force) {
+        const last = await this.prisma.connectorSyncLog.findFirst({
+          where: { sellerId, syncType: 'catalog', status: 'success' },
+          orderBy: { completedAt: 'desc' },
+          select: { completedAt: true },
+        });
+        cursor = last?.completedAt?.toISOString();
+      }
+
+      const mode = cursor ? `incremental since ${cursor}` : 'full';
+      this.log.log(`[${sellerId}] catalog sync starting (${mode})`);
+
+      for await (const batch of connector.fetchCatalog(sellerId, cursor)) {
         for (const raw of batch) {
           try {
             await this.upsertListing(sellerId, raw);
@@ -45,7 +60,7 @@ export class ConnectorSyncService {
       }
 
       await this.finishLog(log.id, 'success', synced, errors.length, errors);
-      this.log.log(`[${sellerId}] catalog sync: ${synced} products`);
+      this.log.log(`[${sellerId}] catalog sync done (${mode}): ${synced} products`);
       return this.result(sellerId, 'catalog', 'success', synced, errors, start);
     } catch (err) {
       const msg = String(err);
@@ -53,6 +68,37 @@ export class ConnectorSyncService {
       this.log.error(`[${sellerId}] catalog sync failed: ${msg}`);
       return this.result(sellerId, 'catalog', 'failed', synced, [msg], start);
     }
+  }
+
+  /** Last sync result per type, used by the sync status dashboard widget. */
+  async getSyncStatus(sellerId: string) {
+    const types = ['catalog', 'inventory', 'prices'] as const;
+    const rows = await this.prisma.connectorSyncLog.findMany({
+      where: {
+        sellerId,
+        syncType: { in: [...types] },
+        status: { not: 'running' },
+      },
+      orderBy: { completedAt: 'desc' },
+      distinct: ['syncType'],
+      select: {
+        syncType: true,
+        status: true,
+        itemsSynced: true,
+        itemsFailed: true,
+        startedAt: true,
+        completedAt: true,
+      },
+    });
+
+    const byType = Object.fromEntries(rows.map((r) => [r.syncType, r]));
+    return types.map((t) => ({
+      type: t,
+      lastRun: byType[t]?.completedAt ?? null,
+      status: byType[t]?.status ?? null,
+      itemsSynced: byType[t]?.itemsSynced ?? 0,
+      itemsFailed: byType[t]?.itemsFailed ?? 0,
+    }));
   }
 
   async syncInventory(sellerId: string): Promise<SyncResult> {

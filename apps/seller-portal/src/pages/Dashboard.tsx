@@ -285,44 +285,76 @@ function HealthBar({ label, value, total, color }: { label: string; value: numbe
   );
 }
 
+interface SyncStatusRow {
+  type: string;
+  lastRun: string | null;
+  status: string | null;
+  itemsSynced: number;
+  itemsFailed: number;
+}
+
+function relTime(iso: string | null): string {
+  if (!iso) return 'nunca';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60)    return 'hace un momento';
+  if (diff < 3600)  return `hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`;
+  return `hace ${Math.floor(diff / 86400)} d`;
+}
+
 function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigate: (id: NavId) => void }) {
   const [syncing, setSyncing] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, { items: number; ok: boolean }>>({});
+  const [syncStatus, setSyncStatus] = useState<SyncStatusRow[]>([]);
+  const [runResults, setRunResults] = useState<Record<string, { items: number; ok: boolean }>>({});
 
   const connectorName = session.seller.connectorType ?? 'manual';
   const hasConnector = !!session.seller.connectorType;
 
-  async function triggerSync(type: 'catalog' | 'inventory' | 'prices') {
+  useEffect(() => {
+    fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => setSyncStatus(d as SyncStatusRow[]))
+      .catch(() => null);
+  }, [session.seller.id, session.token]);
+
+  async function triggerSync(type: 'catalog' | 'inventory' | 'prices', force = false) {
     setSyncing(type);
     try {
-      const res = await fetch(
-        `${API}/api/v1/sellers/${session.seller.id}/connector/sync/${type}`,
-        { method: 'POST', headers: { Authorization: `Bearer ${session.token}` } },
-      );
-      const body = await res.json().catch(() => ({}));
-      setResults((r) => ({
-        ...r,
-        [type]: { items: (body as { itemsSynced?: number }).itemsSynced ?? 0, ok: res.ok },
-      }));
+      const url = `${API}/api/v1/sellers/${session.seller.id}/connector/sync/${type}${force ? '?force=true' : ''}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      const body = await res.json().catch(() => ({})) as { itemsSynced?: number };
+      setRunResults((r) => ({ ...r, [type]: { items: body.itemsSynced ?? 0, ok: res.ok } }));
+      // refresh status after sync
+      fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
+        headers: { Authorization: `Bearer ${session.token}` },
+      })
+        .then((r) => r.json())
+        .then((d) => setSyncStatus(d as SyncStatusRow[]))
+        .catch(() => null);
     } catch {
-      setResults((r) => ({ ...r, [type]: { items: 0, ok: false } }));
+      setRunResults((r) => ({ ...r, [type]: { items: 0, ok: false } }));
     } finally {
       setSyncing(null);
     }
   }
 
   const SYNC_ROWS = [
-    { key: 'catalog',   label: 'Catálogo',    freq: 'cada 4 horas'  },
-    { key: 'inventory', label: 'Inventario',   freq: 'cada 5 min'    },
-    { key: 'prices',    label: 'Precios',      freq: 'cada 15 min'   },
-  ] as const;
+    { key: 'catalog'   as const, label: 'Catálogo',  freq: 'cada 4 horas', canForce: true },
+    { key: 'inventory' as const, label: 'Inventario', freq: 'cada 5 min',   canForce: false },
+    { key: 'prices'    as const, label: 'Precios',    freq: 'cada 15 min',  canForce: false },
+  ];
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Sincronización</h1>
-          <p className="text-sm text-slate-500">Estado y control de la sincronización con el conector.</p>
+          <p className="text-sm text-slate-500">Estado en tiempo real de la sincronización con el conector.</p>
         </div>
         <Button
           variant="primary"
@@ -336,10 +368,7 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
       {!hasConnector && (
         <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
           Sin conector configurado.{' '}
-          <button
-            className="underline font-medium hover:text-amber-900"
-            onClick={() => onNavigate('settings')}
-          >
+          <button className="underline font-medium hover:text-amber-900" onClick={() => onNavigate('settings')}>
             Ir a Configuración
           </button>
         </div>
@@ -357,25 +386,54 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
         <CardContent className="pt-0">
           <div className="divide-y divide-slate-100">
             {SYNC_ROWS.map((s) => {
-              const r = results[s.key];
+              const status = syncStatus.find((r) => r.type === s.key);
+              const run = runResults[s.key];
               return (
-                <div key={s.key} className="py-3 flex items-center gap-4 text-sm">
-                  <span className="text-slate-600 w-28 shrink-0">{s.label}</span>
-                  {r ? (
-                    r.ok
-                      ? <span className="text-emerald-700 font-medium">{r.items} ítems sincronizados</span>
-                      : <span className="text-red-600 font-medium">Error</span>
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                  <span className="ml-auto text-slate-400 text-xs">{s.freq}</span>
-                  <button
-                    onClick={() => triggerSync(s.key as 'catalog' | 'inventory' | 'prices')}
-                    disabled={syncing !== null || !hasConnector}
-                    className="text-xs text-slate-600 underline hover:text-slate-900 disabled:opacity-40"
-                  >
-                    {syncing === s.key ? '…' : 'Ejecutar'}
-                  </button>
+                <div key={s.key} className="py-3.5 grid grid-cols-[7rem_1fr_auto] items-center gap-4 text-sm">
+                  <span className="text-slate-700 font-medium">{s.label}</span>
+
+                  <div className="space-y-0.5">
+                    {run ? (
+                      run.ok
+                        ? <span className="text-emerald-700">{run.items} ítems sincronizados</span>
+                        : <span className="text-red-600">Error en la última ejecución</span>
+                    ) : status ? (
+                      <div>
+                        <span className={status.status === 'success' ? 'text-emerald-700' : 'text-red-600'}>
+                          {status.status === 'success'
+                            ? `${status.itemsSynced.toLocaleString('es-AR')} ítems`
+                            : 'Error'}
+                        </span>
+                        <span className="text-slate-400 text-xs ml-2">{relTime(status.lastRun)}</span>
+                        {status.itemsFailed > 0 && (
+                          <span className="text-amber-600 text-xs ml-2">{status.itemsFailed} fallidos</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs">Sin ejecuciones previas</span>
+                    )}
+                    <p className="text-xs text-slate-400">{s.freq}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => triggerSync(s.key)}
+                      disabled={syncing !== null || !hasConnector}
+                      className="text-xs text-slate-600 underline hover:text-slate-900 disabled:opacity-40"
+                    >
+                      {syncing === s.key ? '…' : 'Ejecutar'}
+                    </button>
+                    {s.canForce && (
+                      <button
+                        onClick={() => triggerSync(s.key, true)}
+                        disabled={syncing !== null || !hasConnector}
+                        className="text-xs text-slate-400 hover:text-slate-700 disabled:opacity-40"
+                        title="Ignorar sincronización incremental y descargar todo el catálogo"
+                      >
+                        Completa
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -385,21 +443,11 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
 
       <Card>
         <CardContent className="pt-5 pb-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Frecuencia programada</p>
-          <div className="space-y-2 text-sm text-slate-600">
-            <div className="flex justify-between">
-              <span>Catálogo</span>
-              <span className="text-slate-400">cada 4 horas</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Inventario</span>
-              <span className="text-slate-400">cada 5 minutos</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Precios</span>
-              <span className="text-slate-400">cada 15 minutos</span>
-            </div>
-          </div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Modo de sincronización</p>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            El catálogo usa <strong className="text-slate-700">sincronización incremental</strong> — solo se descargan los productos modificados desde la última ejecución exitosa, reduciendo el tiempo y el uso de la API.
+            Usá <em>Completa</em> para forzar una descarga de todos los productos cuando sea necesario.
+          </p>
         </CardContent>
       </Card>
     </div>
