@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Switch } from '../components/ui/switch.js';
 import type { SellerSession } from '../App.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -128,8 +129,8 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
       });
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/listings?${params}`);
-      const data = (await res.json()) as { data?: Listing[]; total?: number };
-      setListings(data.data ?? []);
+      const data = (await res.json()) as { listings?: Listing[]; total?: number };
+      setListings(data.listings ?? []);
       setTotal(data.total ?? 0);
     } finally {
       setLoading(false);
@@ -451,20 +452,12 @@ function ListingRow({
       </td>
 
       <td className="px-4 py-3 text-center">
-        <button
-          onClick={onToggleActive}
+        <Switch
+          checked={listing.active}
+          onCheckedChange={onToggleActive}
           disabled={isSaving}
-          title={listing.active ? 'Desactivar' : 'Activar'}
-          className={cn(
-            'relative w-10 h-5 rounded-full transition-colors duration-200 disabled:opacity-60',
-            listing.active ? 'bg-emerald-500' : 'bg-slate-300'
-          )}
-        >
-          <span className={cn(
-            'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200',
-            listing.active ? 'translate-x-5' : 'translate-x-0.5'
-          )} />
-        </button>
+          aria-label={listing.active ? 'Desactivar' : 'Activar'}
+        />
       </td>
 
       <td className="px-4 py-3">
@@ -719,18 +712,11 @@ function EditModal({
               <p className="text-sm font-medium text-slate-900">Activo en marketplace</p>
               <p className="text-xs text-slate-500 mt-0.5">Visible para compradores</p>
             </div>
-            <button
-              onClick={() => setActive((a) => !a)}
-              className={cn(
-                'relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0',
-                active ? 'bg-emerald-500' : 'bg-slate-300'
-              )}
-            >
-              <span className={cn(
-                'absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200',
-                active ? 'translate-x-5' : 'translate-x-0.5'
-              )} />
-            </button>
+            <Switch
+              checked={active}
+              onCheckedChange={setActive}
+              aria-label="Activo en marketplace"
+            />
           </div>
 
           {/* ── Promos section ── */}
@@ -809,20 +795,12 @@ function EditModal({
 
                       {/* Controls */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => handleTogglePromo(promo)}
+                        <Switch
+                          checked={promo.active}
+                          onCheckedChange={() => handleTogglePromo(promo)}
                           disabled={togglingPromoId === promo.id}
-                          title={promo.active ? 'Pausar' : 'Activar'}
-                          className={cn(
-                            'relative w-8 h-4 rounded-full transition-colors duration-200 disabled:opacity-50',
-                            promo.active ? 'bg-emerald-500' : 'bg-slate-300'
-                          )}
-                        >
-                          <span className={cn(
-                            'absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-200',
-                            promo.active ? 'translate-x-4' : 'translate-x-0.5'
-                          )} />
-                        </button>
+                          aria-label={promo.active ? 'Pausar promo' : 'Activar promo'}
+                        />
                         <button
                           onClick={() => handleDeletePromo(promo.id)}
                           disabled={deletingPromoId === promo.id}

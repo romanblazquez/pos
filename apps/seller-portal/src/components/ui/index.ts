@@ -5,3 +5,4 @@ export { Button, buttonVariants } from './button.js';
 export { Progress } from './progress.js';
 export { Separator } from './separator.js';
 export { ToastProvider, useToast } from './toast.js';
+export { Switch } from './switch.js';
