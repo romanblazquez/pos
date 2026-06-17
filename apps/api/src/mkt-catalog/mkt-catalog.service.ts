@@ -3,6 +3,7 @@ import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { BggService } from './bgg.service.js';
 import type { ProductDocument } from '../search/typesense.service.js';
+import type { RankedGame } from './bgg-scraper-client.service.js';
 
 export interface ImportByBggIdResult {
   bggId: string;
@@ -14,6 +15,11 @@ export interface ImportByBggIdResult {
 export interface BulkImportResult {
   imported: ImportByBggIdResult[];
   failed: { bggId: string; reason: string }[];
+}
+
+export interface RanksDumpImportResult {
+  imported: number;
+  skipped: number;
 }
 
 function slugify(name: string): string {
@@ -35,8 +41,12 @@ export class MktCatalogService {
     @Inject(BggService)       private readonly bgg: BggService,
   ) {}
 
-  /** Import a single game by BGG ID, enriching from the BGG API. */
-  async importByBggId(bggId: string): Promise<ImportByBggIdResult> {
+  /**
+   * Import a single game by BGG ID, enriching from the BGG API.
+   * `status` controls the resulting canonicalStatus — bulk discovery imports use
+   * 'pending' so ~150k auto-imported games don't go live without review.
+   */
+  async importByBggId(bggId: string, status: string = 'verified'): Promise<ImportByBggIdResult> {
     const game = await this.bgg.getGame(bggId);
     if (!game) throw new Error(`BGG game ${bggId} not found`);
 
@@ -62,7 +72,7 @@ export class MktCatalogService {
           bggWeight: game.weight || undefined,
           images: game.image ? [game.image] : existing.images,
           tags: [...game.categories, ...game.mechanics].slice(0, 12),
-          canonicalStatus: 'verified',
+          canonicalStatus: status,
         },
       });
       await this.syncToSearch(updated.id);
@@ -91,7 +101,7 @@ export class MktCatalogService {
         bggWeight: game.weight || undefined,
         images: game.image ? [game.image] : [],
         tags: [...game.categories, ...game.mechanics].slice(0, 12),
-        canonicalStatus: 'verified',
+        canonicalStatus: status,
       },
     });
 
@@ -114,6 +124,72 @@ export class MktCatalogService {
         result.failed.push({ bggId: id, reason: String(err) });
       }
     }
+    return result;
+  }
+
+  /**
+   * Bulk-import BGG's full ranks dump (~178k games) directly — no per-item API calls,
+   * so none of the BGG XML API's rate limit or registration requirements apply.
+   * Lands everything as 'pending' (see importByBggId for why) and never downgrades an
+   * already-reviewed product's status on re-import.
+   */
+  async importFromRanksDump(
+    games: RankedGame[],
+    onProgress?: (progress: RanksDumpImportResult) => void,
+  ): Promise<RanksDumpImportResult> {
+    const CHUNK_SIZE = 50;
+    const result: RanksDumpImportResult = { imported: 0, skipped: 0 };
+
+    for (let i = 0; i < games.length; i += CHUNK_SIZE) {
+      const batch = games.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        batch.map(async (g) => {
+          if (!g.name) {
+            result.skipped++;
+            return;
+          }
+          const bggId = String(g.bgg_id);
+          // bggId is globally unique, so suffixing the slug with it sidesteps the need
+          // for a uniqueness lookup per row across 178k rows.
+          const slug = `${slugify(g.name)}-${bggId}`;
+          try {
+            await this.prisma.mktProduct.upsert({
+              where: { bggId },
+              create: {
+                slug,
+                name: g.name,
+                bggId,
+                category: g.is_expansion ? 'expansion' : 'board-game',
+                yearPublished: g.year_published ?? undefined,
+                bggRating: g.average ?? undefined,
+                bggRank: g.rank ?? undefined,
+                bggUsersRated: g.users_rated ?? undefined,
+                isExpansion: g.is_expansion,
+                canonicalStatus: 'pending',
+              },
+              update: {
+                // Explicit null (not ?? undefined) — Prisma treats undefined as "don't
+                // touch", so a re-import that finds a previously-ranked game has since
+                // become unranked needs null written through, not skipped.
+                name: g.name,
+                yearPublished: g.year_published,
+                bggRating: g.average,
+                bggRank: g.rank,
+                bggUsersRated: g.users_rated,
+                isExpansion: g.is_expansion,
+              },
+            });
+            result.imported++;
+          } catch (err) {
+            this.log.warn(`Ranks-dump upsert failed for BGG ${bggId}: ${String(err)}`);
+            result.skipped++;
+          }
+        }),
+      );
+      onProgress?.(result);
+    }
+
+    this.log.log(`Ranks-dump import complete: ${result.imported} imported, ${result.skipped} skipped`);
     return result;
   }
 

@@ -91,6 +91,23 @@ services:
   #   image: otel/opentelemetry-collector:latest
   #   ports: ['4317:4317', '4318:4318']
 
+  # BGG login + bulk catalog scraping. Runs its own Playwright/Chromium with a
+  # stealth plugin (BGG sits behind a Cloudflare JS challenge that detects plain
+  # automation regardless of source IP — Steel's self-hosted image was tried
+  # first but its bundled browser fails to launch at all due to an upstream
+  # fingerprint-generator bug, and even patched around it provides no real
+  # stealth, so it was dropped in favor of running Chromium directly here).
+  bgg-scraper:
+    build:
+      context: ..
+      dockerfile: apps/bgg-scraper/Dockerfile
+    container_name: retail-os-bgg-scraper
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+    ports:
+      - '${BGG_SCRAPER_PORT:-3001}:3001'
+
 volumes:
   retail_pg:
   retail_redis:

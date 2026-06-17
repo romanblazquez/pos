@@ -84,29 +84,6 @@ services:
       retries: 20
       start_period: 30s
 
-  steel:
-    image: ghcr.io/steel-dev/steel-browser:latest
-    container_name: steel
-    restart: unless-stopped
-    environment:
-      STEEL_LOG_LEVEL: info
-    ports:
-      - "${STEEL_PORT:-3000}:3000"
-
-  bgg-scraper:
-    build:
-      context: .
-      dockerfile: apps/bgg-scraper/Dockerfile
-    container_name: bgg-scraper
-    restart: unless-stopped
-    depends_on:
-      - steel
-    environment:
-      PORT: 3001
-      STEEL_CDP: ws://steel:3000
-    ports:
-      - "${BGG_SCRAPER_PORT:-3001}:3001"
-
 volumes:
   odoo-db:
   odoo-data:

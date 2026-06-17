@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MktCatalogService } from './mkt-catalog.service.js';
+import { BggDiscoveryService } from './bgg-discovery.service.js';
 import { Public } from '../auth/auth.guard.js';
 
 @ApiTags('admin')
@@ -11,6 +12,7 @@ import { Public } from '../auth/auth.guard.js';
 export class MktCatalogController {
   constructor(
     @Inject(MktCatalogService) private readonly svc: MktCatalogService,
+    @Inject(BggDiscoveryService) private readonly discovery: BggDiscoveryService,
   ) {}
 
   /** List all marketplace products (admin view). */
@@ -86,6 +88,59 @@ export class MktCatalogController {
   @ApiResponse({ status: 200, description: 'Array of { bggId, name, yearPublished } matches' })
   searchBgg(@Query('q') q: string) {
     return this.svc.searchBgg(q);
+  }
+
+  /** Bulk-import BGG's full ranks dump — the recommended way to populate the whole catalog. */
+  @Post('bgg-discovery/import-full-catalog')
+  @ApiOperation({
+    summary: "Bulk-import BGG's full ranks dump (~178k games)",
+    description:
+      "Logs into BGG and downloads its daily CSV ranks dump (no registration required, unlike the per-item XML API), then upserts every game as a 'pending' MktProduct " +
+      '(name, year, rank, rating, usersRated, isExpansion — no description/images/designer, since those need the registration-gated XML API). ' +
+      'Runs in the background, typically finishes in minutes. Poll GET bgg-discovery/import-full-catalog/status for progress. Requires BGG_USERNAME/BGG_PASSWORD configured.',
+  })
+  @ApiResponse({ status: 201, description: '{ started: boolean } — false if a run is already in progress' })
+  startFullCatalogImport() {
+    return this.discovery.startFullCatalogImport();
+  }
+
+  /** Progress of the running (or last) full-catalog ranks-dump import. */
+  @Get('bgg-discovery/import-full-catalog/status')
+  @ApiOperation({
+    summary: 'Full-catalog ranks-dump import progress',
+    description: '{ running, total, imported, skipped, error? }',
+  })
+  fullCatalogImportStatus() {
+    return this.discovery.fullCatalogImportStatus();
+  }
+
+  /** Start a full BGG catalog discovery + import run (per-page, per-item — see note). */
+  @Post('bgg-discovery/start')
+  @ApiOperation({
+    summary: '[Secondary] Page-by-page BGG discovery + per-item import',
+    description:
+      'Logs into BGG and walks every page of the ranked browse listing, queuing every discovered game for import via BullMQ (bgg-discovery, bgg-import queues), respecting the ~1 req/sec BGG rate limit. ' +
+      "NOTE: per-item enrichment calls BGG's XML API (/thing), which now requires a registered BGG application + token (BGG policy change, 2025-07-02) that this project does not have — import jobs queued by this path will fail until that's set up. " +
+      'Prefer POST bgg-discovery/import-full-catalog instead, which gets rank/rating/year data for the whole catalog without hitting that wall.',
+  })
+  @ApiBody({
+    schema: { type: 'object', properties: { startPage: { type: 'number', example: 1 } } },
+    required: false,
+  })
+  @ApiResponse({ status: 201, description: 'Discovery enqueued' })
+  startBggDiscovery(@Body() body: { startPage?: number }) {
+    return this.discovery.startDiscovery(body?.startPage ?? 1);
+  }
+
+  /** Progress of the running (or last) BGG discovery/import job. */
+  @Get('bgg-discovery/status')
+  @ApiOperation({
+    summary: 'BGG discovery/import queue status',
+    description: 'Returns BullMQ job counts (waiting/active/completed/failed/delayed) for both the discovery and import queues.',
+  })
+  @ApiResponse({ status: 200, description: '{ discovery: JobCounts, import: JobCounts }' })
+  bggDiscoveryStatus() {
+    return this.discovery.status();
   }
 
   /** Re-sync a product to the search index. */

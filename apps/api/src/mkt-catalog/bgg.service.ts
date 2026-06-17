@@ -27,7 +27,10 @@ export interface BggSearchResult {
   yearPublished: number | null;
 }
 
-const BGG_API = 'https://boardgamegeek.com/xmlapi2';
+// BGG's XML API sits behind the same Cloudflare challenge as its HTML pages —
+// a plain fetch() gets a 401. Route through the bgg-scraper's stealth-browser
+// proxy instead, which actually clears the challenge.
+const BGG_API = `${process.env.BGG_SCRAPER_URL ?? 'http://localhost:3001'}/xmlapi2`;
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
 function num(v: unknown): number | null {

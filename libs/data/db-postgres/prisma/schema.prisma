@@ -328,12 +328,16 @@ model MktProduct {
   canonicalStatus String    @default("pending")
   bggRating       Float?
   bggWeight       Float?    // complexity 1–5
+  bggRank         Int?      // overall rank from BGG's daily ranks dump
+  bggUsersRated   Int?
+  isExpansion     Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   listings        Listing[]
   @@index([category])
   @@index([canonicalStatus])
   @@index([bggId])
+  @@index([bggRank])
 }
 
 // ─── Listings (seller × product × price × stock) ─────────────────────────────
