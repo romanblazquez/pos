@@ -1,39 +1,36 @@
 import { useState } from 'react';
 import { useCart } from './CartContext.js';
+import { Button } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? '';
 
 function fmt(minor: number, currency = 'MXN') {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency', currency, maximumFractionDigits: 0,
-  }).format(minor / 100);
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
 }
 
-interface Props {
-  onClose: () => void;
-}
+const inputCls =
+  'w-full px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--bg-input] text-[--tx] ' +
+  'placeholder:text-[--tx-faint] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent';
 
 type Step = 'cart' | 'form' | 'processing' | 'success' | 'error';
 
-export default function CartDrawer({ onClose }: Props) {
+export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const { items, remove, clear, total } = useCart();
   const [step, setStep] = useState<Step>('cart');
   const [error, setError] = useState('');
   const [orderId, setOrderId] = useState('');
 
-  // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [stateVal, setStateVal] = useState('');
   const [postalCode, setPostalCode] = useState('');
 
   async function submitCheckout(e: React.FormEvent) {
     e.preventDefault();
     setStep('processing');
     setError('');
-
     try {
       const baseUrl = window.location.origin;
       const res = await fetch(`${API}/api/v1/checkout`, {
@@ -41,7 +38,7 @@ export default function CartDrawer({ onClose }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity })),
-          deliveryAddress: { street, city, state, postalCode },
+          deliveryAddress: { street, city, state: stateVal, postalCode },
           customerEmail: email,
           customerName: name,
           successUrl: `${baseUrl}/checkout/success`,
@@ -49,164 +46,116 @@ export default function CartDrawer({ onClose }: Props) {
           pendingUrl: `${baseUrl}/checkout/pending`,
         }),
       });
-
-      const data = await res.json() as {
-        orderId?: string;
-        checkoutUrl?: string;
-        message?: string;
-      };
-
-      if (!res.ok) {
-        setError(data.message ?? 'Error al iniciar el pago.');
-        setStep('error');
-        return;
-      }
-
+      const data = await res.json() as { orderId?: string; checkoutUrl?: string; message?: string };
+      if (!res.ok) { setError(data.message ?? 'Error al iniciar el pago.'); setStep('error'); return; }
       setOrderId(data.orderId ?? '');
       clear();
-
-      // In dev mode the checkoutUrl is back to successUrl — just show success
-      if (data.checkoutUrl?.includes('dev_mode=1')) {
-        setStep('success');
-      } else {
-        // Redirect to MercadoPago Checkout Pro
-        window.location.href = data.checkoutUrl!;
-      }
+      if (data.checkoutUrl?.includes('dev_mode=1')) setStep('success');
+      else window.location.href = data.checkoutUrl!;
     } catch {
       setError('No se pudo conectar con el servidor.');
       setStep('error');
     }
   }
 
+  const stepTitle = step === 'cart' ? 'Tu carrito' : step === 'form' ? 'Datos de envío' : '';
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Drawer */}
-      <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col overflow-hidden">
+      <div className="animate-slide-right relative w-full max-w-md bg-[--bg-raised] h-full shadow-2xl flex flex-col border-l border-[--border]">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-200">
-          <h2 className="font-bold text-stone-900 text-lg">
-            {step === 'cart' ? 'Tu carrito' : step === 'form' ? 'Datos de envío' : ''}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-stone-400 hover:text-stone-700 text-xl leading-none"
-          >
-            ✕
-          </button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[--border] shrink-0">
+          <h2 className="font-bold text-[--tx] text-base">{stepTitle}</h2>
+          <button onClick={onClose} className="text-[--tx-faint] hover:text-[--tx] transition-colors text-xl leading-none">✕</button>
         </div>
 
-        {/* Content */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto">
-          {step === 'cart' && (
-            <CartStep items={items} onRemove={remove} total={total} onNext={() => setStep('form')} />
-          )}
+          {step === 'cart' && <CartItems items={items} onRemove={remove} />}
+
           {step === 'form' && (
-            <form id="checkout-form" onSubmit={submitCheckout} className="p-5 space-y-4">
+            <form id="checkout-form" onSubmit={submitCheckout} className="p-5 flex flex-col gap-4">
               <Field label="Nombre completo">
-                <input required value={name} onChange={(e) => setName(e.target.value)}
-                  placeholder="Juan García" className={cls} />
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Juan García" className={inputCls} />
               </Field>
               <Field label="Email">
-                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="juan@ejemplo.com" className={cls} />
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@ejemplo.com" className={inputCls} />
               </Field>
-              <hr className="border-stone-200" />
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Dirección de envío</p>
+              <hr className="border-[--border]" />
+              <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wide">Dirección de envío</p>
               <Field label="Calle y número">
-                <input required value={street} onChange={(e) => setStreet(e.target.value)}
-                  placeholder="Av. Insurgentes 1234" className={cls} />
+                <input required value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Insurgentes 1234" className={inputCls} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Ciudad">
-                  <input required value={city} onChange={(e) => setCity(e.target.value)}
-                    placeholder="CDMX" className={cls} />
+                  <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="CDMX" className={inputCls} />
                 </Field>
                 <Field label="Estado">
-                  <input required value={state} onChange={(e) => setState(e.target.value)}
-                    placeholder="Ciudad de México" className={cls} />
+                  <input required value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder="Ciudad de México" className={inputCls} />
                 </Field>
               </div>
               <Field label="Código postal">
-                <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)}
-                  placeholder="06600" className={cls} />
+                <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="06600" className={inputCls} />
               </Field>
             </form>
           )}
+
           {step === 'processing' && (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
-              <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-stone-600 text-sm">Iniciando pago seguro...</p>
+              <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-[--tx-muted] text-sm">Iniciando pago seguro…</p>
             </div>
           )}
+
           {step === 'success' && (
-            <div className="flex flex-col items-center justify-center h-64 gap-4 p-6 text-center">
+            <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
               <p className="text-5xl">✅</p>
-              <p className="font-bold text-stone-900">¡Pedido recibido!</p>
-              <p className="text-sm text-stone-500">
-                Tu pedido <code className="bg-stone-100 px-1 rounded text-xs">{orderId}</code> está
-                confirmado. Recibirás un email con los detalles.
+              <p className="font-bold text-[--tx] text-lg">¡Pedido recibido!</p>
+              <p className="text-sm text-[--tx-muted]">
+                Pedido <code className="bg-[--bg-subtle] px-1.5 py-0.5 rounded text-xs font-mono">{orderId.slice(-10)}</code> confirmado.
               </p>
-              <button onClick={onClose}
-                className="mt-2 px-5 py-2 bg-emerald-700 text-white text-sm rounded-lg hover:bg-emerald-800">
-                Cerrar
-              </button>
+              <Button onClick={onClose}>Cerrar</Button>
             </div>
           )}
+
           {step === 'error' && (
-            <div className="p-5 space-y-4">
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+            <div className="p-5 flex flex-col gap-3">
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
                 {error}
               </div>
-              <button
-                onClick={() => setStep('form')}
-                className="w-full py-2.5 border border-stone-300 rounded-lg text-sm text-stone-700 hover:bg-stone-50"
-              >
-                ← Volver e intentar de nuevo
-              </button>
+              <Button variant="outline" onClick={() => setStep('form')}>← Volver e intentar de nuevo</Button>
             </div>
           )}
         </div>
 
-        {/* Footer CTAs */}
+        {/* Footer */}
         {step === 'cart' && items.length > 0 && (
-          <div className="px-5 py-4 border-t border-stone-200">
-            <div className="flex justify-between text-sm font-semibold text-stone-900 mb-3">
+          <div className="px-5 py-4 border-t border-[--border] flex flex-col gap-3 shrink-0">
+            <div className="flex justify-between text-sm font-semibold text-[--tx]">
               <span>Total</span>
               <span>{fmt(total, items[0]?.currency)}</span>
             </div>
-            <button
-              onClick={() => setStep('form')}
-              className="w-full py-3 bg-emerald-700 text-white font-semibold rounded-xl hover:bg-emerald-800"
-            >
+            <Button className="w-full justify-center py-3" onClick={() => setStep('form')}>
               Continuar con el pago →
-            </button>
+            </Button>
           </div>
         )}
+
         {step === 'form' && (
-          <div className="px-5 py-4 border-t border-stone-200 space-y-2">
-            <div className="flex justify-between text-sm font-semibold text-stone-900 mb-1">
+          <div className="px-5 py-4 border-t border-[--border] flex flex-col gap-2 shrink-0">
+            <div className="flex justify-between text-sm font-semibold text-[--tx]">
               <span>Total a pagar</span>
               <span>{fmt(total, items[0]?.currency)}</span>
             </div>
-            <button
-              type="submit"
-              form="checkout-form"
-              className="w-full py-3 bg-emerald-700 text-white font-semibold rounded-xl hover:bg-emerald-800"
-            >
+            <Button type="submit" form="checkout-form" className="w-full justify-center py-3">
               Pagar con Mercado Pago 🔒
-            </button>
-            <button
-              onClick={() => setStep('cart')}
-              className="w-full py-2 text-sm text-stone-500 hover:text-stone-700"
-            >
+            </Button>
+            <Button variant="ghost" onClick={() => setStep('cart')} className="w-full justify-center text-[--tx-muted]">
               ← Volver al carrito
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -214,60 +163,38 @@ export default function CartDrawer({ onClose }: Props) {
   );
 }
 
-function CartStep({
-  items,
-  onRemove,
-  total,
-  onNext,
-}: {
-  items: ReturnType<typeof useCart>['items'];
-  onRemove: (id: string) => void;
-  total: number;
-  onNext: () => void;
-}) {
+function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['items']; onRemove: (id: string) => void }) {
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-stone-400">
-        <p className="text-4xl mb-3">🛒</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-[--tx-faint]">
+        <p className="text-4xl">🛒</p>
         <p className="text-sm">Tu carrito está vacío</p>
       </div>
     );
   }
 
-  // Warn if mixed sellers (checkout will reject)
   const sellers = [...new Set(items.map((i) => i.sellerName))];
-  const mixedSellers = sellers.length > 1;
 
   return (
-    <div className="p-5 space-y-3">
-      {mixedSellers && (
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-          ⚠️ Tenés productos de distintas tiendas. Por ahora solo podés comprar de una tienda por pedido.
-          Eliminá los de una tienda para continuar.
+    <div className="p-5 flex flex-col gap-3">
+      {sellers.length > 1 && (
+        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+          ⚠️ Tenés productos de distintas tiendas. Solo podés comprar de una tienda por pedido.
         </div>
       )}
       {items.map((item) => (
-        <div key={item.listingId} className="flex gap-3 items-start p-3 rounded-xl border border-stone-200">
+        <div key={item.listingId} className="flex gap-3 items-start p-3 rounded-xl border border-[--border] bg-[--bg-raised]">
           {item.imageUrl ? (
             <img src={item.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
           ) : (
-            <div className="w-14 h-14 rounded-lg bg-stone-100 flex items-center justify-center text-2xl shrink-0">
-              🎲
-            </div>
+            <div className="w-14 h-14 rounded-lg bg-[--bg-subtle] flex items-center justify-center text-2xl shrink-0">🎲</div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm text-stone-900 truncate">{item.productName}</p>
-            <p className="text-xs text-stone-500">{item.sellerName} · ×{item.quantity}</p>
-            <p className="text-sm font-semibold text-stone-900 mt-0.5">
-              {fmt(item.priceMinorUnits * item.quantity, item.currency)}
-            </p>
+            <p className="font-medium text-sm text-[--tx] truncate">{item.productName}</p>
+            <p className="text-xs text-[--tx-muted]">{item.sellerName} · ×{item.quantity}</p>
+            <p className="text-sm font-semibold text-[--tx] mt-0.5">{fmt(item.priceMinorUnits * item.quantity, item.currency)}</p>
           </div>
-          <button
-            onClick={() => onRemove(item.listingId)}
-            className="text-stone-300 hover:text-red-400 text-lg shrink-0"
-          >
-            ✕
-          </button>
+          <button onClick={() => onRemove(item.listingId)} className="text-[--tx-faint] hover:text-red-500 transition-colors text-lg shrink-0">✕</button>
         </div>
       ))}
     </div>
@@ -276,13 +203,9 @@ function CartStep({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-stone-600">{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-medium text-[--tx-muted]">{label}</label>
       {children}
     </div>
   );
 }
-
-const cls =
-  'w-full px-3 py-2 text-sm rounded-lg border border-stone-300 ' +
-  'focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent';

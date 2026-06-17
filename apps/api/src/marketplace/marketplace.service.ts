@@ -100,7 +100,20 @@ export class MarketplaceService {
           where: { active: true },
           include: {
             deliveryOptions: true,
-            seller: { include: { score: true } },
+            seller: { include: { score: true, rewardConfig: true } },
+            promos: {
+              where: {
+                active: true,
+                OR: [
+                  { startsAt: null, endsAt: null },
+                  { startsAt: { lte: new Date() }, endsAt: null },
+                  { startsAt: null, endsAt: { gte: new Date() } },
+                  { startsAt: { lte: new Date() }, endsAt: { gte: new Date() } },
+                ],
+              },
+              orderBy: { bonusCashbackPct: 'desc' },
+              take: 1,
+            },
           },
           orderBy: { rankScore: 'desc' },
         },
@@ -152,6 +165,9 @@ export class MarketplaceService {
           type: d.type,
         })),
         lastSyncedAt: l.lastSyncedAt,
+        storeCashbackPct: l.seller.rewardConfig?.storeCashbackPct ?? 0,
+        promoBonus: l.promos[0]?.bonusCashbackPct ?? 0,
+        promoLabel: l.promos[0]?.label ?? null,
       })),
     };
   }

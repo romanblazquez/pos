@@ -2,11 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 
-interface SearchPageProps {
-  query: string;
-  onProduct: (slug: string) => void;
-}
-
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function searchProducts(q: string): Promise<{ results: Product[]; total: number }> {
@@ -15,7 +10,7 @@ async function searchProducts(q: string): Promise<{ results: Product[]; total: n
   return res.json() as Promise<{ results: Product[]; total: number }>;
 }
 
-export default function SearchPage({ query, onProduct }: SearchPageProps) {
+export default function SearchPage({ query, onProduct }: { query: string; onProduct: (slug: string) => void }) {
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
@@ -30,32 +25,31 @@ export default function SearchPage({ query, onProduct }: SearchPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-900">
-          Resultados para <span className="text-emerald-700">"{query}"</span>
+        <h1 className="text-2xl font-bold text-[--tx]">
+          Resultados para{' '}
+          <span className="text-emerald-600 dark:text-emerald-400">"{query}"</span>
         </h1>
-        {data && (
-          <p className="text-sm text-stone-500 mt-1">{data.total} juegos encontrados</p>
-        )}
+        {data && <p className="text-sm text-[--tx-muted] mt-0.5">{data.total} juegos encontrados</p>}
       </div>
 
       {isLoading && <SearchSkeleton />}
 
       {isError && (
-        <div className="text-center py-16 text-stone-500">
+        <div className="text-center py-16 text-[--tx-muted]">
           <p className="text-4xl mb-3">😕</p>
           <p>Hubo un error al buscar. Intentá de nuevo.</p>
         </div>
       )}
 
       {data && results.length === 0 && (
-        <div className="text-center py-16 text-stone-500">
+        <div className="text-center py-16 text-[--tx-muted]">
           <p className="text-4xl mb-3">🔍</p>
-          <p className="font-medium">No encontramos "{query}"</p>
+          <p className="font-medium text-[--tx]">No encontramos "{query}"</p>
           <p className="text-sm mt-1">Probá con otro nombre o categoría</p>
         </div>
       )}
 
-      {data && results.length > 0 && (
+      {results.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {results.map((product) => (
             <ProductCard
@@ -75,12 +69,12 @@ function SearchSkeleton() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-stone-200 overflow-hidden animate-pulse">
-          <div className="aspect-square bg-stone-200" />
-          <div className="p-3 space-y-2">
-            <div className="h-4 bg-stone-200 rounded w-3/4" />
-            <div className="h-3 bg-stone-200 rounded w-1/2" />
-            <div className="h-4 bg-stone-200 rounded w-2/3" />
+        <div key={i} className="rounded-xl border border-[--border] bg-[--bg-raised] overflow-hidden">
+          <div className="aspect-square bg-[--bg-subtle] animate-pulse" />
+          <div className="p-3 flex flex-col gap-2">
+            <div className="h-4 bg-[--bg-subtle] rounded animate-pulse w-3/4" />
+            <div className="h-3 bg-[--bg-subtle] rounded animate-pulse w-1/2" />
+            <div className="h-4 bg-[--bg-subtle] rounded animate-pulse w-2/3" />
           </div>
         </div>
       ))}

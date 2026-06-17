@@ -2,11 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
+import { Badge, Button } from '../components/ui/index.js';
 
-interface ProductPageProps {
-  slug: string;
-  onCartOpen: () => void;
-}
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 interface ListingDetail {
   id: string;
@@ -37,6 +35,9 @@ interface ListingDetail {
     type: string;
   }[];
   lastSyncedAt: string;
+  storeCashbackPct: number;
+  promoBonus: number;
+  promoLabel: string | null;
 }
 
 interface ProductDetail {
@@ -61,17 +62,16 @@ interface ProductDetail {
 }
 
 async function fetchProduct(slug: string): Promise<ProductDetail> {
-  const res = await fetch(`/api/v1/products/${slug}`);
+  const res = await fetch(`${API}/api/v1/products/${slug}`);
   if (!res.ok) throw new Error('Product not found');
   return res.json() as Promise<ProductDetail>;
 }
 
-function formatPrice(minor: number, currency = 'MXN') {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 })
-    .format(minor / 100);
+function fmt(minor: number, currency = 'MXN') {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
 }
 
-export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
+export default function ProductPage({ slug, onCartOpen }: { slug: string; onCartOpen: () => void }) {
   const { data: platformCfg } = usePlatformConfig();
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
@@ -87,26 +87,19 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
   if (isError || !data) return <NotFound />;
 
   const p = data;
-  const activeListings = p.listings.filter(
-    (l) => l.stockStatus !== 'out_of_stock',
-  );
+  const activeListings = p.listings.filter((l) => l.stockStatus !== 'out_of_stock');
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="grid md:grid-cols-2 gap-8 mb-10">
+
         {/* Images */}
-        <div className="space-y-3">
-          <div className="aspect-square rounded-2xl overflow-hidden bg-stone-100">
+        <div className="flex flex-col gap-3">
+          <div className="aspect-square rounded-2xl overflow-hidden bg-[--bg-subtle]">
             {p.images[selectedImage] ? (
-              <img
-                src={p.images[selectedImage]}
-                alt={p.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={p.images[selectedImage]} alt={p.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-8xl text-stone-300">
-                🎲
-              </div>
+              <div className="w-full h-full flex items-center justify-center text-8xl text-[--tx-faint]">🎲</div>
             )}
           </div>
           {p.images.length > 1 && (
@@ -115,9 +108,8 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedImage === i ? 'border-emerald-600' : 'border-stone-200'
-                  }`}
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors
+                    ${selectedImage === i ? 'border-emerald-500' : 'border-[--border]'}`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -126,74 +118,80 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
           )}
         </div>
 
-        {/* Product info */}
-        <div className="space-y-4">
-          {p.publisher && (
-            <p className="text-sm text-stone-500">{p.publisher}</p>
-          )}
-          <h1 className="text-3xl font-bold text-stone-900">{p.name}</h1>
+        {/* Info */}
+        <div className="flex flex-col gap-4">
+          {p.publisher && <p className="text-sm text-[--tx-muted]">{p.publisher}</p>}
+          <h1 className="text-3xl font-bold text-[--tx]">{p.name}</h1>
 
-          {/* Game metadata chips */}
+          {/* Metadata chips */}
           <div className="flex flex-wrap gap-2">
             {p.minPlayers && p.maxPlayers && (
               <Chip icon="👥" label={`${p.minPlayers}–${p.maxPlayers} jugadores`} />
             )}
             {p.minAge && <Chip icon="🔞" label={`+${p.minAge} años`} />}
-            {p.playTimeMinutes && (
-              <Chip icon="⏱️" label={`${p.playTimeMinutes} min`} />
-            )}
-            {p.bggRating && (
-              <Chip icon="⭐" label={`BGG ${p.bggRating.toFixed(1)}`} />
-            )}
-            {p.bggWeight && (
-              <Chip icon="🧠" label={`Complejidad ${p.bggWeight.toFixed(1)}/5`} />
-            )}
+            {p.playTimeMinutes && <Chip icon="⏱️" label={`${p.playTimeMinutes} min`} />}
+            {p.bggRating && <Chip icon="⭐" label={`BGG ${p.bggRating.toFixed(1)}`} />}
+            {p.bggWeight && <Chip icon="🧠" label={`Complejidad ${p.bggWeight.toFixed(1)}/5`} />}
           </div>
 
           {p.description && (
-            <p className="text-sm text-stone-600 leading-relaxed line-clamp-4">
-              {p.description}
-            </p>
+            <div
+              className="text-sm text-[--tx-muted] leading-relaxed line-clamp-4"
+              dangerouslySetInnerHTML={{ __html: p.description }}
+            />
           )}
 
           {/* Price summary */}
-          {activeListings.length > 0 && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-              <p className="text-sm text-emerald-700 font-medium mb-1">
-                Desde
-              </p>
-              <p className="text-3xl font-bold text-emerald-900">
-                {formatPrice(
-                  Math.min(...activeListings.map((l) => l.priceMinorUnits)),
-                  activeListings[0].currency,
+          {activeListings.length > 0 && (() => {
+            const bestCashback = Math.max(...activeListings.map(
+              (l) => platformCashback + l.storeCashbackPct + l.promoBonus,
+            ));
+            return (
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20
+                              border border-emerald-200 dark:border-emerald-800 flex flex-col gap-2">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Desde</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                    {activeListings.length} tienda{activeListings.length > 1 ? 's' : ''} con stock
+                  </p>
+                </div>
+                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-200">
+                  {fmt(Math.min(...activeListings.map((l) => l.priceMinorUnits)), activeListings[0].currency)}
+                </p>
+                {bestCashback > 0 && (
+                  <div className="flex items-start gap-2 pt-1 border-t border-emerald-200 dark:border-emerald-800">
+                    <span className="text-base mt-0.5">🎁</span>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                        Hasta {Math.round(bestCashback * 100)}% en créditos
+                      </p>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                        {Math.round(platformCashback * 100)}% libres en todo el marketplace
+                        {bestCashback > platformCashback && ` + hasta ${Math.round((bestCashback - platformCashback) * 100)}% exclusivos de tienda`}
+                      </p>
+                    </div>
+                  </div>
                 )}
-              </p>
-              <p className="text-sm text-emerald-600 mt-1">
-                {activeListings.length} tienda{activeListings.length > 1 ? 's' : ''} con stock
-              </p>
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
-      {/* Seller comparison table */}
+      {/* Listings comparison */}
       <section>
-        <h2 className="text-xl font-semibold text-stone-900 mb-4">
-          Comparar tiendas
-        </h2>
+        <h2 className="text-xl font-semibold text-[--tx] mb-4">Comparar tiendas</h2>
         {p.listings.length === 0 ? (
-          <p className="text-stone-500 text-sm">
+          <p className="text-[--tx-muted] text-sm">
             Este juego no está disponible en ninguna tienda conectada por ahora.
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {p.listings.map((listing, idx) => (
               <ListingRow
                 key={listing.id}
                 listing={listing}
                 rank={idx + 1}
-                productName={p.name}
-                productImage={p.images[0]}
                 platformCashbackPct={platformCashback}
                 onAddToCart={() => {
                   add({
@@ -217,79 +215,61 @@ export default function ProductPage({ slug, onCartOpen }: ProductPageProps) {
 }
 
 function ListingRow({
-  listing: l, rank, productName: _pn, productImage: _pi, onAddToCart, platformCashbackPct = 0.01,
+  listing: l, rank, onAddToCart, platformCashbackPct = 0.01,
 }: {
   listing: ListingDetail;
   rank: number;
-  productName: string;
-  productImage?: string;
   platformCashbackPct?: number;
   onAddToCart: () => void;
 }) {
   const [showScore, setShowScore] = useState(false);
-  const bestDelivery = l.deliveryOptions.reduce(
-    (best, d) => (d.estimatedDaysMin < best.estimatedDaysMin ? d : best),
-    l.deliveryOptions[0],
-  );
 
-  const stockColor =
-    l.stockStatus === 'in_stock'
-      ? 'text-emerald-600'
-      : l.stockStatus === 'low_stock'
-        ? 'text-amber-600'
-        : 'text-red-500';
+  const bestDelivery = l.deliveryOptions.length
+    ? l.deliveryOptions.reduce((best, d) => d.estimatedDaysMin < best.estimatedDaysMin ? d : best, l.deliveryOptions[0])
+    : null;
 
-  const stockLabel =
-    l.stockStatus === 'in_stock'
-      ? '● En stock'
-      : l.stockStatus === 'low_stock'
-        ? '● Poco stock'
-        : '○ Sin stock';
+  const stockBadge = l.stockStatus === 'in_stock'
+    ? <Badge variant="success">● En stock</Badge>
+    : l.stockStatus === 'low_stock'
+    ? <Badge variant="warning">● Poco stock</Badge>
+    : <Badge variant="error">○ Sin stock</Badge>;
 
   return (
-    <div
-      className={`rounded-xl border p-4 flex items-center gap-4 flex-wrap
-        ${rank === 1 ? 'border-emerald-400 bg-emerald-50/40' : 'border-stone-200 bg-white'}`}
+    <div className={`rounded-xl border p-4 flex flex-wrap items-center gap-4
+      ${rank === 1
+        ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10'
+        : 'border-[--border] bg-[--bg-raised]'}`}
     >
-      {/* Rank badge */}
-      <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-          ${rank === 1 ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-stone-600'}`}
+      {/* Rank */}
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+        ${rank === 1 ? 'bg-emerald-600 text-white' : 'bg-[--bg-subtle] text-[--tx-muted]'}`}
       >
         {rank}
       </div>
 
-      {/* Seller info */}
-      <div className="flex-1 min-w-[120px]">
-        <p className="font-semibold text-stone-900 text-sm">{l.sellerName}</p>
+      {/* Seller */}
+      <div className="flex flex-col gap-0.5 flex-1 min-w-[120px]">
+        <p className="font-semibold text-[--tx] text-sm">{l.sellerName}</p>
         <div className="flex items-center gap-1">
           <span className="text-xs text-amber-500">★</span>
-          <span className="text-xs text-stone-500">{(l.sellerScore * 5).toFixed(1)}</span>
+          <span className="text-xs text-[--tx-muted]">{(l.sellerScore * 5).toFixed(1)}</span>
         </div>
       </div>
 
       {/* Stock */}
-      <div className="shrink-0">
-        <span className={`text-sm font-medium ${stockColor}`}>{stockLabel}</span>
-        <p className="text-xs text-stone-400">
-          Confianza {Math.round(l.stockConfidence * 100)}%
-        </p>
+      <div className="flex flex-col gap-0.5 shrink-0">
+        {stockBadge}
+        <p className="text-xs text-[--tx-faint]">Conf. {Math.round(l.stockConfidence * 100)}%</p>
       </div>
 
-      {/* Best delivery */}
+      {/* Delivery */}
       {bestDelivery && (
-        <div className="shrink-0 text-sm text-stone-600">
+        <div className="shrink-0 text-sm text-[--tx-muted]">
           🚚 {bestDelivery.estimatedDaysMin}–{bestDelivery.estimatedDaysMax} días
           {bestDelivery.priceMinorUnits === 0 ? (
-            <span className="text-emerald-600 ml-1 text-xs">envío gratis</span>
+            <span className="text-emerald-600 ml-1 text-xs font-medium">gratis</span>
           ) : (
-            <span className="text-stone-400 ml-1 text-xs">
-              {new Intl.NumberFormat('es-MX', {
-                style: 'currency',
-                currency: l.currency,
-                maximumFractionDigits: 0,
-              }).format(bestDelivery.priceMinorUnits / 100)}
-            </span>
+            <span className="text-[--tx-faint] ml-1 text-xs">{fmt(bestDelivery.priceMinorUnits, l.currency)}</span>
           )}
         </div>
       )}
@@ -297,35 +277,37 @@ function ListingRow({
       {/* Price + CTA */}
       <div className="flex items-center gap-3 shrink-0 ml-auto">
         <div className="text-right">
-          <span className="text-xl font-bold text-stone-900 block">
-            {new Intl.NumberFormat('es-MX', {
-              style: 'currency',
-              currency: l.currency,
-              maximumFractionDigits: 0,
-            }).format(l.priceMinorUnits / 100)}
-          </span>
-          {platformCashbackPct > 0 && l.stockStatus !== 'out_of_stock' && (
-            <span className="text-xs text-emerald-600 font-medium">
-              +{Math.round(platformCashbackPct * 100)}% cashback
-            </span>
-          )}
+          <span className="text-xl font-bold text-[--tx] block">{fmt(l.priceMinorUnits, l.currency)}</span>
+          {l.stockStatus !== 'out_of_stock' && (() => {
+            const totalCb = platformCashbackPct + l.storeCashbackPct + l.promoBonus;
+            if (totalCb <= 0) return null;
+            return (
+              <div className="text-right mt-0.5">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                  🎁 +{Math.round(totalCb * 100)}% créditos
+                </span>
+                {(l.storeCashbackPct > 0 || l.promoBonus > 0) && (
+                  <p className="text-[10px] text-[--tx-faint] leading-tight">
+                    {Math.round(platformCashbackPct * 100)}% libres
+                    {l.storeCashbackPct > 0 && ` + ${Math.round(l.storeCashbackPct * 100)}% tienda`}
+                    {l.promoBonus > 0 && ` + ${Math.round(l.promoBonus * 100)}% promo`}
+                  </p>
+                )}
+                {l.promoLabel && <p className="text-[10px] text-amber-500 font-medium">{l.promoLabel}</p>}
+              </div>
+            );
+          })()}
         </div>
         {l.stockStatus !== 'out_of_stock' && (
-          <button
-            onClick={onAddToCart}
-            className="px-4 py-2 bg-emerald-700 text-white text-sm font-semibold
-                       rounded-lg hover:bg-emerald-800 transition-colors"
-          >
-            Agregar 🛒
-          </button>
+          <Button onClick={onAddToCart} size="sm">Agregar 🛒</Button>
         )}
       </div>
 
-      {/* Score explainer toggle */}
+      {/* Score explainer */}
       <div className="w-full">
         <button
           onClick={() => setShowScore(!showScore)}
-          className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+          className="text-xs text-[--tx-faint] hover:text-[--tx-muted] transition-colors"
         >
           {showScore ? '▲ Ocultar ranking' : '▼ ¿Por qué este ranking?'}
         </button>
@@ -333,18 +315,13 @@ function ListingRow({
           <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
             {Object.entries(l.scoreBreakdown).map(([key, val]) => (
               <div key={key} className="text-center">
-                <div className="h-1.5 bg-stone-200 rounded-full overflow-hidden mb-1">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full"
-                    style={{ width: `${Math.round(val * 100)}%` }}
-                  />
+                <div className="h-1.5 bg-[--bg-subtle] rounded-full overflow-hidden mb-1">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round(val * 100)}%` }} />
                 </div>
-                <p className="text-xs text-stone-400 capitalize">
+                <p className="text-[10px] text-[--tx-faint] capitalize">
                   {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
                 </p>
-                <p className="text-xs font-medium text-stone-600">
-                  {Math.round(val * 100)}%
-                </p>
+                <p className="text-xs font-medium text-[--tx-muted]">{Math.round(val * 100)}%</p>
               </div>
             ))}
           </div>
@@ -356,7 +333,8 @@ function ListingRow({
 
 function Chip({ icon, label }: { icon: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 text-xs text-stone-600">
+    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full
+                     bg-[--bg-subtle] text-xs text-[--tx-muted] font-medium">
       {icon} {label}
     </span>
   );
@@ -364,14 +342,14 @@ function Chip({ icon, label }: { icon: string; label: string }) {
 
 function ProductSkeleton() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 animate-pulse">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="aspect-square rounded-2xl bg-stone-200" />
-        <div className="space-y-4">
-          <div className="h-4 bg-stone-200 rounded w-1/4" />
-          <div className="h-8 bg-stone-200 rounded w-3/4" />
-          <div className="h-4 bg-stone-200 rounded w-1/2" />
-          <div className="h-24 bg-stone-200 rounded" />
+        <div className="aspect-square rounded-2xl bg-[--bg-subtle] animate-pulse" />
+        <div className="flex flex-col gap-4">
+          <div className="h-4 bg-[--bg-subtle] rounded animate-pulse w-1/4" />
+          <div className="h-8 bg-[--bg-subtle] rounded animate-pulse w-3/4" />
+          <div className="h-4 bg-[--bg-subtle] rounded animate-pulse w-1/2" />
+          <div className="h-24 bg-[--bg-subtle] rounded animate-pulse" />
         </div>
       </div>
     </div>
@@ -380,9 +358,9 @@ function ProductSkeleton() {
 
 function NotFound() {
   return (
-    <div className="text-center py-24 text-stone-500">
+    <div className="text-center py-24 text-[--tx-muted]">
       <p className="text-5xl mb-4">🎲</p>
-      <p className="text-lg font-medium">Juego no encontrado</p>
+      <p className="text-lg font-medium text-[--tx]">Juego no encontrado</p>
     </div>
   );
 }

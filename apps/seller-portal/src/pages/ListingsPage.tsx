@@ -49,6 +49,15 @@ interface Stats {
   lowStock: number;
 }
 
+interface AiEnhanceResult {
+  name: string;
+  description: string;
+  slug: string;
+  tags: string[];
+  skuIssue: string | null;
+  reasoning: string;
+}
+
 type StatusFilter = 'all' | 'active' | 'inactive' | 'out_of_stock' | 'low_stock';
 type SortKey = 'recent' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc';
 
@@ -129,8 +138,8 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
       });
       const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/listings?${params}`);
-      const data = (await res.json()) as { listings?: Listing[]; total?: number };
-      setListings(data.listings ?? []);
+      const data = (await res.json()) as { data?: Listing[]; listings?: Listing[]; total?: number };
+      setListings(data.data ?? data.listings ?? []);
       setTotal(data.total ?? 0);
     } finally {
       setLoading(false);
@@ -501,6 +510,12 @@ function EditModal({
   const [active, setActive] = useState(listing.active);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // AI enhance state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<AiEnhanceResult | null>(null);
+  const [aiApplying, setAiApplying] = useState(false);
+  const [aiApplied, setAiApplied] = useState(false);
 
   // Promos state
   const [promos, setPromos] = useState<ListingPromo[]>([]);
@@ -946,6 +961,147 @@ function EditModal({
               />
             </details>
           )}
+
+          {/* ── AI SEO Enhance ── */}
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                  Optimización SEO con IA
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Genera título, descripción y tags SEO. Revisá antes de aplicar.
+                </p>
+              </div>
+              {!aiResult && (
+                <button
+                  onClick={async () => {
+                    setAiLoading(true);
+                    setAiResult(null);
+                    try {
+                      const res = await fetch(
+                        `${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/ai-enhance`,
+                        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      if (res.ok) {
+                        const body = await res.json() as { suggested: AiEnhanceResult };
+                        setAiResult(body.suggested);
+                      }
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  disabled={aiLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-60 transition-colors shrink-0 ml-3"
+                >
+                  {aiLoading ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Analizando…
+                    </>
+                  ) : (
+                    <>✦ Optimizar con IA</>
+                  )}
+                </button>
+              )}
+              {aiResult && !aiApplied && (
+                <button
+                  onClick={() => setAiResult(null)}
+                  className="text-xs text-slate-400 hover:text-slate-600 ml-3"
+                >
+                  × Descartar
+                </button>
+              )}
+            </div>
+
+            {aiResult && !aiApplied && (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">
+                {aiResult.reasoning && (
+                  <p className="text-xs text-violet-700 italic leading-relaxed">
+                    ✦ {aiResult.reasoning}
+                  </p>
+                )}
+
+                {aiResult.skuIssue && (
+                  <div className="flex gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                    <span className="text-amber-500 shrink-0">⚠</span>
+                    <p className="text-xs text-amber-700">{aiResult.skuIssue}</p>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <DiffRow label="Nombre" before={listing.product.name} after={aiResult.name} />
+                  <DiffRow label="Descripción" before={listing.product.description ?? ''} after={aiResult.description} multiline />
+                  <DiffRow label="Slug" before={listing.product.slug} after={aiResult.slug} />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Tags</p>
+                    <div className="flex flex-wrap gap-1">
+                      {aiResult.tags.map((t) => (
+                        <span key={t} className="px-2 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={async () => {
+                      setAiApplying(true);
+                      try {
+                        const res = await fetch(
+                          `${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/product`,
+                          {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({
+                              name: aiResult.name,
+                              description: aiResult.description,
+                              slug: aiResult.slug,
+                              tags: aiResult.tags,
+                            }),
+                          }
+                        );
+                        if (res.ok) {
+                          const body = await res.json() as { product?: Partial<Listing['product']> };
+                          onSaved({
+                            id: listing.id,
+                            product: {
+                              ...listing.product,
+                              name: aiResult.name,
+                              description: aiResult.description,
+                              slug: body.product?.slug ?? aiResult.slug,
+                              tags: aiResult.tags,
+                            },
+                          });
+                          setAiApplied(true);
+                          setAiResult(null);
+                        }
+                      } finally {
+                        setAiApplying(false);
+                      }
+                    }}
+                    disabled={aiApplying}
+                    className="flex-1 py-2 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-60 transition-colors"
+                  >
+                    {aiApplying ? 'Aplicando…' : 'Aplicar sugerencias'}
+                  </button>
+                  <button
+                    onClick={() => setAiResult(null)}
+                    className="px-4 py-2 text-xs text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {aiApplied && (
+              <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                <span>✓</span>
+                <span>Sugerencias aplicadas — los cambios ya están guardados en el producto.</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -974,6 +1130,35 @@ function EditModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DiffRow({ label, before, after, multiline }: {
+  label: string; before: string; after: string; multiline?: boolean;
+}) {
+  const changed = before !== after;
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+      {changed ? (
+        <div className="space-y-1">
+          <p className={cn(
+            'text-xs text-slate-400 line-through leading-relaxed',
+            multiline ? 'max-h-16 overflow-hidden' : 'truncate'
+          )}>
+            {before || '(vacío)'}
+          </p>
+          <p className={cn(
+            'text-xs text-violet-800 font-medium leading-relaxed',
+            multiline ? 'max-h-24 overflow-hidden' : ''
+          )}>
+            {after}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500 leading-relaxed">{before || '(vacío)'} <span className="text-slate-300">— sin cambios</span></p>
+      )}
     </div>
   );
 }

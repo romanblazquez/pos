@@ -332,6 +332,74 @@ export class SellersService {
     await this.prisma.listingPromo.delete({ where: { id: promoId } });
   }
 
+  async aiEnhanceListing(sellerId: string, listingId: string, ai: import('../ai/ai.service.js').AiService) {
+    const listing = await this.prisma.listing.findFirst({
+      where: { id: listingId, sellerId },
+      include: { product: true },
+    });
+    if (!listing) throw new NotFoundException('Listing not found');
+
+    const allSkus = await this.prisma.listing
+      .findMany({ where: { sellerId }, select: { sellerSku: true } })
+      .then((rows) => rows.map((r) => r.sellerSku).filter(Boolean) as string[]);
+
+    const result = await ai.enhanceProduct({
+      name: listing.product.name,
+      description: listing.product.description,
+      tags: listing.product.tags,
+      publisher: listing.product.publisher,
+      designer: listing.product.designer,
+      category: listing.product.category,
+      yearPublished: listing.product.yearPublished,
+      minPlayers: listing.product.minPlayers,
+      maxPlayers: listing.product.maxPlayers,
+      playTimeMinutes: listing.product.playTimeMinutes,
+      language: listing.product.language,
+      sellerSku: listing.sellerSku,
+      allSellerSkus: allSkus,
+    });
+
+    return { listingId, productId: listing.productId, current: {
+      name: listing.product.name,
+      description: listing.product.description,
+      slug: listing.product.slug,
+      tags: listing.product.tags,
+      sellerSku: listing.sellerSku,
+    }, suggested: result };
+  }
+
+  async applyProductPatch(sellerId: string, listingId: string, data: {
+    name?: string; description?: string; slug?: string; tags?: string[]; sellerSku?: string;
+  }) {
+    const listing = await this.prisma.listing.findFirst({
+      where: { id: listingId, sellerId },
+    });
+    if (!listing) throw new NotFoundException('Listing not found');
+
+    const productPatch: Record<string, unknown> = {};
+    if (data.name !== undefined) productPatch['name'] = data.name;
+    if (data.description !== undefined) productPatch['description'] = data.description;
+    if (data.tags !== undefined) productPatch['tags'] = data.tags;
+    if (data.slug !== undefined) {
+      const existing = await this.prisma.mktProduct.findUnique({ where: { slug: data.slug } });
+      if (existing && existing.id !== listing.productId) {
+        productPatch['slug'] = `${data.slug}-${listingId.slice(-6)}`;
+      } else {
+        productPatch['slug'] = data.slug;
+      }
+    }
+
+    if (Object.keys(productPatch).length > 0) {
+      await this.prisma.mktProduct.update({ where: { id: listing.productId }, data: productPatch });
+    }
+
+    if (data.sellerSku !== undefined) {
+      await this.prisma.listing.update({ where: { id: listingId }, data: { sellerSku: data.sellerSku } });
+    }
+
+    return this.prisma.listing.findUnique({ where: { id: listingId }, include: { product: true } });
+  }
+
   /** Returns the active promo (if any) for a listing at the current moment. */
   async getActivePromo(listingId: string) {
     const now = new Date();

@@ -323,6 +323,24 @@ export class CheckoutService {
     return { processed: true };
   }
 
+  async listCustomerOrders(customerId: string, limit = 20) {
+    return this.prisma.marketplaceOrder.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        seller: { select: { name: true, slug: true } },
+        lines: {
+          include: {
+            listing: {
+              include: { product: { select: { name: true, slug: true, images: true } } },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async listOrders(params: { limit?: number; status?: string } = {}) {
     const { limit = 50, status } = params;
     const [orders, total] = await Promise.all([

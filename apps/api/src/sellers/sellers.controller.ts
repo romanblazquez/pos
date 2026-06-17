@@ -24,6 +24,7 @@ import { CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sel
 import { Public } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
+import { AiService } from '../ai/ai.service.js';
 
 @ApiTags('sellers')
 @ApiBearerAuth('seller-jwt')
@@ -33,6 +34,7 @@ export class SellersController {
   constructor(
     @Inject(SellersService) private readonly svc: SellersService,
     @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
+    @Inject(AiService) private readonly ai: AiService,
   ) {}
 
   @Post()
@@ -434,5 +436,36 @@ export class SellersController {
     @Body() body: UpdateListingDto,
   ) {
     return this.svc.updateListing(id, listingId, body);
+  }
+
+  // ── AI enhancement ────────────────────────────────────────────────────────
+
+  @Post(':id/listings/:listingId/ai-enhance')
+  @ApiOperation({ summary: 'Generate AI SEO suggestions for a listing (preview only — does not save)' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiResponse({ status: 200, description: 'AI-generated SEO suggestions. Apply them with PATCH :id/listings/:listingId/product.' })
+  async aiEnhanceListing(@Param('id') id: string, @Param('listingId') listingId: string) {
+    return this.svc.aiEnhanceListing(id, listingId, this.ai);
+  }
+
+  @Patch(':id/listings/:listingId/product')
+  @ApiOperation({ summary: 'Apply AI (or manual) edits to the underlying product fields' })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID' })
+  @ApiBody({ schema: { type: 'object', properties: {
+    name:        { type: 'string' },
+    description: { type: 'string' },
+    slug:        { type: 'string' },
+    tags:        { type: 'array', items: { type: 'string' } },
+    sellerSku:   { type: 'string' },
+  }}})
+  @ApiResponse({ status: 200, description: 'Product updated.' })
+  applyProductPatch(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Body() body: { name?: string; description?: string; slug?: string; tags?: string[]; sellerSku?: string },
+  ) {
+    return this.svc.applyProductPatch(id, listingId, body);
   }
 }

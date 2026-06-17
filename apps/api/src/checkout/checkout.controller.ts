@@ -63,6 +63,22 @@ export class CheckoutController {
     return this.svc.reconcileOrder(id);
   }
 
+  /** Customer: list my orders. */
+  @Get('customers/:customerId/orders')
+  @ApiOperation({
+    summary: 'List orders for a customer',
+    description: 'Returns all marketplace orders for the given customer, newest first.',
+  })
+  @ApiParam({ name: 'customerId', description: 'Customer CUID', example: 'clxcust123' })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiResponse({ status: 200, description: 'Array of orders with seller and line info.' })
+  listCustomerOrders(
+    @Param('customerId') customerId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.svc.listCustomerOrders(customerId, limit ? parseInt(limit, 10) : 20);
+  }
+
   /** Admin: list all orders (most recent first). */
   @ApiTags('admin')
   @Get('checkout/admin/orders')
