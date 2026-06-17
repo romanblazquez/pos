@@ -151,7 +151,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
 
           {p.description && (
             <div
-              className="text-sm text-[--tx-muted] leading-relaxed line-clamp-4"
+              className="text-sm text-[--tx-muted] leading-relaxed"
               dangerouslySetInnerHTML={{ __html: p.description }}
             />
           )}

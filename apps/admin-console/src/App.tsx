@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
 type AdminView = 'sellers' | 'catalog' | 'orders' | 'bgg' | 'ranking';
 
@@ -153,7 +154,7 @@ function CatalogView() {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [enrichResult, setEnrichResult] = useState<string | null>(null);
+  const [enrichResult, setEnrichResult] = useState<{ message: string; viewUrl?: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-catalog', statusFilter, page],
@@ -173,9 +174,12 @@ function CatalogView() {
   const enrichOneMut = useMutation({
     mutationFn: async (bggId: string) => {
       const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
-      return res.json();
+      return res.json() as Promise<{ name: string; slug: string }>;
     },
-    onSuccess: () => invalidate(),
+    onSuccess: (data) => {
+      setEnrichResult({ message: `${data.name} enriquecido`, viewUrl: `${MARKETPLACE_URL}/product/${data.slug}` });
+      invalidate();
+    },
   });
 
   const enrichBulkMut = useMutation({
@@ -188,7 +192,7 @@ function CatalogView() {
       return res.json() as Promise<{ imported: unknown[]; failed: unknown[] }>;
     },
     onSuccess: (data) => {
-      setEnrichResult(`${data.imported.length} enriquecidos, ${data.failed.length} fallaron`);
+      setEnrichResult({ message: `${data.imported.length} enriquecidos, ${data.failed.length} fallaron` });
       setSelected(new Set());
       invalidate();
     },
@@ -248,8 +252,13 @@ function CatalogView() {
       </div>
 
       {enrichResult && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
-          ✓ {enrichResult}
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 flex items-center gap-3">
+          <span>✓ {enrichResult.message}</span>
+          {enrichResult.viewUrl && (
+            <a href={enrichResult.viewUrl} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+              Ver producto ↗
+            </a>
+          )}
         </div>
       )}
 
@@ -333,15 +342,28 @@ function CatalogView() {
                     <td className="px-4 py-3 text-slate-500">{p._count?.listings ?? '—'}</td>
                     <td className="px-4 py-3"><StatusBadge status={p.canonicalStatus} /></td>
                     <td className="px-4 py-3">
-                      {p.bggId && (
-                        <button
-                          onClick={() => enrichOneMut.mutate(p.bggId!)}
-                          disabled={enrichOneMut.isPending}
-                          className="text-xs text-blue-600 hover:underline disabled:opacity-50"
-                        >
-                          Enriquecer
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {p.bggId && (
+                          <button
+                            onClick={() => enrichOneMut.mutate(p.bggId!)}
+                            disabled={enrichOneMut.isPending}
+                            className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                          >
+                            Enriquecer
+                          </button>
+                        )}
+                        {/* Only verified products are visible on the live marketplace. */}
+                        {p.canonicalStatus === 'verified' && (
+                          <a
+                            href={`${MARKETPLACE_URL}/product/${p.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-emerald-600 hover:underline"
+                          >
+                            Ver producto ↗
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -429,7 +451,7 @@ function BggImportView() {
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [bulkIds, setBulkIds] = useState('');
-  const [importResult, setImportResult] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ message: string; viewUrl?: string } | null>(null);
 
   const searchQuery = useQuery({
     queryKey: ['bgg-search', q],
@@ -444,10 +466,10 @@ function BggImportView() {
   const importMut = useMutation({
     mutationFn: async (bggId: string) => {
       const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
-      return res.json();
+      return res.json() as Promise<{ name: string; slug: string }>;
     },
     onSuccess: (data) => {
-      setImportResult(`Importado: ${(data as { name?: string }).name ?? 'OK'}`);
+      setImportResult({ message: `Importado: ${data.name}`, viewUrl: `${MARKETPLACE_URL}/product/${data.slug}` });
       qc.invalidateQueries({ queryKey: ['admin-catalog'] });
     },
   });
@@ -459,11 +481,10 @@ function BggImportView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bggIds: ids }),
       });
-      return res.json();
+      return res.json() as Promise<{ imported: unknown[]; failed: unknown[] }>;
     },
     onSuccess: (data) => {
-      const d = data as { imported?: number; failed?: number };
-      setImportResult(`Bulk: ${d.imported ?? 0} importados, ${d.failed ?? 0} fallaron`);
+      setImportResult({ message: `Bulk: ${data.imported.length} importados, ${data.failed.length} fallaron` });
       setBulkIds('');
       qc.invalidateQueries({ queryKey: ['admin-catalog'] });
     },
@@ -496,8 +517,13 @@ function BggImportView() {
       <h1 className="text-xl font-bold text-slate-900">Importar desde BoardGameGeek</h1>
 
       {importResult && (
-        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
-          ✓ {importResult}
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 flex items-center gap-3">
+          <span>✓ {importResult.message}</span>
+          {importResult.viewUrl && (
+            <a href={importResult.viewUrl} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+              Ver producto ↗
+            </a>
+          )}
         </div>
       )}
 
@@ -746,7 +772,7 @@ interface Seller {
 }
 
 interface MktProduct {
-  id: string; name: string; bggId: string | null;
+  id: string; name: string; slug: string; bggId: string | null;
   description: string | null; images: string[];
   canonicalStatus: string;
   bggRank: number | null; bggRating: number | null;

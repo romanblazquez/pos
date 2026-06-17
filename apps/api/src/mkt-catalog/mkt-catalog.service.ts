@@ -9,6 +9,7 @@ export interface ImportByBggIdResult {
   bggId: string;
   productId: string;
   name: string;
+  slug: string;
   created: boolean;
 }
 
@@ -76,7 +77,7 @@ export class MktCatalogService {
         },
       });
       await this.syncToSearch(updated.id);
-      return { bggId, productId: updated.id, name: updated.name, created: false };
+      return { bggId, productId: updated.id, name: updated.name, slug: updated.slug, created: false };
     }
 
     // Check slug uniqueness
@@ -108,7 +109,7 @@ export class MktCatalogService {
     await this.syncToSearch(created.id);
     this.log.log(`Imported: ${created.name} (BGG ${bggId})`);
 
-    return { bggId, productId: created.id, name: created.name, created: true };
+    return { bggId, productId: created.id, name: created.name, slug: created.slug, created: true };
   }
 
   /** Bulk import list of BGG IDs — continues on individual failures. */
