@@ -38,21 +38,11 @@ export class MktCatalogController {
     });
   }
 
-  /** Import a single game by BGG ID. */
-  @Post('import/bgg/:id')
-  @ApiOperation({
-    summary: 'Import a board game from BoardGameGeek by BGG ID',
-    description:
-      'Fetches game metadata from the BGG XML API2, creates or updates an MktProduct with name, description, images, player count, play time, BGG rating, and weight complexity. Sets canonicalStatus to `approved`. Idempotent — re-importing the same ID updates the record.',
-  })
-  @ApiParam({ name: 'id', description: 'BoardGameGeek game ID (numeric)', example: '13' })
-  @ApiResponse({ status: 201, description: 'Product created or updated from BGG data' })
-  @ApiResponse({ status: 400, description: 'BGG ID not found or BGG API error' })
-  importOne(@Param('id') bggId: string) {
-    return this.svc.importByBggId(bggId);
-  }
-
-  /** Bulk import from a list of BGG IDs. */
+  /**
+   * Bulk import from a list of BGG IDs. Must be registered before import/bgg/:id —
+   * Nest matches routes in declaration order, so :id would otherwise capture the
+   * literal "bulk" segment first.
+   */
   @Post('import/bgg/bulk')
   @ApiOperation({
     summary: 'Bulk-import board games from BGG',
@@ -75,6 +65,20 @@ export class MktCatalogController {
   @ApiResponse({ status: 201, description: 'Array of import results — one entry per BGG ID' })
   bulk(@Body() body: { bggIds: string[] }) {
     return this.svc.bulkImport(body.bggIds);
+  }
+
+  /** Import a single game by BGG ID. */
+  @Post('import/bgg/:id')
+  @ApiOperation({
+    summary: 'Import a board game from BoardGameGeek by BGG ID',
+    description:
+      'Scrapes the BGG game detail page (via apps/bgg-scraper) and creates or updates an MktProduct with name, description, images, player count, play time, BGG rating, and weight complexity. Sets canonicalStatus to `verified`. Idempotent — re-importing the same ID updates the record.',
+  })
+  @ApiParam({ name: 'id', description: 'BoardGameGeek game ID (numeric)', example: '13' })
+  @ApiResponse({ status: 201, description: 'Product created or updated from BGG data' })
+  @ApiResponse({ status: 400, description: 'BGG ID not found or BGG API error' })
+  importOne(@Param('id') bggId: string) {
+    return this.svc.importByBggId(bggId);
   }
 
   /** Search BGG for games to import. */

@@ -40,41 +40,6 @@ async function newContext(): Promise<BrowserContext> {
   return browser.newContext();
 }
 
-// Shared, never-closed context for XML API proxying. The XML API itself returns
-// raw XML with no JS to run, so Cloudflare never lets it clear the challenge there —
-// we have to earn the clearance cookie on an HTML page first, then reuse it here.
-let apiContextPromise: Promise<BrowserContext> | undefined;
-async function getApiContext(): Promise<BrowserContext> {
-  if (!apiContextPromise) {
-    apiContextPromise = (async () => {
-      const context = await newContext();
-      const page = await context.newPage();
-      await page.goto('https://boardgamegeek.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.close();
-      return context;
-    })();
-  }
-  return apiContextPromise;
-}
-
-// Proxy for https://boardgamegeek.com/xmlapi2/* — BGG's XML API sits behind the
-// same Cloudflare challenge as the HTML pages, so apps/api's BggService routes
-// its requests through here instead of fetching boardgamegeek.com directly.
-app.get('/xmlapi2/*', async (req: Request, res: Response) => {
-  try {
-    const context = await getApiContext();
-    const page = await context.newPage();
-    const url = `https://boardgamegeek.com${req.originalUrl}`;
-    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const status = response?.status() ?? 502;
-    const body = response ? await response.text() : '';
-    await page.close();
-    res.status(status).type('application/xml').send(body);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
 async function login(page: Page, username: string, password: string): Promise<void> {
   await page.goto('https://boardgamegeek.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.click('a:has-text("Sign In")');
@@ -159,6 +124,9 @@ app.post('/ranks-dump', async (req: Request, res: Response) => {
 
     await login(page, username, password);
     await page.goto('https://boardgamegeek.com/data_dumps/bg_ranks', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Angular renders the download link client-side — domcontentloaded fires before
+    // that, so wait for it explicitly instead of racing it.
+    await page.waitForSelector('a[download]', { timeout: 15000 });
     const downloadUrl = await page.evaluate(() => document.querySelector('a[download]')?.getAttribute('href') ?? null);
     if (!downloadUrl) throw new Error('Download link not found on /data_dumps/bg_ranks — page layout may have changed');
 
@@ -188,6 +156,83 @@ app.post('/ranks-dump', async (req: Request, res: Response) => {
       .filter((g) => Number.isFinite(g.bgg_id));
 
     res.json({ success: true, count: games.length, games });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  } finally {
+    if (context) await context.close();
+  }
+});
+
+interface GeekitemLink {
+  name: string;
+}
+
+interface GeekitemData {
+  item: {
+    name?: string;
+    description?: string;
+    yearpublished?: string;
+    minplayers?: string;
+    maxplayers?: string;
+    minplaytime?: string;
+    maxplaytime?: string;
+    minage?: string;
+    imageurl?: string;
+    links?: Record<string, GeekitemLink[]>;
+    stats?: { average?: string; avgweight?: string };
+  };
+}
+
+// BGG's game detail pages (plain HTML, no registration gate unlike /thing) embed a
+// full structured data blob at window.GEEK.geekitemPreload — that's a far richer and
+// more reliable source for description/image/designer/publisher than scraping rendered
+// DOM text would be.
+app.get('/game/:id', async (req: Request, res: Response) => {
+  const id = req.params.id;
+
+  let context: BrowserContext | undefined;
+  try {
+    context = await newContext();
+    const page = await context.newPage();
+    const response = await page.goto(`https://boardgamegeek.com/boardgame/${id}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+
+    if (!response || response.status() === 404) {
+      res.status(404).json({ error: `BGG game ${id} not found` });
+      return;
+    }
+
+    const data = await page.evaluate(() => (window as unknown as { GEEK?: { geekitemPreload?: GeekitemData } }).GEEK?.geekitemPreload);
+    const item = data?.item;
+    if (!item) {
+      res.status(502).json({ error: 'geekitemPreload not found on page — BGG layout may have changed' });
+      return;
+    }
+
+    const linkNames = (type: string) => (item.links?.[type] ?? []).map((l) => l.name);
+
+    res.json({
+      success: true,
+      game: {
+        bgg_id: parseInt(id, 10),
+        name: item.name ?? '',
+        description: item.description ?? '',
+        year_published: num(item.yearpublished),
+        min_players: num(item.minplayers),
+        max_players: num(item.maxplayers),
+        min_age: num(item.minage),
+        play_time_minutes: num(item.maxplaytime) ?? num(item.minplaytime),
+        image_url: item.imageurl ?? null,
+        rating: num(item.stats?.average),
+        weight: num(item.stats?.avgweight),
+        designer: linkNames('boardgamedesigner')[0] ?? null,
+        publisher: linkNames('boardgamepublisher')[0] ?? null,
+        categories: linkNames('boardgamecategory').slice(0, 6),
+        mechanics: linkNames('boardgamemechanic').slice(0, 8),
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   } finally {

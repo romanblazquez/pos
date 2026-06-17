@@ -145,31 +145,80 @@ function SellersView() {
 
 // ─── Catalog matching queue ────────────────────────────────────────────────────
 
+const PAGE_SIZE = 50;
+
 function CatalogView() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [enrichResult, setEnrichResult] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-catalog', statusFilter],
+    queryKey: ['admin-catalog', statusFilter, page],
     queryFn: async () => {
       const res = await fetch(
-        `${API}/api/v1/admin/catalog/products?status=${statusFilter}&limit=50`,
+        `${API}/api/v1/admin/catalog/products?status=${statusFilter}&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
       );
       return res.json() as Promise<{ products: MktProduct[]; total: number }>;
     },
   });
 
-  const approveMut = useMutation({
-    mutationFn: async (id: string) => {
-      await fetch(`${API}/api/v1/admin/catalog/products/${id}/reindex`, { method: 'POST' });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-catalog'] });
+
+  // Enriching pulls description/image/designer/publisher from BGG's game page
+  // and sets canonicalStatus to 'verified' in the same call — that's what makes
+  // a product show up in the public marketplace.
+  const enrichOneMut = useMutation({
+    mutationFn: async (bggId: string) => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
+      return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-catalog'] }),
+    onSuccess: () => invalidate(),
+  });
+
+  const enrichBulkMut = useMutation({
+    mutationFn: async (bggIds: string[]) => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bggIds }),
+      });
+      return res.json() as Promise<{ imported: unknown[]; failed: unknown[] }>;
+    },
+    onSuccess: (data) => {
+      setEnrichResult(`${data.imported.length} enriquecidos, ${data.failed.length} fallaron`);
+      setSelected(new Set());
+      invalidate();
+    },
   });
 
   const products = (data?.products ?? []).filter((p) =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function toggleSelected(bggId: string | null) {
+    if (!bggId) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(bggId)) next.delete(bggId); else next.add(bggId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const idsOnPage = products.map((p) => p.bggId).filter((id): id is string => !!id);
+    const allSelected = idsOnPage.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) idsOnPage.forEach((id) => next.delete(id));
+      else idsOnPage.forEach((id) => next.add(id));
+      return next;
+    });
+  }
 
   return (
     <div className="p-6 space-y-5">
@@ -185,7 +234,7 @@ function CatalogView() {
           {(['pending', 'verified', 'duplicate'] as const).map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setPage(0); setSelected(new Set()); }}
               className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 statusFilter === s
                   ? 'bg-slate-900 text-white border-slate-900'
@@ -198,6 +247,33 @@ function CatalogView() {
         </div>
       </div>
 
+      {enrichResult && (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
+          ✓ {enrichResult}
+        </div>
+      )}
+
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-900 text-white text-sm">
+          <span>{selected.size} seleccionados</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => enrichBulkMut.mutate([...selected])}
+              disabled={enrichBulkMut.isPending}
+              className="px-3 py-1.5 bg-white text-slate-900 rounded-lg text-xs font-medium hover:bg-slate-100 disabled:opacity-50"
+            >
+              {enrichBulkMut.isPending ? 'Enriqueciendo... (puede tardar)' : `Enriquecer ${selected.size} seleccionados`}
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="px-3 py-1.5 text-xs text-slate-300 hover:text-white"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {isLoading ? (
           <Loading />
@@ -205,30 +281,97 @@ function CatalogView() {
           <Empty icon="📚" msg={`No hay productos con estado "${statusFilter}".`} />
         ) : (
           <table className="w-full text-sm">
-            <Thead cols={['Nombre', 'BGG ID', 'Categoría', 'Listings', 'Estado', 'Acción']} />
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={products.length > 0 && products.every((p) => !p.bggId || selected.has(p.bggId))}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                {['Imagen', 'Nombre', 'BGG Rank', 'Descripción', 'Listings', 'Estado', 'Acción'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900 max-w-xs truncate">{p.name}</td>
-                  <td className="px-4 py-3 text-slate-500 font-mono text-xs">{p.bggId ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{p.category}</td>
-                  <td className="px-4 py-3 text-slate-500">{p._count?.listings ?? '—'}</td>
-                  <td className="px-4 py-3"><StatusBadge status={p.canonicalStatus} /></td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => approveMut.mutate(p.id)}
-                      disabled={approveMut.isPending}
-                      className="text-xs text-blue-600 hover:underline disabled:opacity-50"
-                    >
-                      Reindexar
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {products.map((p) => {
+                const hasImage = p.images && p.images.length > 0;
+                const hasDescription = !!p.description;
+                return (
+                  <tr key={p.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        disabled={!p.bggId}
+                        checked={!!p.bggId && selected.has(p.bggId)}
+                        onChange={() => toggleSelected(p.bggId)}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      {hasImage ? (
+                        <img src={p.images[0]} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                      ) : (
+                        <span className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded text-slate-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 max-w-xs">
+                      <p className="font-medium text-slate-900 truncate">{p.name}</p>
+                      <p className="text-xs text-slate-400">BGG #{p.bggId ?? '—'}{p.yearPublished ? ` · ${p.yearPublished}` : ''}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{p.bggRank ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      {hasDescription ? (
+                        <span className="text-xs text-emerald-600">✓ Completa</span>
+                      ) : (
+                        <span className="text-xs text-amber-600">⚠ Falta</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{p._count?.listings ?? '—'}</td>
+                    <td className="px-4 py-3"><StatusBadge status={p.canonicalStatus} /></td>
+                    <td className="px-4 py-3">
+                      {p.bggId && (
+                        <button
+                          onClick={() => enrichOneMut.mutate(p.bggId!)}
+                          disabled={enrichOneMut.isPending}
+                          className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                        >
+                          Enriquecer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm text-slate-500">
+          <span>{total.toLocaleString('es-MX')} productos · página {page + 1} de {pageCount.toLocaleString('es-MX')}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={page >= pageCount - 1}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -326,6 +469,28 @@ function BggImportView() {
     },
   });
 
+  // Full-catalog import pulls BGG's daily ranks dump (~178k games, rank/rating
+  // data only) directly — no per-item rate limit, finishes in under a minute.
+  const fullImportStatus = useQuery({
+    queryKey: ['bgg-full-catalog-status'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog/status`);
+      return res.json() as Promise<{ running: boolean; total: number; imported: number; skipped: number; error?: string }>;
+    },
+    refetchInterval: (query) => (query.state.data?.running ? 1500 : false),
+  });
+
+  const startFullImportMut = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog`, { method: 'POST' });
+      return res.json() as Promise<{ started: boolean }>;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bgg-full-catalog-status'] }),
+  });
+
+  const fs = fullImportStatus.data;
+  const fullImportPct = fs && fs.total > 0 ? Math.round(((fs.imported + fs.skipped) / fs.total) * 100) : 0;
+
   return (
     <div className="p-6 space-y-6 max-w-3xl">
       <h1 className="text-xl font-bold text-slate-900">Importar desde BoardGameGeek</h1>
@@ -335,6 +500,41 @@ function BggImportView() {
           ✓ {importResult}
         </div>
       )}
+
+      {/* Full catalog import */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">Catálogo completo (ranks dump)</h2>
+          <button
+            onClick={() => startFullImportMut.mutate()}
+            disabled={startFullImportMut.isPending || fs?.running}
+            className="px-4 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-50"
+          >
+            {fs?.running ? 'Importando...' : '🎲 Importar catálogo completo'}
+          </button>
+        </div>
+        <p className="text-sm text-slate-500">
+          Descarga el dump diario de BGG con rank/rating de ~178k juegos (sin descripción/imagen —
+          eso se completa por juego con "Enriquecer" en la cola de Catálogo). Quedan como
+          <code className="mx-1 px-1 bg-slate-100 rounded">pending</code> hasta su revisión.
+        </p>
+        {fs && (fs.running || fs.total > 0) && (
+          <div className="space-y-1.5">
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
+                style={{ width: `${fs.running ? fullImportPct : 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              {fs.running
+                ? `${fs.imported + fs.skipped} / ${fs.total} (${fullImportPct}%)`
+                : `Completo: ${fs.imported} importados, ${fs.skipped} omitidos de ${fs.total}`}
+            </p>
+            {fs.error && <p className="text-xs text-red-600">Error: {fs.error}</p>}
+          </div>
+        )}
+      </div>
 
       {/* Search BGG */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
@@ -547,7 +747,10 @@ interface Seller {
 
 interface MktProduct {
   id: string; name: string; bggId: string | null;
-  category: string; canonicalStatus: string;
+  description: string | null; images: string[];
+  canonicalStatus: string;
+  bggRank: number | null; bggRating: number | null;
+  yearPublished: number | null; isExpansion: boolean;
   _count?: { listings: number };
 }
 

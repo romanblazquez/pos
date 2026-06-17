@@ -239,18 +239,27 @@ export class MktCatalogService {
     await this.search.upsertProduct(doc);
   }
 
-  /** List all marketplace products with pagination. */
+  /**
+   * List products with pagination — ranked (by BGG rank, nulls last) so the games
+   * most worth reviewing/enriching first surface at the top of the pending queue.
+   */
   async list(params: { limit?: number; offset?: number; status?: string }) {
-    return this.prisma.mktProduct.findMany({
-      where: params.status ? { canonicalStatus: params.status } : {},
-      take: params.limit ?? 50,
-      skip: params.offset ?? 0,
-      orderBy: { name: 'asc' },
-      select: {
-        id: true, slug: true, name: true, bggId: true,
-        publisher: true, canonicalStatus: true, images: true,
-        _count: { select: { listings: true } },
-      },
-    });
+    const where = params.status ? { canonicalStatus: params.status } : {};
+    const [products, total] = await Promise.all([
+      this.prisma.mktProduct.findMany({
+        where,
+        take: params.limit ?? 50,
+        skip: params.offset ?? 0,
+        orderBy: [{ bggRank: { sort: 'asc', nulls: 'last' } }, { name: 'asc' }],
+        select: {
+          id: true, slug: true, name: true, bggId: true, description: true,
+          publisher: true, canonicalStatus: true, images: true,
+          bggRank: true, bggRating: true, yearPublished: true, isExpansion: true,
+          _count: { select: { listings: true } },
+        },
+      }),
+      this.prisma.mktProduct.count({ where }),
+    ]);
+    return { products, total };
   }
 }
