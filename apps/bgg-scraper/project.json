@@ -1,0 +1,17 @@
+{
+  "name": "bgg-scraper",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/bgg-scraper/src",
+  "projectType": "application",
+  "tags": ["type:app", "scope:bgg-scraper"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "apps/bgg-scraper" }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsx --tsconfig apps/bgg-scraper/tsconfig.json apps/bgg-scraper/src/main.ts" }
+    }
+  }
+}
