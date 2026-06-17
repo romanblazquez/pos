@@ -52,7 +52,7 @@ export default function WalletPage() {
               <p className="text-3xl font-bold">{fmt(wallet?.platformCreditsMinor ?? 0)}</p>
               <p className="text-emerald-300 text-xs">Usables en cualquier tienda</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl shrink-0">🎁</div>
+            <div className="w-12 h-12 rounded-full bg-emerald-950 flex items-center justify-center text-2xl shrink-0">🎁</div>
           </div>
 
           {/* Store credits */}
@@ -81,7 +81,7 @@ export default function WalletPage() {
 
       {/* Explainer */}
       <div className="rounded-xl border border-emerald-200 dark:border-emerald-800
-                      bg-emerald-50 dark:bg-emerald-900/20 p-4 flex flex-col gap-1.5">
+                      bg-emerald-50 dark:bg-emerald-950 p-4 flex flex-col gap-1.5">
         <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">¿Cómo funcionan los créditos?</p>
         <ul className="text-xs text-emerald-700 dark:text-emerald-400 flex flex-col gap-1">
           <li>🎁 <strong>Créditos libres</strong>: 1% de cada compra, válidos en todo el marketplace.</li>

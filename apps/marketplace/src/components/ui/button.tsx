@@ -11,9 +11,9 @@ export const buttonVariants = cva(
         primary:     'bg-emerald-700 text-white hover:bg-emerald-800',
         secondary:   'bg-[--bg-subtle] text-[--tx] hover:bg-[--bg-hover]',
         outline:     'border border-[--border] bg-[--bg-raised] text-[--tx] hover:bg-[--bg-hover]',
-        ghost:       'text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+        ghost:       'bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
         destructive: 'bg-red-600 text-white hover:bg-red-700',
-        link:        'text-emerald-600 underline-offset-4 hover:underline p-0 h-auto',
+        link:        'bg-[--bg-subtle] text-emerald-700 underline-offset-4 hover:bg-[--bg-hover] hover:underline',
       },
       size: {
         sm:   'h-8 px-3 text-xs',

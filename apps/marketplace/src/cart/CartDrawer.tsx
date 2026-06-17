@@ -62,14 +62,19 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-stone-950/60 backdrop-blur-md" onClick={onClose} />
 
-      <div className="animate-slide-right relative w-full max-w-md bg-[--bg-raised] h-full shadow-2xl flex flex-col border-l border-[--border]">
+      <div className="animate-slide-right relative w-full max-w-md bg-[--bg-raised] h-full shadow-xl flex flex-col border-l border-[--border]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[--border] shrink-0">
           <h2 className="font-bold text-[--tx] text-base">{stepTitle}</h2>
-          <button onClick={onClose} className="text-[--tx-faint] hover:text-[--tx] transition-colors text-xl leading-none">✕</button>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Body */}
@@ -123,7 +128,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
 
           {step === 'error' && (
             <div className="p-5 flex flex-col gap-3">
-              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-200">
                 {error}
               </div>
               <Button variant="outline" onClick={() => setStep('form')}>← Volver e intentar de nuevo</Button>
@@ -178,7 +183,7 @@ function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['ite
   return (
     <div className="p-5 flex flex-col gap-3">
       {sellers.length > 1 && (
-        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200">
           ⚠️ Tenés productos de distintas tiendas. Solo podés comprar de una tienda por pedido.
         </div>
       )}
@@ -194,7 +199,12 @@ function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['ite
             <p className="text-xs text-[--tx-muted]">{item.sellerName} · ×{item.quantity}</p>
             <p className="text-sm font-semibold text-[--tx] mt-0.5">{fmt(item.priceMinorUnits * item.quantity, item.currency)}</p>
           </div>
-          <button onClick={() => onRemove(item.listingId)} className="text-[--tx-faint] hover:text-red-500 transition-colors text-lg shrink-0">✕</button>
+          <button
+            onClick={() => onRemove(item.listingId)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx-muted] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-200"
+          >
+            ✕
+          </button>
         </div>
       ))}
     </div>

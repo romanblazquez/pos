@@ -37,9 +37,20 @@ interface Order {
   lines: { quantity: number; listing: { product: { name: string; images: string[] } } }[];
 }
 
-export default function AccountPage({ onNavigate }: { onNavigate: (p: 'wallet' | 'orders') => void }) {
+export default function AccountPage({
+  onNavigate,
+  onLogout,
+}: {
+  onNavigate: (p: 'wallet' | 'orders') => void;
+  onLogout: () => void;
+}) {
   const { session, logout } = useCustomer();
   if (!session) return null;
+
+  function handleLogout() {
+    logout();
+    onLogout();
+  }
 
   const { data: wallet } = useQuery<Wallet>({
     queryKey: ['wallet', session.customer.id],
@@ -64,7 +75,7 @@ export default function AccountPage({ onNavigate }: { onNavigate: (p: 'wallet' |
           </h1>
           <p className="text-sm text-[--tx-muted]">{session.customer.email}</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={logout} className="text-[--tx-muted] hover:text-red-500 shrink-0">
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[--tx-muted] hover:text-red-500 shrink-0">
           Cerrar sesión
         </Button>
       </div>
@@ -76,10 +87,6 @@ export default function AccountPage({ onNavigate }: { onNavigate: (p: 'wallet' |
         className="relative overflow-hidden rounded-2xl cursor-pointer group
                    bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-6 shadow-lg"
       >
-        {/* Decorative ring */}
-        <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full border border-white/10" />
-        <div className="absolute -right-2 -top-2 w-28 h-28 rounded-full border border-white/10" />
-
         <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Créditos disponibles</p>
         <p className="text-4xl font-bold tracking-tight mb-1">{fmt(totalCredits)}</p>
 
@@ -103,14 +110,14 @@ export default function AccountPage({ onNavigate }: { onNavigate: (p: 'wallet' |
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4">
         <Card>
-          <button onClick={() => onNavigate('orders')} className="w-full text-left p-5 hover:bg-[--bg-hover] transition-colors rounded-xl">
+          <button onClick={() => onNavigate('orders')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
             <p className="text-2xl mb-2">🛍️</p>
             <p className="text-2xl font-bold text-[--tx]">{orders?.length ?? '–'}</p>
             <p className="text-sm text-[--tx-muted] font-medium">Pedidos</p>
           </button>
         </Card>
         <Card>
-          <button onClick={() => onNavigate('wallet')} className="w-full text-left p-5 hover:bg-[--bg-hover] transition-colors rounded-xl">
+          <button onClick={() => onNavigate('wallet')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
             <p className="text-2xl mb-2">🎁</p>
             <p className="text-2xl font-bold text-[--tx]">
               {wallet?.storeCredits.filter((s) => s.balanceMinor > 0).length ?? 0}
@@ -124,7 +131,7 @@ export default function AccountPage({ onNavigate }: { onNavigate: (p: 'wallet' |
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-[--tx]">Pedidos recientes</h2>
-          <button onClick={() => onNavigate('orders')} className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline">
+          <button onClick={() => onNavigate('orders')} className="rounded-lg border border-[--border] bg-[--bg-subtle] px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300">
             Ver todos →
           </button>
         </div>

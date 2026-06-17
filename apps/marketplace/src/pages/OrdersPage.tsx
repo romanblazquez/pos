@@ -71,7 +71,7 @@ export default function OrdersPage() {
                 {/* Header row */}
                 <button
                   onClick={() => setExpanded(isOpen ? null : order.id)}
-                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-[--bg-hover] transition-colors"
+                  className="w-full flex items-center gap-3 bg-[--bg-raised] p-4 text-left transition-colors hover:bg-[--bg-hover]"
                 >
                   <div className="w-11 h-11 rounded-lg overflow-hidden bg-[--bg-subtle] shrink-0">
                     {order.lines[0]?.listing?.product?.images?.[0]

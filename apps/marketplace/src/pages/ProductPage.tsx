@@ -1,5 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import {
+  Brain,
+  ChevronDown,
+  ChevronUp,
+  Clock3,
+  Gift,
+  PackageCheck,
+  ShieldCheck,
+  ShoppingCart,
+  Star,
+  Truck,
+  Users,
+} from 'lucide-react';
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Badge, Button } from '../components/ui/index.js';
@@ -99,7 +112,9 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
             {p.images[selectedImage] ? (
               <img src={p.images[selectedImage]} alt={p.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-8xl text-[--tx-faint]">🎲</div>
+              <div className="flex h-full w-full items-center justify-center text-[--tx-faint]">
+                <PackageCheck className="h-16 w-16" aria-hidden="true" />
+              </div>
             )}
           </div>
           {p.images.length > 1 && (
@@ -108,7 +123,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 bg-[--bg-subtle] transition-colors
                     ${selectedImage === i ? 'border-emerald-500' : 'border-[--border]'}`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
@@ -126,12 +141,12 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
           {/* Metadata chips */}
           <div className="flex flex-wrap gap-2">
             {p.minPlayers && p.maxPlayers && (
-              <Chip icon="👥" label={`${p.minPlayers}–${p.maxPlayers} jugadores`} />
+              <Chip icon={<Users className="h-3.5 w-3.5" />} label={`${p.minPlayers}-${p.maxPlayers} jugadores`} />
             )}
-            {p.minAge && <Chip icon="🔞" label={`+${p.minAge} años`} />}
-            {p.playTimeMinutes && <Chip icon="⏱️" label={`${p.playTimeMinutes} min`} />}
-            {p.bggRating && <Chip icon="⭐" label={`BGG ${p.bggRating.toFixed(1)}`} />}
-            {p.bggWeight && <Chip icon="🧠" label={`Complejidad ${p.bggWeight.toFixed(1)}/5`} />}
+            {p.minAge && <Chip icon={<ShieldCheck className="h-3.5 w-3.5" />} label={`+${p.minAge} años`} />}
+            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-3.5 w-3.5" />} label={`${p.playTimeMinutes} min`} />}
+            {p.bggRating && <Chip icon={<Star className="h-3.5 w-3.5 fill-current" />} label={`BGG ${p.bggRating.toFixed(1)}`} />}
+            {p.bggWeight && <Chip icon={<Brain className="h-3.5 w-3.5" />} label={`Complejidad ${p.bggWeight.toFixed(1)}/5`} />}
           </div>
 
           {p.description && (
@@ -147,7 +162,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
               (l) => platformCashback + l.storeCashbackPct + l.promoBonus,
             ));
             return (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950
                               border border-emerald-200 dark:border-emerald-800 flex flex-col gap-2">
                 <div className="flex items-baseline justify-between">
                   <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Desde</p>
@@ -160,7 +175,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                 </p>
                 {bestCashback > 0 && (
                   <div className="flex items-start gap-2 pt-1 border-t border-emerald-200 dark:border-emerald-800">
-                    <span className="text-base mt-0.5">🎁</span>
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
                     <div>
                       <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                         Hasta {Math.round(bestCashback * 100)}% en créditos
@@ -229,15 +244,15 @@ function ListingRow({
     : null;
 
   const stockBadge = l.stockStatus === 'in_stock'
-    ? <Badge variant="success">● En stock</Badge>
+    ? <Badge variant="success">En stock</Badge>
     : l.stockStatus === 'low_stock'
-    ? <Badge variant="warning">● Poco stock</Badge>
-    : <Badge variant="error">○ Sin stock</Badge>;
+    ? <Badge variant="warning">Poco stock</Badge>
+    : <Badge variant="error">Sin stock</Badge>;
 
   return (
     <div className={`rounded-xl border p-4 flex flex-wrap items-center gap-4
       ${rank === 1
-        ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10'
+        ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950'
         : 'border-[--border] bg-[--bg-raised]'}`}
     >
       {/* Rank */}
@@ -264,8 +279,9 @@ function ListingRow({
 
       {/* Delivery */}
       {bestDelivery && (
-        <div className="shrink-0 text-sm text-[--tx-muted]">
-          🚚 {bestDelivery.estimatedDaysMin}–{bestDelivery.estimatedDaysMax} días
+        <div className="inline-flex shrink-0 items-center gap-1.5 text-sm text-[--tx-muted]">
+          <Truck className="h-4 w-4" aria-hidden="true" />
+          {bestDelivery.estimatedDaysMin}-{bestDelivery.estimatedDaysMax} días
           {bestDelivery.priceMinorUnits === 0 ? (
             <span className="text-emerald-600 ml-1 text-xs font-medium">gratis</span>
           ) : (
@@ -284,7 +300,7 @@ function ListingRow({
             return (
               <div className="text-right mt-0.5">
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  🎁 +{Math.round(totalCb * 100)}% créditos
+                  +{Math.round(totalCb * 100)}% créditos
                 </span>
                 {(l.storeCashbackPct > 0 || l.promoBonus > 0) && (
                   <p className="text-[10px] text-[--tx-faint] leading-tight">
@@ -299,7 +315,10 @@ function ListingRow({
           })()}
         </div>
         {l.stockStatus !== 'out_of_stock' && (
-          <Button onClick={onAddToCart} size="sm">Agregar 🛒</Button>
+          <Button onClick={onAddToCart} size="sm">
+            <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+            Agregar
+          </Button>
         )}
       </div>
 
@@ -307,9 +326,10 @@ function ListingRow({
       <div className="w-full">
         <button
           onClick={() => setShowScore(!showScore)}
-          className="text-xs text-[--tx-faint] hover:text-[--tx-muted] transition-colors"
+          className="inline-flex items-center gap-1 rounded-lg border border-[--border] bg-[--bg-subtle] px-2 py-1 text-xs text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
         >
-          {showScore ? '▲ Ocultar ranking' : '▼ ¿Por qué este ranking?'}
+          {showScore ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+          {showScore ? 'Ocultar ranking' : 'Por qué este ranking'}
         </button>
         {showScore && (
           <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -331,7 +351,7 @@ function ListingRow({
   );
 }
 
-function Chip({ icon, label }: { icon: string; label: string }) {
+function Chip({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full
                      bg-[--bg-subtle] text-xs text-[--tx-muted] font-medium">
@@ -359,7 +379,7 @@ function ProductSkeleton() {
 function NotFound() {
   return (
     <div className="text-center py-24 text-[--tx-muted]">
-      <p className="text-5xl mb-4">🎲</p>
+      <PackageCheck className="mx-auto mb-4 h-12 w-12" aria-hidden="true" />
       <p className="text-lg font-medium text-[--tx]">Juego no encontrado</p>
     </div>
   );

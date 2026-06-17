@@ -39,10 +39,10 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-md"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-sm rounded-2xl border border-[--border] bg-[--bg-raised] shadow-2xl overflow-hidden animate-fade-in">
+      <div className="w-full max-w-sm overflow-hidden rounded-lg border border-[--border] bg-[--bg-raised] shadow-xl animate-fade-in">
 
         {/* Tab bar */}
         <div className="flex border-b border-[--border]">
@@ -52,8 +52,8 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
               onClick={() => switchTab(t)}
               className={`flex-1 py-3.5 text-sm font-semibold transition-colors
                 ${tab === t
-                  ? 'text-emerald-600 border-b-2 border-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
-                  : 'text-[--tx-muted] hover:text-[--tx]'}`}
+                  ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-400'
+                  : 'bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
             >
               {t === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
             </button>
@@ -120,7 +120,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20
+            <p className="text-xs text-red-600 dark:text-red-200 bg-red-50 dark:bg-red-950
                           rounded-lg px-3 py-2 border border-red-200 dark:border-red-800">
               {error}
             </p>
@@ -135,7 +135,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
             <button
               type="button"
               onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
-              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+              className="rounded-md bg-[--bg-subtle] px-2 py-1 font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300"
             >
               {tab === 'login' ? 'Registrate' : 'Iniciá sesión'}
             </button>

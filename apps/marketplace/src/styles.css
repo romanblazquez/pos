@@ -60,12 +60,29 @@
     color: var(--tx);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 9999px; }
+}
+
+@layer utilities {
+  .bg-\[--bg\] { background-color: var(--bg) !important; }
+  .bg-\[--bg-raised\] { background-color: var(--bg-raised) !important; }
+  .bg-\[--bg-subtle\] { background-color: var(--bg-subtle) !important; }
+  .bg-\[--bg-input\] { background-color: var(--bg-input) !important; }
+  .hover\:bg-\[--bg-hover\]:hover { background-color: var(--bg-hover) !important; }
+
+  .border-\[--border\] { border-color: var(--border) !important; }
+
+  .text-\[--tx\] { color: var(--tx) !important; }
+  .text-\[--tx-muted\] { color: var(--tx-muted) !important; }
+  .text-\[--tx-faint\] { color: var(--tx-faint) !important; }
+  .hover\:text-\[--tx\]:hover { color: var(--tx) !important; }
+  .placeholder\:text-\[--tx-faint\]::placeholder { color: var(--tx-faint) !important; }
 }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */

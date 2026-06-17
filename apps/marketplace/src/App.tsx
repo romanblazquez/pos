@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Home, Moon, Search, ShoppingCart, Store, Sun, User, Wallet } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
@@ -10,12 +12,13 @@ import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
 import AuthModal from './components/AuthModal.js';
 import { Button } from './components/ui/index.js';
+import { formatMoney } from './marketplace-meta.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 type Route =
   | { page: 'home' }
-  | { page: 'search'; q: string }
+  | { page: 'search'; q: string; category?: string }
   | { page: 'product'; slug: string }
   | { page: 'account' }
   | { page: 'wallet' }
@@ -26,7 +29,14 @@ function parseRoute(pathname: string, search: string): Route {
     const slug = pathname.slice('/product/'.length);
     if (slug) return { page: 'product', slug };
   }
-  if (pathname === '/search') return { page: 'search', q: new URLSearchParams(search).get('q') ?? '' };
+  if (pathname === '/search') {
+    const params = new URLSearchParams(search);
+    return {
+      page: 'search',
+      q: params.get('q') ?? '',
+      category: params.get('category') ?? undefined,
+    };
+  }
   if (pathname === '/account') return { page: 'account' };
   if (pathname === '/account/wallet') return { page: 'wallet' };
   if (pathname === '/account/orders') return { page: 'orders' };
@@ -34,7 +44,13 @@ function parseRoute(pathname: string, search: string): Route {
 }
 
 function routePath(r: Route): string {
-  if (r.page === 'search') return `/search?q=${encodeURIComponent(r.q)}`;
+  if (r.page === 'search') {
+    const params = new URLSearchParams();
+    if (r.q) params.set('q', r.q);
+    if (r.category) params.set('category', r.category);
+    const query = params.toString();
+    return query ? `/search?${query}` : '/search';
+  }
   if (r.page === 'product') return `/product/${r.slug}`;
   if (r.page === 'account') return '/account';
   if (r.page === 'wallet') return '/account/wallet';
@@ -46,7 +62,7 @@ export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('mkt_theme');
     if (stored === 'dark' || stored === 'light') return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
   });
 
   useEffect(() => {
@@ -122,6 +138,12 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
     window.scrollTo(0, 0);
   }
 
+  function replaceRoute(r: Route) {
+    setRoute(r);
+    window.history.replaceState({}, '', routePath(r));
+    window.scrollTo(0, 0);
+  }
+
   if (checkout.state !== 'idle') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[--bg]">
@@ -171,6 +193,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
         onHome={() => navigate({ page: 'home' })}
         onCartOpen={() => setCartOpen(true)}
         onAccountClick={() => navigate({ page: 'account' })}
+        onWalletClick={() => navigate({ page: 'wallet' })}
         onAuthClick={() => setAuthOpen(true)}
       />
 
@@ -188,8 +211,8 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
                 onClick={() => navigate({ page })}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors
                   ${route.page === page
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'text-[--tx-muted] hover:text-[--tx] hover:bg-[--bg-hover]'}`}
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100'
+                    : 'bg-[--bg-subtle] text-[--tx-muted] hover:text-[--tx] hover:bg-[--bg-hover]'}`}
               >
                 {label}
               </button>
@@ -200,15 +223,28 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
 
       <main className="animate-fade-in">
         {route.page === 'home' && (
-          <HomePage onSearch={(q) => navigate({ page: 'search', q })} onProduct={(slug) => navigate({ page: 'product', slug })} />
+          <HomePage
+            onSearch={(q, category) => navigate({ page: 'search', q, category })}
+            onProduct={(slug) => navigate({ page: 'product', slug })}
+          />
         )}
         {route.page === 'search' && (
-          <SearchPage query={route.q} onProduct={(slug) => navigate({ page: 'product', slug })} />
+          <SearchPage
+            query={route.q}
+            category={route.category}
+            onSearch={(q, category) => navigate({ page: 'search', q, category })}
+            onProduct={(slug) => navigate({ page: 'product', slug })}
+          />
         )}
         {route.page === 'product' && (
           <ProductPage slug={route.slug} onCartOpen={() => setCartOpen(true)} />
         )}
-        {route.page === 'account' && session && <AccountPage onNavigate={(p) => navigate({ page: p })} />}
+        {route.page === 'account' && session && (
+          <AccountPage
+            onNavigate={(p) => navigate({ page: p })}
+            onLogout={() => replaceRoute({ page: 'home' })}
+          />
+        )}
         {route.page === 'wallet' && session && <WalletPage />}
         {route.page === 'orders' && session && <OrdersPage />}
       </main>
@@ -227,7 +263,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
 }
 
 function Header({
-  theme, onToggleTheme, onSearch, onHome, onCartOpen, onAccountClick, onAuthClick,
+  theme, onToggleTheme, onSearch, onHome, onCartOpen, onAccountClick, onWalletClick, onAuthClick,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -235,104 +271,179 @@ function Header({
   onHome: () => void;
   onCartOpen: () => void;
   onAccountClick: () => void;
+  onWalletClick: () => void;
   onAuthClick: () => void;
 }) {
   const [q, setQ] = useState('');
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
+  const { data: walletSummary } = useQuery<{
+    platformCreditsMinor: number;
+    storeCredits: { balanceMinor: number }[];
+  }>({
+    queryKey: ['wallet-summary', session?.customer.id ?? 'anonymous'],
+    enabled: !!session,
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/customers/${session!.customer.id}/wallet`);
+      if (!res.ok) throw new Error('wallet failed');
+      return res.json() as Promise<{ platformCreditsMinor: number; storeCredits: { balanceMinor: number }[] }>;
+    },
+  });
+
+  const walletTotal = walletSummary
+    ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
+    : 0;
+
+  function submitSearch(e: FormEvent) {
+    e.preventDefault();
+    if (q.trim()) onSearch(q.trim());
+  }
 
   return (
-    <header className="sticky top-0 z-40 bg-[--bg-raised] border-b border-[--border]">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-
-        {/* Logo */}
+    <header className="sticky top-0 z-40 border-b border-[--border] bg-[--bg-raised]">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0">
+        <div className="flex items-center gap-2">
         <button
           onClick={onHome}
-          className="font-bold text-base text-emerald-700 dark:text-emerald-400 whitespace-nowrap shrink-0 hover:opacity-80 transition-opacity"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[--bg-subtle] px-2 py-1 text-base font-bold text-[--tx]
+                       transition-colors hover:text-emerald-700 dark:hover:text-emerald-400"
         >
-          🎲 BoardGame Market
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-white">
+              <Home className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="max-w-[11rem] truncate tracking-tight">BoardGame Market</span>
         </button>
 
-        {/* Search */}
+          <div className="ml-auto flex items-center gap-1 lg:hidden">
+            {session && (
+              <HeaderIconButton label="Wallet" onClick={onWalletClick}>
+                <Wallet className="h-4 w-4" aria-hidden="true" />
+              </HeaderIconButton>
+            )}
+            <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
+              {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+            </HeaderIconButton>
+            <HeaderIconButton label={session ? 'Mi cuenta' : 'Iniciar sesión'} onClick={session ? onAccountClick : onAuthClick}>
+              <User className="h-4 w-4" aria-hidden="true" />
+            </HeaderIconButton>
+            <CartButton count={count} onClick={onCartOpen} compact />
+          </div>
+        </div>
+
         <form
-          className="flex-1 flex gap-2 max-w-xl"
-          onSubmit={(e) => { e.preventDefault(); if (q.trim()) onSearch(q.trim()); }}
+          className="relative flex w-full min-w-0 flex-1 gap-2 lg:max-w-2xl"
+          onSubmit={submitSearch}
         >
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--tx-faint]" aria-hidden="true" />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Busca un juego de mesa…"
-            className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-[--border]
+            placeholder="Busca Catan, Root, Wingspan..."
+            className="h-10 min-w-0 flex-1 rounded-lg border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm
                        bg-[--bg-input] text-[--tx] placeholder:text-[--tx-faint]
                        focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
-          <Button type="submit" size="sm">Buscar</Button>
+          <Button type="submit" className="min-w-10 shrink-0 px-3 sm:px-4">
+            <Search className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Buscar</span>
+          </Button>
         </form>
 
-        {/* Right nav */}
-        <nav className="hidden sm:flex items-center gap-1 shrink-0 ml-auto">
-          {/* Theme toggle */}
-          <button
-            onClick={onToggleTheme}
-            title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[--tx-muted]
-                       hover:bg-[--bg-hover] hover:text-[--tx] transition-colors"
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
+        <nav className="hidden shrink-0 items-center gap-1 lg:ml-auto lg:flex">
+          {session && (
+            <button
+              onClick={onWalletClick}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50
+                         px-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100
+                         dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+            >
+              <Wallet className="h-4 w-4" aria-hidden="true" />
+              {walletSummary ? formatMoney(walletTotal) : 'Wallet'}
+            </button>
+          )}
 
-          {/* Seller link */}
           <a
             href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
-            className="text-sm text-[--tx-muted] hover:text-[--tx] transition-colors px-2 py-1"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[--bg-subtle] px-3 text-sm font-medium text-[--tx-muted]
+                       transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
           >
+            <Store className="h-4 w-4" aria-hidden="true" />
             Soy vendedor
           </a>
 
-          {/* Customer auth */}
+          <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
+            {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+          </HeaderIconButton>
+
           {!isLoading && (
             session ? (
               <button
                 onClick={onAccountClick}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[--bg-hover] transition-colors"
+                className="flex h-9 items-center gap-2 rounded-lg bg-[--bg-subtle] px-2 transition-colors hover:bg-[--bg-hover]"
               >
-                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs font-bold
-                                flex items-center justify-center shrink-0 select-none">
+                <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-full bg-emerald-700
+                                text-xs font-bold text-white">
                   {(session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase()}
                 </div>
-                <span className="text-sm text-[--tx] font-medium max-w-[8rem] truncate">
+                <span className="max-w-[8rem] truncate text-sm font-medium text-[--tx]">
                   {session.customer.name?.split(' ')[0] ?? 'Mi cuenta'}
                 </span>
               </button>
             ) : (
-              <button
-                onClick={onAuthClick}
-                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700
-                           dark:text-emerald-400 dark:hover:text-emerald-300 px-2 py-1"
-              >
+              <Button variant="outline" size="sm" onClick={onAuthClick}>
+                <User className="h-4 w-4" aria-hidden="true" />
                 Iniciar sesión
-              </button>
+              </Button>
             )
           )}
 
-          {/* Cart */}
-          <button
-            onClick={onCartOpen}
-            className="relative ml-1 flex items-center gap-1 px-3 py-1.5 rounded-lg
-                       text-[--tx] hover:bg-[--bg-hover] transition-colors font-medium"
-          >
-            🛒
-            {count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5
-                               bg-emerald-600 text-white text-[10px] font-bold rounded-full
-                               flex items-center justify-center">
-                {count}
-              </span>
-            )}
-          </button>
+          <CartButton count={count} onClick={onCartOpen} />
         </nav>
       </div>
     </header>
+  );
+}
+
+function HeaderIconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx-muted]
+                 transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
+    >
+      {children}
+    </button>
+  );
+}
+
+function CartButton({ count, onClick, compact = false }: { count: number; onClick: () => void; compact?: boolean }) {
+  return (
+    <button
+      aria-label="Abrir carrito"
+      title="Carrito"
+      onClick={onClick}
+      className={`relative inline-flex h-9 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx] transition-colors hover:bg-[--bg-hover]
+        ${compact ? 'w-9' : 'gap-2 px-3 font-medium'}`}
+    >
+      <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+      {!compact && <span className="text-sm">Carrito</span>}
+      {count > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full
+                         bg-emerald-600 px-0.5 text-[10px] font-bold text-white">
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
