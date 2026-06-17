@@ -54,6 +54,16 @@ export class MarketplaceController {
     });
   }
 
+  @Get('categories')
+  @ApiOperation({
+    summary: 'List distinct categories with active listings',
+    description: 'Backs the marketplace\'s category-browse tiles — only returns categories that currently have at least one published, active listing.',
+  })
+  @ApiResponse({ status: 200, description: 'Array of { category, count }' })
+  getCategories() {
+    return this.svc.getCategories();
+  }
+
   @Get(':slug')
   @ApiOperation({
     summary: 'Get product by slug',

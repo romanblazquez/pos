@@ -25,16 +25,26 @@ export default function WalletPage() {
 
   const { data: wallet, isLoading: wl } = useQuery<Wallet>({
     queryKey: ['wallet', session.customer.id],
-    queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`)).json() as Promise<Wallet>,
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`);
+      if (!res.ok) throw new Error(`wallet fetch failed: ${res.status}`);
+      return res.json() as Promise<Wallet>;
+    },
+    retry: false,
   });
 
   const { data: txs, isLoading: tl } = useQuery<Transaction[]>({
     queryKey: ['wallet-transactions', session.customer.id],
-    queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet/transactions`)).json() as Promise<Transaction[]>,
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet/transactions`);
+      if (!res.ok) throw new Error(`transactions fetch failed: ${res.status}`);
+      return res.json() as Promise<Transaction[]>;
+    },
+    retry: false,
   });
 
-  const totalStore = wallet?.storeCredits.reduce((s, c) => s + c.balanceMinor, 0) ?? 0;
-  const activeStores = wallet?.storeCredits.filter((s) => s.balanceMinor > 0) ?? [];
+  const totalStore = wallet?.storeCredits?.reduce((s, c) => s + c.balanceMinor, 0) ?? 0;
+  const activeStores = wallet?.storeCredits?.filter((s) => s.balanceMinor > 0) ?? [];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">

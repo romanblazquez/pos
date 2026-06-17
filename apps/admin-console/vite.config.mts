@@ -10,6 +10,7 @@ const repoRoot = resolve(here, '../..');
 
 export default defineConfig({
   root: here,
+  cacheDir: resolve(repoRoot, 'node_modules/.vite/admin-console'),
   plugins: [tailwindcss(), react(), tsconfigPaths({ root: repoRoot, projects: ['tsconfig.base.json'] })],
   server: {
     port: 4500,

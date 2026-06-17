@@ -27,6 +27,12 @@ async function searchProducts(
   return res.json() as Promise<{ results: Product[]; total: number }>;
 }
 
+async function fetchCategories(): Promise<{ category: string; count: number }[]> {
+  const res = await fetch(`${API}/api/v1/products/categories`);
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ category: string; count: number }[]>;
+}
+
 export default function SearchPage({
   query,
   category,
@@ -51,8 +57,13 @@ export default function SearchPage({
     enabled: query.length > 0 || !!category || inStockOnly,
   });
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ['marketplace-categories'],
+    queryFn: fetchCategories,
+  });
+
   const results = data?.results ?? [];
-  const categoryOptions = getCategoryOptions();
+  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
   const title = query
     ? `Resultados para "${query}"`
     : category

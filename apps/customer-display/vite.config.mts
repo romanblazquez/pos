@@ -10,6 +10,7 @@ const repoRoot = resolve(here, '../..');
 
 export default defineConfig({
   root: here,
+  cacheDir: resolve(repoRoot, 'node_modules/.vite/customer-display'),
   plugins: [
     tailwindcss(),
     react(),

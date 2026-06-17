@@ -45,12 +45,17 @@ export class BggScraperClientService {
     return data.games;
   }
 
-  /** Full BGG catalog (~178k games) with rank/rating data — one request, no pagination. */
-  async ranksDump(username: string, password: string): Promise<RankedGame[]> {
+  /**
+   * Full BGG catalog (~178k games) with rank/rating data — one request, no pagination.
+   * Pass `cookie` (a raw `Cookie:` header from an already-authenticated browser session)
+   * to skip the login-form automation entirely — useful when BGG's bot detection blocks
+   * the headless login flow. Falls back to username/password form-login otherwise.
+   */
+  async ranksDump(auth: { username?: string; password?: string; cookie?: string }): Promise<RankedGame[]> {
     const res = await fetch(`${BASE_URL}/ranks-dump`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(auth),
     });
     if (!res.ok) throw new Error(`bgg-scraper ranks-dump failed: ${res.status} ${await res.text()}`);
     const data = (await res.json()) as { games: RankedGame[] };

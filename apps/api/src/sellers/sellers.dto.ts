@@ -115,8 +115,11 @@ export class SyncResultDto {
   @ApiProperty({ type: 'string', description: 'success | partial | failed', example: 'success' })
   status: string;
 
-  @ApiProperty({ type: 'integer', description: 'Number of items successfully synced', example: 982 })
+  @ApiProperty({ type: 'integer', description: 'Number of items successfully synced and published into a listing', example: 982 })
   itemsSynced: number;
+
+  @ApiProperty({ type: 'integer', description: 'Number of items staged for seller review — no confident catalog match found', example: 3 })
+  itemsStaged: number;
 
   @ApiProperty({ type: 'integer', description: 'Number of items that failed to sync', example: 0 })
   itemsFailed: number;

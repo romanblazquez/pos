@@ -54,15 +54,25 @@ export default function AccountPage({
 
   const { data: wallet } = useQuery<Wallet>({
     queryKey: ['wallet', session.customer.id],
-    queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`)).json() as Promise<Wallet>,
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`);
+      if (!res.ok) throw new Error(`wallet fetch failed: ${res.status}`);
+      return res.json() as Promise<Wallet>;
+    },
+    retry: false,
   });
 
   const { data: orders } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
-    queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/orders?limit=5`)).json() as Promise<Order[]>,
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/orders?limit=5`);
+      if (!res.ok) throw new Error(`orders fetch failed: ${res.status}`);
+      return res.json() as Promise<Order[]>;
+    },
+    retry: false,
   });
 
-  const totalCredits = (wallet?.platformCreditsMinor ?? 0) + (wallet?.storeCredits.reduce((s, c) => s + c.balanceMinor, 0) ?? 0);
+  const totalCredits = (wallet?.platformCreditsMinor ?? 0) + (wallet?.storeCredits?.reduce((s, c) => s + c.balanceMinor, 0) ?? 0);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
@@ -90,7 +100,7 @@ export default function AccountPage({
         <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Créditos disponibles</p>
         <p className="text-4xl font-bold tracking-tight mb-1">{fmt(totalCredits)}</p>
 
-        {wallet && wallet.storeCredits.length > 0 && (
+        {wallet && wallet.storeCredits?.length > 0 && (
           <p className="text-emerald-300 text-xs mt-1">
             {fmt(wallet.platformCreditsMinor)} libres
             {wallet.storeCredits.map((sc) => (
@@ -120,7 +130,7 @@ export default function AccountPage({
           <button onClick={() => onNavigate('wallet')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
             <p className="text-2xl mb-2">🎁</p>
             <p className="text-2xl font-bold text-[--tx]">
-              {wallet?.storeCredits.filter((s) => s.balanceMinor > 0).length ?? 0}
+              {wallet?.storeCredits?.filter((s) => s.balanceMinor > 0).length ?? 0}
             </p>
             <p className="text-sm text-[--tx-muted] font-medium">Tiendas con crédito</p>
           </button>

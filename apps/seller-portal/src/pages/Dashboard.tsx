@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { SellerSession } from '../App.js';
 import { ConnectorCredentialForm } from '../onboarding/OnboardingWizard.js';
 import type { ConnectorType } from '../onboarding/OnboardingWizard.js';
 import ListingsPage from './ListingsPage.js';
+import ProductMappingPage from './ProductMappingPage.js';
 import OrdersPage from './OrdersPage.js';
 import AnalyticsPage from './AnalyticsPage.js';
 import { SettingsPage } from './SettingsPage.js';
@@ -27,12 +28,13 @@ const CONNECTORS = [
 const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
 
 const NAV_ITEMS = [
-  { label: 'Visión general', id: 'dashboard' },
-  { label: 'Productos',      id: 'listings'  },
-  { label: 'Pedidos',        id: 'orders'    },
-  { label: 'Sincronización', id: 'sync'      },
-  { label: 'Analíticas',     id: 'analytics' },
-  { label: 'Configuración',  id: 'settings'  },
+  { label: 'Visión general',     id: 'dashboard' },
+  { label: 'Productos',          id: 'listings'  },
+  { label: 'Vincular productos', id: 'mapping'   },
+  { label: 'Pedidos',            id: 'orders'    },
+  { label: 'Sincronización',     id: 'sync'      },
+  { label: 'Analíticas',         id: 'analytics' },
+  { label: 'Configuración',      id: 'settings'  },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]['id'];
@@ -60,12 +62,24 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
 
 function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) {
   const [activeNav, setActiveNav] = useState<NavId>(parseNavFromPath);
+  const [pendingMappings, setPendingMappings] = useState(0);
 
   useEffect(() => {
     function onPop() { setActiveNav(parseNavFromPath()); }
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+
+  const refreshPendingMappings = useCallback(() => {
+    fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=1`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    })
+      .then((r) => r.json())
+      .then((d: { total?: number }) => setPendingMappings(d.total ?? 0))
+      .catch(() => null);
+  }, [session.seller.id, session.token]);
+
+  useEffect(() => { refreshPendingMappings(); }, [refreshPendingMappings, activeNav]);
 
   function navigate(id: NavId) {
     setActiveNav(id);
@@ -102,7 +116,12 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
               {activeNav === item.id && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-emerald-400 rounded-full -ml-3" />
               )}
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.id === 'mapping' && pendingMappings > 0 && (
+                <span className="shrink-0 text-[10px] font-bold bg-amber-400 text-slate-900 rounded-full px-1.5 py-0.5 tabular">
+                  {pendingMappings}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -135,6 +154,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
       <main className="flex-1 overflow-auto">
         {activeNav === 'dashboard'  && <DashboardHome session={session} />}
         {activeNav === 'listings'   && <ListingsPage session={session} />}
+        {activeNav === 'mapping'    && <ProductMappingPage session={session} />}
         {activeNav === 'orders'     && <OrdersPage session={session} />}
         {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
         {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={navigate} />}
@@ -146,7 +166,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
             </div>
           </div>
         )}
-        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'orders' &&
+        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'mapping' && activeNav !== 'orders' &&
          activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}

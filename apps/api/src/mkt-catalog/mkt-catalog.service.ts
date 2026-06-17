@@ -244,8 +244,11 @@ export class MktCatalogService {
    * List products with pagination — ranked (by BGG rank, nulls last) so the games
    * most worth reviewing/enriching first surface at the top of the pending queue.
    */
-  async list(params: { limit?: number; offset?: number; status?: string }) {
-    const where = params.status ? { canonicalStatus: params.status } : {};
+  async list(params: { limit?: number; offset?: number; status?: string; search?: string }) {
+    const where = {
+      ...(params.status ? { canonicalStatus: params.status } : {}),
+      ...(params.search ? { name: { contains: params.search, mode: 'insensitive' as const } } : {}),
+    };
     const [products, total] = await Promise.all([
       this.prisma.mktProduct.findMany({
         where,
@@ -262,5 +265,105 @@ export class MktCatalogService {
       this.prisma.mktProduct.count({ where }),
     ]);
     return { products, total };
+  }
+
+  // ── Seller mapping-request review queue (escalated SellerProductMapping rows) ──
+
+  async listMappingRequests(params: { status?: string; sellerId?: string; limit?: number; offset?: number }) {
+    const where = {
+      status: params.status ?? 'escalated',
+      ...(params.sellerId ? { sellerId: params.sellerId } : {}),
+    };
+    const [requests, total] = await Promise.all([
+      this.prisma.sellerProductMapping.findMany({
+        where,
+        take: params.limit ?? 50,
+        skip: params.offset ?? 0,
+        orderBy: { createdAt: 'asc' },
+        include: { seller: { select: { id: true, name: true, slug: true } } },
+      }),
+      this.prisma.sellerProductMapping.count({ where }),
+    ]);
+    return { requests, total };
+  }
+
+  async getMappingRequest(id: string) {
+    const request = await this.prisma.sellerProductMapping.findUnique({
+      where: { id },
+      include: { seller: { select: { id: true, name: true, slug: true } } },
+    });
+    if (!request) throw new Error(`Mapping request ${id} not found`);
+    return request;
+  }
+
+  /** Admin links a seller's escalated item to an existing master product. */
+  async approveMappingExisting(mappingId: string, productId: string) {
+    return this.resolveMappingRequest(mappingId, productId, 'admin_existing');
+  }
+
+  /** Admin imports the product fresh from BGG, then links the seller's escalated item to it. */
+  async approveMappingFromBgg(mappingId: string, bggId: string) {
+    const { productId } = await this.importByBggId(bggId, 'verified');
+    return this.resolveMappingRequest(mappingId, productId, 'admin_new_bgg');
+  }
+
+  /** Fallback for items genuinely not on BGG (accessories, sleeves, etc.) — creates a standalone master product. */
+  async approveMappingStandalone(mappingId: string, data: { name: string; category?: string; description?: string; images?: string[] }) {
+    const slug = `${slugify(data.name)}-${Date.now()}`;
+    const product = await this.prisma.mktProduct.create({
+      data: {
+        slug,
+        name: data.name,
+        category: data.category ?? 'board-game',
+        description: data.description,
+        images: data.images ?? [],
+        canonicalStatus: 'verified',
+      },
+    });
+    await this.syncToSearch(product.id);
+    return this.resolveMappingRequest(mappingId, product.id, 'admin_new_standalone');
+  }
+
+  async rejectMappingRequest(mappingId: string, reason?: string) {
+    return this.prisma.sellerProductMapping.update({
+      where: { id: mappingId },
+      data: { status: 'rejected', adminNote: reason, resolvedAt: new Date(), resolvedBy: 'admin' },
+    });
+  }
+
+  private async resolveMappingRequest(mappingId: string, productId: string, matchMethod: string) {
+    const mapping = await this.getMappingRequest(mappingId);
+    const raw = mapping.rawPayload as Record<string, unknown>;
+    const variant = (raw.variants as Record<string, unknown>[] | undefined)?.[0];
+
+    const listing = await this.prisma.listing.create({
+      data: {
+        sellerId: mapping.sellerId,
+        productId,
+        sellerProductId: mapping.sellerProductId ?? undefined,
+        sellerSku: mapping.sellerSku ?? undefined,
+        sellerUrl: (raw.url as string) ?? undefined,
+        priceMinorUnits: (variant?.priceMinorUnits as number) ?? 0,
+        currency: (variant?.currency as string) ?? 'MXN',
+        stock: (variant?.stock as number) ?? 0,
+        lastSyncedAt: new Date(),
+        active: false, // unpublished until the seller explicitly publishes
+      },
+    });
+
+    const updated = await this.prisma.sellerProductMapping.update({
+      where: { id: mappingId },
+      data: {
+        status: 'manual_matched',
+        productId,
+        matchMethod,
+        listingId: listing.id,
+        resolvedAt: new Date(),
+        resolvedBy: 'admin',
+      },
+    });
+
+    await this.syncToSearch(productId);
+    return updated;
   }
 }

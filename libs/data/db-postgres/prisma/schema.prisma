@@ -271,6 +271,7 @@ model Seller {
   mpConnection    SellerMpConnection?
   rewardConfig    SellerRewardConfig?
   storeCredits    StoreCredit[]
+  productMappings SellerProductMapping[]
   @@index([status])
   @@index([connectorType])
 }
@@ -334,6 +335,7 @@ model MktProduct {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   listings        Listing[]
+  sellerMappings  SellerProductMapping[]
   @@index([category])
   @@index([canonicalStatus])
   @@index([bggId])
@@ -364,10 +366,51 @@ model Listing {
   deliveryOptions DeliveryOption[]
   orderLines      MarketplaceOrderLine[]
   promos          ListingPromo[]
+  mapping         SellerProductMapping?
   @@unique([sellerId, sellerSku])
   @@index([productId, rankScore])
   @@index([sellerId, active])
   @@index([stockStatus])
+}
+
+/// Per-seller-SKU mapping cache AND staging queue for matching a seller's raw
+/// synced items to the master MktProduct catalog. One row per (sellerId, externalKey).
+/// Lifecycle: pending_review (ambiguous/no match) -> [seller acts] -> manual_matched | escalated | rejected
+///            escalated -> [admin acts] -> manual_matched | rejected
+///            auto_matched / manual_matched rows ARE the fast-path cache for future syncs.
+model SellerProductMapping {
+  id              String    @id @default(cuid())
+  sellerId        String
+  // Stable per-seller external key (raw.externalId from the connector) — the cache lookup key.
+  externalKey     String
+  sellerSku       String?
+  sellerProductId String?
+  // RawProduct snapshot at staging time, so the seller/admin UI can render the
+  // original title/images without re-fetching from the connector.
+  rawPayload      Json
+  // 'auto_matched' | 'manual_matched' | 'pending_review' | 'escalated' | 'rejected'
+  status          String    @default("pending_review")
+  // Cache-hit target once matched (any path).
+  productId       String?
+  // 'auto' | 'seller_manual' | 'admin_existing' | 'admin_new_bgg' | 'admin_new_standalone' | 'legacy_unreviewed'
+  matchMethod     String?
+  matchConfidence Float?
+  // Top candidate matches surfaced to seller/admin: [{ productId, name, score, bggId }]
+  candidates      Json?
+  listingId       String?   @unique
+  sellerNote      String?   // seller's note when escalating ("not found, please add")
+  adminNote       String?   // admin's note / rejection reason
+  resolvedAt      DateTime?
+  resolvedBy      String?   // adminId, or 'seller:<sellerId>' for audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  seller          Seller     @relation(fields: [sellerId], references: [id])
+  product         MktProduct? @relation(fields: [productId], references: [id])
+  listing         Listing?    @relation(fields: [listingId], references: [id])
+  @@unique([sellerId, externalKey])
+  @@index([sellerId, status])
+  @@index([status, createdAt])
+  @@index([productId])
 }
 
 /// Per-listing promotional cashback — stacks on top of the seller's store-wide rate.

@@ -44,6 +44,12 @@ async function fetchProducts(page: number, category?: string): Promise<ProductsR
   return res.json() as Promise<ProductsResponse>;
 }
 
+async function fetchCategories(): Promise<{ category: string; count: number }[]> {
+  const res = await fetch(`${API}/api/v1/products/categories`);
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ category: string; count: number }[]>;
+}
+
 interface HomePageProps {
   onSearch: (q: string, category?: string) => void;
   onProduct: (slug: string) => void;
@@ -62,9 +68,14 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
     placeholderData: (prev) => prev,
   });
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ['marketplace-categories'],
+    queryFn: fetchCategories,
+  });
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 0;
   const featuredProduct = data?.results.find((product) => product.images[0]);
-  const categoryOptions = getCategoryOptions();
+  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
   const minPrice = data?.results.reduce<number | null>((lowest, product) => {
     if (product.minPriceMinor <= 0) return lowest;
     return lowest === null ? product.minPriceMinor : Math.min(lowest, product.minPriceMinor);

@@ -10,6 +10,7 @@ const repoRoot = resolve(here, '../..');
 
 export default defineConfig({
   root: here,
+  cacheDir: resolve(repoRoot, 'node_modules/.vite/seller-portal'),
   plugins: [tailwindcss(), react(), tsconfigPaths({ root: repoRoot, projects: ['tsconfig.base.json'] })],
   server: {
     port: 4400,

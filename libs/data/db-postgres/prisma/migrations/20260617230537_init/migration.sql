@@ -1,3 +1,7 @@
+-- Enable trigram fuzzy-match support, used by ProductMatchingService's
+-- pg_trgm-backed candidate search against MktProduct.name.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- CreateTable
 CREATE TABLE "Tenant" (
     "id" TEXT NOT NULL,
@@ -210,12 +214,28 @@ CREATE TABLE "Seller" (
     "tier" TEXT NOT NULL DEFAULT 'starter',
     "status" TEXT NOT NULL DEFAULT 'pending',
     "commissionRate" DECIMAL(5,4) NOT NULL DEFAULT 0.03,
+    "passwordHash" TEXT,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "verifyToken" TEXT,
     "onboardingStep" TEXT,
     "onboardingData" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Seller_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SellerMpConnection" (
+    "id" TEXT NOT NULL,
+    "sellerId" TEXT NOT NULL,
+    "merchantId" TEXT NOT NULL,
+    "scope" TEXT,
+    "encryptedCreds" JSONB NOT NULL,
+    "connectedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SellerMpConnection_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -258,6 +278,9 @@ CREATE TABLE "MktProduct" (
     "canonicalStatus" TEXT NOT NULL DEFAULT 'pending',
     "bggRating" DOUBLE PRECISION,
     "bggWeight" DOUBLE PRECISION,
+    "bggRank" INTEGER,
+    "bggUsersRated" INTEGER,
+    "isExpansion" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -287,6 +310,45 @@ CREATE TABLE "Listing" (
 );
 
 -- CreateTable
+CREATE TABLE "SellerProductMapping" (
+    "id" TEXT NOT NULL,
+    "sellerId" TEXT NOT NULL,
+    "externalKey" TEXT NOT NULL,
+    "sellerSku" TEXT,
+    "sellerProductId" TEXT,
+    "rawPayload" JSONB NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending_review',
+    "productId" TEXT,
+    "matchMethod" TEXT,
+    "matchConfidence" DOUBLE PRECISION,
+    "candidates" JSONB,
+    "listingId" TEXT,
+    "sellerNote" TEXT,
+    "adminNote" TEXT,
+    "resolvedAt" TIMESTAMP(3),
+    "resolvedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SellerProductMapping_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ListingPromo" (
+    "id" TEXT NOT NULL,
+    "listingId" TEXT NOT NULL,
+    "bonusCashbackPct" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "label" TEXT,
+    "startsAt" TIMESTAMP(3),
+    "endsAt" TIMESTAMP(3),
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ListingPromo_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "DeliveryOption" (
     "id" TEXT NOT NULL,
     "listingId" TEXT NOT NULL,
@@ -310,6 +372,9 @@ CREATE TABLE "MktCustomer" (
     "phone" TEXT,
     "preferredRegion" TEXT,
     "preferredCurrency" TEXT NOT NULL DEFAULT 'MXN',
+    "passwordHash" TEXT,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "verifyToken" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -342,6 +407,10 @@ CREATE TABLE "MarketplaceOrder" (
     "shippingMinorUnits" INTEGER NOT NULL DEFAULT 0,
     "totalMinorUnits" INTEGER NOT NULL,
     "commissionMinorUnits" INTEGER NOT NULL DEFAULT 0,
+    "platformCashbackMinor" INTEGER NOT NULL DEFAULT 0,
+    "storeCashbackMinor" INTEGER NOT NULL DEFAULT 0,
+    "platformCreditsApplied" INTEGER NOT NULL DEFAULT 0,
+    "storeCreditsApplied" INTEGER NOT NULL DEFAULT 0,
     "reservationId" TEXT,
     "reservationExpiresAt" TIMESTAMP(3),
     "checkoutSessionId" TEXT,
@@ -376,6 +445,62 @@ CREATE TABLE "OrderEvent" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "OrderEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlatformConfig" (
+    "id" TEXT NOT NULL DEFAULT 'default',
+    "baseCommissionPct" DOUBLE PRECISION NOT NULL DEFAULT 0.05,
+    "minCommissionPct" DOUBLE PRECISION NOT NULL DEFAULT 0.02,
+    "platformCashbackPct" DOUBLE PRECISION NOT NULL DEFAULT 0.01,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PlatformConfig_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SellerRewardConfig" (
+    "id" TEXT NOT NULL,
+    "sellerId" TEXT NOT NULL,
+    "storeCashbackPct" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SellerRewardConfig_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CustomerWallet" (
+    "id" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "platformCreditsMinor" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CustomerWallet_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StoreCredit" (
+    "id" TEXT NOT NULL,
+    "walletId" TEXT NOT NULL,
+    "sellerId" TEXT NOT NULL,
+    "balanceMinor" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "StoreCredit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "WalletTransaction" (
+    "id" TEXT NOT NULL,
+    "walletId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "amountMinor" INTEGER NOT NULL,
+    "sellerId" TEXT,
+    "orderId" TEXT,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "WalletTransaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -453,10 +578,16 @@ CREATE UNIQUE INDEX "Seller_slug_key" ON "Seller"("slug");
 CREATE UNIQUE INDEX "Seller_email_key" ON "Seller"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Seller_verifyToken_key" ON "Seller"("verifyToken");
+
+-- CreateIndex
 CREATE INDEX "Seller_status_idx" ON "Seller"("status");
 
 -- CreateIndex
 CREATE INDEX "Seller_connectorType_idx" ON "Seller"("connectorType");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SellerMpConnection_sellerId_key" ON "SellerMpConnection"("sellerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SellerScore_sellerId_key" ON "SellerScore"("sellerId");
@@ -477,6 +608,9 @@ CREATE INDEX "MktProduct_canonicalStatus_idx" ON "MktProduct"("canonicalStatus")
 CREATE INDEX "MktProduct_bggId_idx" ON "MktProduct"("bggId");
 
 -- CreateIndex
+CREATE INDEX "MktProduct_bggRank_idx" ON "MktProduct"("bggRank");
+
+-- CreateIndex
 CREATE INDEX "Listing_productId_rankScore_idx" ON "Listing"("productId", "rankScore");
 
 -- CreateIndex
@@ -489,10 +623,31 @@ CREATE INDEX "Listing_stockStatus_idx" ON "Listing"("stockStatus");
 CREATE UNIQUE INDEX "Listing_sellerId_sellerSku_key" ON "Listing"("sellerId", "sellerSku");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "SellerProductMapping_listingId_key" ON "SellerProductMapping"("listingId");
+
+-- CreateIndex
+CREATE INDEX "SellerProductMapping_sellerId_status_idx" ON "SellerProductMapping"("sellerId", "status");
+
+-- CreateIndex
+CREATE INDEX "SellerProductMapping_status_createdAt_idx" ON "SellerProductMapping"("status", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "SellerProductMapping_productId_idx" ON "SellerProductMapping"("productId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SellerProductMapping_sellerId_externalKey_key" ON "SellerProductMapping"("sellerId", "externalKey");
+
+-- CreateIndex
+CREATE INDEX "ListingPromo_listingId_active_idx" ON "ListingPromo"("listingId", "active");
+
+-- CreateIndex
 CREATE INDEX "DeliveryOption_listingId_idx" ON "DeliveryOption"("listingId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MktCustomer_email_key" ON "MktCustomer"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MktCustomer_verifyToken_key" ON "MktCustomer"("verifyToken");
 
 -- CreateIndex
 CREATE INDEX "MarketplaceOrder_sellerId_status_idx" ON "MarketplaceOrder"("sellerId", "status");
@@ -505,6 +660,24 @@ CREATE INDEX "MarketplaceOrder_status_createdAt_idx" ON "MarketplaceOrder"("stat
 
 -- CreateIndex
 CREATE INDEX "OrderEvent_orderId_idx" ON "OrderEvent"("orderId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SellerRewardConfig_sellerId_key" ON "SellerRewardConfig"("sellerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CustomerWallet_customerId_key" ON "CustomerWallet"("customerId");
+
+-- CreateIndex
+CREATE INDEX "StoreCredit_walletId_idx" ON "StoreCredit"("walletId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "StoreCredit_walletId_sellerId_key" ON "StoreCredit"("walletId", "sellerId");
+
+-- CreateIndex
+CREATE INDEX "WalletTransaction_walletId_createdAt_idx" ON "WalletTransaction"("walletId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "WalletTransaction_orderId_idx" ON "WalletTransaction"("orderId");
 
 -- CreateIndex
 CREATE INDEX "ConnectorSyncLog_sellerId_syncType_startedAt_idx" ON "ConnectorSyncLog"("sellerId", "syncType", "startedAt");
@@ -552,6 +725,9 @@ ALTER TABLE "PaymentWebhookEvent" ADD CONSTRAINT "PaymentWebhookEvent_paymentId_
 ALTER TABLE "OnboardingState" ADD CONSTRAINT "OnboardingState_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "SellerMpConnection" ADD CONSTRAINT "SellerMpConnection_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "SellerScore" ADD CONSTRAINT "SellerScore_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -559,6 +735,18 @@ ALTER TABLE "Listing" ADD CONSTRAINT "Listing_sellerId_fkey" FOREIGN KEY ("selle
 
 -- AddForeignKey
 ALTER TABLE "Listing" ADD CONSTRAINT "Listing_productId_fkey" FOREIGN KEY ("productId") REFERENCES "MktProduct"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SellerProductMapping" ADD CONSTRAINT "SellerProductMapping_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SellerProductMapping" ADD CONSTRAINT "SellerProductMapping_productId_fkey" FOREIGN KEY ("productId") REFERENCES "MktProduct"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SellerProductMapping" ADD CONSTRAINT "SellerProductMapping_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ListingPromo" ADD CONSTRAINT "ListingPromo_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DeliveryOption" ADD CONSTRAINT "DeliveryOption_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -582,4 +770,22 @@ ALTER TABLE "MarketplaceOrderLine" ADD CONSTRAINT "MarketplaceOrderLine_listingI
 ALTER TABLE "OrderEvent" ADD CONSTRAINT "OrderEvent_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "MarketplaceOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "SellerRewardConfig" ADD CONSTRAINT "SellerRewardConfig_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CustomerWallet" ADD CONSTRAINT "CustomerWallet_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "MktCustomer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoreCredit" ADD CONSTRAINT "StoreCredit_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "CustomerWallet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoreCredit" ADD CONSTRAINT "StoreCredit_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WalletTransaction" ADD CONSTRAINT "WalletTransaction_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "CustomerWallet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ConnectorSyncLog" ADD CONSTRAINT "ConnectorSyncLog_sellerId_fkey" FOREIGN KEY ("sellerId") REFERENCES "Seller"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Trigram index for ProductMatchingService's fuzzy candidate search.
+CREATE INDEX mktproduct_name_trgm_idx ON "MktProduct" USING gin (name gin_trgm_ops);

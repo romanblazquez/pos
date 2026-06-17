@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Queue, Worker, Job } from 'bullmq';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@retail-os/db-postgres';
 import { ConnectorSyncService } from './sync.service.js';
 
@@ -105,7 +106,11 @@ export class SyncSchedulerService implements OnModuleInit, OnModuleDestroy {
 
   private async dispatchToSellers(syncType: SyncType): Promise<void> {
     const sellers = await this.prisma.seller.findMany({
-      where: { connectorType: { not: null }, status: { not: 'suspended' } },
+      where: {
+        connectorType: { not: null },
+        connectorConfig: { not: Prisma.DbNull },
+        status: { not: 'suspended' },
+      },
       select: { id: true },
     });
 

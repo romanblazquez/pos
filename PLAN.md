@@ -115,7 +115,7 @@ Last updated: 2026-06-16
 - [ ] Wallet balance in header for logged-in customers
 
 ### P2 — Admin Console (http://localhost:4500)
-- [ ] BGG import UI — search by name, import single/bulk
+- [x] BGG import UI — search by name, import single/bulk
 - [ ] Product moderation — approve/reject pending products
 - [ ] Order management — full list with status updates
 - [ ] Ranking dashboard — trigger recompute, view scores

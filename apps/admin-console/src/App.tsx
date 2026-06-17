@@ -4,17 +4,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
-type AdminView = 'sellers' | 'catalog' | 'orders' | 'bgg' | 'ranking';
+type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking';
 
 const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'sellers',  icon: '🏪', label: 'Vendedores' },
   { id: 'catalog',  icon: '📚', label: 'Catálogo' },
+  { id: 'mapping',  icon: '🔗', label: 'Solicitudes de mapeo' },
   { id: 'orders',   icon: '📋', label: 'Pedidos' },
   { id: 'bgg',      icon: '🎲', label: 'BGG Import' },
   { id: 'ranking',  icon: '⭐', label: 'Ranking' },
 ];
 
-const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'orders', 'bgg', 'ranking']);
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking']);
 
 function parseView(): AdminView {
   const segment = window.location.pathname.replace(/^\//, '') as AdminView;
@@ -73,6 +74,7 @@ export default function App() {
       <main className="flex-1 overflow-auto">
         {view === 'sellers'  && <SellersView />}
         {view === 'catalog'  && <CatalogView />}
+        {view === 'mapping'  && <MappingRequestsView />}
         {view === 'orders'   && <OrdersView />}
         {view === 'bgg'      && <BggImportView />}
         {view === 'ranking'  && <RankingView />}
@@ -394,6 +396,411 @@ function CatalogView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Mapping requests (escalated seller items needing a master-catalog decision) ──
+
+const MAPPING_PAGE_SIZE = 20;
+
+function MappingRequestsView() {
+  const qc = useQueryClient();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [sellerFilter, setSellerFilter] = useState('');
+  const [page, setPage] = useState(0);
+
+  const sellersQuery = useQuery({
+    queryKey: ['admin-sellers-all'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/sellers?limit=200`);
+      return res.json() as Promise<Seller[]>;
+    },
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['mapping-requests', sellerFilter, page],
+    queryFn: async () => {
+      const qs = new URLSearchParams({
+        status: 'escalated',
+        limit: String(MAPPING_PAGE_SIZE),
+        offset: String(page * MAPPING_PAGE_SIZE),
+        ...(sellerFilter ? { sellerId: sellerFilter } : {}),
+      });
+      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests?${qs}`);
+      return res.json() as Promise<{ requests: MappingRequest[]; total: number }>;
+    },
+  });
+
+  const requests = data?.requests ?? [];
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / MAPPING_PAGE_SIZE));
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['mapping-requests'] });
+
+  const approveExistingMut = useMutation({
+    mutationFn: async ({ id, productId }: { id: string; productId: string }) => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-existing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId }),
+      });
+      return res.json();
+    },
+    onSuccess: () => { setResult('✓ Vinculado al producto existente'); setExpandedId(null); invalidate(); },
+  });
+
+  const approveNewMut = useMutation({
+    mutationFn: async ({ id, bggId }: { id: string; bggId: string }) => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-new`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bggId }),
+      });
+      return res.json();
+    },
+    onSuccess: () => { setResult('✓ Importado de BGG y vinculado'); setExpandedId(null); invalidate(); },
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      return res.json();
+    },
+    onSuccess: () => { setResult('Solicitud rechazada'); setExpandedId(null); invalidate(); },
+  });
+
+  return (
+    <div className="p-6 space-y-5 max-w-5xl">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Solicitudes de mapeo</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Productos que un vendedor sincronizó pero no pudo vincular al catálogo maestro, y escaló
+            explícitamente pidiendo que se agreguen.
+          </p>
+        </div>
+        <select
+          value={sellerFilter}
+          onChange={(e) => { setSellerFilter(e.target.value); setPage(0); setExpandedId(null); }}
+          className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white shrink-0"
+        >
+          <option value="">Todos los vendedores</option>
+          {(sellersQuery.data ?? []).map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {result && (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
+          {result}
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {isLoading ? (
+          <Loading />
+        ) : requests.length === 0 ? (
+          <Empty icon="🔗" msg="No hay solicitudes pendientes de revisión." />
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {requests.map((r) => {
+              const raw = r.rawPayload as { name?: string; images?: string[] };
+              const topCandidate = r.candidates?.[0];
+              return (
+                <div key={r.id}>
+                  <div className="flex items-center gap-4 px-4 py-3">
+                    <div className="w-10 h-10 rounded bg-slate-100 overflow-hidden shrink-0">
+                      {raw.images?.[0] ? (
+                        <img src={raw.images[0]} alt={raw.name} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900 truncate">{raw.name ?? 'Sin nombre'}</p>
+                      <p className="text-xs text-slate-400">
+                        {r.seller.name} · {new Date(r.createdAt).toLocaleDateString('es-MX')}
+                        {r.sellerNote ? ` · "${r.sellerNote}"` : ''}
+                      </p>
+                    </div>
+                    {topCandidate && (
+                      <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1 shrink-0">
+                        💡 {topCandidate.name} · {Math.round(topCandidate.score * 100)}%
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                      className="text-xs font-medium text-blue-600 hover:underline shrink-0"
+                    >
+                      {expandedId === r.id ? 'Cerrar' : 'Resolver'}
+                    </button>
+                  </div>
+                  {expandedId === r.id && (
+                    <MappingRequestDetail
+                      request={r}
+                      onApproveExisting={(productId) => approveExistingMut.mutate({ id: r.id, productId })}
+                      onApproveNew={(bggId) => approveNewMut.mutate({ id: r.id, bggId })}
+                      onReject={(reason) => rejectMut.mutate({ id: r.id, reason })}
+                      busy={approveExistingMut.isPending || approveNewMut.isPending || rejectMut.isPending}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm text-slate-500">
+          <span>{total.toLocaleString('es-MX')} solicitudes · página {page + 1} de {pageCount}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={page >= pageCount - 1}
+              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SelectedProposal {
+  kind: 'existing' | 'bgg';
+  id: string; // productId for 'existing', bggId for 'bgg'
+  name: string;
+  image?: string | null;
+  yearPublished?: number | null;
+  publisher?: string | null;
+  score?: number;
+}
+
+function MappingRequestDetail({
+  request, onApproveExisting, onApproveNew, onReject, busy,
+}: {
+  request: MappingRequest;
+  onApproveExisting: (productId: string) => void;
+  onApproveNew: (bggId: string) => void;
+  onReject: (reason: string) => void;
+  busy: boolean;
+}) {
+  const [catalogQ, setCatalogQ] = useState('');
+  const [bggQ, setBggQ] = useState('');
+  const [reason, setReason] = useState('');
+  const [selected, setSelected] = useState<SelectedProposal | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
+
+  const raw = request.rawPayload as {
+    name?: string; description?: string; images?: string[]; url?: string;
+    variants?: { priceMinorUnits?: number; currency?: string; stock?: number; sku?: string }[];
+  };
+  const variant = raw.variants?.[0];
+
+  const catalogSearch = useQuery({
+    queryKey: ['mapping-catalog-search', catalogQ],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/products?search=${encodeURIComponent(catalogQ)}&limit=8`);
+      return (await res.json() as { products: MktProduct[] }).products;
+    },
+    enabled: !!catalogQ.trim(),
+  });
+
+  const bggSearch = useQuery({
+    queryKey: ['mapping-bgg-search', bggQ],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/v1/admin/catalog/bgg/search?q=${encodeURIComponent(bggQ)}`);
+      return res.json() as Promise<BggResult[]>;
+    },
+    enabled: !!bggQ.trim(),
+  });
+
+  function confirm() {
+    if (!selected) return;
+    if (selected.kind === 'existing') onApproveExisting(selected.id);
+    else onApproveNew(selected.id);
+  }
+
+  return (
+    <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100 space-y-4 pt-3">
+      {/* Side-by-side comparison: seller's raw data vs the selected proposal */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Datos del vendedor</p>
+          <div className="flex gap-3">
+            <div className="w-14 h-14 rounded bg-slate-100 overflow-hidden shrink-0">
+              {raw.images?.[0] && <img src={raw.images[0]} alt={raw.name} className="w-full h-full object-cover" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-900 truncate">{raw.name ?? 'Sin nombre'}</p>
+              {variant && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {variant.priceMinorUnits != null && fmt(variant.priceMinorUnits, variant.currency)}
+                  {variant.stock != null ? ` · stock ${variant.stock}` : ''}
+                </p>
+              )}
+              {(request.sellerSku || variant?.sku) && (
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{request.sellerSku ?? variant?.sku}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowRawJson((v) => !v)}
+            className="text-xs text-blue-600 hover:underline mt-2"
+          >
+            {showRawJson ? 'Ocultar' : 'Ver'} datos completos del conector
+          </button>
+          {showRawJson && (
+            <pre className="mt-2 p-2 bg-slate-900 text-slate-100 rounded-lg text-[10px] leading-relaxed overflow-auto max-h-48">
+              {JSON.stringify(request.rawPayload, null, 2)}
+            </pre>
+          )}
+        </div>
+
+        <div className={`bg-white rounded-xl border p-3 ${selected ? 'border-emerald-300' : 'border-slate-200'}`}>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Propuesta seleccionada</p>
+          {!selected ? (
+            <p className="text-xs text-slate-400 py-3">Elegí una opción de la derecha para comparar →</p>
+          ) : (
+            <div className="flex gap-3">
+              <div className="w-14 h-14 rounded bg-slate-100 overflow-hidden shrink-0">
+                {selected.image && <img src={selected.image} alt={selected.name} className="w-full h-full object-cover" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-900 truncate">{selected.name}</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {selected.publisher ?? ''}{selected.publisher && selected.yearPublished ? ' · ' : ''}{selected.yearPublished ?? ''}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">
+                  {selected.kind === 'existing' ? 'Catálogo existente' : 'Importar de BGG'}
+                  {selected.score != null ? ` · ${Math.round(selected.score * 100)}% similitud` : ''}
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 mt-3">
+            <button
+              disabled={!selected || busy}
+              onClick={confirm}
+              className="flex-1 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40"
+            >
+              Confirmar vínculo
+            </button>
+            {selected && (
+              <button onClick={() => setSelected(null)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800">
+                Cancelar
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Suggested matches from the auto-matching engine */}
+      {request.candidates && request.candidates.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Sugerencias automáticas</p>
+          <div className="flex flex-wrap gap-2">
+            {request.candidates.map((c) => (
+              <button
+                key={c.productId}
+                onClick={() => setSelected({ kind: 'existing', id: c.productId, name: c.name, image: c.image, yearPublished: c.yearPublished, publisher: c.publisher, score: c.score })}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs transition-colors ${
+                  selected?.kind === 'existing' && selected.id === c.productId
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50'
+                }`}
+              >
+                <span className="text-slate-800">{c.name}</span>
+                <span className="text-slate-400 tabular">{Math.round(c.score * 100)}%</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-3 gap-4">
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Buscar en catálogo</p>
+          <input
+            value={catalogQ}
+            onChange={(e) => setCatalogQ(e.target.value)}
+            placeholder="Buscar en catálogo..."
+            className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg mb-2"
+          />
+          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            {catalogSearch.data?.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelected({ kind: 'existing', id: p.id, name: p.name, image: p.images?.[0], yearPublished: p.yearPublished, publisher: undefined })}
+                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg border truncate ${
+                  selected?.kind === 'existing' && selected.id === p.id
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300'
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Importar de BGG</p>
+          <input
+            value={bggQ}
+            onChange={(e) => setBggQ(e.target.value)}
+            placeholder="Buscar en BGG..."
+            className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg mb-2"
+          />
+          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            {bggSearch.data?.map((r) => (
+              <button
+                key={r.bggId}
+                onClick={() => setSelected({ kind: 'bgg', id: r.bggId, name: r.name, yearPublished: r.yearPublished })}
+                className={`w-full text-left px-2.5 py-1.5 text-xs rounded-lg border truncate ${
+                  selected?.kind === 'bgg' && selected.id === r.bggId
+                    ? 'border-emerald-400 bg-emerald-50'
+                    : 'border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300'
+                }`}
+              >
+                {r.name}{r.yearPublished ? ` (${r.yearPublished})` : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Rechazar</p>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Motivo (opcional)"
+            rows={2}
+            className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg mb-2"
+          />
+          <button
+            disabled={busy}
+            onClick={() => onReject(reason)}
+            className="w-full px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50"
+          >
+            Rechazar solicitud
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -789,4 +1196,24 @@ interface Order {
 
 interface BggResult {
   bggId: string; name: string; yearPublished?: number;
+}
+
+interface MappingCandidate {
+  productId: string;
+  name: string;
+  score: number;
+  bggId: string | null;
+  image: string | null;
+  publisher: string | null;
+  yearPublished: number | null;
+}
+
+interface MappingRequest {
+  id: string;
+  sellerSku: string | null;
+  rawPayload: unknown;
+  candidates: MappingCandidate[] | null;
+  sellerNote: string | null;
+  createdAt: string;
+  seller: { id: string; name: string; slug: string };
 }

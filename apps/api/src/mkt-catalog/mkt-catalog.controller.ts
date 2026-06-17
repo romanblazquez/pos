@@ -25,16 +25,19 @@ export class MktCatalogController {
   @ApiQuery({ name: 'limit', required: false, example: 50 })
   @ApiQuery({ name: 'offset', required: false, example: 0 })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by canonicalStatus: pending | approved | rejected', example: 'pending' })
+  @ApiQuery({ name: 'search', required: false, description: 'Free-text search by product name', example: 'Catan' })
   @ApiResponse({ status: 200, description: 'Paginated product list' })
   list(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('status') status?: string,
+    @Query('search') search?: string,
   ) {
     return this.svc.list({
       limit: limit ? parseInt(limit, 10) : 50,
       offset: offset ? parseInt(offset, 10) : 0,
       status,
+      search,
     });
   }
 
@@ -145,6 +148,95 @@ export class MktCatalogController {
   @ApiResponse({ status: 200, description: '{ discovery: JobCounts, import: JobCounts }' })
   bggDiscoveryStatus() {
     return this.discovery.status();
+  }
+
+  // ── Mapping requests (escalated seller items needing a master-catalog decision) ──
+
+  /** List escalated seller→catalog mapping requests. */
+  @Get('mapping-requests')
+  @ApiOperation({
+    summary: 'List seller product-mapping requests',
+    description:
+      "Items a seller synced but couldn't confidently match to the master catalog, and then " +
+      "explicitly escalated ('I can\\'t find this, please add it'). Default `status` is `escalated`.",
+  })
+  @ApiQuery({ name: 'status', required: false, example: 'escalated' })
+  @ApiQuery({ name: 'sellerId', required: false, description: 'Filter to a single seller' })
+  @ApiQuery({ name: 'limit', required: false, example: 50 })
+  @ApiQuery({ name: 'offset', required: false, example: 0 })
+  listMappingRequests(
+    @Query('status') status?: string,
+    @Query('sellerId') sellerId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.svc.listMappingRequests({
+      status,
+      sellerId,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+  }
+
+  /** Full detail of one mapping request, including the seller's raw synced payload. */
+  @Get('mapping-requests/:id')
+  @ApiOperation({ summary: 'Get full detail of a mapping request' })
+  @ApiParam({ name: 'id', description: 'SellerProductMapping CUID' })
+  getMappingRequest(@Param('id') id: string) {
+    return this.svc.getMappingRequest(id);
+  }
+
+  /** Link the seller's item to an existing master product the admin found. */
+  @Post('mapping-requests/:id/approve-existing')
+  @ApiOperation({ summary: 'Approve a mapping request against an existing master catalog product' })
+  @ApiParam({ name: 'id', description: 'SellerProductMapping CUID' })
+  @ApiBody({ schema: { type: 'object', required: ['productId'], properties: { productId: { type: 'string' } } } })
+  approveExisting(@Param('id') id: string, @Body() body: { productId: string }) {
+    return this.svc.approveMappingExisting(id, body.productId);
+  }
+
+  /** Import the product fresh from BGG (the scraper may have missed it), then link. */
+  @Post('mapping-requests/:id/approve-new')
+  @ApiOperation({
+    summary: 'Approve a mapping request by importing a new master product',
+    description:
+      'Pass `bggId` to import from BoardGameGeek and link (preferred). Pass `name` (+ optional ' +
+      'category/description/images) for items genuinely not on BGG — creates a standalone verified product.',
+  })
+  @ApiParam({ name: 'id', description: 'SellerProductMapping CUID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        bggId: { type: 'string', example: '13' },
+        name: { type: 'string', example: 'Dice tray (acrylic)' },
+        category: { type: 'string', example: 'accessory' },
+        description: { type: 'string' },
+        images: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  approveNew(
+    @Param('id') id: string,
+    @Body() body: { bggId?: string; name?: string; category?: string; description?: string; images?: string[] },
+  ) {
+    if (body.bggId) return this.svc.approveMappingFromBgg(id, body.bggId);
+    if (!body.name) throw new Error('Either bggId or name is required');
+    return this.svc.approveMappingStandalone(id, {
+      name: body.name,
+      category: body.category,
+      description: body.description,
+      images: body.images,
+    });
+  }
+
+  /** Reject a mapping request — no product/listing created. */
+  @Post('mapping-requests/:id/reject')
+  @ApiOperation({ summary: 'Reject a mapping request' })
+  @ApiParam({ name: 'id', description: 'SellerProductMapping CUID' })
+  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } }, required: false })
+  rejectMappingRequest(@Param('id') id: string, @Body() body?: { reason?: string }) {
+    return this.svc.rejectMappingRequest(id, body?.reason);
   }
 
   /** Re-sync a product to the search index. */

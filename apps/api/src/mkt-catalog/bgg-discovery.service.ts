@@ -106,9 +106,9 @@ export class BggDiscoveryService implements OnModuleInit, OnModuleDestroy {
    */
   startFullCatalogImport(): { started: boolean } {
     if (this.fullCatalogStatus.running) return { started: false };
-    const { username, password } = this.credentials();
+    const auth = this.ranksAuth();
     this.fullCatalogStatus = { running: true, total: 0, imported: 0, skipped: 0 };
-    this.runFullCatalogImport(username, password).catch((err: Error) => {
+    this.runFullCatalogImport(auth).catch((err: Error) => {
       this.fullCatalogStatus.running = false;
       this.fullCatalogStatus.error = err.message;
       this.log.error(`Full catalog import failed: ${err.message}`);
@@ -120,9 +120,21 @@ export class BggDiscoveryService implements OnModuleInit, OnModuleDestroy {
     return this.fullCatalogStatus;
   }
 
-  private async runFullCatalogImport(username: string, password: string): Promise<void> {
-    this.log.log('Fetching BGG ranks dump...');
-    const games = await this.scraper.ranksDump(username, password);
+  /**
+   * Prefers BGG_COOKIE (a raw Cookie header from an already-authenticated browser
+   * session) over username/password — the headless login-form flow can get blocked
+   * by BGG's bot detection even with correct credentials, while a real browser
+   * session's cookies sail through. Falls back to credentials() if no cookie is set.
+   */
+  private ranksAuth(): { username?: string; password?: string; cookie?: string } {
+    const cookie = process.env.BGG_COOKIE;
+    if (cookie) return { cookie };
+    return this.credentials();
+  }
+
+  private async runFullCatalogImport(auth: { username?: string; password?: string; cookie?: string }): Promise<void> {
+    this.log.log(`Fetching BGG ranks dump (auth: ${auth.cookie ? 'cookie' : 'username/password'})...`);
+    const games = await this.scraper.ranksDump(auth);
     this.fullCatalogStatus.total = games.length;
     this.log.log(`Got ${games.length} games — importing...`);
 

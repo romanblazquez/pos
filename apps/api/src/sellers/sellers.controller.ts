@@ -20,6 +20,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
+import { SellerMappingService } from './seller-mapping.service.js';
 import { CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Public } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
@@ -35,6 +36,7 @@ export class SellersController {
     @Inject(SellersService) private readonly svc: SellersService,
     @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
     @Inject(AiService) private readonly ai: AiService,
+    @Inject(SellerMappingService) private readonly mapping: SellerMappingService,
   ) {}
 
   @Post()
@@ -207,6 +209,92 @@ export class SellersController {
     const l = parseInt(limit, 10);
     const result = await this.svc.getListings(id, { page: p, limit: l, q, status, sort });
     return paginate(result.listings, result.total, p, l);
+  }
+
+  // ── Product mapping inbox ───────────────────────────────────────────────
+  // Items synced from a connector that couldn't be confidently matched to the
+  // master catalog land here for the seller to resolve manually.
+
+  @Get(':id/product-mappings')
+  @ApiOperation({
+    summary: "List items awaiting the seller's catalog match decision",
+    description:
+      'Items synced from a connector that the matching engine could not confidently ' +
+      'link to a master catalog product. Default `status` is `pending_review` (needs seller action); ' +
+      'pass `escalated` to see items already sent to admin, or `rejected` for dismissed ones.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiQuery({ name: 'status', required: false, example: 'pending_review' })
+  @ApiQuery({ name: 'limit', required: false, example: 24 })
+  @ApiQuery({ name: 'offset', required: false, example: 0 })
+  async listMappings(
+    @Param('id') id: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const result = await this.mapping.list(id, {
+      status,
+      limit: limit ? parseInt(limit, 10) : 24,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+    return paginate(result.mappings, result.total, 1, limit ? parseInt(limit, 10) : 24);
+  }
+
+  @Get(':id/product-mappings/search')
+  @ApiOperation({
+    summary: 'Search the master catalog to manually link a pending item',
+    description: 'Free-text search by product name, for the "none of these match, let me search" flow.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiQuery({ name: 'q', required: true, example: 'Catan' })
+  searchCatalog(@Param('id') _id: string, @Query('q') q: string) {
+    return this.mapping.searchCatalog(q ?? '');
+  }
+
+  @Patch(':id/product-mappings/:mappingId/link')
+  @ApiOperation({
+    summary: 'Link a pending item to a master catalog product',
+    description:
+      'Creates the Listing for this seller × product (unpublished — the seller must separately ' +
+      'publish it from the listings page) and marks the mapping resolved.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiParam({ name: 'mappingId', description: 'SellerProductMapping CUID', example: 'clx9xyz8wvu7tsr6qpo' })
+  @ApiBody({ schema: { type: 'object', required: ['productId'], properties: { productId: { type: 'string' } } } })
+  linkMapping(
+    @Param('id') id: string,
+    @Param('mappingId') mappingId: string,
+    @Body() body: { productId: string },
+  ) {
+    return this.mapping.link(id, mappingId, body.productId);
+  }
+
+  @Post(':id/product-mappings/:mappingId/escalate')
+  @ApiOperation({
+    summary: 'Escalate a pending item to the admin review queue',
+    description: '"I can\'t find this in the catalog, please add it" — sent to admin for triage against BGG/master catalog.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiParam({ name: 'mappingId', description: 'SellerProductMapping CUID', example: 'clx9xyz8wvu7tsr6qpo' })
+  @ApiBody({ schema: { type: 'object', properties: { note: { type: 'string' } } }, required: false })
+  escalateMapping(
+    @Param('id') id: string,
+    @Param('mappingId') mappingId: string,
+    @Body() body?: { note?: string },
+  ) {
+    return this.mapping.escalate(id, mappingId, body?.note);
+  }
+
+  @Delete(':id/product-mappings/:mappingId')
+  @ApiOperation({
+    summary: 'Dismiss a pending item without escalating',
+    description: 'Use when the synced item is irrelevant/duplicate and the seller does not want it listed at all.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiParam({ name: 'mappingId', description: 'SellerProductMapping CUID', example: 'clx9xyz8wvu7tsr6qpo' })
+  dismissMapping(@Param('id') id: string, @Param('mappingId') mappingId: string) {
+    return this.mapping.dismiss(id, mappingId);
   }
 
   @Get(':id/orders/stats')

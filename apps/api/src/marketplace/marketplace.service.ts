@@ -92,6 +92,17 @@ export class MarketplaceService {
     return { results, total: totalCount, source: 'db' as const };
   }
 
+  /** Distinct categories with at least one active listing — backs the marketplace's category-browse tiles. */
+  async getCategories(): Promise<{ category: string; count: number }[]> {
+    const rows = await this.prisma.mktProduct.groupBy({
+      by: ['category'],
+      where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
+      _count: { category: true },
+      orderBy: { _count: { category: 'desc' } },
+    });
+    return rows.map((r) => ({ category: r.category, count: r._count.category }));
+  }
+
   async getProduct(slug: string) {
     const product = await this.prisma.mktProduct.findUnique({
       where: { slug },

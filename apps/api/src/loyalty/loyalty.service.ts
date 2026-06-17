@@ -116,6 +116,9 @@ export class LoyaltyService {
   // ── Customer wallet ──────────────────────────────────────────────────────
 
   async getOrCreateWallet(customerId: string) {
+    const customer = await this.prisma.mktCustomer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new NotFoundException(`Customer ${customerId} not found`);
+
     return this.prisma.customerWallet.upsert({
       where: { customerId },
       create: { customerId, platformCreditsMinor: 0 },

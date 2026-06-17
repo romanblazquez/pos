@@ -15,6 +15,7 @@ const repoRoot = resolve(here, '../..');
  */
 export default defineConfig({
   root: here,
+  cacheDir: resolve(repoRoot, 'node_modules/.vite/pos'),
   plugins: [tailwindcss(), react(), tsconfigPaths({ root: repoRoot, projects: ['tsconfig.base.json'] })],
   resolve: {
     alias: { '@config': resolve(repoRoot, 'config') },

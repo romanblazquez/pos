@@ -40,6 +40,32 @@ async function newContext(): Promise<BrowserContext> {
   return browser.newContext();
 }
 
+/**
+ * Parses a raw `Cookie:` header value (as copied from a real authenticated browser
+ * session's devtools/curl-copy) into Playwright's cookie format and injects it into
+ * the context. This bypasses the login() form-automation entirely — useful when BGG's
+ * Cloudflare/bot-detection blocks the headless login flow even though a real browser
+ * session works fine. Note: cf_clearance and SessionID expire (hours, not permanent) —
+ * this is a stopgap per-run credential, not a persistent fix.
+ */
+async function applyCookieHeader(context: BrowserContext, cookieHeader: string): Promise<void> {
+  const cookies = cookieHeader
+    .split(';')
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const eq = pair.indexOf('=');
+      return { name: pair.slice(0, eq), value: pair.slice(eq + 1) };
+    })
+    .map(({ name, value }) => ({
+      name,
+      value,
+      domain: '.boardgamegeek.com',
+      path: '/',
+    }));
+  await context.addCookies(cookies);
+}
+
 async function login(page: Page, username: string, password: string): Promise<void> {
   await page.goto('https://boardgamegeek.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.click('a:has-text("Sign In")');
@@ -48,6 +74,28 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.fill('input[name="password"], #inputPassword', password);
   await page.click('gg-login-form button.btn-primary:has-text("Sign In")');
   await page.waitForTimeout(3000);
+
+  await verifyLoggedIn(page, 'BGG_USERNAME/BGG_PASSWORD login');
+}
+
+/**
+ * Confirms the page is actually in a logged-in state (no "Sign In" link visible)
+ * before proceeding — whether auth came from the form-login flow or injected cookies.
+ * Catches stale/expired cookies and rejected credentials with a clear error instead
+ * of a confusing downstream "selector not found" timeout.
+ */
+async function verifyLoggedIn(page: Page, authMethod: string): Promise<void> {
+  const stillSignedOut = await page.locator('a:has-text("Sign In")').first().isVisible().catch(() => false);
+  if (stillSignedOut) {
+    const snippet = (await page.locator('body').innerText().catch(() => '')).slice(0, 400);
+    throw new Error(
+      `BGG session is not authenticated (still showing "Sign In" at ${page.url()}, via ${authMethod}). ` +
+      `If using a cookie, it has likely expired (cf_clearance/SessionID are short-lived) — ` +
+      `re-extract from a fresh logged-in browser session. If using username/password, check ` +
+      `they're correct and that BGG isn't presenting a CAPTCHA or device-verification step, ` +
+      `which headless automation cannot pass. Page text snippet: ${JSON.stringify(snippet)}`
+    );
+  }
 }
 
 async function scrapePage(page: Page, pageNum: number): Promise<ScrapedGame[]> {
@@ -110,10 +158,10 @@ function num(v: string | undefined): number | null {
 // far better fit anyway: one fetch gets the ~178k-game catalog instead of 1500+ paginated,
 // Cloudflare-gated browse requests.
 app.post('/ranks-dump', async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { username, password, cookie } = req.body;
 
-  if (!username || !password) {
-    res.status(400).json({ error: 'username and password required' });
+  if (!cookie && (!username || !password)) {
+    res.status(400).json({ error: 'either cookie, or username and password, are required' });
     return;
   }
 
@@ -122,11 +170,28 @@ app.post('/ranks-dump', async (req: Request, res: Response) => {
     context = await newContext();
     const page = await context.newPage();
 
-    await login(page, username, password);
+    if (cookie) {
+      await applyCookieHeader(context, cookie);
+      // Cookies are injected blind (no form to introspect) — load a real page first
+      // to confirm the session is actually authenticated before navigating further.
+      await page.goto('https://boardgamegeek.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await verifyLoggedIn(page, 'cookie');
+    } else {
+      await login(page, username, password);
+    }
     await page.goto('https://boardgamegeek.com/data_dumps/bg_ranks', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await verifyLoggedIn(page, cookie ? 'cookie' : 'BGG_USERNAME/BGG_PASSWORD login');
     // Angular renders the download link client-side — domcontentloaded fires before
     // that, so wait for it explicitly instead of racing it.
-    await page.waitForSelector('a[download]', { timeout: 15000 });
+    try {
+      await page.waitForSelector('a[download]', { timeout: 15000 });
+    } catch {
+      const snippet = (await page.locator('body').innerText().catch(() => '')).slice(0, 400);
+      throw new Error(
+        `Download link never appeared on ${page.url()} — page layout may have changed, ` +
+        `or the data_dumps page itself requires extra permissions. Page text snippet: ${JSON.stringify(snippet)}`
+      );
+    }
     const downloadUrl = await page.evaluate(() => document.querySelector('a[download]')?.getAttribute('href') ?? null);
     if (!downloadUrl) throw new Error('Download link not found on /data_dumps/bg_ranks — page layout may have changed');
 

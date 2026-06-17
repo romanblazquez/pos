@@ -1,5 +1,6 @@
-export const FALLBACK_CATEGORIES = ['board-game', 'Tipo de Juego', 'Preventas', 'Inventario', 'Jugadores'];
-
+// Known categories get a friendlier label/description than the raw DB value —
+// but the tiles themselves are only ever built from real categories (see
+// getCategoryOptions), never shown just because they're listed here.
 const CATEGORY_LABELS: Record<string, string> = {
   'board-game': 'Juegos de mesa',
   'Tipo de Juego': 'Tipo de juego',
@@ -32,9 +33,10 @@ export function categoryDescription(category?: string | null) {
   return CATEGORY_DESCRIPTIONS[category] ?? 'Colección curada del marketplace.';
 }
 
+/** Builds category tiles strictly from real categories that currently have products — no hardcoded fallback list. */
 export function getCategoryOptions(categories: Array<string | null | undefined> = []): CategoryOption[] {
-  const seen = new Set(FALLBACK_CATEGORIES);
-  const extraCategories = categories
+  const seen = new Set<string>();
+  const realCategories = categories
     .filter((category): category is string => {
       if (!category || seen.has(category)) return false;
       seen.add(category);
@@ -42,7 +44,7 @@ export function getCategoryOptions(categories: Array<string | null | undefined> 
     })
     .sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b), 'es-MX'));
 
-  return [...FALLBACK_CATEGORIES, ...extraCategories].map((value) => ({
+  return realCategories.map((value) => ({
     value,
     label: categoryLabel(value),
     description: categoryDescription(value),
