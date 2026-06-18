@@ -95,26 +95,9 @@ export class CheckoutService {
     }
     const currency = listings[0].currency;
 
-    // 4.5 Reserve wallet credits to apply — capped at what the customer actually
-    // has (reserveCredits) and at the order subtotal (can't discount below zero).
-    // Platform credits apply first since they're the more general-purpose balance;
-    // store credits (seller-specific) fill whatever's left.
-    let platformCreditsApplied = 0;
-    let storeCreditsApplied = 0;
-    if (dto.customerId && ((dto.platformCreditsToUse ?? 0) > 0 || (dto.storeCreditsToUse ?? 0) > 0)) {
-      const reserved = await this.loyalty.reserveCredits({
-        customerId: dto.customerId,
-        sellerId,
-        platformCreditsToUse: dto.platformCreditsToUse ?? 0,
-        storeCreditsToUse: dto.storeCreditsToUse ?? 0,
-      });
-      platformCreditsApplied = Math.min(reserved.platformCreditsApplied, subtotal);
-      storeCreditsApplied = Math.min(reserved.storeCreditsApplied, subtotal - platformCreditsApplied);
-    }
-    const creditsAppliedMinor = platformCreditsApplied + storeCreditsApplied;
-    const amountDueMinor = subtotal - creditsAppliedMinor;
-
-    // 5. Create pending order
+    // 5. Create pending order (credits applied as 0 placeholders — patched right
+    // after reservation, since reserving needs a real orderId for the wallet
+    // transaction record).
     const order = await this.prisma.marketplaceOrder.create({
       data: {
         sellerId,
@@ -124,8 +107,6 @@ export class CheckoutService {
         subtotalMinorUnits: subtotal,
         shippingMinorUnits: 0,
         totalMinorUnits: subtotal,
-        platformCreditsApplied,
-        storeCreditsApplied,
         deliveryAddress: dto.deliveryAddress,
         lines: {
           create: listings.map((l) => ({
@@ -135,22 +116,47 @@ export class CheckoutService {
             lineTotalMinor: l.priceMinorUnits * (itemMap.get(l.id) ?? 1),
           })),
         },
-        events: {
-          create: { type: 'created', payload: { initiatedBy: dto.customerEmail, platformCreditsApplied, storeCreditsApplied } },
-        },
+        events: { create: { type: 'created', payload: { initiatedBy: dto.customerEmail } } },
       },
     });
 
-    // 5.5 Fully covered by wallet credits — skip MercadoPago entirely, confirm now.
-    if (amountDueMinor <= 0) {
-      await this.loyalty.redeemCredits({
-        customerId: dto.customerId!,
+    // 5.5 Reserve + immediately deduct wallet credits — atomic with the read, so a
+    // second concurrent/sequential checkout can never over-apply the same
+    // not-yet-redeemed balance (the previous design only checked balance here and
+    // deducted later at confirmation, which let two pending orders both "reserve"
+    // the same credits). Refund via loyalty.refundCredits if this order is cancelled.
+    let platformCreditsApplied = 0;
+    let storeCreditsApplied = 0;
+    if (dto.customerId && ((dto.platformCreditsToUse ?? 0) > 0 || (dto.storeCreditsToUse ?? 0) > 0)) {
+      // Cap the requested amounts at the order subtotal BEFORE reserving —
+      // reserveCredits deducts from the wallet atomically, so whatever it deducts
+      // must exactly equal what's applied to this order. Capping afterward would
+      // silently strand deducted-but-unapplied credits. Platform credits apply
+      // first (general-purpose), store credits (seller-specific) fill the remainder.
+      const platformRequest = Math.min(dto.platformCreditsToUse ?? 0, subtotal);
+      const storeRequest = Math.min(dto.storeCreditsToUse ?? 0, subtotal - platformRequest);
+      const reserved = await this.loyalty.reserveCredits({
+        customerId: dto.customerId,
         sellerId,
         orderId: order.id,
-        platformCreditsApplied,
-        storeCreditsApplied,
+        platformCreditsToUse: platformRequest,
+        storeCreditsToUse: storeRequest,
       });
-      const fees = await this.loyalty.computeOrderFees(sellerId, subtotal);
+      platformCreditsApplied = reserved.platformCreditsApplied;
+      storeCreditsApplied = reserved.storeCreditsApplied;
+      await this.prisma.marketplaceOrder.update({
+        where: { id: order.id },
+        data: { platformCreditsApplied, storeCreditsApplied },
+      });
+    }
+    const creditsAppliedMinor = platformCreditsApplied + storeCreditsApplied;
+    const amountDueMinor = subtotal - creditsAppliedMinor;
+
+    // 5.6 Fully covered by wallet credits — skip MercadoPago entirely, confirm now.
+    if (amountDueMinor <= 0) {
+      // Fully covered by wallet credits — no real money moved, so no cashback is earned
+      // on this order (netPaidMinor = 0). Commission/payout still use the gross subtotal.
+      const fees = await this.loyalty.computeOrderFees(sellerId, subtotal, 0);
       await this.prisma.marketplaceOrder.update({
         where: { id: order.id },
         data: {
@@ -276,7 +282,77 @@ export class CheckoutService {
     if (expected !== v1) throw new UnauthorizedException('Webhook signature mismatch');
   }
 
-  /** Force-reconcile an order against the MP Payments Search API. */
+  /**
+   * Shared finalize step for both reconcile and webhook — this is the single
+   * place that applies a payment-status transition's side effects, so the two
+   * entry points can never drift or double-apply them.
+   *
+   * Idempotent by construction: `newStatus === order.status` is a no-op (covers
+   * MP's duplicate webhook deliveries and a manual reconcile racing the webhook
+   * for the same transition). Compensation (loyalty.refundCredits) mirrors the
+   * reservation made at checkout-init (loyalty.reserveCredits) — if the order
+   * never completes, the credits go back, same as the saga pattern used for the
+   * offline POS checkout (libs/platform/saga): forward step + compensating step.
+   */
+  private async finalizeOrderStatus(
+    order: {
+      id: string; sellerId: string; customerId: string | null; status: string;
+      totalMinorUnits: number; platformCreditsApplied: number; storeCreditsApplied: number;
+    },
+    newStatus: string,
+    paymentId: string,
+    eventType: string,
+    eventPayload: Record<string, unknown>,
+  ): Promise<boolean> {
+    if (newStatus === order.status) return false;
+
+    // Cashback is earned only on money actually collected through the gateway —
+    // net of any wallet/store credits redeemed on this order — never on the gross
+    // total, or credits could be compounded into more credits for free.
+    const netPaidMinor = order.totalMinorUnits - order.platformCreditsApplied - order.storeCreditsApplied;
+    const fees = newStatus === 'confirmed'
+      ? await this.loyalty.computeOrderFees(order.sellerId, order.totalMinorUnits, netPaidMinor)
+      : null;
+
+    await this.prisma.marketplaceOrder.update({
+      where: { id: order.id },
+      data: {
+        status: newStatus,
+        paymentId,
+        ...(fees && {
+          commissionMinorUnits: fees.commissionMinor,
+          platformCashbackMinor: fees.platformCashbackMinor,
+          storeCashbackMinor: fees.storeCashbackMinor,
+        }),
+        events: { create: { type: eventType, payload: eventPayload as object } },
+      },
+    });
+
+    if (newStatus === 'confirmed' && order.customerId && fees) {
+      await this.loyalty.awardCashback({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId: order.id,
+        platformCashbackMinor: fees.platformCashbackMinor,
+        storeCashbackMinor: fees.storeCashbackMinor,
+      });
+    }
+
+    if (newStatus === 'cancelled' && order.customerId
+        && (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0)) {
+      await this.loyalty.refundCredits({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId: order.id,
+        platformCreditsApplied: order.platformCreditsApplied,
+        storeCreditsApplied: order.storeCreditsApplied,
+      });
+    }
+
+    return true;
+  }
+
+  /** Force-reconcile a still-pending order against the MP Payments Search API. */
   async reconcileOrder(orderId: string): Promise<{ status: string; updated: boolean }> {
     const order = await this.prisma.marketplaceOrder.findUniqueOrThrow({
       where: { id: orderId },
@@ -308,47 +384,13 @@ export class CheckoutService {
       cancelled: 'cancelled',
     };
     const newStatus = statusMap[latest.status];
-    if (!newStatus || newStatus === order.status) return { status: order.status, updated: false };
+    if (!newStatus) return { status: order.status, updated: false };
 
-    const fees = await this.loyalty.computeOrderFees(order.sellerId, order.totalMinorUnits);
-
-    await this.prisma.marketplaceOrder.update({
-      where: { id: orderId },
-      data: {
-        status: newStatus,
-        paymentId: String(latest.id),
-        commissionMinorUnits: fees.commissionMinor,
-        platformCashbackMinor: fees.platformCashbackMinor,
-        storeCashbackMinor: fees.storeCashbackMinor,
-        events: {
-          create: {
-            type: `reconciled_${latest.status}`,
-            payload: { paymentId: latest.id, mpStatus: latest.status, amount: latest.transaction_amount },
-          },
-        },
-      },
-    });
-
-    if (newStatus === 'confirmed' && order.customerId) {
-      await this.loyalty.awardCashback({
-        customerId: order.customerId,
-        sellerId: order.sellerId,
-        orderId,
-        platformCashbackMinor: fees.platformCashbackMinor,
-        storeCashbackMinor: fees.storeCashbackMinor,
-      });
-      if (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0) {
-        await this.loyalty.redeemCredits({
-          customerId: order.customerId,
-          sellerId: order.sellerId,
-          orderId,
-          platformCreditsApplied: order.platformCreditsApplied,
-          storeCreditsApplied: order.storeCreditsApplied,
-        });
-      }
-    }
-
-    return { status: newStatus, updated: true };
+    const applied = await this.finalizeOrderStatus(
+      order, newStatus, String(latest.id), `reconciled_${latest.status}`,
+      { paymentId: latest.id, mpStatus: latest.status, amount: latest.transaction_amount },
+    );
+    return { status: applied ? newStatus : order.status, updated: applied };
   }
 
   async handlePaymentWebhook(payload: {
@@ -375,50 +417,12 @@ export class CheckoutService {
       cancelled: 'cancelled',
       refunded: 'refunded',
     };
-
     const newStatus = statusMap[payment.status] ?? order.status;
-    const fees = newStatus === 'confirmed'
-      ? await this.loyalty.computeOrderFees(order.sellerId, order.totalMinorUnits)
-      : null;
 
-    await this.prisma.marketplaceOrder.update({
-      where: { id: orderId },
-      data: {
-        status: newStatus,
-        paymentId,
-        ...(fees && {
-          commissionMinorUnits: fees.commissionMinor,
-          platformCashbackMinor: fees.platformCashbackMinor,
-          storeCashbackMinor: fees.storeCashbackMinor,
-        }),
-        events: {
-          create: {
-            type: `payment_${payment.status}`,
-            payload: { paymentId, mpStatus: payment.status, amount: payment.transaction_amount },
-          },
-        },
-      },
-    });
-
-    if (newStatus === 'confirmed' && order.customerId && fees) {
-      await this.loyalty.awardCashback({
-        customerId: order.customerId,
-        sellerId: order.sellerId,
-        orderId,
-        platformCashbackMinor: fees.platformCashbackMinor,
-        storeCashbackMinor: fees.storeCashbackMinor,
-      });
-      if (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0) {
-        await this.loyalty.redeemCredits({
-          customerId: order.customerId,
-          sellerId: order.sellerId,
-          orderId,
-          platformCreditsApplied: order.platformCreditsApplied,
-          storeCreditsApplied: order.storeCreditsApplied,
-        });
-      }
-    }
-
+    await this.finalizeOrderStatus(
+      order, newStatus, paymentId, `payment_${payment.status}`,
+      { paymentId, mpStatus: payment.status, amount: payment.transaction_amount },
+    );
     return { processed: true };
   }
 

@@ -8,6 +8,7 @@ export interface CartItem {
   priceMinorUnits: number;
   currency: string;
   quantity: number;
+  stock: number;
   imageUrl?: string;
 }
 
@@ -25,17 +26,22 @@ const Ctx = createContext<CartCtx | null>(null);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // Caps at available stock — repeated "Agregar" clicks (or a stale stock value
+  // from a longer-open tab) can never push the cart quantity past what's
+  // actually purchasable; the backend re-validates this independently at
+  // checkout anyway, but catching it here gives immediate feedback instead of
+  // a generic error at the very end of checkout.
   const add = useCallback((item: CartItem) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.listingId === item.listingId);
       if (existing) {
         return prev.map((i) =>
           i.listingId === item.listingId
-            ? { ...i, quantity: i.quantity + item.quantity }
+            ? { ...i, quantity: Math.min(i.quantity + item.quantity, item.stock), stock: item.stock }
             : i,
         );
       }
-      return [...prev, item];
+      return [...prev, { ...item, quantity: Math.min(item.quantity, item.stock) }];
     });
   }, []);
 

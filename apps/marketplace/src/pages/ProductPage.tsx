@@ -94,7 +94,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
   });
 
   const [selectedImage, setSelectedImage] = useState(0);
-  const { add } = useCart();
+  const { add, items: cartItems } = useCart();
 
   if (isLoading) return <ProductSkeleton />;
   if (isError || !data) return <NotFound />;
@@ -208,6 +208,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                 listing={listing}
                 rank={idx + 1}
                 platformCashbackPct={platformCashback}
+                inCartQuantity={cartItems.find((i) => i.listingId === listing.id)?.quantity ?? 0}
                 onAddToCart={() => {
                   add({
                     listingId: listing.id,
@@ -217,6 +218,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                     priceMinorUnits: listing.priceMinorUnits,
                     currency: listing.currency,
                     quantity: 1,
+                    stock: listing.stock,
                     imageUrl: p.images[0],
                   });
                   onCartOpen();
@@ -231,14 +233,16 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
 }
 
 function ListingRow({
-  listing: l, rank, onAddToCart, platformCashbackPct = 0.01,
+  listing: l, rank, onAddToCart, platformCashbackPct = 0.01, inCartQuantity = 0,
 }: {
   listing: ListingDetail;
   rank: number;
   platformCashbackPct?: number;
+  inCartQuantity?: number;
   onAddToCart: () => void;
 }) {
   const [showScore, setShowScore] = useState(false);
+  const atStockLimit = l.stock > 0 && inCartQuantity >= l.stock;
 
   const bestDelivery = l.deliveryOptions.length
     ? l.deliveryOptions.reduce((best, d) => d.estimatedDaysMin < best.estimatedDaysMin ? d : best, l.deliveryOptions[0])
@@ -316,9 +320,9 @@ function ListingRow({
           })()}
         </div>
         {l.stockStatus !== 'out_of_stock' && (
-          <Button onClick={onAddToCart} size="sm">
+          <Button onClick={onAddToCart} size="sm" disabled={atStockLimit} title={atStockLimit ? 'Ya agregaste todo el stock disponible' : undefined}>
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-            Agregar
+            {atStockLimit ? 'Máximo en carrito' : 'Agregar'}
           </Button>
         )}
       </div>

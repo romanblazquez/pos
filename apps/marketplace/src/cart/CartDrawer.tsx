@@ -3,7 +3,7 @@ import { useCart } from './CartContext.js';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet, storeCreditFor } from '../hooks/useWallet.js';
-import { Button, inputCls } from '../components/ui/index.js';
+import { Button, inputCls, fmtExact } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? '';
 
@@ -24,10 +24,13 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const [useCredits, setUseCredits] = useState(true);
 
   const cartSellerId = items[0]?.sellerId;
-  const platformCreditsAvailable = wallet?.platformCreditsMinor ?? 0;
-  const storeCreditsAvailable = cartSellerId ? storeCreditFor(wallet, cartSellerId) : 0;
+  // Clamped at 0 — a corrupted/negative wallet balance must never inflate the
+  // amount charged (negative "credits" would otherwise subtract a negative,
+  // i.e. add to the total).
+  const platformCreditsAvailable = Math.max(0, wallet?.platformCreditsMinor ?? 0);
+  const storeCreditsAvailable = Math.max(0, cartSellerId ? storeCreditFor(wallet, cartSellerId) : 0);
   const creditsAvailable = platformCreditsAvailable + storeCreditsAvailable;
-  const creditsToApply = useCredits ? Math.min(creditsAvailable, total) : 0;
+  const creditsToApply = useCredits ? Math.max(0, Math.min(creditsAvailable, total)) : 0;
   const amountDue = total - creditsToApply;
 
   const [name, setName] = useState(session?.customer.name ?? '');
@@ -218,7 +221,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[--tx]">Usar mis créditos</p>
                       <p className="text-xs text-[--tx-muted] mt-0.5">
-                        Tenés {fmt(creditsAvailable, items[0]?.currency)} disponibles
+                        Tenés {fmtExact(creditsAvailable, items[0]?.currency)} disponibles
                         {storeCreditsAvailable > 0 && platformCreditsAvailable > 0 ? ' (saldo general + crédito de esta tienda)' : ''}.
                       </p>
                     </div>
@@ -275,17 +278,17 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
               <>
                 <div className="flex justify-between text-sm text-[--tx-muted]">
                   <span>Subtotal</span>
-                  <span className="tabular">{fmt(total, items[0]?.currency)}</span>
+                  <span className="tabular">{fmtExact(total, items[0]?.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-emerald-600">
                   <span>Créditos aplicados</span>
-                  <span className="tabular">−{fmt(creditsToApply, items[0]?.currency)}</span>
+                  <span className="tabular">−{fmtExact(creditsToApply, items[0]?.currency)}</span>
                 </div>
               </>
             )}
             <div className="flex justify-between text-sm font-semibold text-[--tx]">
               <span>Total a pagar</span>
-              <span className="tabular">{fmt(amountDue, items[0]?.currency)}</span>
+              <span className="tabular">{fmtExact(amountDue, items[0]?.currency)}</span>
             </div>
             <Button type="submit" form="checkout-form" className="w-full justify-center py-3">
               {amountDue <= 0 ? 'Confirmar pedido' : 'Pagar con Mercado Pago 🔒'}

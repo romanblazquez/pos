@@ -85,8 +85,9 @@ export default function App() {
 
 type CheckoutState =
   | { state: 'idle' }
-  | { state: 'polling'; orderId: string }
+  | { state: 'checking'; orderId: string }
   | { state: 'confirmed'; orderId: string }
+  | { state: 'delayed'; orderId: string }
   | { state: 'failed'; message: string };
 
 function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme: () => void }) {
@@ -122,21 +123,34 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
       setCheckout({ state: 'failed', message: 'El pago fue rechazado. Podés intentar de nuevo.' });
       return;
     }
-    setCheckout({ state: 'polling', orderId });
-    let attempts = 0;
-    const MAX = 20;
-    const iv = setInterval(async () => {
-      attempts++;
+    setCheckout({ state: 'checking', orderId });
+    let cancelled = false;
+
+    // The webhook (server push) should have already confirmed the order by the
+    // time the buyer lands back here — reconcile is just a one-shot backstop in
+    // case the webhook hasn't arrived yet. A short bounded retry (not indefinite
+    // polling) covers that race; if it's still not confirmed after a few seconds,
+    // hand off to a "still processing" state instead of an endless spinner —
+    // "Mis pedidos" self-heals on view, so the buyer always has a way forward.
+    async function checkStatus(id: string, attempt: number): Promise<void> {
+      if (cancelled) return;
       try {
-        if (attempts === 1) await fetch(`${API}/api/v1/checkout/orders/${orderId}/reconcile`, { method: 'POST' });
-        const res = await fetch(`${API}/api/v1/checkout/orders/${orderId}`);
+        if (attempt === 0) await fetch(`${API}/api/v1/checkout/orders/${id}/reconcile`, { method: 'POST' });
+        const res = await fetch(`${API}/api/v1/checkout/orders/${id}`);
         if (!res.ok) throw new Error();
         const order = (await res.json()) as { status: string };
-        if (order.status === 'confirmed' || attempts >= MAX) { clearInterval(iv); setCheckout({ state: 'confirmed', orderId }); }
-        else if (order.status === 'cancelled') { clearInterval(iv); setCheckout({ state: 'failed', message: 'El pago fue cancelado.' }); }
-      } catch { if (attempts >= MAX) { clearInterval(iv); setCheckout({ state: 'confirmed', orderId }); } }
-    }, 2000);
-    return () => clearInterval(iv);
+        if (cancelled) return;
+        if (order.status === 'confirmed') { setCheckout({ state: 'confirmed', orderId: id }); return; }
+        if (order.status === 'cancelled') { setCheckout({ state: 'failed', message: 'El pago fue cancelado.' }); return; }
+      } catch {
+        if (cancelled) return;
+      }
+      if (attempt >= 3) { setCheckout({ state: 'delayed', orderId: id }); return; }
+      setTimeout(() => checkStatus(id, attempt + 1), 1500);
+    }
+    checkStatus(orderId, 0);
+
+    return () => { cancelled = true; };
   }, []);
 
   function navigate(r: Route) {
@@ -157,11 +171,24 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[--bg]">
         <div className="w-full max-w-sm rounded-2xl border border-[--border] bg-[--bg-raised] p-10 text-center space-y-4 shadow-lg">
-          {checkout.state === 'polling' && (
+          {checkout.state === 'checking' && (
             <>
               <p className="text-4xl animate-pulse">⏳</p>
               <h1 className="text-lg font-bold text-[--tx]">Confirmando tu pago…</h1>
-              <p className="text-sm text-[--tx-muted]">No cierres la ventana.</p>
+              <p className="text-sm text-[--tx-muted]">Esto toma solo unos segundos.</p>
+            </>
+          )}
+          {checkout.state === 'delayed' && (
+            <>
+              <p className="text-4xl">📨</p>
+              <h1 className="text-lg font-bold text-[--tx]">Tu pago se está procesando</h1>
+              <p className="text-sm text-[--tx-muted]">
+                MercadoPago todavía no nos confirma el resultado — esto puede tardar un poco más.
+                Te avisaremos en "Mis pedidos" en cuanto se confirme.
+              </p>
+              <Button onClick={() => { setCheckout({ state: 'idle' }); navigate({ page: 'orders' }); }}>
+                Ver mis pedidos
+              </Button>
             </>
           )}
           {checkout.state === 'confirmed' && (

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext.js';
-import { Card, CardContent, Badge } from '../components/ui/index.js';
+import { Card, CardContent, Badge, fmtExact } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -181,14 +181,9 @@ export default function OrdersPage() {
                     {(() => {
                       const creditsApplied = (order.platformCreditsApplied ?? 0) + (order.storeCreditsApplied ?? 0);
                       const gatewayLabel = PAYMENT_PROVIDER_LABEL[order.paymentProvider ?? ''] ?? 'Tarjeta';
-                      // Round each displayed figure to whole currency units, then derive
-                      // "paid via gateway" from those already-rounded numbers — otherwise
-                      // independently-rounded credits + paid can fail to sum to the total
-                      // shown (e.g. $194 + $1,007 visually ≠ $1,200 even though the exact
-                      // cents values are correct).
-                      const totalUnits = Math.round(order.totalMinorUnits / 100);
-                      const creditsUnits = Math.round(creditsApplied / 100);
-                      const paidUnits = totalUnits - creditsUnits;
+                      // Exact (2-decimal) figures throughout — the amounts always sum
+                      // correctly because nothing here is rounded for display.
+                      const paidViaGateway = order.totalMinorUnits - creditsApplied;
                       return (
                         <div className="border-t border-[--border] pt-3 flex flex-col gap-1.5">
                           <div className="flex justify-between text-xs text-[--tx-muted]">
@@ -204,18 +199,18 @@ export default function OrdersPage() {
                             <>
                               <div className="flex justify-between text-xs text-[--tx-muted] pt-1">
                                 <span>Total del pedido</span>
-                                <span className="tabular">{fmt(totalUnits * 100, order.currency)}</span>
+                                <span className="tabular">{fmtExact(order.totalMinorUnits, order.currency)}</span>
                               </div>
                               <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
                                 <span>🎁 Créditos aplicados</span>
-                                <span className="tabular">−{fmt(creditsUnits * 100, order.currency)}</span>
+                                <span className="tabular">−{fmtExact(creditsApplied, order.currency)}</span>
                               </div>
                             </>
                           )}
 
                           <div className="flex justify-between text-sm font-bold text-[--tx] pt-1 border-t border-[--border]">
-                            <span>Total pagado{paidUnits > 0 ? ` (${gatewayLabel})` : ''}</span>
-                            <span className="tabular">{fmt(paidUnits * 100, order.currency)}</span>
+                            <span>Total pagado{paidViaGateway > 0 ? ` (${gatewayLabel})` : ''}</span>
+                            <span className="tabular">{fmtExact(paidViaGateway, order.currency)}</span>
                           </div>
                         </div>
                       );

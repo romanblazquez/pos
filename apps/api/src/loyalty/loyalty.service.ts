@@ -49,8 +49,19 @@ export class LoyaltyService {
   }
 
   /** Compute the effective commission and cashback amounts for an order.
+   *  orderTotalMinor (gross) drives commission/sellerPayout — the seller is owed for
+   *  the full sale regardless of how the customer paid. netPaidMinor (gross minus any
+   *  wallet/store credits redeemed on this order) drives cashback — cashback must never
+   *  be earned on money that didn't actually change hands through the gateway, or a
+   *  customer could compound credits into more credits for free. Defaults to
+   *  orderTotalMinor when omitted (no credits applied).
    *  listingId is optional — when provided, any active per-listing promo is added to storeCashbackPct. */
-  async computeOrderFees(sellerId: string, orderTotalMinor: number, listingId?: string): Promise<{
+  async computeOrderFees(
+    sellerId: string,
+    orderTotalMinor: number,
+    netPaidMinor: number = orderTotalMinor,
+    listingId?: string,
+  ): Promise<{
     effectiveCommissionPct: number;
     platformCashbackPct: number;
     storeCashbackPct: number;
@@ -96,9 +107,10 @@ export class LoyaltyService {
       platformCfg.minCommissionPct,
     );
 
+    const netBasis = Math.max(0, Math.min(netPaidMinor, orderTotalMinor));
     const commissionMinor = Math.round(orderTotalMinor * effectiveCommissionPct);
-    const platformCashbackMinor = Math.round(orderTotalMinor * platformCfg.platformCashbackPct);
-    const storeCashbackMinor = Math.round(orderTotalMinor * storeCashbackPct);
+    const platformCashbackMinor = Math.round(netBasis * platformCfg.platformCashbackPct);
+    const storeCashbackMinor = Math.round(netBasis * storeCashbackPct);
     const sellerPayoutMinor = orderTotalMinor - commissionMinor - storeCashbackMinor;
 
     return {
@@ -183,29 +195,75 @@ export class LoyaltyService {
     });
   }
 
-  /** Validate and reserve credits to apply at checkout. Returns actual amounts to deduct. */
+  /**
+   * Reserve AND deduct credits atomically at checkout-init time. Deducting
+   * immediately (rather than just checking balance here and deducting later at
+   * payment confirmation) prevents two concurrent/sequential checkouts from both
+   * reading the same not-yet-redeemed balance and over-applying it — the wallet
+   * decrement happens in the same transaction as the read, so a second call
+   * always sees the already-reduced balance. Clamped at 0 in both directions so
+   * a corrupted/negative balance can never inflate the amount charged.
+   * Call refundCredits if the resulting order ends up cancelled/failed.
+   */
   async reserveCredits(opts: {
     customerId: string;
     sellerId: string;
+    orderId: string;
     platformCreditsToUse: number;
     storeCreditsToUse: number;
   }): Promise<{ platformCreditsApplied: number; storeCreditsApplied: number }> {
-    const wallet = await this.prisma.customerWallet.findUnique({
-      where: { customerId: opts.customerId },
-      include: { storeCredits: { where: { sellerId: opts.sellerId } } },
+    return this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.customerWallet.findUnique({
+        where: { customerId: opts.customerId },
+        include: { storeCredits: { where: { sellerId: opts.sellerId } } },
+      });
+      if (!wallet) return { platformCreditsApplied: 0, storeCreditsApplied: 0 };
+
+      const platformAvailable = Math.max(0, wallet.platformCreditsMinor);
+      const storeAvailable = Math.max(0, wallet.storeCredits[0]?.balanceMinor ?? 0);
+      const platformCreditsApplied = Math.max(0, Math.min(opts.platformCreditsToUse, platformAvailable));
+      const storeCreditsApplied = Math.max(0, Math.min(opts.storeCreditsToUse, storeAvailable));
+
+      if (platformCreditsApplied > 0) {
+        await tx.customerWallet.update({
+          where: { id: wallet.id },
+          data: { platformCreditsMinor: { decrement: platformCreditsApplied } },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: 'redeem_platform',
+            amountMinor: -platformCreditsApplied,
+            sellerId: opts.sellerId,
+            orderId: opts.orderId,
+            description: `Créditos aplicados en orden #${opts.orderId.slice(-8)}`,
+          },
+        });
+      }
+
+      if (storeCreditsApplied > 0) {
+        await tx.storeCredit.updateMany({
+          where: { walletId: wallet.id, sellerId: opts.sellerId },
+          data: { balanceMinor: { decrement: storeCreditsApplied } },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: 'redeem_store',
+            amountMinor: -storeCreditsApplied,
+            sellerId: opts.sellerId,
+            orderId: opts.orderId,
+            description: `Crédito de tienda aplicado en orden #${opts.orderId.slice(-8)}`,
+          },
+        });
+      }
+
+      return { platformCreditsApplied, storeCreditsApplied };
     });
-
-    const platformAvailable = wallet?.platformCreditsMinor ?? 0;
-    const storeAvailable = wallet?.storeCredits[0]?.balanceMinor ?? 0;
-
-    const platformCreditsApplied = Math.min(opts.platformCreditsToUse, platformAvailable);
-    const storeCreditsApplied = Math.min(opts.storeCreditsToUse, storeAvailable);
-
-    return { platformCreditsApplied, storeCreditsApplied };
   }
 
-  /** Redeem credits — call inside checkout transaction when payment is confirmed. */
-  async redeemCredits(opts: {
+  /** Give back credits already reserved for an order that ended up cancelled/failed. */
+  async refundCredits(opts: {
     customerId: string;
     sellerId: string;
     orderId: string;
@@ -222,33 +280,34 @@ export class LoyaltyService {
       if (opts.platformCreditsApplied > 0) {
         await tx.customerWallet.update({
           where: { id: wallet.id },
-          data: { platformCreditsMinor: { decrement: opts.platformCreditsApplied } },
+          data: { platformCreditsMinor: { increment: opts.platformCreditsApplied } },
         });
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
-            type: 'redeem_platform',
-            amountMinor: -opts.platformCreditsApplied,
+            type: 'earn_platform',
+            amountMinor: opts.platformCreditsApplied,
             sellerId: opts.sellerId,
             orderId: opts.orderId,
-            description: `Créditos aplicados en orden #${opts.orderId.slice(-8)}`,
+            description: `Reembolso — orden #${opts.orderId.slice(-8)} cancelada`,
           },
         });
       }
 
       if (opts.storeCreditsApplied > 0) {
-        await tx.storeCredit.updateMany({
-          where: { walletId: wallet.id, sellerId: opts.sellerId },
-          data: { balanceMinor: { decrement: opts.storeCreditsApplied } },
+        await tx.storeCredit.upsert({
+          where: { walletId_sellerId: { walletId: wallet.id, sellerId: opts.sellerId } },
+          create: { walletId: wallet.id, sellerId: opts.sellerId, balanceMinor: opts.storeCreditsApplied },
+          update: { balanceMinor: { increment: opts.storeCreditsApplied } },
         });
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
-            type: 'redeem_store',
-            amountMinor: -opts.storeCreditsApplied,
+            type: 'earn_store',
+            amountMinor: opts.storeCreditsApplied,
             sellerId: opts.sellerId,
             orderId: opts.orderId,
-            description: `Crédito de tienda aplicado en orden #${opts.orderId.slice(-8)}`,
+            description: `Reembolso de crédito de tienda — orden #${opts.orderId.slice(-8)} cancelada`,
           },
         });
       }
