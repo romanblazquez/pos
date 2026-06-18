@@ -284,6 +284,10 @@ function OrderCard({ order, expanded, onToggle }: {
                 <span className="tabular">{fmtPrice(order.shippingMinorUnits, order.currency)}</span>
               </div>
             )}
+            <div className="flex justify-between font-medium text-slate-700 pt-1 border-t border-slate-100">
+              <span>Total cobrado al comprador</span>
+              <span className="tabular">{fmtPrice(order.totalMinorUnits, order.currency)}</span>
+            </div>
             {order.commissionMinorUnits > 0 && (
               <div className="flex justify-between text-slate-400 text-xs">
                 <span>Comisión plataforma</span>
@@ -291,8 +295,8 @@ function OrderCard({ order, expanded, onToggle }: {
               </div>
             )}
             <div className="flex justify-between font-semibold text-slate-900 pt-1 border-t border-slate-100">
-              <span>Total</span>
-              <span className="tabular">{fmtPrice(order.totalMinorUnits, order.currency)}</span>
+              <span>Vas a recibir</span>
+              <span className="tabular">{fmtPrice(order.totalMinorUnits - order.commissionMinorUnits, order.currency)}</span>
             </div>
           </div>
 
