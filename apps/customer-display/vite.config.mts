@@ -10,6 +10,10 @@ const repoRoot = resolve(here, '../..');
 
 export default defineConfig({
   root: here,
+  // Vite's default envDir is `root` (this app's own folder) — the actual .env
+  // lives at the monorepo root, so without this every VITE_* var silently
+  // fell back to its hardcoded default instead of being read at all.
+  envDir: repoRoot,
   cacheDir: resolve(repoRoot, 'node_modules/.vite/customer-display'),
   plugins: [
     tailwindcss(),

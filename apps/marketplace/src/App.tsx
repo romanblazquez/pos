@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage.js';
 import AccountPage from './pages/AccountPage.js';
 import WalletPage from './pages/WalletPage.js';
 import OrdersPage from './pages/OrdersPage.js';
+import AddressesPage from './pages/AddressesPage.js';
 import { CartProvider, useCart } from './cart/CartContext.js';
 import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
@@ -22,7 +23,8 @@ type Route =
   | { page: 'product'; slug: string }
   | { page: 'account' }
   | { page: 'wallet' }
-  | { page: 'orders' };
+  | { page: 'orders' }
+  | { page: 'addresses' };
 
 function parseRoute(pathname: string, search: string): Route {
   if (pathname.startsWith('/product/')) {
@@ -40,6 +42,7 @@ function parseRoute(pathname: string, search: string): Route {
   if (pathname === '/account') return { page: 'account' };
   if (pathname === '/account/wallet') return { page: 'wallet' };
   if (pathname === '/account/orders') return { page: 'orders' };
+  if (pathname === '/account/addresses') return { page: 'addresses' };
   return { page: 'home' };
 }
 
@@ -55,6 +58,7 @@ function routePath(r: Route): string {
   if (r.page === 'account') return '/account';
   if (r.page === 'wallet') return '/account/wallet';
   if (r.page === 'orders') return '/account/orders';
+  if (r.page === 'addresses') return '/account/addresses';
   return '/';
 }
 
@@ -105,11 +109,16 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const orderId = params.get('order_id');
-    const status = params.get('status');
+    // Our own dev-mode fallback appends `order_id`; a real MercadoPago redirect
+    // appends its own params instead — `external_reference` is the one we set to
+    // our orderId when creating the preference, and `status`/`collection_status`
+    // carry approved | pending | rejected (never `order_id`/`failure`, which only
+    // existed in the dev-mode path and never matched a real payment redirect).
+    const orderId = params.get('order_id') ?? params.get('external_reference');
+    const status = params.get('status') ?? params.get('collection_status');
     if (!orderId) return;
     window.history.replaceState({}, '', window.location.pathname);
-    if (status === 'failure') {
+    if (status === 'rejected' || status === 'failure') {
       setCheckout({ state: 'failed', message: 'El pago fue rechazado. Podés intentar de nuevo.' });
       return;
     }
@@ -131,7 +140,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
   }, []);
 
   function navigate(r: Route) {
-    const isAccountPage = r.page === 'account' || r.page === 'wallet' || r.page === 'orders';
+    const isAccountPage = r.page === 'account' || r.page === 'wallet' || r.page === 'orders' || r.page === 'addresses';
     if (isAccountPage && !session) { setAuthOpen(true); return; }
     setRoute(r);
     window.history.pushState({}, '', routePath(r));
@@ -182,7 +191,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
     );
   }
 
-  const isAccount = route.page === 'account' || route.page === 'wallet' || route.page === 'orders';
+  const isAccount = route.page === 'account' || route.page === 'wallet' || route.page === 'orders' || route.page === 'addresses';
 
   return (
     <div className="min-h-screen bg-[--bg]">
@@ -205,6 +214,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
               { page: 'account', label: 'Resumen' },
               { page: 'wallet', label: 'Wallet' },
               { page: 'orders', label: 'Pedidos' },
+              { page: 'addresses', label: 'Direcciones' },
             ] as const).map(({ page, label }) => (
               <button
                 key={page}
@@ -247,6 +257,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
         )}
         {route.page === 'wallet' && session && <WalletPage />}
         {route.page === 'orders' && session && <OrdersPage />}
+        {route.page === 'addresses' && session && <AddressesPage />}
       </main>
 
       {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}

@@ -159,9 +159,16 @@ export class CheckoutService {
 
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
+    // MP test/sandbox credentials produce a test-mode preference — sending the buyer
+    // to init_point (the production checkout URL) for one triggers a fatal "una de
+    // las partes es de prueba" error. Use sandbox_init_point whenever it's present
+    // (MP only returns it for test-mode preferences); fall back to init_point for
+    // real production credentials, which don't get a sandbox_init_point at all.
+    const checkoutUrl = preference.sandbox_init_point ?? preference.init_point;
+
     return {
       orderId: order.id,
-      checkoutUrl: preference.init_point,
+      checkoutUrl,
       checkoutSessionId: preference.id,
       expiresAt,
     };
@@ -395,7 +402,7 @@ export class CheckoutService {
     successUrl: string;
     failureUrl: string;
     pendingUrl: string;
-  }): Promise<{ id: string; init_point: string }> {
+  }): Promise<{ id: string; init_point: string; sandbox_init_point?: string }> {
     // Use seller's token for marketplace split, fall back to platform token for dev
     const token = params.sellerMpToken ?? this.mpToken;
 
@@ -415,11 +422,17 @@ export class CheckoutService {
         failure: params.failureUrl,
         pending: params.pendingUrl,
       },
-      auto_return: 'approved',
       notification_url: `${process.env.API_BASE_URL ?? 'http://localhost:3000'}/api/v1/checkout/webhooks/mercadopago`,
       expires: true,
       expiration_date_to: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     };
+
+    // MP rejects auto_return unless back_urls.success is a publicly reachable
+    // https URL — only request it when that's true (production / tunneled dev).
+    // Locally over http, the buyer just clicks "volver al sitio" manually instead.
+    if (params.successUrl.startsWith('https://')) {
+      body['auto_return'] = 'approved';
+    }
 
     // Marketplace split: declare platform client_id and commission amount
     if (params.sellerMpToken && params.marketplaceFee) {
@@ -438,7 +451,7 @@ export class CheckoutService {
       throw new BadRequestException(`MercadoPago preference error: ${err}`);
     }
 
-    return res.json() as Promise<{ id: string; init_point: string }>;
+    return res.json() as Promise<{ id: string; init_point: string; sandbox_init_point?: string }>;
   }
 
   private async fetchMpPayment(paymentId: string): Promise<{

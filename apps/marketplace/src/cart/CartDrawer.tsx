@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from './CartContext.js';
-import { Button } from '../components/ui/index.js';
+import { useCustomer } from '../context/CustomerContext.js';
+import { useAddresses } from '../hooks/useAddresses.js';
+import { Button, inputCls } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? '';
 
@@ -8,37 +10,61 @@ function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
 }
 
-const inputCls =
-  'w-full px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--bg-input] text-[--tx] ' +
-  'placeholder:text-[--tx-faint] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent';
-
 type Step = 'cart' | 'form' | 'processing' | 'success' | 'error';
 
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const { items, remove, clear, total } = useCart();
+  const { session } = useCustomer();
+  const { addresses, create: createAddress } = useAddresses(session?.customer.id);
   const [step, setStep] = useState<Step>('cart');
   const [error, setError] = useState('');
   const [orderId, setOrderId] = useState('');
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(session?.customer.name ?? '');
+  const [email, setEmail] = useState(session?.customer.email ?? '');
+
+  // 'new' = typing a fresh address below; otherwise the id of a saved address to reuse.
+  const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new');
+  const [saveAddress, setSaveAddress] = useState(true);
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
   const [stateVal, setStateVal] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
+  // Default to the customer's default saved address the first time the list loads.
+  useEffect(() => {
+    if (addresses.length === 0) return;
+    setSelectedAddressId((current) => {
+      if (current !== 'new') return current;
+      return addresses.find((a) => a.isDefault)?.id ?? addresses[0].id;
+    });
+  }, [addresses]);
+
+  const usingNewAddress = selectedAddressId === 'new' || addresses.length === 0;
 
   async function submitCheckout(e: React.FormEvent) {
     e.preventDefault();
     setStep('processing');
     setError('');
     try {
+      const savedAddress = addresses.find((a) => a.id === selectedAddressId);
+      const deliveryAddress = savedAddress
+        ? { street: savedAddress.street, city: savedAddress.city, state: savedAddress.state, postalCode: savedAddress.postalCode, country: savedAddress.country }
+        : { street, city, state: stateVal, postalCode, country: 'MX' };
+
+      // Save the new address for next time — best-effort, never blocks checkout itself.
+      if (usingNewAddress && saveAddress && session) {
+        try { await createAddress.mutateAsync({ street, city, state: stateVal, postalCode, country: 'MX' }); } catch { /* non-blocking */ }
+      }
+
       const baseUrl = window.location.origin;
       const res = await fetch(`${API}/api/v1/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map((i) => ({ listingId: i.listingId, quantity: i.quantity })),
-          deliveryAddress: { street, city, state: stateVal, postalCode },
+          deliveryAddress,
+          customerId: session?.customer.id,
           customerEmail: email,
           customerName: name,
           successUrl: `${baseUrl}/checkout/success`,
@@ -91,20 +117,79 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
               </Field>
               <hr className="border-[--border]" />
               <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wide">Dirección de envío</p>
-              <Field label="Calle y número">
-                <input required value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Insurgentes 1234" className={inputCls} />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Ciudad">
-                  <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="CDMX" className={inputCls} />
-                </Field>
-                <Field label="Estado">
-                  <input required value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder="Ciudad de México" className={inputCls} />
-                </Field>
-              </div>
-              <Field label="Código postal">
-                <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="06600" className={inputCls} />
-              </Field>
+
+              {addresses.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {addresses.map((addr) => (
+                    <label
+                      key={addr.id}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                        selectedAddressId === addr.id
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                          : 'border-[--border] hover:border-[--tx-faint]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="address"
+                        checked={selectedAddressId === addr.id}
+                        onChange={() => setSelectedAddressId(addr.id)}
+                        className="mt-1 accent-emerald-600"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[--tx]">{addr.label || 'Dirección'}</p>
+                        <p className="text-xs text-[--tx-muted]">{addr.street}, {addr.city}, {addr.state} {addr.postalCode}</p>
+                      </div>
+                    </label>
+                  ))}
+                  <label
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      selectedAddressId === 'new'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                        : 'border-[--border] hover:border-[--tx-faint]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="address"
+                      checked={selectedAddressId === 'new'}
+                      onChange={() => setSelectedAddressId('new')}
+                      className="accent-emerald-600"
+                    />
+                    <span className="text-sm font-medium text-[--tx]">+ Usar una dirección nueva</span>
+                  </label>
+                </div>
+              )}
+
+              {usingNewAddress && (
+                <div className="flex flex-col gap-4">
+                  <Field label="Calle y número">
+                    <input required value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Insurgentes 1234" className={inputCls} />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Ciudad">
+                      <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="CDMX" className={inputCls} />
+                    </Field>
+                    <Field label="Estado">
+                      <input required value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder="Ciudad de México" className={inputCls} />
+                    </Field>
+                  </div>
+                  <Field label="Código postal">
+                    <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="06600" className={inputCls} />
+                  </Field>
+                  {session && (
+                    <label className="flex items-center gap-2.5 text-sm text-[--tx-muted] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveAddress}
+                        onChange={(e) => setSaveAddress(e.target.checked)}
+                        className="w-4 h-4 accent-emerald-600"
+                      />
+                      Guardar esta dirección para la próxima vez
+                    </label>
+                  )}
+                </div>
+              )}
             </form>
           )}
 

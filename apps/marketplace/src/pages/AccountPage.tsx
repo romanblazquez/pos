@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCustomer } from '../context/CustomerContext.js';
+import { useAddresses } from '../hooks/useAddresses.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -41,7 +42,7 @@ export default function AccountPage({
   onNavigate,
   onLogout,
 }: {
-  onNavigate: (p: 'wallet' | 'orders') => void;
+  onNavigate: (p: 'wallet' | 'orders' | 'addresses') => void;
   onLogout: () => void;
 }) {
   const { session, logout } = useCustomer();
@@ -71,6 +72,8 @@ export default function AccountPage({
     },
     retry: false,
   });
+
+  const { addresses } = useAddresses(session.customer.id);
 
   const totalCredits = (wallet?.platformCreditsMinor ?? 0) + (wallet?.storeCredits?.reduce((s, c) => s + c.balanceMinor, 0) ?? 0);
 
@@ -118,7 +121,7 @@ export default function AccountPage({
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card>
           <button onClick={() => onNavigate('orders')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
             <p className="text-2xl mb-2">🛍️</p>
@@ -133,6 +136,13 @@ export default function AccountPage({
               {wallet?.storeCredits?.filter((s) => s.balanceMinor > 0).length ?? 0}
             </p>
             <p className="text-sm text-[--tx-muted] font-medium">Tiendas con crédito</p>
+          </button>
+        </Card>
+        <Card>
+          <button onClick={() => onNavigate('addresses')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
+            <p className="text-2xl mb-2">📍</p>
+            <p className="text-2xl font-bold text-[--tx]">{addresses.length}</p>
+            <p className="text-sm text-[--tx-muted] font-medium">Direcciones</p>
           </button>
         </Card>
       </div>
