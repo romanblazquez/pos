@@ -102,4 +102,45 @@ export class SellerMappingService {
       data: { status: 'rejected', resolvedAt: new Date(), resolvedBy: `seller:${sellerId}` },
     });
   }
+
+  /**
+   * Re-pair an already-matched listing to a different master product — covers
+   * "this was auto/manually matched wrong, let me fix it" from the listings page,
+   * as opposed to the initial-match flow above.
+   */
+  async relinkListing(sellerId: string, listingId: string, newProductId: string) {
+    const listing = await this.prisma.listing.findUnique({ where: { id: listingId } });
+    if (!listing || listing.sellerId !== sellerId) {
+      throw new NotFoundException(`Listing ${listingId} not found for this seller`);
+    }
+    const previousProductId = listing.productId;
+
+    const updated = await this.prisma.listing.update({
+      where: { id: listingId },
+      data: { productId: newProductId },
+      include: { product: true },
+    });
+
+    // Keep the mapping audit trail in sync — update if one exists (it should, for
+    // anything matched through this pipeline), but don't fail re-link on legacy
+    // listings that predate it.
+    await this.prisma.sellerProductMapping.updateMany({
+      where: { listingId },
+      data: {
+        productId: newProductId,
+        matchMethod: 'seller_manual',
+        matchConfidence: null,
+        status: 'manual_matched',
+        resolvedAt: new Date(),
+        resolvedBy: `seller:${sellerId}`,
+      },
+    });
+
+    await Promise.all([
+      this.catalog.syncToSearch(newProductId),
+      this.catalog.syncToSearch(previousProductId),
+    ]);
+
+    return updated;
+  }
 }

@@ -526,6 +526,26 @@ export class SellersController {
     return this.svc.updateListing(id, listingId, body);
   }
 
+  @Patch(':id/listings/:listingId/relink')
+  @ApiOperation({
+    summary: 'Re-pair an already-matched listing to a different master catalog product',
+    description:
+      'For correcting a wrong auto/manual match after the fact — search the catalog ' +
+      '(GET :id/product-mappings/search?q=) and pass the chosen productId here.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiParam({ name: 'listingId', description: 'Listing CUID', example: 'clx9xyz8wvu7tsr6qpo' })
+  @ApiBody({ schema: { type: 'object', required: ['productId'], properties: { productId: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Listing re-linked to the new product. Returns the updated listing with its new product.' })
+  @ApiResponse({ status: 404, description: 'Listing not found or does not belong to this seller.' })
+  relinkListing(
+    @Param('id') id: string,
+    @Param('listingId') listingId: string,
+    @Body() body: { productId: string },
+  ) {
+    return this.mapping.relinkListing(id, listingId, body.productId);
+  }
+
   // ── AI enhancement ────────────────────────────────────────────────────────
 
   @Post(':id/listings/:listingId/ai-enhance')

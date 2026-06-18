@@ -42,6 +42,15 @@ interface Listing {
   };
 }
 
+interface RelinkSearchResult {
+  id: string;
+  name: string;
+  yearPublished: number | null;
+  publisher: string | null;
+  bggId: string | null;
+  images: string[];
+}
+
 interface Stats {
   total: number;
   active: number;
@@ -511,6 +520,16 @@ function EditModal({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Re-pairing to a different master product
+  const [product, setProduct] = useState(listing.product);
+  const [showRelink, setShowRelink] = useState(false);
+  const [relinkQuery, setRelinkQuery] = useState('');
+  const [relinkResults, setRelinkResults] = useState<RelinkSearchResult[] | null>(null);
+  const [relinkSearching, setRelinkSearching] = useState(false);
+  const [relinkSelected, setRelinkSelected] = useState<RelinkSearchResult | null>(null);
+  const [relinking, setRelinking] = useState(false);
+  const relinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // AI enhance state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiEnhanceResult | null>(null);
@@ -547,6 +566,47 @@ function EditModal({
   function updatePromos(updated: ListingPromo[]) {
     setPromos(updated);
     onPromosFetched(listing.id, updated);
+  }
+
+  useEffect(() => {
+    if (relinkTimer.current) clearTimeout(relinkTimer.current);
+    if (!relinkQuery.trim()) { setRelinkResults(null); return; }
+    relinkTimer.current = setTimeout(async () => {
+      setRelinkSearching(true);
+      try {
+        const res = await fetch(
+          `${API}/api/v1/sellers/${sellerId}/product-mappings/search?q=${encodeURIComponent(relinkQuery)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        setRelinkResults(res.ok ? (await res.json()) as RelinkSearchResult[] : []);
+      } finally {
+        setRelinkSearching(false);
+      }
+    }, 300);
+    return () => { if (relinkTimer.current) clearTimeout(relinkTimer.current); };
+  }, [relinkQuery, sellerId, token]);
+
+  async function handleConfirmRelink() {
+    if (!relinkSelected) return;
+    setRelinking(true);
+    try {
+      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/relink`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ productId: relinkSelected.id }),
+      });
+      if (res.ok) {
+        const updated = (await res.json()) as { product: Listing['product'] };
+        setProduct(updated.product);
+        onSaved({ id: listing.id, product: updated.product });
+        setShowRelink(false);
+        setRelinkQuery('');
+        setRelinkResults(null);
+        setRelinkSelected(null);
+      }
+    } finally {
+      setRelinking(false);
+    }
   }
 
   async function handleCreatePromo() {
@@ -655,21 +715,27 @@ function EditModal({
         {/* Modal header */}
         <div className="flex items-start gap-4 px-6 py-5 border-b border-slate-100 shrink-0">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-            {listing.product.images[0] ? (
-              <img src={listing.product.images[0]} alt={listing.product.name} className="w-full h-full object-cover" />
+            {product.images[0] ? (
+              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-slate-200" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-slate-900 leading-tight truncate">{listing.product.name}</h2>
+            <h2 className="font-semibold text-slate-900 leading-tight truncate">{product.name}</h2>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               {listing.sellerSku && (
                 <span className="text-xs font-mono text-slate-400">{listing.sellerSku}</span>
               )}
               <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full capitalize">
-                {listing.product.category}
+                {product.category}
               </span>
+              <button
+                onClick={() => setShowRelink((v) => !v)}
+                className="text-xs font-medium text-emerald-600 hover:text-emerald-800 transition-colors"
+              >
+                {showRelink ? 'Cancelar' : '¿Producto equivocado? Cambiar ↺'}
+              </button>
             </div>
           </div>
           <button
@@ -679,6 +745,66 @@ function EditModal({
             ×
           </button>
         </div>
+
+        {/* Re-pair to a different master product */}
+        {showRelink && (
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 shrink-0 space-y-3">
+            <input
+              type="search"
+              autoFocus
+              value={relinkQuery}
+              onChange={(e) => { setRelinkQuery(e.target.value); setRelinkSelected(null); }}
+              placeholder="Buscar el producto correcto en el catálogo…"
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white
+                         focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            />
+            {relinkSearching && <p className="text-xs text-slate-400">Buscando…</p>}
+            {relinkResults && relinkResults.length === 0 && !relinkSearching && (
+              <p className="text-xs text-slate-400">Sin resultados.</p>
+            )}
+            {relinkResults && relinkResults.length > 0 && (
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {relinkResults.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setRelinkSelected(r)}
+                    className={cn(
+                      'w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left transition-colors',
+                      relinkSelected?.id === r.id
+                        ? 'border-emerald-400 bg-emerald-50'
+                        : 'border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300',
+                    )}
+                  >
+                    <span className="text-sm text-slate-800 truncate">{r.name}</span>
+                    {r.yearPublished && <span className="shrink-0 text-xs text-slate-400 tabular">{r.yearPublished}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {relinkSelected && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-emerald-300">
+                <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                  {relinkSelected.images[0] && (
+                    <img src={relinkSelected.images[0]} alt={relinkSelected.name} className="w-full h-full object-cover" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-900 truncate">{relinkSelected.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {relinkSelected.publisher ?? ''}{relinkSelected.publisher && relinkSelected.yearPublished ? ' · ' : ''}{relinkSelected.yearPublished ?? ''}
+                  </p>
+                </div>
+                <button
+                  onClick={handleConfirmRelink}
+                  disabled={relinking}
+                  className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-60 transition-colors shrink-0"
+                >
+                  {relinking ? 'Vinculando…' : 'Confirmar cambio'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Scrollable body */}
         <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
@@ -938,9 +1064,9 @@ function EditModal({
                 Ver en tienda ↗
               </a>
             )}
-            {listing.product.slug && (
+            {product.slug && (
               <a
-                href={`${MARKETPLACE}/product/${listing.product.slug}`}
+                href={`${MARKETPLACE}/product/${product.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-emerald-600 hover:text-emerald-800 underline underline-offset-2"
@@ -950,14 +1076,14 @@ function EditModal({
             )}
           </div>
 
-          {listing.product.description && (
+          {product.description && (
             <details className="text-xs text-slate-500 cursor-pointer">
               <summary className="font-medium text-slate-700 hover:text-slate-900 select-none">
                 Descripción del producto
               </summary>
               <div
                 className="mt-2 p-3 bg-slate-50 rounded-lg max-h-32 overflow-y-auto leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: listing.product.description }}
+                dangerouslySetInnerHTML={{ __html: product.description }}
               />
             </details>
           )}
@@ -1030,9 +1156,9 @@ function EditModal({
                 )}
 
                 <div className="space-y-2">
-                  <DiffRow label="Nombre" before={listing.product.name} after={aiResult.name} />
-                  <DiffRow label="Descripción" before={listing.product.description ?? ''} after={aiResult.description} multiline />
-                  <DiffRow label="Slug" before={listing.product.slug} after={aiResult.slug} />
+                  <DiffRow label="Nombre" before={product.name} after={aiResult.name} />
+                  <DiffRow label="Descripción" before={product.description ?? ''} after={aiResult.description} multiline />
+                  <DiffRow label="Slug" before={product.slug} after={aiResult.slug} />
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Tags</p>
                     <div className="flex flex-wrap gap-1">
@@ -1063,16 +1189,15 @@ function EditModal({
                         );
                         if (res.ok) {
                           const body = await res.json() as { product?: Partial<Listing['product']> };
-                          onSaved({
-                            id: listing.id,
-                            product: {
-                              ...listing.product,
-                              name: aiResult.name,
-                              description: aiResult.description,
-                              slug: body.product?.slug ?? aiResult.slug,
-                              tags: aiResult.tags,
-                            },
-                          });
+                          const updatedProduct = {
+                            ...product,
+                            name: aiResult.name,
+                            description: aiResult.description,
+                            slug: body.product?.slug ?? aiResult.slug,
+                            tags: aiResult.tags,
+                          };
+                          setProduct(updatedProduct);
+                          onSaved({ id: listing.id, product: updatedProduct });
                           setAiApplied(true);
                           setAiResult(null);
                         }

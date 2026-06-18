@@ -153,17 +153,30 @@ const PAGE_SIZE = 50;
 function CatalogView() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending');
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [enrichResult, setEnrichResult] = useState<{ message: string; viewUrl?: string } | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-catalog', statusFilter, page],
+    queryKey: ['admin-catalog', statusFilter, page, debouncedSearch],
     queryFn: async () => {
-      const res = await fetch(
-        `${API}/api/v1/admin/catalog/products?status=${statusFilter}&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
-      );
+      const qs = new URLSearchParams({
+        status: statusFilter,
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      });
+      const res = await fetch(`${API}/api/v1/admin/catalog/products?${qs}`);
       return res.json() as Promise<{ products: MktProduct[]; total: number }>;
     },
   });
@@ -200,9 +213,7 @@ function CatalogView() {
     },
   });
 
-  const products = (data?.products ?? []).filter((p) =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const products = data?.products ?? [];
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
