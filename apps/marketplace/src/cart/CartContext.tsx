@@ -32,6 +32,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // checkout anyway, but catching it here gives immediate feedback instead of
   // a generic error at the very end of checkout.
   const add = useCallback((item: CartItem) => {
+    if (item.stock <= 0) return; // out of stock — never add, not even at quantity 0
     setItems((prev) => {
       const existing = prev.find((i) => i.listingId === item.listingId);
       if (existing) {

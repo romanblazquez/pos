@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
+  AlertTriangle,
+  Award,
   Brain,
   ChevronDown,
   ChevronUp,
@@ -95,12 +97,28 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
 
   const [selectedImage, setSelectedImage] = useState(0);
   const { add, items: cartItems } = useCart();
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   if (isLoading) return <ProductSkeleton />;
   if (isError || !data) return <NotFound />;
 
   const p = data;
-  const activeListings = p.listings.filter((l) => l.stockStatus !== 'out_of_stock');
+  const isAvailable = (l: ListingDetail) => l.stockStatus !== 'out_of_stock' && l.stock > 0;
+  // Backend orders by rankScore (price/seller-quality/availability blend), preserved within
+  // each group — but a sold-out listing should never sit above ones a customer can actually
+  // buy, so split into "available" and "sold out" groups rather than mixing by raw rank.
+  const activeListings = p.listings.filter(isAvailable);
+  const inStockListings = activeListings;
+  const outOfStockListings = p.listings.filter((l) => !isAvailable(l));
+  const lowestPriceId = activeListings.length
+    ? activeListings.reduce((best, l) => (l.priceMinorUnits < best.priceMinorUnits ? l : best), activeListings[0]).id
+    : null;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -195,21 +213,48 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
 
       {/* Listings comparison */}
       <section>
-        <h2 className="text-xl font-semibold text-[--tx] mb-4">Comparar tiendas</h2>
+        <div className="flex items-baseline justify-between mb-1">
+          <h2 className="text-xl font-semibold text-[--tx]">Comparar tiendas</h2>
+          {inStockListings.length > 0 && (
+            <span className="text-xs text-[--tx-faint]">
+              {inStockListings.length} con stock{outOfStockListings.length > 0 && ` · ${outOfStockListings.length} agotada${outOfStockListings.length > 1 ? 's' : ''}`}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[--tx-faint] mb-4">
+          Ordenado por mejor combinación de precio, confianza del vendedor y entrega — fijate en
+          el precio si solo te importa pagar menos.
+        </p>
+
         {p.listings.length === 0 ? (
           <p className="text-[--tx-muted] text-sm">
             Este juego no está disponible en ninguna tienda conectada por ahora.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {p.listings.map((listing, idx) => (
+            {/* Column header — desktop only, helps scanning a multi-row comparison */}
+            <div className="hidden md:flex items-center gap-4 px-4 text-[11px] uppercase tracking-wide text-[--tx-faint]">
+              <span className="w-7 shrink-0" />
+              <span className="flex-1 min-w-[120px]">Tienda</span>
+              <span className="w-24 shrink-0">Stock</span>
+              <span className="w-32 shrink-0">Entrega</span>
+              <span className="ml-auto">Precio</span>
+            </div>
+
+            {inStockListings.map((listing, idx) => (
               <ListingRow
                 key={listing.id}
                 listing={listing}
                 rank={idx + 1}
+                isBestPrice={listing.id === lowestPriceId}
                 platformCashbackPct={platformCashback}
                 inCartQuantity={cartItems.find((i) => i.listingId === listing.id)?.quantity ?? 0}
                 onAddToCart={() => {
+                  const inCart = cartItems.find((i) => i.listingId === listing.id)?.quantity ?? 0;
+                  if (listing.stock <= 0 || inCart >= listing.stock) {
+                    setToast(`"${listing.sellerName}" ya no tiene más stock disponible para agregar.`);
+                    return;
+                  }
                   add({
                     listingId: listing.id,
                     productName: p.name,
@@ -225,51 +270,115 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                 }}
               />
             ))}
+
+            {outOfStockListings.length > 0 && (
+              <div className="flex flex-col gap-3 mt-2 pt-4 border-t border-[--border] border-dashed">
+                <p className="text-xs font-medium text-[--tx-faint]">Agotado por ahora</p>
+                {outOfStockListings.map((listing) => (
+                  <ListingRow
+                    key={listing.id}
+                    listing={listing}
+                    rank={0}
+                    isBestPrice={false}
+                    platformCashbackPct={platformCashback}
+                    inCartQuantity={0}
+                    onAddToCart={() => {
+                      setToast(`"${listing.sellerName}" está agotado en este momento.`);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>
+
+      {/* Add-to-cart guardrail feedback */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2
+                        max-w-[90vw] rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/90
+                        backdrop-blur-md shadow-lg px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
 
 function ListingRow({
-  listing: l, rank, onAddToCart, platformCashbackPct = 0.01, inCartQuantity = 0,
+  listing: l, rank, onAddToCart, platformCashbackPct = 0.01, inCartQuantity = 0, isBestPrice = false,
 }: {
   listing: ListingDetail;
   rank: number;
   platformCashbackPct?: number;
   inCartQuantity?: number;
+  isBestPrice?: boolean;
   onAddToCart: () => void;
 }) {
   const [showScore, setShowScore] = useState(false);
-  const atStockLimit = l.stock > 0 && inCartQuantity >= l.stock;
+  const [peeking, setPeeking] = useState(false); // press-and-hold reveal on out-of-stock rows
+  const isOutOfStock = l.stockStatus === 'out_of_stock' || l.stock <= 0;
+  const atStockLimit = !isOutOfStock && inCartQuantity >= l.stock;
+  const isBestOverall = rank === 1 && !isOutOfStock;
+  const showGlass = isOutOfStock && !peeking;
+  const peekHandlers = isOutOfStock
+    ? {
+        onMouseDown: () => setPeeking(true),
+        onMouseUp: () => setPeeking(false),
+        onMouseLeave: () => setPeeking(false),
+        onTouchStart: () => setPeeking(true),
+        onTouchEnd: () => setPeeking(false),
+        onTouchCancel: () => setPeeking(false),
+      }
+    : {};
 
   const bestDelivery = l.deliveryOptions.length
     ? l.deliveryOptions.reduce((best, d) => d.estimatedDaysMin < best.estimatedDaysMin ? d : best, l.deliveryOptions[0])
     : null;
 
-  const stockBadge = l.stockStatus === 'in_stock'
-    ? <Badge variant="success">En stock</Badge>
+  const stockBadge = isOutOfStock
+    ? <Badge variant="error">Sin stock</Badge>
     : l.stockStatus === 'low_stock'
     ? <Badge variant="warning">Poco stock</Badge>
-    : <Badge variant="error">Sin stock</Badge>;
+    : <Badge variant="success">En stock</Badge>;
 
   return (
-    <div className={`rounded-xl border p-4 flex flex-wrap items-center gap-4
-      ${rank === 1
+    <div
+      className={`relative rounded-xl border p-4 flex flex-wrap items-center gap-4 transition-colors
+      ${isBestOverall
         ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950'
-        : 'border-[--border] bg-[--bg-raised]'}`}
+        : 'border-[--border] bg-[--bg-raised]'}
+      ${isOutOfStock ? 'opacity-70 select-none cursor-pointer [-webkit-touch-callout:none]' : ''}`}
+      {...peekHandlers}
     >
-      {/* Rank */}
+      {/* Glass overlay — out-of-stock rows are visually "frosted" by default so a customer
+          doesn't mistake them for purchasable. Press-and-hold temporarily clears it (sets
+          `peeking`) so they can still read the price/seller underneath; releasing re-applies it. */}
+      {showGlass && (
+        <div className="absolute inset-0 rounded-xl backdrop-blur-[2px] bg-white/40 dark:bg-black/30
+                        grayscale flex items-center justify-center pointer-events-none select-none
+                        [-webkit-touch-callout:none] will-change-[backdrop-filter] transition-opacity">
+          <span className="px-3 py-1 rounded-full bg-[--bg-raised]/90 border border-[--border] text-xs font-medium text-[--tx-muted] shadow-sm select-none">
+            No disponible por ahora · mantené presionado para ver
+          </span>
+        </div>
+      )}
+
+      {/* Rank / best-overall marker */}
       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-        ${rank === 1 ? 'bg-emerald-600 text-white' : 'bg-[--bg-subtle] text-[--tx-muted]'}`}
+        ${isBestOverall ? 'bg-emerald-600 text-white' : 'bg-[--bg-subtle] text-[--tx-muted]'}`}
       >
-        {rank}
+        {isBestOverall ? <Award className="h-3.5 w-3.5" aria-hidden="true" /> : rank || '–'}
       </div>
 
       {/* Seller */}
       <div className="flex flex-col gap-0.5 flex-1 min-w-[120px]">
-        <p className="font-semibold text-[--tx] text-sm">{l.sellerName}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-[--tx] text-sm">{l.sellerName}</p>
+          {isBestOverall && <Badge variant="success">Mejor oferta</Badge>}
+          {isBestPrice && !isBestOverall && <Badge variant="info">Precio más bajo</Badge>}
+        </div>
         <div className="flex items-center gap-1">
           <span className="text-xs text-amber-500">★</span>
           <span className="text-xs text-[--tx-muted]">{(l.sellerScore * 5).toFixed(1)}</span>
@@ -298,8 +407,17 @@ function ListingRow({
       {/* Price + CTA */}
       <div className="flex items-center gap-3 shrink-0 ml-auto">
         <div className="text-right">
-          <span className="text-xl font-bold text-[--tx] block">{fmt(l.priceMinorUnits, l.currency)}</span>
-          {l.stockStatus !== 'out_of_stock' && (() => {
+          <span
+            className={`text-xl font-bold block select-none transition-[filter] duration-300
+              ${isBestPrice ? 'text-emerald-700 dark:text-emerald-400' : 'text-[--tx]'}
+              ${showGlass ? 'blur-[5px]' : 'blur-0'}`}
+          >
+            {/* Out-of-stock & not currently held: the real price never enters the DOM at all
+                (a fake digit mask renders instead), so it can't be read via inspect-element —
+                only swapped in while `peeking` is true. */}
+            {showGlass ? '$ X,XXX' : fmt(l.priceMinorUnits, l.currency)}
+          </span>
+          {!isOutOfStock && (() => {
             const totalCb = platformCashbackPct + l.storeCashbackPct + l.promoBonus;
             if (totalCb <= 0) return null;
             return (
@@ -319,7 +437,7 @@ function ListingRow({
             );
           })()}
         </div>
-        {l.stockStatus !== 'out_of_stock' && (
+        {!isOutOfStock && (
           <Button onClick={onAddToCart} size="sm" disabled={atStockLimit} title={atStockLimit ? 'Ya agregaste todo el stock disponible' : undefined}>
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
             {atStockLimit ? 'Máximo en carrito' : 'Agregar'}
@@ -328,30 +446,32 @@ function ListingRow({
       </div>
 
       {/* Score explainer */}
-      <div className="w-full">
-        <button
-          onClick={() => setShowScore(!showScore)}
-          className="inline-flex items-center gap-1 rounded-lg border border-[--border] bg-[--bg-subtle] px-2 py-1 text-xs text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
-        >
-          {showScore ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
-          {showScore ? 'Ocultar ranking' : 'Por qué este ranking'}
-        </button>
-        {showScore && (
-          <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {Object.entries(l.scoreBreakdown).map(([key, val]) => (
-              <div key={key} className="text-center">
-                <div className="h-1.5 bg-[--bg-subtle] rounded-full overflow-hidden mb-1">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round(val * 100)}%` }} />
+      {!isOutOfStock && (
+        <div className="w-full">
+          <button
+            onClick={() => setShowScore(!showScore)}
+            className="inline-flex items-center gap-1 rounded-lg border border-[--border] bg-[--bg-subtle] px-2 py-1 text-xs text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
+          >
+            {showScore ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+            {showScore ? 'Ocultar ranking' : 'Por qué este ranking'}
+          </button>
+          {showScore && (
+            <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {Object.entries(l.scoreBreakdown).map(([key, val]) => (
+                <div key={key} className="text-center">
+                  <div className="h-1.5 bg-[--bg-subtle] rounded-full overflow-hidden mb-1">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round(val * 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] text-[--tx-faint] capitalize">
+                    {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                  </p>
+                  <p className="text-xs font-medium text-[--tx-muted]">{Math.round(val * 100)}%</p>
                 </div>
-                <p className="text-[10px] text-[--tx-faint] capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                </p>
-                <p className="text-xs font-medium text-[--tx-muted]">{Math.round(val * 100)}%</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

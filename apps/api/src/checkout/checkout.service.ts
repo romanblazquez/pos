@@ -63,15 +63,18 @@ export class CheckoutService {
       throw new NotFoundException(`Listings not found or inactive: ${missing.join(', ')}`);
     }
 
-    // 2. Validate stock
+    // 2. Validate stock — check the numeric `stock` directly, not just `stockStatus`.
+    // stockStatus is a derived label written independently at several sync sites and
+    // can drift from the actual count (e.g. a connector reporting stale status); the
+    // count itself is the source of truth and must never be bypassable by a stale label.
     for (const item of dto.items) {
       const listing = listings.find((l) => l.id === item.listingId)!;
-      if (listing.stockStatus === 'out_of_stock') {
+      if (listing.stockStatus === 'out_of_stock' || listing.stock <= 0) {
         throw new BadRequestException(
           `"${listing.product.name}" está agotado. Por favor eliminalo del carrito.`,
         );
       }
-      if (listing.stock > 0 && listing.stock < item.quantity) {
+      if (listing.stock < item.quantity) {
         throw new BadRequestException(
           `Solo quedan ${listing.stock} unidades de "${listing.product.name}".`,
         );
