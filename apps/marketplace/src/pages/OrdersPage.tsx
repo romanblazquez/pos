@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext.js';
 import { Card, CardContent, Badge } from '../components/ui/index.js';
 
@@ -29,19 +29,45 @@ interface OrderLine {
 }
 interface Order {
   id: string; status: string; totalMinorUnits: number; currency: string; createdAt: string;
+  platformCreditsApplied: number; storeCreditsApplied: number; paymentProvider: string | null;
   seller: { name: string; slug: string };
   lines: OrderLine[];
 }
+
+const PAYMENT_PROVIDER_LABEL: Record<string, string> = {
+  mercadopago_checkout_pro: 'MercadoPago',
+  wallet_credits: 'Créditos de tu cuenta',
+};
 
 export default function OrdersPage() {
   const { session } = useCustomer();
   if (!session) return null;
   const [expanded, setExpanded] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const reconciledRef = useRef(new Set<string>());
 
   const { data: orders, isLoading } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
     queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/orders`)).json() as Promise<Order[]>,
   });
+
+  // Self-heal stale "pending" orders — MercadoPago's webhook/redirect can miss
+  // (e.g. local dev without a public webhook URL), so re-check with MP directly
+  // whenever this page is viewed instead of relying solely on the one-shot
+  // redirect-page effect in App.tsx.
+  useEffect(() => {
+    const pending = (orders ?? []).filter(
+      (o) => o.status === 'pending' && !reconciledRef.current.has(o.id),
+    );
+    if (pending.length === 0) return;
+    pending.forEach((o) => reconciledRef.current.add(o.id));
+
+    Promise.all(
+      pending.map((o) =>
+        fetch(`${API}/api/v1/checkout/orders/${o.id}/reconcile`, { method: 'POST' }).catch(() => null),
+      ),
+    ).then(() => qc.invalidateQueries({ queryKey: ['customer-orders', session.customer.id] }));
+  }, [orders, qc, session.customer.id]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
@@ -152,20 +178,48 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Meta */}
-                    <div className="border-t border-[--border] pt-3 flex flex-col gap-1.5">
-                      <div className="flex justify-between text-xs text-[--tx-muted]">
-                        <span>ID</span>
-                        <code className="font-mono text-[10px] bg-[--bg-subtle] px-1.5 py-0.5 rounded">{order.id.slice(-12)}</code>
-                      </div>
-                      <div className="flex justify-between text-xs text-[--tx-muted]">
-                        <span>Vendedor</span>
-                        <span>{order.seller.name}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-bold text-[--tx] pt-1 border-t border-[--border]">
-                        <span>Total</span>
-                        <span>{fmt(order.totalMinorUnits, order.currency)}</span>
-                      </div>
-                    </div>
+                    {(() => {
+                      const creditsApplied = (order.platformCreditsApplied ?? 0) + (order.storeCreditsApplied ?? 0);
+                      const gatewayLabel = PAYMENT_PROVIDER_LABEL[order.paymentProvider ?? ''] ?? 'Tarjeta';
+                      // Round each displayed figure to whole currency units, then derive
+                      // "paid via gateway" from those already-rounded numbers — otherwise
+                      // independently-rounded credits + paid can fail to sum to the total
+                      // shown (e.g. $194 + $1,007 visually ≠ $1,200 even though the exact
+                      // cents values are correct).
+                      const totalUnits = Math.round(order.totalMinorUnits / 100);
+                      const creditsUnits = Math.round(creditsApplied / 100);
+                      const paidUnits = totalUnits - creditsUnits;
+                      return (
+                        <div className="border-t border-[--border] pt-3 flex flex-col gap-1.5">
+                          <div className="flex justify-between text-xs text-[--tx-muted]">
+                            <span>ID</span>
+                            <code className="font-mono text-[10px] bg-[--bg-subtle] px-1.5 py-0.5 rounded">{order.id.slice(-12)}</code>
+                          </div>
+                          <div className="flex justify-between text-xs text-[--tx-muted]">
+                            <span>Vendedor</span>
+                            <span>{order.seller.name}</span>
+                          </div>
+
+                          {creditsApplied > 0 && (
+                            <>
+                              <div className="flex justify-between text-xs text-[--tx-muted] pt-1">
+                                <span>Total del pedido</span>
+                                <span className="tabular">{fmt(totalUnits * 100, order.currency)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                                <span>🎁 Créditos aplicados</span>
+                                <span className="tabular">−{fmt(creditsUnits * 100, order.currency)}</span>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="flex justify-between text-sm font-bold text-[--tx] pt-1 border-t border-[--border]">
+                            <span>Total pagado{paidUnits > 0 ? ` (${gatewayLabel})` : ''}</span>
+                            <span className="tabular">{fmt(paidUnits * 100, order.currency)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </Card>

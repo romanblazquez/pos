@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
+import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -28,12 +29,9 @@ const ORDER_LABEL: Record<string, string> = {
   shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado', refunded: 'Reembolsado',
 };
 
-interface Wallet {
-  platformCreditsMinor: number;
-  storeCredits: { balanceMinor: number; seller: { name: string } }[];
-}
 interface Order {
   id: string; status: string; totalMinorUnits: number; currency: string; createdAt: string;
+  platformCreditsApplied: number; storeCreditsApplied: number;
   seller: { name: string };
   lines: { quantity: number; listing: { product: { name: string; images: string[] } } }[];
 }
@@ -53,15 +51,7 @@ export default function AccountPage({
     onLogout();
   }
 
-  const { data: wallet } = useQuery<Wallet>({
-    queryKey: ['wallet', session.customer.id],
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`);
-      if (!res.ok) throw new Error(`wallet fetch failed: ${res.status}`);
-      return res.json() as Promise<Wallet>;
-    },
-    retry: false,
-  });
+  const { data: wallet } = useWallet(session.customer.id);
 
   const { data: orders } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
@@ -171,6 +161,13 @@ export default function AccountPage({
           <div className="flex flex-col gap-2">
             {orders.map((order) => {
               const product = order.lines[0]?.listing?.product;
+              const creditsApplied = (order.platformCreditsApplied ?? 0) + (order.storeCreditsApplied ?? 0);
+              // Round to whole currency units first, then derive "paid" from the
+              // already-rounded total/credits so the displayed figures always sum
+              // correctly (independent rounding can be off by one unit otherwise).
+              const totalUnits = Math.round(order.totalMinorUnits / 100);
+              const creditsUnits = Math.round(creditsApplied / 100);
+              const paidUnits = totalUnits - creditsUnits;
               return (
                 <Card key={order.id}>
                   <div className="flex items-center gap-3 p-4">
@@ -185,9 +182,14 @@ export default function AccountPage({
                         {order.lines.length > 1 && <span className="text-[--tx-muted]"> +{order.lines.length - 1}</span>}
                       </p>
                       <p className="text-xs text-[--tx-muted]">{order.seller.name} · {relDate(order.createdAt)}</p>
+                      {creditsApplied > 0 && (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                          🎁 {fmt(creditsUnits * 100, order.currency)} en créditos · pedido {fmt(totalUnits * 100, order.currency)}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <p className="text-sm font-semibold text-[--tx]">{fmt(order.totalMinorUnits, order.currency)}</p>
+                      <p className="text-sm font-semibold text-[--tx]">{fmt(paidUnits * 100, order.currency)}</p>
                       <Badge variant={ORDER_BADGE[order.status] ?? 'default'}>
                         {ORDER_LABEL[order.status] ?? order.status}
                       </Badge>

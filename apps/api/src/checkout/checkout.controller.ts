@@ -100,6 +100,34 @@ export class CheckoutController {
     });
   }
 
+  /** Admin: mark a seller's order payout as sent (manual, outside the platform). */
+  @ApiTags('admin')
+  @Post('checkout/admin/orders/:orderId/mark-paid-out')
+  @ApiOperation({
+    summary: "Mark a seller's payout for this order as sent (admin)",
+    description:
+      'Stopgap while sellers cannot connect their own MercadoPago account for real-time split ' +
+      "payments — the platform collects 100% of every payment. Use this once you've manually " +
+      "transferred the seller's net amount (order total minus commission) outside the platform.",
+  })
+  @ApiParam({ name: 'orderId', description: 'MarketplaceOrder CUID' })
+  @ApiBody({ schema: { type: 'object', properties: { paidOutBy: { type: 'string', example: 'admin@retailos.com' } } }, required: false })
+  @ApiResponse({ status: 201, description: 'Order marked as paid out.' })
+  @ApiResponse({ status: 400, description: 'Order payment is not confirmed yet — nothing to pay out.' })
+  markPaidOut(@Param('orderId') orderId: string, @Body() body?: { paidOutBy?: string }) {
+    return this.svc.markPaidOut(orderId, body?.paidOutBy ?? 'admin');
+  }
+
+  /** Admin: undo a payout mark (correcting a mistake). */
+  @ApiTags('admin')
+  @Post('checkout/admin/orders/:orderId/unmark-paid-out')
+  @ApiOperation({ summary: 'Undo a payout mark (admin)' })
+  @ApiParam({ name: 'orderId', description: 'MarketplaceOrder CUID' })
+  @ApiResponse({ status: 201, description: 'Payout mark cleared.' })
+  unmarkPaidOut(@Param('orderId') orderId: string) {
+    return this.svc.unmarkPaidOut(orderId);
+  }
+
   /** MercadoPago Checkout Pro payment webhook. */
   @Post('checkout/webhooks/mercadopago')
   @ApiOperation({

@@ -418,6 +418,8 @@ CREATE TABLE "MarketplaceOrder" (
     "paymentProvider" TEXT,
     "sellerOrderId" TEXT,
     "deliveryAddress" JSONB,
+    "paidOutAt" TIMESTAMP(3),
+    "paidOutBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

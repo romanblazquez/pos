@@ -28,6 +28,8 @@ export interface InitCheckoutDto {
   successUrl: string;
   failureUrl: string;
   pendingUrl: string;
+  platformCreditsToUse?: number;
+  storeCreditsToUse?: number;
 }
 
 export interface CheckoutResult {
@@ -93,6 +95,25 @@ export class CheckoutService {
     }
     const currency = listings[0].currency;
 
+    // 4.5 Reserve wallet credits to apply — capped at what the customer actually
+    // has (reserveCredits) and at the order subtotal (can't discount below zero).
+    // Platform credits apply first since they're the more general-purpose balance;
+    // store credits (seller-specific) fill whatever's left.
+    let platformCreditsApplied = 0;
+    let storeCreditsApplied = 0;
+    if (dto.customerId && ((dto.platformCreditsToUse ?? 0) > 0 || (dto.storeCreditsToUse ?? 0) > 0)) {
+      const reserved = await this.loyalty.reserveCredits({
+        customerId: dto.customerId,
+        sellerId,
+        platformCreditsToUse: dto.platformCreditsToUse ?? 0,
+        storeCreditsToUse: dto.storeCreditsToUse ?? 0,
+      });
+      platformCreditsApplied = Math.min(reserved.platformCreditsApplied, subtotal);
+      storeCreditsApplied = Math.min(reserved.storeCreditsApplied, subtotal - platformCreditsApplied);
+    }
+    const creditsAppliedMinor = platformCreditsApplied + storeCreditsApplied;
+    const amountDueMinor = subtotal - creditsAppliedMinor;
+
     // 5. Create pending order
     const order = await this.prisma.marketplaceOrder.create({
       data: {
@@ -103,6 +124,8 @@ export class CheckoutService {
         subtotalMinorUnits: subtotal,
         shippingMinorUnits: 0,
         totalMinorUnits: subtotal,
+        platformCreditsApplied,
+        storeCreditsApplied,
         deliveryAddress: dto.deliveryAddress,
         lines: {
           create: listings.map((l) => ({
@@ -113,10 +136,46 @@ export class CheckoutService {
           })),
         },
         events: {
-          create: { type: 'created', payload: { initiatedBy: dto.customerEmail } },
+          create: { type: 'created', payload: { initiatedBy: dto.customerEmail, platformCreditsApplied, storeCreditsApplied } },
         },
       },
     });
+
+    // 5.5 Fully covered by wallet credits — skip MercadoPago entirely, confirm now.
+    if (amountDueMinor <= 0) {
+      await this.loyalty.redeemCredits({
+        customerId: dto.customerId!,
+        sellerId,
+        orderId: order.id,
+        platformCreditsApplied,
+        storeCreditsApplied,
+      });
+      const fees = await this.loyalty.computeOrderFees(sellerId, subtotal);
+      await this.prisma.marketplaceOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'confirmed',
+          paymentProvider: 'wallet_credits',
+          commissionMinorUnits: fees.commissionMinor,
+          platformCashbackMinor: fees.platformCashbackMinor,
+          storeCashbackMinor: fees.storeCashbackMinor,
+          events: { create: { type: 'confirmed_via_credits', payload: { platformCreditsApplied, storeCreditsApplied } } },
+        },
+      });
+      await this.loyalty.awardCashback({
+        customerId: dto.customerId!,
+        sellerId,
+        orderId: order.id,
+        platformCashbackMinor: fees.platformCashbackMinor,
+        storeCashbackMinor: fees.storeCashbackMinor,
+      });
+      return {
+        orderId: order.id,
+        checkoutUrl: `${dto.successUrl}?order_id=${order.id}`,
+        checkoutSessionId: 'wallet-credits',
+        expiresAt: new Date().toISOString(),
+      };
+    }
 
     // 6. Resolve seller's MP access token (marketplace split) or platform token fallback
     let sellerMpToken: string | null = null;
@@ -127,21 +186,36 @@ export class CheckoutService {
     }
 
     const commissionRate = 0.03; // 3% — use seller.commissionRate in production
-    const commissionAmount = Math.round((subtotal / 100) * commissionRate * 100) / 100; // major units
+    const commissionAmount = Math.round((amountDueMinor / 100) * commissionRate * 100) / 100; // major units
+    const currencyId = currency === 'MXN' ? 'MXN' : 'ARS';
+
+    // When credits are applied, MercadoPago must charge exactly amountDueMinor —
+    // collapse to a single consolidated line item rather than trying to scale each
+    // listing's price proportionally (simpler, avoids rounding-cent edge cases).
+    const mpItems = creditsAppliedMinor > 0
+      ? [{
+          id: order.id,
+          title: listings.length === 1 ? listings[0].product.name : `Pedido (${listings.length} productos)`,
+          quantity: 1,
+          unit_price: amountDueMinor / 100,
+          currency_id: currencyId,
+          picture_url: listings[0].product.images[0] ?? '',
+        }]
+      : listings.map((l) => ({
+          id: l.id,
+          title: l.product.name,
+          quantity: itemMap.get(l.id) ?? 1,
+          unit_price: l.priceMinorUnits / 100,
+          currency_id: currencyId,
+          picture_url: l.product.images[0] ?? '',
+        }));
 
     // 7. Create MercadoPago Checkout Pro preference
     const preference = await this.createMpPreference({
       orderId: order.id,
       sellerMpToken,
       marketplaceFee: sellerMpToken ? commissionAmount : undefined,
-      items: listings.map((l) => ({
-        id: l.id,
-        title: l.product.name,
-        quantity: itemMap.get(l.id) ?? 1,
-        unit_price: l.priceMinorUnits / 100,
-        currency_id: currency === 'MXN' ? 'MXN' : 'ARS',
-        picture_url: l.product.images[0] ?? '',
-      })),
+      items: mpItems,
       payer: { email: dto.customerEmail, name: dto.customerName },
       successUrl: dto.successUrl,
       failureUrl: dto.failureUrl,
@@ -263,6 +337,15 @@ export class CheckoutService {
         platformCashbackMinor: fees.platformCashbackMinor,
         storeCashbackMinor: fees.storeCashbackMinor,
       });
+      if (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0) {
+        await this.loyalty.redeemCredits({
+          customerId: order.customerId,
+          sellerId: order.sellerId,
+          orderId,
+          platformCreditsApplied: order.platformCreditsApplied,
+          storeCreditsApplied: order.storeCreditsApplied,
+        });
+      }
     }
 
     return { status: newStatus, updated: true };
@@ -325,6 +408,15 @@ export class CheckoutService {
         platformCashbackMinor: fees.platformCashbackMinor,
         storeCashbackMinor: fees.storeCashbackMinor,
       });
+      if (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0) {
+        await this.loyalty.redeemCredits({
+          customerId: order.customerId,
+          sellerId: order.sellerId,
+          orderId,
+          platformCreditsApplied: order.platformCreditsApplied,
+          storeCreditsApplied: order.storeCreditsApplied,
+        });
+      }
     }
 
     return { processed: true };
@@ -365,6 +457,30 @@ export class CheckoutService {
       }),
     ]);
     return { orders, total };
+  }
+
+  /**
+   * Manual payout tracking — stopgap while sellers can't connect their own MP
+   * account for real-time split payments (the platform collects 100% via its
+   * own account). Admin marks here once the seller's net payout has actually
+   * been transferred outside the platform (bank transfer, manual MP transfer, etc).
+   */
+  async markPaidOut(orderId: string, paidOutBy: string) {
+    const order = await this.prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: orderId } });
+    if (order.status !== 'confirmed' && order.status !== 'delivered' && order.status !== 'shipped') {
+      throw new BadRequestException(`Cannot mark a "${order.status}" order as paid out — payment isn't confirmed yet`);
+    }
+    return this.prisma.marketplaceOrder.update({
+      where: { id: orderId },
+      data: { paidOutAt: new Date(), paidOutBy },
+    });
+  }
+
+  async unmarkPaidOut(orderId: string) {
+    return this.prisma.marketplaceOrder.update({
+      where: { id: orderId },
+      data: { paidOutAt: null, paidOutBy: null },
+    });
   }
 
   async getOrder(orderId: string) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCart } from './CartContext.js';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
+import { useWallet, storeCreditFor } from '../hooks/useWallet.js';
 import { Button, inputCls } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? '';
@@ -16,9 +17,18 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const { items, remove, clear, total } = useCart();
   const { session } = useCustomer();
   const { addresses, create: createAddress } = useAddresses(session?.customer.id);
+  const { data: wallet } = useWallet(session?.customer.id);
   const [step, setStep] = useState<Step>('cart');
   const [error, setError] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [useCredits, setUseCredits] = useState(true);
+
+  const cartSellerId = items[0]?.sellerId;
+  const platformCreditsAvailable = wallet?.platformCreditsMinor ?? 0;
+  const storeCreditsAvailable = cartSellerId ? storeCreditFor(wallet, cartSellerId) : 0;
+  const creditsAvailable = platformCreditsAvailable + storeCreditsAvailable;
+  const creditsToApply = useCredits ? Math.min(creditsAvailable, total) : 0;
+  const amountDue = total - creditsToApply;
 
   const [name, setName] = useState(session?.customer.name ?? '');
   const [email, setEmail] = useState(session?.customer.email ?? '');
@@ -67,6 +77,10 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
           customerId: session?.customer.id,
           customerEmail: email,
           customerName: name,
+          // Backend caps these at actual balance and at the order subtotal — sending
+          // the full available amounts here is safe even if it exceeds what's needed.
+          platformCreditsToUse: useCredits ? platformCreditsAvailable : 0,
+          storeCreditsToUse: useCredits ? storeCreditsAvailable : 0,
           successUrl: `${baseUrl}/checkout/success`,
           failureUrl: `${baseUrl}/checkout/failure`,
           pendingUrl: `${baseUrl}/checkout/pending`,
@@ -190,6 +204,27 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
                   )}
                 </div>
               )}
+
+              {session && creditsAvailable > 0 && (
+                <>
+                  <hr className="border-[--border]" />
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-[--border] bg-[--bg-subtle] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useCredits}
+                      onChange={(e) => setUseCredits(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-emerald-600"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[--tx]">Usar mis créditos</p>
+                      <p className="text-xs text-[--tx-muted] mt-0.5">
+                        Tenés {fmt(creditsAvailable, items[0]?.currency)} disponibles
+                        {storeCreditsAvailable > 0 && platformCreditsAvailable > 0 ? ' (saldo general + crédito de esta tienda)' : ''}.
+                      </p>
+                    </div>
+                  </label>
+                </>
+              )}
             </form>
           )}
 
@@ -236,12 +271,24 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
 
         {step === 'form' && (
           <div className="px-5 py-4 border-t border-[--border] flex flex-col gap-2 shrink-0">
+            {creditsToApply > 0 && (
+              <>
+                <div className="flex justify-between text-sm text-[--tx-muted]">
+                  <span>Subtotal</span>
+                  <span className="tabular">{fmt(total, items[0]?.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-emerald-600">
+                  <span>Créditos aplicados</span>
+                  <span className="tabular">−{fmt(creditsToApply, items[0]?.currency)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between text-sm font-semibold text-[--tx]">
               <span>Total a pagar</span>
-              <span>{fmt(total, items[0]?.currency)}</span>
+              <span className="tabular">{fmt(amountDue, items[0]?.currency)}</span>
             </div>
             <Button type="submit" form="checkout-form" className="w-full justify-center py-3">
-              Pagar con Mercado Pago 🔒
+              {amountDue <= 0 ? 'Confirmar pedido' : 'Pagar con Mercado Pago 🔒'}
             </Button>
             <Button variant="ghost" onClick={() => setStep('cart')} className="w-full justify-center text-[--tx-muted]">
               ← Volver al carrito

@@ -500,6 +500,12 @@ model MarketplaceOrder {
   paymentProvider     String?
   sellerOrderId       String?   // order ID in seller's external system
   deliveryAddress     Json?     // snapshot at order time
+  // Manual payout tracking — stopgap while sellers can't connect their own MP
+  // account for real-time split payments (see MpSellerOAuthService). The platform
+  // collects 100% via its own account; admin marks here once the seller's net
+  // payout (total - commission) has actually been transferred outside the platform.
+  paidOutAt           DateTime?
+  paidOutBy           String?   // adminId or identifier of who recorded the payout
   events              OrderEvent[]
   lines               MarketplaceOrderLine[]
   seller              Seller    @relation(fields: [sellerId], references: [id])

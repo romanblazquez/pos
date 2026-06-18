@@ -1,5 +1,4 @@
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Home, Moon, Search, ShoppingCart, Store, Sun, User, Wallet } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
@@ -11,6 +10,7 @@ import AddressesPage from './pages/AddressesPage.js';
 import { CartProvider, useCart } from './cart/CartContext.js';
 import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
+import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { Button } from './components/ui/index.js';
 import { formatMoney } from './marketplace-meta.js';
@@ -288,18 +288,7 @@ function Header({
   const [q, setQ] = useState('');
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
-  const { data: walletSummary } = useQuery<{
-    platformCreditsMinor: number;
-    storeCredits: { balanceMinor: number }[];
-  }>({
-    queryKey: ['wallet-summary', session?.customer.id ?? 'anonymous'],
-    enabled: !!session,
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/customers/${session!.customer.id}/wallet`);
-      if (!res.ok) throw new Error('wallet failed');
-      return res.json() as Promise<{ platformCreditsMinor: number; storeCredits: { balanceMinor: number }[] }>;
-    },
-  });
+  const { data: walletSummary } = useWallet(session?.customer.id);
 
   const walletTotal = walletSummary
     ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)

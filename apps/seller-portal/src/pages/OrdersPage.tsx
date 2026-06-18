@@ -40,6 +40,7 @@ interface Order {
   totalMinorUnits: number;
   commissionMinorUnits: number;
   paymentProvider: string | null;
+  paidOutAt: string | null;
   createdAt: string;
   lines: OrderLine[];
 }
@@ -298,6 +299,15 @@ function OrderCard({ order, expanded, onToggle }: {
               <span>Vas a recibir</span>
               <span className="tabular">{fmtPrice(order.totalMinorUnits - order.commissionMinorUnits, order.currency)}</span>
             </div>
+            {(order.status === 'confirmed' || order.status === 'shipped' || order.status === 'delivered') && (
+              order.paidOutAt ? (
+                <p className="text-xs text-emerald-600 font-medium pt-0.5">
+                  ✓ Pago recibido el {fmtDate(order.paidOutAt)}
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600 pt-0.5">⏳ Pago pendiente de transferencia</p>
+              )
+            )}
           </div>
 
           {/* Meta */}

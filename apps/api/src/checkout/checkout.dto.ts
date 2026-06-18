@@ -49,6 +49,14 @@ export class InitCheckoutDto {
   @ApiPropertyOptional({ type: 'string', description: 'Authenticated customer CUID. Omit for guest checkout.', example: 'clxcustomer456' })
   @IsOptional() @IsString()
   customerId?: string;
+
+  @ApiPropertyOptional({ type: 'integer', description: 'Platform wallet credits to apply, in minor currency units. Capped at what the customer actually has and at the order subtotal.', example: 5000 })
+  @IsOptional() @IsInt() @Min(0)
+  platformCreditsToUse?: number;
+
+  @ApiPropertyOptional({ type: 'integer', description: "Seller-specific store credits to apply, in minor currency units. Capped at the customer's balance for this seller and at the order subtotal.", example: 0 })
+  @IsOptional() @IsInt() @Min(0)
+  storeCreditsToUse?: number;
 }
 
 export class CheckoutResultDto {

@@ -819,6 +819,7 @@ function MappingRequestDetail({
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 function OrdersView() {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
@@ -828,10 +829,36 @@ function OrdersView() {
   });
 
   const orders = data?.orders ?? [];
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-orders'] });
+
+  const markPaidMut = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/mark-paid-out`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: invalidate,
+  });
+
+  const unmarkPaidMut = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/unmark-paid-out`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: invalidate,
+  });
+
+  const canPayOut = (status: string) => status === 'confirmed' || status === 'shipped' || status === 'delivered';
 
   return (
     <div className="p-6 space-y-5">
       <h1 className="text-xl font-bold text-slate-900">Pedidos</h1>
+      <p className="text-sm text-slate-500">
+        El pago a vendedores es manual mientras el split por MercadoPago no esté habilitado —
+        la plataforma recibe el 100% de cada pago. Marcá "Pago enviado" una vez que transferiste
+        el neto del vendedor (total − comisión) por fuera de la plataforma.
+      </p>
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {isLoading ? (
           <Loading />
@@ -839,7 +866,7 @@ function OrdersView() {
           <Empty icon="📋" msg="Todavía no hay pedidos en el marketplace." />
         ) : (
           <table className="w-full text-sm">
-            <Thead cols={['ID', 'Cliente', 'Vendedor', 'Total', 'Estado', 'Fecha']} />
+            <Thead cols={['ID', 'Cliente', 'Vendedor', 'Total', 'Neto vendedor', 'Estado', 'Fecha', 'Pago a vendedor']} />
             <tbody className="divide-y divide-slate-100">
               {orders.map((o) => (
                 <tr key={o.id} className="hover:bg-slate-50">
@@ -849,9 +876,34 @@ function OrdersView() {
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {fmt(o.totalMinorUnits, o.currency)}
                   </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {fmt(o.totalMinorUnits - o.commissionMinorUnits, o.currency)}
+                  </td>
                   <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                   <td className="px-4 py-3 text-xs text-slate-400">
                     {new Date(o.createdAt).toLocaleDateString('es-MX')}
+                  </td>
+                  <td className="px-4 py-3">
+                    {!canPayOut(o.status) ? (
+                      <span className="text-xs text-slate-400">—</span>
+                    ) : o.paidOutAt ? (
+                      <button
+                        onClick={() => unmarkPaidMut.mutate(o.id)}
+                        disabled={unmarkPaidMut.isPending}
+                        title={`Pagado el ${new Date(o.paidOutAt).toLocaleDateString('es-MX')} — click para deshacer`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 hover:bg-emerald-100"
+                      >
+                        ✓ Pagado
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => markPaidMut.mutate(o.id)}
+                        disabled={markPaidMut.isPending}
+                        className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-50"
+                      >
+                        Marcar pago enviado
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1200,7 +1252,8 @@ interface MktProduct {
 
 interface Order {
   id: string; status: string; currency: string;
-  totalMinorUnits: number; createdAt: string;
+  totalMinorUnits: number; commissionMinorUnits: number; createdAt: string;
+  paidOutAt: string | null;
   customer?: { email: string } | null;
   seller?: { name: string } | null;
 }

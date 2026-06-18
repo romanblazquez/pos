@@ -212,6 +212,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                   add({
                     listingId: listing.id,
                     productName: p.name,
+                    sellerId: listing.sellerId,
                     sellerName: listing.sellerName,
                     priceMinorUnits: listing.priceMinorUnits,
                     currency: listing.currency,

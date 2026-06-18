@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCustomer } from '../context/CustomerContext.js';
+import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -15,23 +16,13 @@ const TX_META: Record<string, { icon: string; color: string; sign: string }> = {
   redeem_store:    { icon: '✅', color: 'text-[--tx-muted]', sign: '−' },
 };
 
-interface StoreCredit { balanceMinor: number; seller: { id: string; name: string } }
-interface Wallet { platformCreditsMinor: number; storeCredits: StoreCredit[] }
 interface Transaction { id: string; type: string; amountMinor: number; description: string; createdAt: string }
 
 export default function WalletPage() {
   const { session } = useCustomer();
   if (!session) return null;
 
-  const { data: wallet, isLoading: wl } = useQuery<Wallet>({
-    queryKey: ['wallet', session.customer.id],
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet`);
-      if (!res.ok) throw new Error(`wallet fetch failed: ${res.status}`);
-      return res.json() as Promise<Wallet>;
-    },
-    retry: false,
-  });
+  const { data: wallet, isLoading: wl } = useWallet(session.customer.id);
 
   const { data: txs, isLoading: tl } = useQuery<Transaction[]>({
     queryKey: ['wallet-transactions', session.customer.id],
