@@ -14,7 +14,7 @@ export interface CartItem {
 export interface CheckoutAddressDto {
   street: string;
   city: string;
-  state: string;
+  state?: string;
   postalCode: string;
   country?: string;
 }
@@ -28,14 +28,17 @@ export interface InitCheckoutDto {
   successUrl: string;
   failureUrl: string;
   pendingUrl: string;
-  platformCreditsToUse?: number;
-  storeCreditsToUse?: number;
+  // Apply as much of the customer's wallet/store credit as available, capped at
+  // the order subtotal — matches what the frontend has always sent (the full
+  // available balance or nothing, never a partial amount), just without making
+  // the caller compute and pass the numbers itself.
+  useCredits?: boolean;
 }
 
 export interface CheckoutResult {
   orderId: string;
   checkoutUrl: string;        // MP Checkout Pro URL
-  checkoutSessionId: string;  // MP preference_id
+  mpPreferenceId: string;
   expiresAt: string;
 }
 
@@ -81,11 +84,13 @@ export class CheckoutService {
       }
     }
 
-    // 3. All items must be from a single seller (MVP constraint)
+    // 3. All items must be from a single seller — MercadoPago's marketplace split
+    // is a documented 1:1 model (one payment, one seller-collector); there is no
+    // product that splits a single payment across multiple sellers.
     const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
     if (sellerIds.length > 1) {
       throw new BadRequestException(
-        'Por ahora solo podés comprar productos del mismo vendedor en un solo pedido.',
+        'Solo podés comprar productos de una tienda por pedido. Vaciá el carrito o terminá esta compra antes de agregar productos de otra tienda.',
       );
     }
     const sellerId = sellerIds[0];
@@ -110,7 +115,7 @@ export class CheckoutService {
         subtotalMinorUnits: subtotal,
         shippingMinorUnits: 0,
         totalMinorUnits: subtotal,
-        deliveryAddress: dto.deliveryAddress,
+        deliveryAddress: dto.deliveryAddress as object,
         lines: {
           create: listings.map((l) => ({
             listingId: l.id,
@@ -130,20 +135,13 @@ export class CheckoutService {
     // the same credits). Refund via loyalty.refundCredits if this order is cancelled.
     let platformCreditsApplied = 0;
     let storeCreditsApplied = 0;
-    if (dto.customerId && ((dto.platformCreditsToUse ?? 0) > 0 || (dto.storeCreditsToUse ?? 0) > 0)) {
-      // Cap the requested amounts at the order subtotal BEFORE reserving —
-      // reserveCredits deducts from the wallet atomically, so whatever it deducts
-      // must exactly equal what's applied to this order. Capping afterward would
-      // silently strand deducted-but-unapplied credits. Platform credits apply
-      // first (general-purpose), store credits (seller-specific) fill the remainder.
-      const platformRequest = Math.min(dto.platformCreditsToUse ?? 0, subtotal);
-      const storeRequest = Math.min(dto.storeCreditsToUse ?? 0, subtotal - platformRequest);
+    if (dto.useCredits && dto.customerId) {
       const reserved = await this.loyalty.reserveCredits({
         customerId: dto.customerId,
         sellerId,
         orderId: order.id,
-        platformCreditsToUse: platformRequest,
-        storeCreditsToUse: storeRequest,
+        platformCreditsToUse: subtotal,
+        storeCreditsToUse: subtotal,
       });
       platformCreditsApplied = reserved.platformCreditsApplied;
       storeCreditsApplied = reserved.storeCreditsApplied;
@@ -181,12 +179,15 @@ export class CheckoutService {
       return {
         orderId: order.id,
         checkoutUrl: `${dto.successUrl}?order_id=${order.id}`,
-        checkoutSessionId: 'wallet-credits',
+        mpPreferenceId: 'wallet-credits',
         expiresAt: new Date().toISOString(),
       };
     }
 
-    // 6. Resolve seller's MP access token (marketplace split) or platform token fallback
+    // 6. Resolve seller's MP access token for the 1:1 marketplace split. The
+    // seller's own OAuth token is what makes MP route their net share directly
+    // to their account — fall back to the platform's own token (Merchant of
+    // Record, no automatic split) only while the seller hasn't connected yet.
     let sellerMpToken: string | null = null;
     try {
       sellerMpToken = await this.mpOAuth.getSellerAccessToken(sellerId);
@@ -194,8 +195,12 @@ export class CheckoutService {
       // Seller hasn't connected MP yet — fall back to platform token
     }
 
-    const commissionRate = 0.03; // 3% — use seller.commissionRate in production
-    const commissionAmount = Math.round((amountDueMinor / 100) * commissionRate * 100) / 100; // major units
+    // Commission must reflect the seller's actual configured rate (platform base
+    // rate net of their cashback-driven discount), not a hardcoded stand-in —
+    // this is exactly the number MP will actually withhold from the seller's
+    // payout, so it has to match what computeOrderFees uses for the ledger too.
+    const { effectiveCommissionPct } = await this.loyalty.computeOrderFees(sellerId, amountDueMinor, amountDueMinor);
+    const commissionAmount = Math.round(amountDueMinor * effectiveCommissionPct) / 100; // major units
     const currencyId = currency === 'MXN' ? 'MXN' : 'ARS';
 
     // When credits are applied, MercadoPago must charge exactly amountDueMinor —
@@ -235,7 +240,7 @@ export class CheckoutService {
     await this.prisma.marketplaceOrder.update({
       where: { id: order.id },
       data: {
-        checkoutSessionId: preference.id,
+        mpPreferenceId: preference.id,
         paymentProvider: 'mercadopago_checkout_pro',
       },
     });
@@ -252,7 +257,7 @@ export class CheckoutService {
     return {
       orderId: order.id,
       checkoutUrl,
-      checkoutSessionId: preference.id,
+      mpPreferenceId: preference.id,
       expiresAt,
     };
   }
@@ -467,10 +472,10 @@ export class CheckoutService {
   }
 
   /**
-   * Manual payout tracking — stopgap while sellers can't connect their own MP
-   * account for real-time split payments (the platform collects 100% via its
-   * own account). Admin marks here once the seller's net payout has actually
-   * been transferred outside the platform (bank transfer, manual MP transfer, etc).
+   * Manual payout tracking — stopgap while a seller hasn't connected their own MP
+   * account for the real-time 1:1 split (the platform collects 100% via its own
+   * account in that case). Admin marks here once the seller's net payout has
+   * actually been transferred outside the platform.
    */
   async markPaidOut(orderId: string, paidOutBy: string) {
     const order = await this.prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: orderId } });

@@ -1,4 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from '@retail-os/db-postgres';
 import { encryptCredentials, decryptCredentials } from '../connectors/credential-crypto.js';
 
@@ -27,30 +28,45 @@ export class MpSellerOAuthService {
   private get clientId() { return process.env.MERCADOPAGO_CLIENT_ID ?? ''; }
   private get clientSecret() { return process.env.MERCADOPAGO_CLIENT_SECRET ?? ''; }
   private get redirectUri() {
+    if (process.env.MERCADOPAGO_REDIRECT_URI) return process.env.MERCADOPAGO_REDIRECT_URI;
     const base = process.env.API_BASE_URL ?? 'http://localhost:3000';
     return `${base}/api/v1/payments/mp/oauth/callback`;
   }
   private get portalUrl() { return process.env.SELLER_PORTAL_URL ?? 'http://localhost:4400'; }
 
-  /** Return the MP OAuth authorization URL for a seller. */
+  /**
+   * Return the MP OAuth authorization URL for a seller.
+   *
+   * PKCE: MP requires `code_challenge`/`code_challenge_method` once a marketplace
+   * app has the "authorization code + PKCE" flow enabled in its dashboard — without
+   * them the /authorization endpoint itself 400s. There's no server-side session to
+   * stash the verifier in across this redirect round-trip, so it travels inside the
+   * (already opaque, base64url-encoded) `state` param instead, the same place
+   * `sellerId` already rides — `exchangeCode` reads it back out below.
+   */
   getAuthUrl(sellerId: string): string {
     if (!this.clientId) {
       return `${this.portalUrl}?mp=error&msg=${encodeURIComponent('MERCADOPAGO_CLIENT_ID not configured')}`;
     }
-    const state = Buffer.from(JSON.stringify({ sellerId, ts: Date.now() })).toString('base64url');
+    const codeVerifier = randomBytes(32).toString('base64url');
+    const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
+    const state = Buffer.from(JSON.stringify({ sellerId, ts: Date.now(), codeVerifier })).toString('base64url');
     const params = new URLSearchParams({
       client_id: this.clientId,
       response_type: 'code',
       platform_id: 'mp',
       state,
       redirect_uri: this.redirectUri,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
     });
     return `${MP_AUTH_BASE}/authorization?${params}`;
   }
 
   /** Exchange OAuth code for tokens, persist encrypted, return sellerId. */
   async exchangeCode(code: string, state: string): Promise<string> {
-    const { sellerId } = JSON.parse(Buffer.from(state, 'base64url').toString()) as { sellerId: string };
+    const { sellerId, codeVerifier } = JSON.parse(Buffer.from(state, 'base64url').toString()) as
+      { sellerId: string; codeVerifier?: string };
 
     const res = await fetch(`${MP_BASE}/oauth/token`, {
       method: 'POST',
@@ -61,6 +77,7 @@ export class MpSellerOAuthService {
         code,
         grant_type: 'authorization_code',
         redirect_uri: this.redirectUri,
+        ...(codeVerifier && { code_verifier: codeVerifier }),
       }),
     });
 

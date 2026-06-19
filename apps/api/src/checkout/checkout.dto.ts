@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsArray, IsNotEmpty, IsOptional, IsPositive, IsString, IsInt,
-  MaxLength, Min, ValidateNested,
+  IsArray, IsBoolean, IsNotEmpty, IsOptional, IsPositive, IsString, IsInt,
+  MaxLength, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -38,7 +38,7 @@ export class CheckoutAddressDto {
 }
 
 export class InitCheckoutDto {
-  @ApiProperty({ type: [CartItemDto], description: 'One or more items to purchase. All must belong to the same seller.' })
+  @ApiProperty({ type: [CartItemDto], description: 'One or more items to purchase. All must belong to the same seller — MercadoPago marketplace split is a documented 1:1 model (one payment, one seller-collector).' })
   @IsArray() @ValidateNested({ each: true }) @Type(() => CartItemDto)
   items: CartItemDto[];
 
@@ -50,13 +50,29 @@ export class InitCheckoutDto {
   @IsOptional() @IsString()
   customerId?: string;
 
-  @ApiPropertyOptional({ type: 'integer', description: 'Platform wallet credits to apply, in minor currency units. Capped at what the customer actually has and at the order subtotal.', example: 5000 })
-  @IsOptional() @IsInt() @Min(0)
-  platformCreditsToUse?: number;
+  @ApiProperty({ type: 'string', example: 'juan@ejemplo.com' })
+  @IsString() @IsNotEmpty()
+  customerEmail: string;
 
-  @ApiPropertyOptional({ type: 'integer', description: "Seller-specific store credits to apply, in minor currency units. Capped at the customer's balance for this seller and at the order subtotal.", example: 0 })
-  @IsOptional() @IsInt() @Min(0)
-  storeCreditsToUse?: number;
+  @ApiProperty({ type: 'string', example: 'Juan García' })
+  @IsString() @IsNotEmpty()
+  customerName: string;
+
+  @ApiProperty({ type: 'string', description: 'Where to redirect the buyer after a successful payment', example: 'https://tienda.com/checkout/success' })
+  @IsString() @IsNotEmpty()
+  successUrl: string;
+
+  @ApiProperty({ type: 'string', description: 'Where to redirect the buyer after a failed/rejected payment', example: 'https://tienda.com/checkout/failure' })
+  @IsString() @IsNotEmpty()
+  failureUrl: string;
+
+  @ApiProperty({ type: 'string', description: 'Where to redirect the buyer while payment is still pending', example: 'https://tienda.com/checkout/pending' })
+  @IsString() @IsNotEmpty()
+  pendingUrl: string;
+
+  @ApiPropertyOptional({ type: 'boolean', description: "Apply as much of the customer's available platform and store credit as possible, capped at the order subtotal. Omit/false to pay the full amount.", example: true })
+  @IsOptional() @IsBoolean()
+  useCredits?: boolean;
 }
 
 export class CheckoutResultDto {

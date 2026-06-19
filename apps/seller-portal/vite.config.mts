@@ -20,6 +20,7 @@ export default defineConfig({
     port: 4400,
     strictPort: true,
     fs: { allow: [repoRoot] },
+    allowedHosts: ['.ngrok-free.app'],
     proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
     },

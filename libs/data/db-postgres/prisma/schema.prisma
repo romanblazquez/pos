@@ -495,7 +495,7 @@ model MarketplaceOrder {
   storeCreditsApplied      Int   @default(0)  // store credits used at checkout
   reservationId       String?   // seller-side hold ID
   reservationExpiresAt DateTime?
-  checkoutSessionId   String?
+  mpPreferenceId      String?   // MercadoPago Checkout Pro preference id
   paymentId           String?
   paymentProvider     String?
   sellerOrderId       String?   // order ID in seller's external system

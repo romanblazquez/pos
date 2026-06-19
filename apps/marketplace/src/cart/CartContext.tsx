@@ -12,9 +12,11 @@ export interface CartItem {
   imageUrl?: string;
 }
 
+export type AddResult = 'ok' | 'out_of_stock' | 'different_seller';
+
 interface CartCtx {
   items: CartItem[];
-  add: (item: CartItem) => void;
+  add: (item: CartItem) => AddResult;
   remove: (listingId: string) => void;
   clear: () => void;
   total: number;
@@ -31,8 +33,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // actually purchasable; the backend re-validates this independently at
   // checkout anyway, but catching it here gives immediate feedback instead of
   // a generic error at the very end of checkout.
-  const add = useCallback((item: CartItem) => {
-    if (item.stock <= 0) return; // out of stock — never add, not even at quantity 0
+  //
+  // MercadoPago's marketplace split is a documented 1:1 model (one payment, one
+  // seller-collector) — a cart can never hold items from more than one seller,
+  // so this is enforced here too, not just at checkout submission, to give the
+  // buyer immediate feedback instead of a surprise error after filling out the
+  // whole checkout form.
+  const add = useCallback((item: CartItem): AddResult => {
+    if (item.stock <= 0) return 'out_of_stock';
+    const cartSellerId = items[0]?.sellerId;
+    const alreadyInCart = items.some((i) => i.listingId === item.listingId);
+    if (cartSellerId && cartSellerId !== item.sellerId && !alreadyInCart) {
+      return 'different_seller';
+    }
     setItems((prev) => {
       const existing = prev.find((i) => i.listingId === item.listingId);
       if (existing) {
@@ -44,7 +57,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { ...item, quantity: Math.min(item.quantity, item.stock) }];
     });
-  }, []);
+    return 'ok';
+  }, [items]);
 
   const remove = useCallback((listingId: string) => {
     setItems((prev) => prev.filter((i) => i.listingId !== listingId));

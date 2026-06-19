@@ -255,7 +255,7 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                     setToast(`"${listing.sellerName}" ya no tiene más stock disponible para agregar.`);
                     return;
                   }
-                  add({
+                  const result = add({
                     listingId: listing.id,
                     productName: p.name,
                     sellerId: listing.sellerId,
@@ -266,6 +266,10 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
                     stock: listing.stock,
                     imageUrl: p.images[0],
                   });
+                  if (result === 'different_seller') {
+                    setToast(`Tu carrito tiene productos de otra tienda. Vaciá el carrito para comprar en "${listing.sellerName}".`);
+                    return;
+                  }
                   onCartOpen();
                 }}
               />

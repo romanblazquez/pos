@@ -29,7 +29,7 @@ export class CheckoutController {
   })
   @ApiBody({ type: InitCheckoutDto })
   @ApiResponse({ status: 201, description: 'Order created. Returns { orderId, checkoutUrl, totalMinorUnits }', type: CheckoutResultDto })
-  @ApiResponse({ status: 400, description: 'Validation failed — e.g. insufficient stock, unknown listingId, or empty cart' })
+  @ApiResponse({ status: 400, description: 'Validation failed — e.g. insufficient stock, unknown listingId, cart spans more than one seller, or empty cart' })
   @ApiResponse({ status: 409, description: 'Stock reservation conflict — another buyer reserved the last unit' })
   initCheckout(@Body() dto: InitCheckoutDto) {
     return this.svc.initCheckout(dto);

@@ -80,10 +80,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
           customerId: session?.customer.id,
           customerEmail: email,
           customerName: name,
-          // Backend caps these at actual balance and at the order subtotal — sending
-          // the full available amounts here is safe even if it exceeds what's needed.
-          platformCreditsToUse: useCredits ? platformCreditsAvailable : 0,
-          storeCreditsToUse: useCredits ? storeCreditsAvailable : 0,
+          useCredits,
           successUrl: `${baseUrl}/checkout/success`,
           failureUrl: `${baseUrl}/checkout/failure`,
           pendingUrl: `${baseUrl}/checkout/pending`,
@@ -313,15 +310,8 @@ function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['ite
     );
   }
 
-  const sellers = [...new Set(items.map((i) => i.sellerName))];
-
   return (
     <div className="p-5 flex flex-col gap-3">
-      {sellers.length > 1 && (
-        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200">
-          ⚠️ Tenés productos de distintas tiendas. Solo podés comprar de una tienda por pedido.
-        </div>
-      )}
       {items.map((item) => (
         <div key={item.listingId} className="flex gap-3 items-start p-3 rounded-xl border border-[--border] bg-[--bg-raised]">
           {item.imageUrl ? (
