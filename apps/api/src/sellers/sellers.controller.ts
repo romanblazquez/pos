@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
 import { SellerMappingService } from './seller-mapping.service.js';
-import { CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
+import { BulkUpdateListingsDto, CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Public } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
@@ -481,6 +481,41 @@ export class SellersController {
   ) {
     await this.svc.deleteListingPromo(id, listingId, promoId);
     return { deleted: true };
+  }
+
+  @Patch(':id/listings/bulk')
+  @ApiOperation({
+    summary: 'Bulk activate/deactivate listings',
+    description:
+      'Sets `active` on many listings at once. Pass explicit `ids` to act on a specific selection, ' +
+      'or a `filter` (matching the same `q`/`status` params as GET :id/listings) to act on every ' +
+      'listing that matches — including ones outside the current page. An empty filter targets all ' +
+      'of the seller\'s listings. `ids` takes precedence over `filter` when both are present.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['active'],
+      properties: {
+        ids:    { type: 'array', items: { type: 'string' }, description: 'Explicit listing CUIDs to update.' },
+        filter: {
+          type: 'object',
+          properties: {
+            q:      { type: 'string', description: 'Product name search term, same as GET :id/listings' },
+            status: { type: 'string', description: 'active | inactive | out_of_stock | low_stock' },
+          },
+        },
+        active: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Returns { updated: number } — count of listings changed.' })
+  bulkUpdateListings(
+    @Param('id') id: string,
+    @Body() body: BulkUpdateListingsDto,
+  ) {
+    return this.svc.bulkUpdateListings(id, { ids: body.ids, filter: body.filter }, { active: body.active });
   }
 
   @Patch(':id/listings/:listingId')

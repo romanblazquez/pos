@@ -116,6 +116,13 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
   // tracks which listing IDs have at least one currently-active promo (lazy, populated when modal opens)
   const [promoMap, setPromoMap] = useState<Record<string, boolean>>({});
 
+  // Bulk selection: selectedIds holds explicitly checked rows; selectAllMatching means
+  // "every listing matching the current filter", not just what's loaded on this page.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'active' | 'inactive' | null>(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -127,14 +134,22 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [q]);
 
-  useEffect(() => {
-    fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
+  const fetchStats = useCallback(() => {
+    return fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
       headers: { Authorization: `Bearer ${session.token}` },
     })
       .then((r) => r.json())
       .then((s) => setStats(s as Stats))
       .catch(() => null);
   }, [session.seller.id, session.token]);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  // Selection is scoped to a filter+search+sort combination — reset it when any of those change.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectAllMatching(false);
+  }, [debouncedQ, statusFilter, sort]);
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -171,6 +186,67 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
       setStats((s) => s ? { ...s, active: s.active + (listing.active ? -1 : 1) } : s);
     } finally {
       setSavingId(null);
+    }
+  }
+
+  const pageIds = listings.map((l) => l.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const someOnPageSelected = pageIds.some((id) => selectedIds.has(id));
+  const selectedCount = selectAllMatching ? total : selectedIds.size;
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setSelectAllMatching(false);
+    setBulkAction(null);
+  }
+
+  function toggleRowSelected(id: string) {
+    if (selectAllMatching) {
+      // Switching out of "select all matching" into an explicit per-row selection.
+      setSelectAllMatching(false);
+      setSelectedIds(new Set(pageIds.filter((x) => x !== id)));
+      return;
+    }
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    if (allOnPageSelected) {
+      clearSelection();
+    } else {
+      setSelectAllMatching(false);
+      setSelectedIds(new Set(pageIds));
+    }
+  }
+
+  async function applyBulkAction(active: boolean) {
+    setBulkSaving(true);
+    try {
+      const body: { active: boolean; ids?: string[]; filter?: { q?: string; status?: string } } = { active };
+      if (selectAllMatching) {
+        body.filter = {
+          ...(debouncedQ ? { q: debouncedQ } : {}),
+          ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+        };
+      } else {
+        body.ids = Array.from(selectedIds);
+      }
+      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/bulk`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        clearSelection();
+        await Promise.all([fetchListings(), fetchStats()]);
+      }
+    } finally {
+      setBulkSaving(false);
+      setBulkAction(null);
     }
   }
 
@@ -262,12 +338,41 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
           </div>
         </div>
 
+        {/* Bulk action bar */}
+        {selectedCount > 0 && (
+          <BulkActionBar
+            count={selectedCount}
+            allOnPageSelected={allOnPageSelected}
+            selectAllMatching={selectAllMatching}
+            showSelectAllMatching={!selectAllMatching && allOnPageSelected && total > pageIds.length}
+            totalMatching={total}
+            pendingAction={bulkAction}
+            saving={bulkSaving}
+            onSelectAllMatching={() => setSelectAllMatching(true)}
+            onRequestAction={setBulkAction}
+            onCancelAction={() => setBulkAction(null)}
+            onConfirmAction={() => bulkAction && applyBulkAction(bulkAction === 'active')}
+            onClear={clearSelection}
+          />
+        )}
+
         {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="px-5 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      ref={(el) => { if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected; }}
+                      onChange={toggleSelectAllOnPage}
+                      disabled={listings.length === 0}
+                      className="accent-slate-900 w-4 h-4 cursor-pointer"
+                      aria-label="Seleccionar todos los productos de esta página"
+                    />
+                  </th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Producto</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Categoría</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Precio</th>
@@ -279,14 +384,14 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
               <tbody className="divide-y divide-slate-100">
                 {loading && listings.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center text-slate-400">
+                    <td colSpan={7} className="py-20 text-center text-slate-400">
                       <p className="text-sm">Cargando productos…</p>
                     </td>
                   </tr>
                 )}
                 {!loading && listings.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center text-slate-400">
+                    <td colSpan={7} className="py-20 text-center text-slate-400">
                       <p className="font-medium text-slate-500">Sin resultados</p>
                       <p className="text-xs mt-1">Probá cambiando los filtros</p>
                     </td>
@@ -300,6 +405,8 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
                     onEdit={() => setEditListing(listing)}
                     isSaving={savingId === listing.id}
                     hasActivePromo={promoMap[listing.id] ?? false}
+                    selected={selectAllMatching || selectedIds.has(listing.id)}
+                    onToggleSelected={() => toggleRowSelected(listing.id)}
                   />
                 ))}
               </tbody>
@@ -398,16 +505,104 @@ function StatsBar({
   );
 }
 
+// ─── Bulk action bar ────────────────────────────────────────────────────────────
+
+function BulkActionBar({
+  count, allOnPageSelected, selectAllMatching, showSelectAllMatching, totalMatching,
+  pendingAction, saving, onSelectAllMatching, onRequestAction, onCancelAction, onConfirmAction, onClear,
+}: {
+  count: number;
+  allOnPageSelected: boolean;
+  selectAllMatching: boolean;
+  showSelectAllMatching: boolean;
+  totalMatching: number;
+  pendingAction: 'active' | 'inactive' | null;
+  saving: boolean;
+  onSelectAllMatching: () => void;
+  onRequestAction: (action: 'active' | 'inactive') => void;
+  onCancelAction: () => void;
+  onConfirmAction: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900 text-white shadow-sm">
+        <span className="text-sm font-medium">
+          {selectAllMatching
+            ? `Los ${totalMatching.toLocaleString('es-AR')} productos que coinciden están seleccionados`
+            : `${count.toLocaleString('es-AR')} seleccionado${count === 1 ? '' : 's'}`}
+        </span>
+
+        <div className="ml-auto flex items-center gap-2">
+          {pendingAction ? (
+            <>
+              <span className="text-sm text-slate-300">
+                ¿{pendingAction === 'active' ? 'Activar' : 'Desactivar'} {selectAllMatching ? totalMatching : count} producto{(selectAllMatching ? totalMatching : count) === 1 ? '' : 's'}?
+              </span>
+              <button
+                onClick={onConfirmAction}
+                disabled={saving}
+                className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+              >
+                {saving ? 'Aplicando…' : 'Confirmar'}
+              </button>
+              <button
+                onClick={onCancelAction}
+                disabled={saving}
+                className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => onRequestAction('active')}
+                className="px-3 py-1.5 text-xs font-semibold bg-white text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Activar
+              </button>
+              <button
+                onClick={() => onRequestAction('inactive')}
+                className="px-3 py-1.5 text-xs font-semibold border border-slate-600 text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Desactivar
+              </button>
+              <button
+                onClick={onClear}
+                className="px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+              >
+                Limpiar
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {showSelectAllMatching && !pendingAction && (
+        <p className="text-xs text-slate-500 px-1">
+          {allOnPageSelected ? 'Se seleccionaron todos los productos de esta página. ' : ''}
+          <button onClick={onSelectAllMatching} className="font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2">
+            Seleccionar las {totalMatching.toLocaleString('es-AR')} que coinciden con el filtro
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Listing row ──────────────────────────────────────────────────────────────
 
 function ListingRow({
-  listing, onToggleActive, onEdit, isSaving, hasActivePromo,
+  listing, onToggleActive, onEdit, isSaving, hasActivePromo, selected, onToggleSelected,
 }: {
   listing: Listing;
   onToggleActive: () => void;
   onEdit: () => void;
   isSaving: boolean;
   hasActivePromo: boolean;
+  selected: boolean;
+  onToggleSelected: () => void;
 }) {
   const stockClass =
     listing.stockStatus === 'in_stock'     ? 'text-emerald-700 bg-emerald-50' :
@@ -421,7 +616,16 @@ function ListingRow({
     listing.stock >= 999                   ? 'Sin límite'         : String(listing.stock);
 
   return (
-    <tr className={cn('group hover:bg-slate-50/60 transition-colors', !listing.active && 'opacity-50')}>
+    <tr className={cn('group hover:bg-slate-50/60 transition-colors', !listing.active && 'opacity-50', selected && 'bg-slate-50')}>
+      <td className="px-5 py-3 w-10">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelected}
+          className="accent-slate-900 w-4 h-4 cursor-pointer"
+          aria-label={`Seleccionar ${listing.product.name}`}
+        />
+      </td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-100 shrink-0">

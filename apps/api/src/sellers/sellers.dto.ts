@@ -43,6 +43,22 @@ export class UpdateListingDto {
   active?: boolean;
 }
 
+export class BulkUpdateListingsDto {
+  @ApiPropertyOptional({ type: [String], description: 'Explicit listing CUIDs to update. Takes precedence over `filter`.' })
+  @IsOptional() @IsString({ each: true })
+  ids?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Used when `ids` is omitted — applies to every listing matching this filter (e.g. select-all-across-pages). An empty filter matches all of the seller\'s listings.',
+  })
+  @IsOptional()
+  filter?: { q?: string; status?: string };
+
+  @ApiProperty({ type: 'boolean', description: 'Whether the matched listings should be visible in the marketplace', example: true })
+  @IsBoolean()
+  active: boolean;
+}
+
 export class ListingStatsDto {
   @ApiProperty({ type: 'integer', description: 'Total listings for this seller', example: 982 })
   total: number;

@@ -87,6 +87,20 @@ export class SellersService {
     return { total, active, outOfStock, lowStock };
   }
 
+  private buildListingWhere(sellerId: string, filter: { q?: string; status?: string }) {
+    const where: Record<string, unknown> = { sellerId };
+
+    if (filter.q) {
+      where['product'] = { name: { contains: filter.q, mode: 'insensitive' } };
+    }
+    if (filter.status === 'active')       where['active'] = true;
+    if (filter.status === 'inactive')     where['active'] = false;
+    if (filter.status === 'out_of_stock') where['stockStatus'] = 'out_of_stock';
+    if (filter.status === 'low_stock')    where['stockStatus'] = 'low_stock';
+
+    return where;
+  }
+
   async getListings(sellerId: string, params: {
     page: number;
     limit: number;
@@ -94,15 +108,7 @@ export class SellersService {
     status?: string;
     sort?: string;
   }) {
-    const where: Record<string, unknown> = { sellerId };
-
-    if (params.q) {
-      where['product'] = { name: { contains: params.q, mode: 'insensitive' } };
-    }
-    if (params.status === 'active')       where['active'] = true;
-    if (params.status === 'inactive')     where['active'] = false;
-    if (params.status === 'out_of_stock') where['stockStatus'] = 'out_of_stock';
-    if (params.status === 'low_stock')    where['stockStatus'] = 'low_stock';
+    const where = this.buildListingWhere(sellerId, params);
 
     const orderBy: Record<string, string> =
       params.sort === 'price_asc'  ? { priceMinorUnits: 'asc' } :
@@ -152,6 +158,18 @@ export class SellersService {
     }
 
     return this.prisma.listing.update({ where: { id: listingId }, data: patch });
+  }
+
+  async bulkUpdateListings(sellerId: string, selection: {
+    ids?: string[];
+    filter?: { q?: string; status?: string };
+  }, data: { active: boolean }) {
+    const where = selection.ids?.length
+      ? { id: { in: selection.ids }, sellerId }
+      : this.buildListingWhere(sellerId, selection.filter ?? {});
+
+    const { count } = await this.prisma.listing.updateMany({ where, data: { active: data.active } });
+    return { updated: count };
   }
 
   async getOrderStats(sellerId: string) {
