@@ -562,9 +562,10 @@ export class CheckoutService {
       body['auto_return'] = 'approved';
     }
 
-    // Marketplace split: declare platform client_id and commission amount
+    // Marketplace split: MP routes the fee to the platform (the app that issued the
+    // seller's OAuth token) automatically. Per MP docs only `marketplace_fee` is sent;
+    // adding a `marketplace` field (numeric client_id) breaks payment processing.
     if (params.sellerMpToken && params.marketplaceFee) {
-      body['marketplace'] = process.env.MERCADOPAGO_CLIENT_ID;
       body['marketplace_fee'] = params.marketplaceFee;
     }
 
