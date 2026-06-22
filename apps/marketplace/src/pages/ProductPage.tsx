@@ -21,6 +21,7 @@ import { Badge, Button } from '../components/ui/index.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
 import { categoryLabel } from '../marketplace-meta.js';
+import { trackEvent } from '../analytics.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -118,6 +119,20 @@ export default function ProductPage({
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    if (!data) return;
+    const prices = data.listings.map((listing) => listing.priceMinorUnits);
+    trackEvent('view_item', {
+      currency: data.listings[0]?.currency ?? 'MXN',
+      value: prices.length ? Math.min(...prices) / 100 : 0,
+      items: [{
+        item_id: data.id,
+        item_name: data.name,
+        item_category: data.category,
+      }],
+    });
+  }, [data]);
 
   if (isLoading) return <ProductSkeleton />;
   if (isError || !data) return <NotFound />;

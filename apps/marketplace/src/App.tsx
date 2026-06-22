@@ -14,6 +14,8 @@ import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { Button } from './components/ui/index.js';
 import { formatMoney } from './marketplace-meta.js';
+import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner.js';
+import { trackPageView } from './analytics.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -107,6 +109,10 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+
+  useEffect(() => {
+    trackPageView(routePath(route));
+  }, [route]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -302,6 +308,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
           }}
         />
       )}
+      <AnalyticsConsentBanner />
     </div>
   );
 }

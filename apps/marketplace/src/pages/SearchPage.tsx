@@ -13,6 +13,7 @@ import { Button, cn } from '../components/ui/index.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
+import { trackEvent } from '../analytics.js';
 import {
   categoryDescription,
   categoryLabel,
@@ -197,6 +198,10 @@ export default function SearchPage({
               className="flex min-w-0 gap-2 md:w-[26rem]"
               onSubmit={(e) => {
                 e.preventDefault();
+                trackEvent('search', {
+                  search_term: draft.trim(),
+                  category: category ?? 'all',
+                });
                 onSearch(draft.trim(), category);
               }}
             >

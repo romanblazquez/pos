@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 const SITE_URL = 'https://juegospedia.com';
 const DEFAULT_IMAGE = `${SITE_URL}/og-default.jpg`;
 const SEO_INDEXING_ENABLED = import.meta.env.VITE_SEO_INDEXING_ENABLED === 'true';
+const GOOGLE_SITE_VERIFICATION = import.meta.env.VITE_GOOGLE_SITE_VERIFICATION?.trim();
 
 export interface SeoHeadProps {
   title: string;
@@ -40,6 +41,9 @@ export function SeoHead({
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
     setMeta('name', 'twitter:image', image);
+    if (GOOGLE_SITE_VERIFICATION) {
+      setMeta('name', 'google-site-verification', GOOGLE_SITE_VERIFICATION);
+    }
     setLink('canonical', canonicalUrl);
 
     const id = 'page-structured-data';
