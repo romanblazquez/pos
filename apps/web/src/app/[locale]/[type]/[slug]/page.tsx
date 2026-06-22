@@ -9,6 +9,7 @@ import {
   type ProductDetail,
 } from '@/lib/api';
 import { buildMetadata, entityAlternates } from '@/lib/seo';
+import { APP_URL } from '@/lib/site';
 import { breadcrumbLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -202,6 +203,24 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
             {product.listings.length} {locale === 'es' ? 'ofertas desde' : 'offers from'} {range}
           </p>
         )}
+        {sorted.length > 0 && (
+          // Purchase happens in the transactional SPA on app.juegospedia.com.
+          <p style={{ margin: '0.75rem 0' }}>
+            <a
+              href={`${APP_URL}/product/${product.slug}`}
+              style={{
+                display: 'inline-block',
+                background: 'var(--accent)',
+                color: '#0b1020',
+                fontWeight: 700,
+                padding: '0.6rem 1.1rem',
+                borderRadius: 8,
+              }}
+            >
+              {locale === 'es' ? 'Comprar' : 'Buy'} →
+            </a>
+          </p>
+        )}
         {product.images?.[0] && (
           <img
             src={product.images[0]}
@@ -242,9 +261,8 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
                   return (
                     <tr key={l.id}>
                       <td>
-                        <Link href={`${listingPath('stores', locale)}/${l.sellerSlug}`}>
-                          {l.sellerName}
-                        </Link>
+                        {/* No public seller storefront yet — plain text, not a link. */}
+                        {l.sellerName}
                         {best && l.id === best.id && (
                           <strong> · {locale === 'es' ? 'Mejor precio' : 'Best price'}</strong>
                         )}
@@ -271,8 +289,13 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
         <section className="related">
           {product.tags?.length > 0 && (
             <div className="taglist">
+              {/* Mechanic landing pages need a new API filter; until then tags
+                  link to real search results rather than a 404. */}
               {product.tags.map((tag) => (
-                <Link key={tag} href={`${listingPath('mechanics', locale)}/${slugify(tag)}`}>
+                <Link
+                  key={tag}
+                  href={`${listingPath('search', locale)}?q=${encodeURIComponent(tag)}`}
+                >
                   {tag}
                 </Link>
               ))}

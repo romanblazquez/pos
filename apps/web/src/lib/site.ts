@@ -14,6 +14,13 @@ export const API_BASE_URL = (
 
 export const SITE_NAME = 'Juegospedia';
 
+// The transactional SPA (cart / checkout / account) stays on its own host after
+// the apex cutover. Public SSR pages hand off here to complete a purchase.
+export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.juegospedia.com').replace(
+  /\/$/,
+  '',
+);
+
 export const ORGANIZATION = {
   name: SITE_NAME,
   legalName: 'Juegospedia',
