@@ -7,6 +7,7 @@ import { breadcrumbLd, itemListLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
+import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
 import {
   homePath,
   isLocale,
@@ -30,7 +31,14 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: { locale: string; type: string };
-  searchParams: { page?: string };
+  searchParams: {
+    page?: string;
+    category?: string;
+    inStock?: string;
+    sort?: string;
+    min?: string;
+    max?: string;
+  };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
   const locale = params.locale as Locale;
@@ -52,6 +60,13 @@ export async function generateMetadata({
 
   if (kind !== 'games' && kind !== 'categories') return {};
 
+  // Faceted/filtered or deeper-page URLs are navigational — keep them out of the
+  // index so only the clean base listing competes (spec §9).
+  const filtered = Boolean(
+    searchParams.category || searchParams.inStock || searchParams.sort || searchParams.min || searchParams.max,
+  );
+  const navigational = page > 1 || filtered;
+
   const path = page > 1 ? `${listingPath(kind, locale)}?page=${page}` : listingPath(kind, locale);
   const isGames = kind === 'games';
   const base = isGames
@@ -71,17 +86,41 @@ export async function generateMetadata({
     path,
     title,
     description,
-    // Deeper pages are navigational, not landing pages — keep them out of the index.
-    noindex: page > 1,
-    alternates:
-      page > 1 ? undefined : { es: listingPath(kind, 'es'), en: listingPath(kind, 'en') },
+    noindex: navigational,
+    alternates: navigational
+      ? undefined
+      : { es: listingPath(kind, 'es'), en: listingPath(kind, 'en') },
   });
 }
 
-function Pager({ base, page, total, locale }: { base: string; page: number; total: number; locale: Locale }) {
+// Serialize active filters (everything except page) so pagination preserves them.
+function filterQuery(sp: Record<string, string | undefined>): string {
+  const p = new URLSearchParams();
+  for (const k of ['q', 'category', 'inStock', 'sort', 'min', 'max'] as const) {
+    if (sp[k]) p.set(k, sp[k] as string);
+  }
+  return p.toString();
+}
+
+function Pager({
+  base,
+  page,
+  total,
+  locale,
+  query = '',
+}: {
+  base: string;
+  page: number;
+  total: number;
+  locale: Locale;
+  query?: string;
+}) {
   const pages = Math.ceil(total / PAGE_SIZE);
   if (pages <= 1) return null;
-  const href = (p: number) => (p === 1 ? base : `${base}?page=${p}`);
+  const href = (p: number) => {
+    const parts = [query, p > 1 ? `page=${p}` : ''].filter(Boolean);
+    return parts.length ? `${base}?${parts.join('&')}` : base;
+  };
   // Window of page numbers around the current page.
   const nums = new Set<number>([1, pages, page, page - 1, page + 1]);
   const list = [...nums].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
@@ -112,7 +151,15 @@ export default async function ListingPage({
   searchParams,
 }: {
   params: { locale: string; type: string };
-  searchParams: { q?: string; page?: string };
+  searchParams: {
+    q?: string;
+    page?: string;
+    category?: string;
+    inStock?: string;
+    sort?: string;
+    min?: string;
+    max?: string;
+  };
 }) {
   if (!isLocale(params.locale)) notFound();
   const locale = params.locale as Locale;
@@ -120,10 +167,27 @@ export default async function ListingPage({
   const homeName = locale === 'es' ? 'Inicio' : 'Home';
   const page = pageOf(searchParams);
 
-  // ── Search ───────────────────────────────────────────────────────────────
+  // ── Search (faceted) ───────────────────────────────────────────────────────
   if (kind === 'search') {
     const q = (searchParams.q ?? '').trim();
-    const { results, total } = q ? await listProducts({ q, limit: 48 }) : { results: [], total: 0 };
+    const categories = await getCategories();
+    const state: FilterState = {
+      q,
+      category: categoryFromParam(searchParams.category, categories),
+      inStock: searchParams.inStock === 'true',
+      sort: (searchParams.sort as FilterState['sort']) || undefined,
+      min: searchParams.min ? Math.max(0, parseInt(searchParams.min, 10)) || undefined : undefined,
+      max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
+    };
+    const { results, total } = await listProducts({
+      q,
+      category: state.category,
+      inStock: state.inStock,
+      sortBy: state.sort,
+      minPriceMinor: state.min != null ? state.min * 100 : undefined,
+      maxPriceMinor: state.max != null ? state.max * 100 : undefined,
+      limit: 48,
+    });
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Buscar' : 'Search', path: listingPath('search', locale) },
@@ -136,31 +200,53 @@ export default async function ListingPage({
             ? locale === 'es' ? `Resultados para “${q}”` : `Results for “${q}”`
             : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
         </h1>
-        <form className="search-form" method="get" action={listingPath('search', locale)}>
+        <form method="get" action={listingPath('search', locale)}>
           <input
-            className="search-input"
+            className="search-bar"
             type="search"
             name="q"
             defaultValue={q}
             placeholder={locale === 'es' ? 'Catan, estrategia, 2 jugadores…' : 'Catan, strategy, 2 players…'}
             aria-label={locale === 'es' ? 'Buscar' : 'Search'}
           />
+          <div className="search-layout">
+            <SearchFilters locale={locale} categories={categories} state={state} />
+            <div>
+              <p className="muted" style={{ marginBottom: '1rem' }}>
+                {total} {locale === 'es' ? 'resultados' : 'results'}
+              </p>
+              <div className="grid">
+                {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+              </div>
+            </div>
+          </div>
         </form>
-        {q && <p className="muted">{total} {locale === 'es' ? 'resultados' : 'results'}</p>}
-        <div className="grid" style={{ marginTop: '1rem' }}>
-          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-        </div>
       </main>
     );
   }
 
-  // ── Games catalog (paginated over the full catalogue) ──────────────────────
+  // ── Games catalog (faceted sidebar + paginated over the full catalogue) ─────
   if (kind === 'games') {
+    const base = listingPath('games', locale);
+    const categories = await getCategories();
+    const state: FilterState = {
+      q: '',
+      category: categoryFromParam(searchParams.category, categories),
+      inStock: searchParams.inStock === 'true',
+      sort: (searchParams.sort as FilterState['sort']) || undefined,
+      min: searchParams.min ? Math.max(0, parseInt(searchParams.min, 10)) || undefined : undefined,
+      max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
+    };
+    const filtered = Boolean(state.category || state.inStock || state.sort || state.min || state.max);
     const { results, total } = await listProducts({
+      category: state.category,
+      inStock: state.inStock,
+      sortBy: state.sort,
+      minPriceMinor: state.min != null ? state.min * 100 : undefined,
+      maxPriceMinor: state.max != null ? state.max * 100 : undefined,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     });
-    const base = listingPath('games', locale);
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: base },
@@ -168,7 +254,7 @@ export default async function ListingPage({
     return (
       <main className="container">
         <Breadcrumbs crumbs={crumbs} />
-        {page === 1 && (
+        {page === 1 && !filtered && (
           <JsonLd
             data={[
               breadcrumbLd(crumbs),
@@ -177,13 +263,20 @@ export default async function ListingPage({
           />
         )}
         <h1 className="page-title">{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
-        <p className="muted">
-          {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
-        </p>
-        <div className="grid" style={{ marginTop: '1.25rem' }}>
-          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-        </div>
-        <Pager base={base} page={page} total={total} locale={locale} />
+        <form method="get" action={base}>
+          <div className="search-layout">
+            <SearchFilters locale={locale} categories={categories} state={state} />
+            <div>
+              <p className="muted" style={{ marginBottom: '1rem' }}>
+                {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
+              </p>
+              <div className="grid">
+                {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+              </div>
+              <Pager base={base} page={page} total={total} locale={locale} query={filterQuery(searchParams)} />
+            </div>
+          </div>
+        </form>
       </main>
     );
   }

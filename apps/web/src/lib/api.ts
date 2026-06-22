@@ -93,12 +93,18 @@ export function getProduct(slug: string): Promise<ProductDetail | null> {
   return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}`, REVALIDATE.product);
 }
 
+export type SortBy = 'rank_score' | 'price_asc' | 'price_desc' | 'name';
+
 export async function listProducts(opts: {
   category?: string;
   q?: string;
   limit?: number;
   offset?: number;
   inStock?: boolean;
+  sortBy?: SortBy;
+  /** Price bounds in MINOR units (centavos), matching the API contract. */
+  minPriceMinor?: number;
+  maxPriceMinor?: number;
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
@@ -107,6 +113,9 @@ export async function listProducts(opts: {
   if (opts.q) params.set('q', opts.q);
   if (opts.category) params.set('category', opts.category);
   if (opts.inStock) params.set('inStock', 'true');
+  if (opts.sortBy) params.set('sortBy', opts.sortBy);
+  if (opts.minPriceMinor) params.set('minPrice', String(opts.minPriceMinor));
+  if (opts.maxPriceMinor) params.set('maxPrice', String(opts.maxPriceMinor));
   const data = await api<{ results: ProductSummary[]; total: number }>(
     `/api/v1/products?${params}`,
     REVALIDATE.listing,

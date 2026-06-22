@@ -10,11 +10,11 @@ import '../globals.css';
 
 // Self-hosted at build (zero layout shift): Inter for UI/body (brand match),
 // Fraunces as the display serif for the "encyclopedia/almanac" identity.
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const fraunces = Fraunces({
   subsets: ['latin'],
   weight: ['400', '600'],
-  variable: '--font-display',
+  variable: '--font-fraunces',
   display: 'swap',
 });
 

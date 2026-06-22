@@ -11,7 +11,7 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
   const hasPrice = product.minPriceMinor > 0;
 
   return (
-    <Link className="card" href={href}>
+    <Link className="card-link" href={href}>
       <div className="card-media">
         {product.images?.[0] ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -10,6 +10,7 @@ import {
 } from '@/lib/api';
 import { buildMetadata, entityAlternates } from '@/lib/seo';
 import { APP_URL } from '@/lib/site';
+import { buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
 import { breadcrumbLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
@@ -199,7 +200,8 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
           )}
           {sorted.length > 0 && (
             // Purchase completes in the transactional SPA on app.juegospedia.com.
-            <a className="btn" href={`${APP_URL}/product/${product.slug}`}>
+            // buttonVariants() styles the anchor without Radix Slot (RSC-safe).
+            <a className={buttonVariants({ size: 'lg' })} href={`${APP_URL}/product/${product.slug}`}>
               {locale === 'es' ? 'Comprar ahora' : 'Buy now'} →
             </a>
           )}

@@ -20,6 +20,16 @@ const nextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
   },
+  // The shared design-system lib (@retail-os/ui-react) uses NodeNext-style `.js`
+  // import specifiers that actually point at `.ts`/`.tsx` source. Vite resolves
+  // these for the other apps; webpack/Next needs an explicit extension alias.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.jsx': ['.tsx', '.jsx'],
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
