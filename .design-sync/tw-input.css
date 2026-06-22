@@ -1,0 +1,59 @@
+/* Tailwind v4 precompile entry for design-sync (committed, durable input).
+ * Produces a fully static stylesheet (.cache/compiled.css) that ships to claude.ai/design:
+ *   - preflight + the utilities actually used by the components and the previews
+ *   - the @retail-os theme tokens (theme.css)
+ *   - a generous responsive layout safelist (@source inline) so the design agent
+ *     can build arbitrary on-brand retail layouts with flex/grid utilities that
+ *     would otherwise be tree-shaken away.
+ * Auto content-detection is disabled (source(none)); sources are listed explicitly.
+ * Build: node .ds-sync/node_modules/@tailwindcss/cli/dist/index.mjs \
+ *          -i .design-sync/tw-input.css -o .design-sync/.cache/compiled.css */
+
+/* Brand font (Inter) served at runtime so every design renders on-brand.
+ * SF Pro Display / system-ui remain graceful fallbacks for Apple/other devices. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss" source(none);
+@import "./theme.css";
+
+/* Real usage: the shipped components and our authored retail previews. */
+@source "../libs/shared/ui-react/src/**/*.{ts,tsx}";
+@source "./previews/**/*.tsx";
+
+/* ── Layout toolkit safelist (responsive where it matters for retail layouts) ── */
+
+/* display + flex direction/wrap */
+@source inline("{,sm:,md:,lg:,xl:}{flex,inline-flex,grid,inline-grid,block,inline-block,hidden,contents,flex-row,flex-row-reverse,flex-col,flex-col-reverse,flex-wrap,flex-nowrap}");
+/* flex grow/shrink/basis */
+@source inline("{,sm:,md:,lg:,xl:}{flex-1,flex-auto,flex-initial,flex-none,grow,grow-0,shrink,shrink-0,basis-0,basis-1/2,basis-full}");
+/* justify + align */
+@source inline("{,sm:,md:,lg:,xl:}{justify-start,justify-end,justify-center,justify-between,justify-around,justify-evenly,items-start,items-end,items-center,items-baseline,items-stretch,self-start,self-end,self-center,self-stretch,content-start,content-center,content-between,place-items-center,place-content-center}");
+/* gaps */
+@source inline("{,sm:,md:,lg:,xl:}{gap,gap-x,gap-y}-{0,1,1.5,2,2.5,3,4,5,6,8,10,12}");
+/* grid columns/rows + spans */
+@source inline("{,sm:,md:,lg:,xl:}grid-cols-{1,2,3,4,5,6,12}");
+@source inline("{,sm:,md:,lg:,xl:}col-span-{1,2,3,4,5,6,full}");
+@source inline("grid-rows-{1,2,3,4,6} row-span-{1,2,3,full} auto-rows-min auto-rows-fr col-start-2 row-start-1 row-span-2");
+/* sizing */
+@source inline("{,sm:,md:,lg:,xl:}{w-full,w-auto,w-fit,w-screen,w-1/2,w-1/3,w-2/3,w-1/4,w-3/4,h-full,h-auto,h-fit,min-w-0,min-h-0}");
+@source inline("max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full,prose,none}");
+@source inline("{w,h,size,min-h,min-w}-{0,1,2,3,4,5,6,7,8,9,10,11,12,14,16,20,24,32,40,48,56,64}");
+@source inline("aspect-{square,video,auto}");
+/* padding / margin / space */
+@source inline("{p,px,py,pt,pr,pb,pl}-{0,0.5,1,1.5,2,2.5,3,3.5,4,5,6,8,10,12,16}");
+@source inline("{m,mx,my,mt,mr,mb,ml}-{0,1,2,3,4,5,6,8,10,12,auto}");
+@source inline("{space-x,space-y}-{0,0.5,1,1.5,2,3,4,6}");
+/* typography */
+@source inline("{,sm:,md:,lg:,xl:}text-{left,center,right,xs,sm,base,lg,xl,2xl,3xl,4xl,5xl}");
+@source inline("font-{normal,medium,semibold,bold} leading-{none,tight,snug,normal,relaxed} tracking-{tight,normal,wide} tabular-nums truncate uppercase lowercase capitalize italic underline line-through whitespace-nowrap text-balance text-pretty break-words");
+@source inline("line-clamp-{1,2,3,4,none}");
+/* semantic colors (text/bg/border) */
+@source inline("{bg,text,border}-{background,foreground,card,card-foreground,popover,popover-foreground,primary,primary-foreground,secondary,secondary-foreground,muted,muted-foreground,accent,accent-foreground,destructive,destructive-foreground,success,success-foreground,warning,warning-foreground,border,input,ring,transparent,current,white,black}");
+@source inline("{bg,text}-{primary,muted-foreground,destructive,success,warning,foreground}/{5,10,15,20,50,80,90}");
+/* borders / radius / shadow / ring */
+@source inline("border border-0 border-2 border-t border-b border-l border-r border-dashed rounded rounded-sm rounded-md rounded-lg rounded-xl rounded-2xl rounded-full rounded-none divide-y divide-x");
+@source inline("shadow-xs shadow-sm shadow shadow-md shadow-lg shadow-xl shadow-none ring ring-1 ring-2 ring-offset-2");
+/* position / overflow / misc layout */
+@source inline("relative absolute fixed sticky static inset-0 inset-x-0 inset-y-0 top-0 right-0 bottom-0 left-0 z-0 z-10 z-20 z-30 z-40 z-50");
+@source inline("overflow-hidden overflow-auto overflow-x-auto overflow-y-auto overflow-x-hidden object-cover object-contain object-center cursor-pointer cursor-not-allowed select-none pointer-events-none");
+/* backgrounds / gradients used for retail imagery placeholders */
+@source inline("bg-gradient-to-br bg-gradient-to-r bg-gradient-to-t from-primary/20 via-accent to-secondary to-accent");
