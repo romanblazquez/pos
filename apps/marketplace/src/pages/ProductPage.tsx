@@ -18,6 +18,9 @@ import {
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Badge, Button } from '../components/ui/index.js';
+import { Breadcrumbs } from '../components/Breadcrumbs.js';
+import { SeoHead } from '../components/SeoHead.js';
+import { categoryLabel } from '../marketplace-meta.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -59,6 +62,7 @@ interface ProductDetail {
   id: string;
   slug: string;
   name: string;
+  category: string;
   description?: string;
   images: string[];
   publisher?: string;
@@ -86,7 +90,17 @@ function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
 }
 
-export default function ProductPage({ slug, onCartOpen }: { slug: string; onCartOpen: () => void }) {
+export default function ProductPage({
+  slug,
+  onCartOpen,
+  onHome,
+  onCategory,
+}: {
+  slug: string;
+  onCartOpen: () => void;
+  onHome: () => void;
+  onCategory: (category: string) => void;
+}) {
   const { data: platformCfg } = usePlatformConfig();
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
@@ -119,9 +133,81 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
   const lowestPriceId = activeListings.length
     ? activeListings.reduce((best, l) => (l.priceMinorUnits < best.priceMinorUnits ? l : best), activeListings[0]).id
     : null;
+  const minPrice = activeListings.length ? Math.min(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
+  const maxPrice = activeListings.length ? Math.max(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
+  const currency = activeListings[0]?.currency ?? 'MXN';
+  const canonicalUrl = `https://juegospedia.com/product/${p.slug}`;
+  const description = plainText(p.description) ||
+    `${p.name}: compara precios, stock, envío y tiendas disponibles en México.`;
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://juegospedia.com/' },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: categoryLabel(p.category),
+            item: `https://juegospedia.com/search?category=${encodeURIComponent(p.category)}`,
+          },
+          { '@type': 'ListItem', position: 3, name: p.name, item: canonicalUrl },
+        ],
+      },
+      {
+        '@type': 'Product',
+        name: p.name,
+        description,
+        image: p.images,
+        url: canonicalUrl,
+        category: categoryLabel(p.category),
+        ...(p.publisher ? { brand: { '@type': 'Brand', name: p.publisher } } : {}),
+        ...(p.bggId ? { sku: `BGG-${p.bggId}` } : {}),
+        ...(p.bggRating && p.bggRating > 0 && p.listings.length > 0
+          ? {
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: p.bggRating.toFixed(1),
+                bestRating: '10',
+                ratingCount: Math.max(p.listings.length, 1),
+              },
+            }
+          : {}),
+        offers: {
+          '@type': 'AggregateOffer',
+          url: canonicalUrl,
+          priceCurrency: currency,
+          lowPrice: (minPrice / 100).toFixed(2),
+          highPrice: (maxPrice / 100).toFixed(2),
+          offerCount: activeListings.length,
+          availability: activeListings.length > 0
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+        },
+      },
+    ],
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      <SeoHead
+        title={`${p.name} — precio y disponibilidad | Juegospedia`}
+        description={description.slice(0, 160)}
+        path={`/product/${p.slug}`}
+        image={p.images[0]}
+        type="product"
+        jsonLd={productJsonLd}
+      />
+      <Breadcrumbs items={[
+        { label: 'Inicio', href: '/', onClick: onHome },
+        {
+          label: categoryLabel(p.category),
+          href: `/search?category=${encodeURIComponent(p.category)}`,
+          onClick: () => onCategory(p.category),
+        },
+        { label: p.name },
+      ]} />
       <div className="grid md:grid-cols-2 gap-8 mb-10">
 
         {/* Images */}
@@ -308,6 +394,11 @@ export default function ProductPage({ slug, onCartOpen }: { slug: string; onCart
       )}
     </div>
   );
+}
+
+function plainText(html?: string) {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function ListingRow({

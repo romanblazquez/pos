@@ -1,4 +1,4 @@
-import { formatMoney } from '@retail-os/ui-react';
+import { Badge, Button, Card, formatMoney } from '@retail-os/ui-react';
 import { useCart, type HeldCart } from '../store/cart-store.js';
 
 /**
@@ -25,31 +25,32 @@ export function CartPanel({ onCharge }: { onCharge: () => void }) {
   const discountOptions = [0, 500, 1000, 2500];
 
   return (
-    <aside className="cart">
-      <header className="cart-head">
+    <aside className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto_auto_auto] bg-card p-4">
+      <header className="mb-2 flex items-start justify-between gap-3">
         <div>
-          <h2>Venta actual</h2>
-          <span>{itemCount} articulos</span>
+          <h2 className="text-base font-semibold">Venta actual</h2>
+          <span className="mt-1 block text-xs font-medium text-muted-foreground">{itemCount} artículos</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            className="link"
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={holdCart}
             disabled={sale.isEmpty}
             title="Apartar venta y abrir nueva"
           >
             Apartar
-          </button>
-          <button className="link" onClick={newSale}>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={newSale}>
             Nueva
-          </button>
+          </Button>
         </div>
       </header>
 
       {/* ── Held carts ── */}
       {heldCarts.length > 0 && (
-        <div className="held-carts">
-          <span className="held-label">En espera</span>
+        <Card className="mb-2 gap-1 rounded-lg bg-muted/50 p-2">
+          <span className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">En espera</span>
           {heldCarts.map((h) => (
             <HeldCartChip
               key={h.id}
@@ -58,45 +59,54 @@ export function CartPanel({ onCharge }: { onCharge: () => void }) {
               onDiscard={() => discardHeld(h.id)}
             />
           ))}
-        </div>
+        </Card>
       )}
 
-      <div className="lines">
-        {sale.lines.length === 0 && <p className="empty">Carrito vacío</p>}
+      <div className="flex min-h-0 flex-col gap-2 overflow-auto py-1 pb-3">
+        {sale.lines.length === 0 && (
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">Carrito vacío</div>
+        )}
         {sale.lines.map((line) => (
-          <div key={line.lineId} className="line">
-            <div className="line-main">
-              <span className="line-name">{line.name}</span>
-              <span className="line-total">{fmt(line.lineTotal.minorUnits)}</span>
+          <Card key={line.lineId} className="gap-2 rounded-lg bg-muted/40 p-3 shadow-none">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-sm font-semibold">
+              <span className="truncate">{line.name}</span>
+              <span className="tabular-nums">{fmt(line.lineTotal.minorUnits)}</span>
             </div>
-            <div className="line-controls">
-              <button onClick={() => changeQty(line.lineId, line.quantity - 1)}>−</button>
-              <span className="qty">{line.quantity}</span>
-              <button onClick={() => changeQty(line.lineId, line.quantity + 1)}>+</button>
-              <span className="unit">@ {fmt(line.unitPrice.minorUnits)}</span>
-              <button className="remove" onClick={() => removeLine(line.lineId)}>
+            <div className="grid grid-cols-[28px_28px_28px_minmax(0,1fr)_28px] items-center gap-1.5 text-xs text-muted-foreground">
+              <Button variant="outline" size="icon" className="size-7" onClick={() => changeQty(line.lineId, line.quantity - 1)}>−</Button>
+              <span className="text-center font-semibold text-foreground">{line.quantity}</span>
+              <Button variant="outline" size="icon" className="size-7" onClick={() => changeQty(line.lineId, line.quantity + 1)}>+</Button>
+              <span className="truncate">@ {fmt(line.unitPrice.minorUnits)}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => removeLine(line.lineId)}
+              >
                 ×
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="discount-tools">
-        <span>Descuento</span>
+      <div className="grid grid-cols-[auto_repeat(4,minmax(0,1fr))] items-center gap-1.5 border-t py-3">
+        <span className="text-xs font-medium text-muted-foreground">Descuento</span>
         {discountOptions.map((minorUnits) => (
-          <button
+          <Button
             key={minorUnits}
-            className={sale.cartDiscount.minorUnits === minorUnits ? 'active' : ''}
+            variant={sale.cartDiscount.minorUnits === minorUnits ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 min-w-0 px-2 text-[11px]"
             disabled={minorUnits > sale.netSubtotal.minorUnits}
             onClick={() => setCartDiscount(minorUnits)}
           >
             {minorUnits === 0 ? 'Sin' : `-${fmt(minorUnits)}`}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <div className="totals">
+      <div className="flex flex-col gap-2 border-t pt-3">
         <Row label="Subtotal" value={fmt(sale.netSubtotal.minorUnits)} />
         {!sale.discountTotal.isZero() && (
           <Row label="Descuentos" value={`− ${fmt(sale.discountTotal.minorUnits)}`} />
@@ -105,9 +115,9 @@ export function CartPanel({ onCharge }: { onCharge: () => void }) {
         <Row label="Total" value={fmt(sale.grandTotal.minorUnits)} strong />
       </div>
 
-      <button className="charge" disabled={sale.isEmpty} onClick={onCharge}>
+      <Button size="lg" className="mt-4 h-12 text-base font-semibold" disabled={sale.isEmpty} onClick={onCharge}>
         Cobrar {fmt(sale.grandTotal.minorUnits)}
-      </button>
+      </Button>
     </aside>
   );
 }
@@ -129,23 +139,38 @@ function HeldCartChip({
   const fmt = (n: number) => formatMoney({ minorUnits: Math.max(0, n), currency: cart.currency });
 
   return (
-    <div className="held-chip">
-      <button className="held-restore" onClick={onRestore} title="Recuperar venta">
-        <span className="held-time">{cart.label}</span>
-        <span className="held-meta">{itemCount} art · {fmt(total)}</span>
-      </button>
-      <button className="held-discard" onClick={onDiscard} title="Descartar venta apartada">
+    <div className="flex items-center gap-1.5">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 min-w-0 flex-1 justify-between px-2"
+        onClick={onRestore}
+        title="Recuperar venta"
+      >
+        <span className="truncate text-xs font-semibold">{cart.label}</span>
+        <Badge variant="muted" className="ml-2 shrink-0 text-[10px]">{itemCount} art · {fmt(total)}</Badge>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        onClick={onDiscard}
+        title="Descartar venta apartada"
+      >
         ×
-      </button>
+      </Button>
     </div>
   );
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`row${strong ? ' strong' : ''}`}>
+    <div className={strong
+      ? 'mt-1 flex items-baseline justify-between gap-3 text-xl font-bold'
+      : 'flex justify-between gap-3 text-sm text-muted-foreground'}
+    >
       <span>{label}</span>
-      <span>{value}</span>
+      <span className="tabular-nums">{value}</span>
     </div>
   );
 }

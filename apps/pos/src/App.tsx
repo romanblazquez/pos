@@ -6,6 +6,7 @@ import { isInShell } from './platform/bridge.js';
 import { ProductGrid } from './components/ProductGrid.js';
 import { CartPanel } from './components/CartPanel.js';
 import { PaymentDialog } from './components/PaymentDialog.js';
+import { Badge } from '@retail-os/ui-react';
 
 export function App() {
   const init = useCart((s) => s.init);
@@ -43,21 +44,25 @@ export function App() {
   });
 
   if (!ready || !sale) {
-    return <div className="boot">Iniciando Retail OS POS…</div>;
+    return (
+      <div className="grid h-full place-items-center bg-background text-sm text-muted-foreground">
+        Iniciando Retail OS POS…
+      </div>
+    );
   }
 
   return (
-    <div className="pos">
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo">◆</span>
+    <div className="grid h-full min-w-[720px] grid-rows-[56px_minmax(0,1fr)] bg-background text-foreground">
+      <header className="flex items-center justify-between gap-4 border-b bg-card px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid size-8 place-items-center rounded-lg border border-primary/30 bg-primary/10 text-primary">◆</span>
           <div>
-            <strong>Retail OS</strong>
-            <span className="tag">POS</span>
+            <strong className="block text-sm leading-none">Retail OS</strong>
+            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">POS</span>
           </div>
         </div>
-        <div className="meta">
-          <span className="store">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="truncate text-xs font-medium text-muted-foreground">
             {terminal?.storeId} · {terminal?.deviceId}
           </span>
           <SyncBadge
@@ -68,7 +73,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="workspace">
+      <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(340px,390px)] gap-px bg-border">
         <ProductGrid />
         <CartPanel onCharge={() => setCharging(true)} />
       </main>
@@ -90,11 +95,12 @@ export function App() {
 
 function SyncBadge({ online, pending, inShell }: { online: boolean; pending: number; inShell: boolean }) {
   const label = !inShell ? 'Navegador (memoria)' : online ? 'En línea' : 'Offline';
-  const cls = !inShell ? 'browser' : online ? 'online' : 'offline';
+  const variant = !inShell ? 'secondary' : online ? 'success' : 'warning';
   return (
-    <span className={`sync-badge ${cls}`}>
-      <span className="dot" /> {label}
-      {pending > 0 && <span className="pending">· {pending} por sincronizar</span>}
-    </span>
+    <Badge variant={variant} className="h-7 gap-2 rounded-full px-3">
+      <span className="size-1.5 rounded-full bg-current" />
+      {label}
+      {pending > 0 && <span>· {pending} por sincronizar</span>}
+    </Badge>
   );
 }

@@ -1,9 +1,18 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, Search, SearchX, SlidersHorizontal } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  SearchX,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { Button, cn } from '../components/ui/index.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
+import { Breadcrumbs } from '../components/Breadcrumbs.js';
+import { SeoHead } from '../components/SeoHead.js';
 import {
   categoryDescription,
   categoryLabel,
@@ -11,13 +20,18 @@ import {
 } from '../marketplace-meta.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const PAGE_SIZE = 24;
 
 async function searchProducts(
   q: string,
+  page: number,
   category?: string,
   inStockOnly?: boolean,
 ): Promise<{ results: Product[]; total: number }> {
-  const params = new URLSearchParams({ limit: '48' });
+  const params = new URLSearchParams({
+    limit: String(PAGE_SIZE),
+    offset: String((page - 1) * PAGE_SIZE),
+  });
   if (q) params.set('q', q);
   if (category) params.set('category', category);
   if (inStockOnly) params.set('inStock', 'true');
@@ -38,23 +52,27 @@ export default function SearchPage({
   category,
   onSearch,
   onProduct,
+  onHome,
 }: {
   query: string;
   category?: string;
   onSearch: (q: string, category?: string) => void;
   onProduct: (slug: string) => void;
+  onHome: () => void;
 }) {
   const [draft, setDraft] = useState(query);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   useEffect(() => setDraft(query), [query]);
+  useEffect(() => setPage(1), [query, category, inStockOnly]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['search', query, category, inStockOnly],
-    queryFn: () => searchProducts(query, category, inStockOnly),
-    enabled: query.length > 0 || !!category || inStockOnly,
+    queryKey: ['search', query, category, inStockOnly, page],
+    queryFn: () => searchProducts(query, page, category, inStockOnly),
+    placeholderData: (previous) => previous,
   });
 
   const { data: categoriesData } = useQuery({
@@ -63,6 +81,7 @@ export default function SearchPage({
   });
 
   const results = data?.results ?? [];
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
   const title = query
     ? `Resultados para "${query}"`
@@ -70,8 +89,29 @@ export default function SearchPage({
     ? categoryLabel(category)
     : 'Buscar juegos';
 
+  function goToPage(nextPage: number) {
+    setPage(Math.min(totalPages, Math.max(1, nextPage)));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[17rem_1fr] lg:py-8">
+      <SeoHead
+        title={`${title} | Juegospedia`}
+        description={category
+          ? `${categoryDescription(category)} Compara precio, stock y envío en tiendas de México.`
+          : `Busca ${query || 'juegos de mesa'} y compara disponibilidad, precios y tiendas en Juegospedia.`}
+        path={`/search?${new URLSearchParams({
+          ...(query ? { q: query } : {}),
+          ...(category ? { category } : {}),
+        }).toString()}`}
+        noindex={Boolean(query)}
+        jsonLd={category ? breadcrumbJsonLd([
+          ['Inicio', 'https://juegospedia.com/'],
+          ['Categorías', 'https://juegospedia.com/search'],
+          [categoryLabel(category), `https://juegospedia.com/search?category=${encodeURIComponent(category)}`],
+        ]) : undefined}
+      />
       <aside className="order-2 lg:order-1">
         <div className="sticky top-24 rounded-lg border border-[--border] bg-[--bg-raised] p-4">
           <div className="mb-4 flex items-center gap-2">
@@ -130,6 +170,15 @@ export default function SearchPage({
       </aside>
 
       <main className="order-1 min-w-0 lg:order-2">
+        <Breadcrumbs items={[
+          { label: 'Inicio', href: '/', onClick: onHome },
+          ...(category
+            ? [
+                { label: 'Categorías', href: '/search', onClick: () => onSearch('', undefined) },
+                { label: categoryLabel(category) },
+              ]
+            : [{ label: query ? `Búsqueda: ${query}` : 'Catálogo' }]),
+        ]} />
         <section className="mb-6 rounded-lg border border-[--border] bg-[--bg-raised] p-4 sm:p-5">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
@@ -139,7 +188,7 @@ export default function SearchPage({
               <h1 className="mt-1 text-2xl font-bold text-[--tx]">{title}</h1>
               <p className="mt-1 text-sm text-[--tx-muted]">
                 {data
-                  ? `${data.total.toLocaleString('es-MX')} juegos encontrados`
+                  ? `${data.total.toLocaleString('es-MX')} juegos encontrados · página ${page} de ${totalPages}`
                   : categoryDescription(category)}
               </p>
             </div>
@@ -208,21 +257,104 @@ export default function SearchPage({
         )}
 
         {results.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {results.map((product, index) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                cashbackPct={cashbackPct}
-                priority={index < 8}
-                onClick={() => onProduct(product.slug)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {results.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  cashbackPct={cashbackPct}
+                  priority={page === 1 && index < 8}
+                  onClick={() => onProduct(product.slug)}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <nav
+                aria-label="Paginación del catálogo"
+                className="mt-8 flex flex-wrap items-center justify-center gap-2"
+              >
+                <Button
+                  variant="outline"
+                  disabled={page === 1 || isLoading}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {getPaginationRange(page, totalPages).map((item, index) =>
+                    item === '...' ? (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="px-2 py-2 text-sm text-[--tx-faint]"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => goToPage(item)}
+                        aria-label={`Ir a la página ${item}`}
+                        aria-current={item === page ? 'page' : undefined}
+                        className={cn(
+                          'h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition-colors',
+                          item === page
+                            ? 'border-emerald-700 bg-emerald-700 text-white'
+                            : 'border-[--border] bg-[--bg-raised] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+                        )}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  disabled={page === totalPages || isLoading}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </nav>
+            )}
+          </>
         )}
       </main>
     </div>
   );
+}
+
+function getPaginationRange(current: number, total: number): Array<number | '...'> {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+
+  const pages: Array<number | '...'> = [1];
+  if (current > 3) pages.push('...');
+  for (let page = Math.max(2, current - 1); page <= Math.min(total - 1, current + 1); page += 1) {
+    pages.push(page);
+  }
+  if (current < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+}
+
+function breadcrumbJsonLd(items: Array<[string, string]>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map(([name, item], index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name,
+      item,
+    })),
+  };
 }
 
 function FilterButton({

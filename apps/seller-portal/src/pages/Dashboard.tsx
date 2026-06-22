@@ -87,9 +87,9 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="h-dvh overflow-hidden bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-slate-900 text-slate-300 flex flex-col">
+      <aside className="fixed inset-y-0 left-0 z-30 flex h-dvh w-56 flex-col overflow-hidden bg-slate-900 text-slate-300">
         {/* Logo area */}
         <div className="px-5 pt-6 pb-5 border-b border-white/5">
           <div className="flex items-center gap-2.5">
@@ -103,7 +103,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto sidebar-scroll">
+        <nav className="sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto p-3">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
@@ -151,7 +151,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto">
+      <main className="ml-56 h-dvh min-w-0 overflow-y-auto overscroll-contain">
         {activeNav === 'dashboard'  && <DashboardHome session={session} />}
         {activeNav === 'listings'   && <ListingsPage session={session} />}
         {activeNav === 'mapping'    && <ProductMappingPage session={session} />}

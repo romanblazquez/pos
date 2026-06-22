@@ -1,5 +1,16 @@
 import { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
-import { formatMoney } from '@retail-os/ui-react';
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  formatMoney,
+} from '@retail-os/ui-react';
 import type { Product } from '@retail-os/catalog';
 import { useCart } from '../store/cart-store.js';
 
@@ -73,19 +84,19 @@ export function ProductGrid() {
   };
 
   return (
-    <section className="flex flex-col min-h-0 h-full bg-bg">
+    <section className="flex h-full min-h-0 flex-col bg-background">
 
       {/* ── Sticky header ── */}
-      <header className="flex-shrink-0 flex items-center gap-3 px-4 pt-4 pb-3 border-b border-line bg-bg">
+      <header className="flex shrink-0 items-center gap-3 border-b bg-background px-4 pb-3 pt-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-black text-text tracking-tight leading-none">Catálogo</h1>
-          <span className="text-xs text-muted font-bold mt-0.5 block">{catalog.size()} productos</span>
+          <h1 className="text-sm font-semibold leading-none tracking-tight">Catálogo</h1>
+          <span className="mt-1 block text-xs font-medium text-muted-foreground">{catalog.size()} productos</span>
         </div>
         <div className="relative flex-[2] min-w-0 max-w-md">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm pointer-events-none select-none">🔍</span>
-          <input
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 select-none text-sm text-muted-foreground">⌕</span>
+          <Input
             ref={inputRef}
-            className="w-full h-9 pl-8 pr-3 bg-surface border border-line rounded-lg text-sm text-text placeholder:text-muted outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+            className="pl-8"
             placeholder="Buscar o escanear código"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -97,29 +108,27 @@ export function ProductGrid() {
 
       {/* ── Category strip ── */}
       <nav
-        className="flex-shrink-0 flex gap-2 px-4 py-2.5 overflow-x-auto border-b border-line bg-bg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex shrink-0 gap-2 overflow-x-auto border-b bg-background px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label="Categorías"
       >
         {categories.map((cat) => (
-          <button
+          <Button
             key={cat}
+            type="button"
+            size="sm"
+            variant={cat === category ? 'default' : 'secondary'}
             onClick={() => setCategory(cat)}
-            className={[
-              'flex-shrink-0 h-7 px-3 rounded-full text-xs font-bold border transition-all',
-              cat === category
-                ? 'bg-accent/15 border-accent/50 text-accent'
-                : 'bg-panel-2 border-line text-muted hover:border-line hover:text-text',
-            ].join(' ')}
+            className="h-7 shrink-0 rounded-full px-3 text-xs"
           >
             {cat}
-          </button>
+          </Button>
         ))}
       </nav>
 
       {/* ── Product grid ── */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4">
         {paginated.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-muted">
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
             <span className="text-3xl opacity-40">🔍</span>
             <p className="text-sm font-bold">Sin resultados para "{query}"</p>
           </div>
@@ -144,24 +153,28 @@ export function ProductGrid() {
 
       {/* ── Pagination ── */}
       {totalPages > 1 && (
-        <footer className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-t border-line bg-bg text-xs text-muted">
-          <button
+        <footer className="flex shrink-0 items-center justify-between border-t bg-background px-4 py-2 text-xs text-muted-foreground">
+          <Button
+            variant="outline"
+            size="sm"
             disabled={page === 0}
             onClick={() => setPage((p) => p - 1)}
-            className="h-7 px-3 rounded-md border border-line bg-panel-2 font-bold disabled:opacity-40 hover:border-accent/50 hover:text-accent transition-all"
+            className="h-7"
           >
             ← Anterior
-          </button>
+          </Button>
           <span className="font-medium">
             Página {page + 1} de {totalPages} · {displayProducts.length} artículos
           </span>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
-            className="h-7 px-3 rounded-md border border-line bg-panel-2 font-bold disabled:opacity-40 hover:border-accent/50 hover:text-accent transition-all"
+            className="h-7"
           >
             Siguiente →
-          </button>
+          </Button>
         </footer>
       )}
 
@@ -208,12 +221,17 @@ function ProductCard({
   onAdd: () => void;
 }) {
   return (
-    <button
+    <Card
+      role="button"
+      tabIndex={0}
       onClick={onAdd}
-      className="group flex flex-col items-start gap-1.5 p-0 bg-panel border border-line rounded-lg text-left transition-all hover:border-accent/50 hover:bg-panel-2 active:scale-[0.98] overflow-hidden"
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onAdd();
+      }}
+      className="group cursor-pointer gap-0 overflow-hidden rounded-lg p-0 text-left transition hover:border-primary/50 hover:bg-accent/30 active:scale-[0.98]"
     >
       {/* Product image */}
-      <div className="w-full aspect-square bg-panel-2 overflow-hidden flex-shrink-0 relative">
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-muted">
         {p.imageUrl ? (
           <ProductImage url={p.imageUrl} alt={p.name} />
         ) : (
@@ -222,28 +240,28 @@ function ProductCard({
           </div>
         )}
         {variantCount > 1 && (
-          <span className="absolute top-1 right-1 bg-accent text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
+          <Badge className="absolute right-1 top-1 text-[9px] leading-none">
             {variantCount} vars
-          </span>
+          </Badge>
         )}
       </div>
 
       <div className="flex flex-col gap-1 p-2 w-full">
-        <span className="text-[10px] font-black text-muted uppercase tracking-wide truncate w-full">
+        <span className="w-full truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           {p.category}
         </span>
-        <span className="text-[13px] font-bold text-text leading-snug line-clamp-2 w-full min-h-[2.5rem]">
+        <span className="line-clamp-2 min-h-[2.5rem] w-full text-[13px] font-semibold leading-snug">
           {p.name}
           {p.variantDescription && (
-            <span className="text-muted font-normal"> · {p.variantDescription}</span>
+            <span className="font-normal text-muted-foreground"> · {p.variantDescription}</span>
           )}
         </span>
-        <span className="text-[10px] font-bold text-muted">{p.sku}</span>
-        <span className="text-base font-black text-accent leading-none">
+        <span className="text-[10px] font-medium text-muted-foreground">{p.sku}</span>
+        <span className="text-base font-bold leading-none text-primary">
           {formatMoney({ minorUnits: p.unitPrice.minorUnits, currency: p.unitPrice.currency })}
         </span>
       </div>
-    </button>
+    </Card>
   );
 }
 
@@ -258,45 +276,38 @@ function VariantSheet({
 }) {
   const baseName = variants[0]?.name ?? '';
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-lg bg-bg border-t border-line rounded-t-2xl p-4 flex flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-black text-text">{baseName}</h2>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-text text-xl leading-none w-7 h-7 flex items-center justify-center rounded-md hover:bg-panel-2 transition"
-          >
-            ×
-          </button>
-        </div>
-        <p className="text-xs text-muted -mt-2">Selecciona una variante</p>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="top-auto bottom-0 max-w-lg translate-y-0 rounded-b-none rounded-t-2xl sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{baseName}</DialogTitle>
+          <DialogDescription>Selecciona una variante</DialogDescription>
+        </DialogHeader>
         <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
           {variants.map((v) => (
-            <button
+            <Card
               key={v.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(v)}
-              className="flex flex-col items-start gap-1 p-3 bg-panel border border-line rounded-lg hover:border-accent/50 hover:bg-panel-2 transition-all text-left"
+              className="cursor-pointer gap-1 rounded-lg p-3 text-left transition hover:border-primary/50 hover:bg-accent/30"
             >
               {v.imageUrl && (
                 <div className="w-full aspect-video rounded mb-1 overflow-hidden">
                   <ProductImage url={v.imageUrl} alt={v.name} />
                 </div>
               )}
-              <span className="text-xs font-bold text-text line-clamp-2">
+              <span className="line-clamp-2 text-xs font-semibold">
                 {v.variantDescription ?? v.name}
               </span>
-              <span className="text-[10px] text-muted">{v.sku}</span>
-              <span className="text-sm font-black text-accent">
+              <span className="text-[10px] text-muted-foreground">{v.sku}</span>
+              <span className="text-sm font-bold text-primary">
                 {formatMoney({ minorUnits: v.unitPrice.minorUnits, currency: v.unitPrice.currency })}
               </span>
-            </button>
+            </Card>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

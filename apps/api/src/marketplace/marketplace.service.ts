@@ -32,6 +32,7 @@ export class MarketplaceService {
       maxPrice: params.maxPrice,
       minPlayers: params.minPlayers,
       inStockOnly: params.inStockOnly,
+      sortBy: normalizeSort(params.sortBy),
       limit,
       offset,
     });
@@ -137,6 +138,7 @@ export class MarketplaceService {
       id: product.id,
       slug: product.slug,
       name: product.name,
+      category: product.category,
       description: product.description,
       images: product.images,
       publisher: product.publisher,
@@ -181,5 +183,15 @@ export class MarketplaceService {
         promoLabel: l.promos[0]?.label ?? null,
       })),
     };
+  }
+}
+
+function normalizeSort(sortBy?: string): string | undefined {
+  switch (sortBy) {
+    case 'price_asc': return 'minPriceMinor:asc';
+    case 'price_desc': return 'minPriceMinor:desc';
+    case 'name': return 'name:asc';
+    case 'rank_score': return 'inStockListings:desc,bggRating:desc';
+    default: return undefined;
   }
 }

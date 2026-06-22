@@ -37,13 +37,13 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <aside className="w-52 shrink-0 bg-slate-900 text-white flex flex-col">
+    <div className="h-dvh overflow-hidden bg-slate-50">
+      <aside className="fixed inset-y-0 left-0 z-30 flex h-dvh w-52 flex-col overflow-hidden bg-slate-900 text-white">
         <div className="px-5 py-5 border-b border-slate-800">
           <p className="text-sm font-bold text-white">🎲 BGM Admin</p>
           <p className="text-xs text-slate-400 mt-0.5">Consola de administración</p>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
           {NAV.map((item) => (
             <button
               key={item.id}
@@ -71,7 +71,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
+      <main className="ml-52 h-dvh min-w-0 overflow-y-auto overscroll-contain">
         {view === 'sellers'  && <SellersView />}
         {view === 'catalog'  && <CatalogView />}
         {view === 'mapping'  && <MappingRequestsView />}

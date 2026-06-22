@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
-import { formatMoney } from '@retail-os/ui-react';
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  formatMoney,
+} from '@retail-os/ui-react';
 import type { Sale } from '@retail-os/sales';
 import {
   checkoutSaga,
@@ -99,35 +110,57 @@ export function PaymentDialog({
   }
 
   return (
-    <div className="modal-backdrop" onClick={phase === 'processing' ? undefined : onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <header className="payment-head">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && phase !== 'processing') onClose();
+      }}
+    >
+      <DialogContent
+        showCloseButton={phase !== 'processing'}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[480px]"
+        onPointerDownOutside={(event) => {
+          if (phase === 'processing') event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (phase === 'processing') event.preventDefault();
+        }}
+      >
+        <DialogHeader className="grid grid-cols-[1fr_auto] items-start gap-4 text-left">
           <div>
-            <h2>Cobrar</h2>
-            <span>{itemCount} artículos · #{sale.id.slice(-6).toUpperCase()}</span>
+            <DialogTitle>Cobrar</DialogTitle>
+            <DialogDescription className="mt-1">
+              {itemCount} artículos · #{sale.id.slice(-6).toUpperCase()}
+            </DialogDescription>
           </div>
-          <strong>{total}</strong>
-        </header>
+          <strong className="pr-6 text-2xl leading-none tabular-nums">{total}</strong>
+        </DialogHeader>
 
         {/* ── Step 1: choose provider ─────────────────────────── */}
         {phase === 'choose' && (
           <>
-            <div className="providers">
+            <div className="grid grid-cols-2 gap-2.5">
               {PROVIDERS.map((p) => (
-                <button
+                <Card
                   key={p.id}
-                  className={`provider${provider.id === p.id ? ' active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  className={`min-h-24 cursor-pointer gap-1.5 rounded-lg p-4 text-left shadow-none transition ${
+                    provider.id === p.id
+                      ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                      : 'bg-muted/40 hover:border-primary/40 hover:bg-accent/30'
+                  }`}
                   onClick={() => setProvider(p)}
                 >
-                  <strong>{p.label}</strong>
-                  <span>{p.hint}</span>
-                </button>
+                  <strong className="text-sm">{p.label}</strong>
+                  <span className="text-xs text-muted-foreground">{p.hint}</span>
+                </Card>
               ))}
             </div>
-            <div className="modal-actions">
-              <button className="secondary" onClick={onClose}>Cancelar</button>
-              <button className="primary" onClick={charge}>Confirmar pago</button>
-            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button onClick={charge}>Confirmar pago</Button>
+            </DialogFooter>
           </>
         )}
 
@@ -137,7 +170,7 @@ export function PaymentDialog({
             {/* Cash */}
             {provider.method === 'cash' && (
               <div className="cash-box">
-                <div className="cash-icon" aria-hidden>$</div>
+                <div className="grid size-20 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-4xl font-bold text-primary" aria-hidden>$</div>
                 <p>Registrando pago en efectivo…</p>
               </div>
             )}
@@ -152,10 +185,10 @@ export function PaymentDialog({
                   Usa los controles del terminal para completar el cobro.
                 </p>
                 {terminalMsg && (
-                  <div className="terminal-instruction">
+                  <Badge variant="secondary" className="terminal-instruction">
                     <span className="terminal-instruction-dot" />
                     {terminalMsg}
-                  </div>
+                  </Badge>
                 )}
                 {activePayment ? (
                   <div className="terminal-waiting-id">
@@ -195,14 +228,16 @@ export function PaymentDialog({
                       <p className="vterm-dev-note">🧪 Simulador — elige resultado:</p>
                       <div className="vterm-action-row" style={{ marginTop: 5 }}>
                         {CODI_CALLBACKS.map((cb) => (
-                          <button
+                          <Button
                             key={cb.status}
-                            className={`vterm-key${cb.status === 'approved' ? ' vterm-key-approve' : cb.status === 'rejected' ? ' vterm-key-danger' : ' vterm-key-cancel'}`}
+                            variant={cb.status === 'approved' ? 'default' : cb.status === 'rejected' ? 'destructive' : 'outline'}
+                            size="sm"
+                            className="text-xs"
                             onClick={() => sendCallback(cb.status)}
                             disabled={Boolean(callbackSent)}
                           >
                             {cb.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -222,24 +257,28 @@ export function PaymentDialog({
 
         {/* ── Step 3: result ──────────────────────────────────── */}
         {phase === 'done' && result && (
-          <div className={`result ${result.ok ? 'ok' : 'fail'}`}>
-            <div className="result-icon">{result.ok ? '✓' : '✕'}</div>
-            <p>{result.message}</p>
-            <div className="modal-actions">
+          <div className="grid min-h-52 place-items-center gap-4 py-3 text-center">
+            <div className={`grid size-16 place-items-center rounded-full text-3xl font-bold text-white ${
+              result.ok ? 'bg-success' : 'bg-destructive'
+            }`}>
+              {result.ok ? '✓' : '✕'}
+            </div>
+            <p className="font-medium">{result.message}</p>
+            <DialogFooter className="w-full">
               {result.ok ? (
-                <button className="primary" onClick={onCompleted}>Nueva venta</button>
+                <Button onClick={onCompleted}>Nueva venta</Button>
               ) : (
                 <>
-                  <button className="secondary" onClick={onClose}>Volver al carrito</button>
-                  <button className="primary" onClick={() => { setPhase('choose'); setCallbackSent(null); }}>
+                  <Button variant="outline" onClick={onClose}>Volver al carrito</Button>
+                  <Button onClick={() => { setPhase('choose'); setCallbackSent(null); }}>
                     Reintentar
-                  </button>
+                  </Button>
                 </>
               )}
-            </div>
+            </DialogFooter>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -271,10 +271,16 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
             category={route.category}
             onSearch={(q, category) => navigate({ page: 'search', q, category })}
             onProduct={(slug) => navigate({ page: 'product', slug })}
+            onHome={() => navigate({ page: 'home' })}
           />
         )}
         {route.page === 'product' && (
-          <ProductPage slug={route.slug} onCartOpen={() => setCartOpen(true)} />
+          <ProductPage
+            slug={route.slug}
+            onCartOpen={() => setCartOpen(true)}
+            onHome={() => navigate({ page: 'home' })}
+            onCategory={(category) => navigate({ page: 'search', q: '', category })}
+          />
         )}
         {route.page === 'account' && session && (
           <AccountPage
