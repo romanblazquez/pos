@@ -1,0 +1,11 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+Disallow: /*/buscar
+Disallow: /*/search
+Disallow: /*/cuenta
+Disallow: /*/account
+Disallow: /*?*
+
+Host: https://juegospedia.com
+Sitemap: https://juegospedia.com/sitemap.xml
