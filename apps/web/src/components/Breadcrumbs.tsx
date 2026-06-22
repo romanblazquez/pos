@@ -5,7 +5,7 @@ import type { Crumb } from '@/lib/jsonld';
 // array feeds breadcrumbLd() so structured data matches what users see.
 export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
-    <nav className="crumbs container" aria-label="Breadcrumb" style={{ paddingBottom: 0 }}>
+    <nav className="crumbs" aria-label="Breadcrumb">
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;
         return (

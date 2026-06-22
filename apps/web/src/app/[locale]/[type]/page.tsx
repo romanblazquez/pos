@@ -6,6 +6,7 @@ import { buildMetadata } from '@/lib/seo';
 import { breadcrumbLd, itemListLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ProductCard } from '@/components/ProductCard';
 import {
   homePath,
   isLocale,
@@ -17,18 +18,24 @@ import {
 
 export const revalidate = 1800;
 
-// Listing roots: games catalog (/es/juegos-de-mesa), category index
-// (/es/categorias), and search (/es/buscar?q=). Search is noindex (spec §9);
-// publisher/mechanic/store landing pages need new API filters and are built in
-// a later phase — their roots 404 (not soft-404) until then.
+const PAGE_SIZE = 24;
+
+function pageOf(searchParams: { page?: string }): number {
+  const n = parseInt(searchParams.page ?? '1', 10);
+  return Number.isFinite(n) && n > 1 ? n : 1;
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { locale: string; type: string };
+  searchParams: { page?: string };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
   const locale = params.locale as Locale;
   const kind = resolveKind(locale, params.type);
+  const page = pageOf(searchParams);
 
   if (kind === 'search') {
     return buildMetadata({
@@ -39,17 +46,18 @@ export async function generateMetadata({
         locale === 'es'
           ? 'Busca juegos de mesa y compara precios entre tiendas.'
           : 'Search board games and compare prices across stores.',
-      noindex: true, // search results are never indexed
+      noindex: true,
     });
   }
 
   if (kind !== 'games' && kind !== 'categories') return {};
 
-  const path = listingPath(kind, locale);
+  const path = page > 1 ? `${listingPath(kind, locale)}?page=${page}` : listingPath(kind, locale);
   const isGames = kind === 'games';
-  const title = isGames
+  const base = isGames
     ? locale === 'es' ? 'Juegos de mesa' : 'Board games'
     : locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories';
+  const title = page > 1 ? `${base} — ${locale === 'es' ? 'página' : 'page'} ${page}` : base;
   const description = isGames
     ? locale === 'es'
       ? 'Catálogo de juegos de mesa con precios comparados entre tiendas verificadas.'
@@ -63,22 +71,39 @@ export async function generateMetadata({
     path,
     title,
     description,
-    alternates: { es: listingPath(kind, 'es'), en: listingPath(kind, 'en') },
+    // Deeper pages are navigational, not landing pages — keep them out of the index.
+    noindex: page > 1,
+    alternates:
+      page > 1 ? undefined : { es: listingPath(kind, 'es'), en: listingPath(kind, 'en') },
   });
 }
 
-function ProductGrid({ locale, products }: { locale: Locale; products: { id: string; slug: string; name: string; images: string[] }[] }) {
+function Pager({ base, page, total, locale }: { base: string; page: number; total: number; locale: Locale }) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) return null;
+  const href = (p: number) => (p === 1 ? base : `${base}?page=${p}`);
+  // Window of page numbers around the current page.
+  const nums = new Set<number>([1, pages, page, page - 1, page + 1]);
+  const list = [...nums].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
+
   return (
-    <div className="grid">
-      {products.map((p) => (
-        <Link key={p.id} className="card" href={`${listingPath('games', locale)}/${p.slug}`}>
-          {p.images?.[0] && (
-            <img src={p.images[0]} alt={p.name} width={220} height={220} loading="lazy" />
-          )}
-          <div style={{ marginTop: '0.5rem', fontWeight: 600 }}>{p.name}</div>
-        </Link>
-      ))}
-    </div>
+    <nav className="pager" aria-label={locale === 'es' ? 'Paginación' : 'Pagination'}>
+      {page > 1 && <Link href={href(page - 1)} rel="prev">‹</Link>}
+      {list.map((p, i) => {
+        const gap = i > 0 && p - list[i - 1] > 1;
+        return (
+          <span key={p} style={{ display: 'contents' }}>
+            {gap && <span className="gap">…</span>}
+            {p === page ? (
+              <span className="current" aria-current="page">{p}</span>
+            ) : (
+              <Link href={href(p)}>{p}</Link>
+            )}
+          </span>
+        );
+      })}
+      {page < pages && <Link href={href(page + 1)} rel="next">›</Link>}
+    </nav>
   );
 }
 
@@ -87,12 +112,13 @@ export default async function ListingPage({
   searchParams,
 }: {
   params: { locale: string; type: string };
-  searchParams: { q?: string };
+  searchParams: { q?: string; page?: string };
 }) {
   if (!isLocale(params.locale)) notFound();
   const locale = params.locale as Locale;
   const kind = resolveKind(locale, params.type);
   const homeName = locale === 'es' ? 'Inicio' : 'Home';
+  const page = pageOf(searchParams);
 
   // ── Search ───────────────────────────────────────────────────────────────
   if (kind === 'search') {
@@ -103,57 +129,62 @@ export default async function ListingPage({
       { name: locale === 'es' ? 'Buscar' : 'Search', path: listingPath('search', locale) },
     ];
     return (
-      <>
+      <main className="container">
         <Breadcrumbs crumbs={crumbs} />
-        <main className="container">
-          <h1>
-            {q
-              ? locale === 'es' ? `Resultados para "${q}"` : `Results for "${q}"`
-              : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
-          </h1>
-          <form method="get" action={listingPath('search', locale)} style={{ margin: '1rem 0' }}>
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder={locale === 'es' ? 'Catan, estrategia…' : 'Catan, strategy…'}
-              style={{ padding: '0.55rem 0.8rem', minWidth: 280, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--tx)' }}
-            />
-          </form>
-          {q && (
-            <p className="muted">
-              {total} {locale === 'es' ? 'resultados' : 'results'}
-            </p>
-          )}
-          <ProductGrid locale={locale} products={results} />
-        </main>
-      </>
+        <h1 className="page-title">
+          {q
+            ? locale === 'es' ? `Resultados para “${q}”` : `Results for “${q}”`
+            : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
+        </h1>
+        <form className="search-form" method="get" action={listingPath('search', locale)}>
+          <input
+            className="search-input"
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder={locale === 'es' ? 'Catan, estrategia, 2 jugadores…' : 'Catan, strategy, 2 players…'}
+            aria-label={locale === 'es' ? 'Buscar' : 'Search'}
+          />
+        </form>
+        {q && <p className="muted">{total} {locale === 'es' ? 'resultados' : 'results'}</p>}
+        <div className="grid" style={{ marginTop: '1rem' }}>
+          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+        </div>
+      </main>
     );
   }
 
-  // ── Games catalog ─────────────────────────────────────────────────────────
+  // ── Games catalog (paginated over the full catalogue) ──────────────────────
   if (kind === 'games') {
-    const { results } = await listProducts({ limit: 48 });
+    const { results, total } = await listProducts({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    });
+    const base = listingPath('games', locale);
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: listingPath('games', locale) },
+      { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: base },
     ];
     return (
-      <>
+      <main className="container">
         <Breadcrumbs crumbs={crumbs} />
-        <JsonLd
-          data={[
-            breadcrumbLd(crumbs),
-            itemListLd(
-              results.map((p) => ({ name: p.name, path: `${listingPath('games', locale)}/${p.slug}` })),
-            ),
-          ]}
-        />
-        <main className="container">
-          <h1>{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
-          <ProductGrid locale={locale} products={results} />
-        </main>
-      </>
+        {page === 1 && (
+          <JsonLd
+            data={[
+              breadcrumbLd(crumbs),
+              itemListLd(results.map((p) => ({ name: p.name, path: `${base}/${p.slug}` }))),
+            ]}
+          />
+        )}
+        <h1 className="page-title">{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
+        <p className="muted">
+          {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
+        </p>
+        <div className="grid" style={{ marginTop: '1.25rem' }}>
+          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+        </div>
+        <Pager base={base} page={page} total={total} locale={locale} />
+      </main>
     );
   }
 
@@ -165,23 +196,20 @@ export default async function ListingPage({
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
     ];
     return (
-      <>
+      <main className="container">
         <Breadcrumbs crumbs={crumbs} />
         <JsonLd data={breadcrumbLd(crumbs)} />
-        <main className="container">
-          <h1>{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
-          <div className="taglist">
-            {categories.map((c) => (
-              <Link key={c.category} href={`${listingPath('categories', locale)}/${slugify(c.category)}`}>
-                {c.category} ({c.count})
-              </Link>
-            ))}
-          </div>
-        </main>
-      </>
+        <h1 className="page-title">{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
+        <div className="taglist" style={{ marginTop: '1.25rem' }}>
+          {categories.map((c) => (
+            <Link key={c.category} className="chip" href={`${listingPath('categories', locale)}/${slugify(c.category)}`}>
+              {c.category} <span className="count">{c.count}</span>
+            </Link>
+          ))}
+        </div>
+      </main>
     );
   }
 
-  // publisher / mechanic / store roots not built yet -> real 404
   notFound();
 }

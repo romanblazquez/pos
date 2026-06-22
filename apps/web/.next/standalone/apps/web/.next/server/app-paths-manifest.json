@@ -3,6 +3,6 @@
   "/robots.txt/route": "app/robots.txt/route.js",
   "/sitemap.xml/route": "app/sitemap.xml/route.js",
   "/[locale]/[type]/page": "app/[locale]/[type]/page.js",
-  "/[locale]/page": "app/[locale]/page.js",
-  "/[locale]/[type]/[slug]/page": "app/[locale]/[type]/[slug]/page.js"
+  "/[locale]/[type]/[slug]/page": "app/[locale]/[type]/[slug]/page.js",
+  "/[locale]/page": "app/[locale]/page.js"
 }

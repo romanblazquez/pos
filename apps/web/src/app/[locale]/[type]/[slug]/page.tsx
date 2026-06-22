@@ -10,9 +10,11 @@ import {
 } from '@/lib/api';
 import { buildMetadata, entityAlternates } from '@/lib/seo';
 import { APP_URL } from '@/lib/site';
+import { formatMoney, formatRange } from '@/lib/format';
 import { breadcrumbLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ProductCard } from '@/components/ProductCard';
 import {
   entityPath,
   homePath,
@@ -28,21 +30,11 @@ import {
 // change in Phase 3. dynamicParams defaults to true.
 export const revalidate = 900;
 
-function money(minor: number, currency: string, locale: Locale) {
-  return new Intl.NumberFormat(locale === 'es' ? 'es-MX' : 'en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(minor / 100);
-}
-
 function priceRange(p: ProductDetail, locale: Locale): string | null {
   const prices = p.listings.map((l) => l.priceMinorUnits).filter((n) => n > 0);
   if (!prices.length) return null;
   const cur = p.listings[0]?.currency ?? 'MXN';
-  const lo = Math.min(...prices);
-  const hi = Math.max(...prices);
-  return lo === hi ? money(lo, cur, locale) : `${money(lo, cur, locale)} – ${money(hi, cur, locale)}`;
+  return formatRange(Math.min(...prices), Math.max(...prices), cur, locale);
 }
 
 function productDescription(p: ProductDetail, locale: Locale): string {
@@ -131,7 +123,7 @@ export default async function DetailPage({
       { name: real, path: entityPath('categories', locale, params.slug) },
     ];
     return (
-      <>
+      <main className="container">
         <Breadcrumbs crumbs={crumbs} />
         <JsonLd
           data={[
@@ -141,23 +133,14 @@ export default async function DetailPage({
             ),
           ]}
         />
-        <main className="container">
-          <h1>{real}</h1>
-          <p className="muted">
-            {results.length} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
-          </p>
-          <div className="grid">
-            {results.map((p) => (
-              <Link key={p.id} className="card" href={`${listingPath('games', locale)}/${p.slug}`}>
-                {p.images?.[0] && (
-                  <img src={p.images[0]} alt={p.name} width={220} height={220} loading="lazy" />
-                )}
-                <div style={{ marginTop: '0.5rem', fontWeight: 600 }}>{p.name}</div>
-              </Link>
-            ))}
-          </div>
-        </main>
-      </>
+        <h1 className="page-title">{real}</h1>
+        <p className="muted">
+          {results.length} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
+        </p>
+        <div className="grid" style={{ marginTop: '1.25rem' }}>
+          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+        </div>
+      </main>
     );
   }
 
@@ -193,59 +176,53 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
   ];
 
   return (
-    <>
+    <main className="container">
       <Breadcrumbs crumbs={crumbs} />
       <JsonLd data={[breadcrumbLd(crumbs), productLd(product, path)]} />
-      <main className="container">
-        <h1>{product.name}</h1>
-        {range && (
-          <p className="muted">
-            {product.listings.length} {locale === 'es' ? 'ofertas desde' : 'offers from'} {range}
-          </p>
-        )}
-        {sorted.length > 0 && (
-          // Purchase happens in the transactional SPA on app.juegospedia.com.
-          <p style={{ margin: '0.75rem 0' }}>
-            <a
-              href={`${APP_URL}/product/${product.slug}`}
-              style={{
-                display: 'inline-block',
-                background: 'var(--accent)',
-                color: '#0b1020',
-                fontWeight: 700,
-                padding: '0.6rem 1.1rem',
-                borderRadius: 8,
-              }}
-            >
-              {locale === 'es' ? 'Comprar' : 'Buy'} →
+
+      <div className="product-head">
+        <div className="product-figure">
+          {product.images?.[0] ? (
+            <img src={product.images[0]} alt={product.name} width={320} height={320} />
+          ) : (
+            <div className="card-noimg" style={{ aspectRatio: '1 / 1', fontSize: '4rem' }} aria-hidden="true">🎲</div>
+          )}
+        </div>
+
+        <div>
+          <h1 className="product-h1">{product.name}</h1>
+          {range && (
+            <p className="product-sub">
+              {product.listings.length} {locale === 'es' ? 'ofertas · desde' : 'offers · from'}{' '}
+              <span className="product-price-lead">{range.split('–')[0].trim()}</span>
+            </p>
+          )}
+          {sorted.length > 0 && (
+            // Purchase completes in the transactional SPA on app.juegospedia.com.
+            <a className="btn" href={`${APP_URL}/product/${product.slug}`}>
+              {locale === 'es' ? 'Comprar ahora' : 'Buy now'} →
             </a>
-          </p>
-        )}
-        {product.images?.[0] && (
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            width={320}
-            height={320}
-            style={{ maxWidth: 320, borderRadius: '0.75rem', margin: '1rem 0' }}
-          />
-        )}
+          )}
 
-        <ul className="attrs">
-          {attrs
-            .filter(([, v]) => v !== undefined && v !== '')
-            .map(([k, v]) => (
-              <li key={k}>
-                <b>{k}:</b> {v}
-              </li>
-            ))}
-        </ul>
+          <ul className="attrs">
+            {attrs
+              .filter(([, v]) => v !== undefined && v !== '')
+              .map(([k, v]) => (
+                <li key={k}>
+                  <b>{v}</b>
+                  {k}
+                </li>
+              ))}
+          </ul>
+        </div>
+      </div>
 
-        {product.description && <p>{product.description}</p>}
+      {product.description && <p className="prose" style={{ marginTop: '1.5rem' }}>{product.description}</p>}
 
-        {sorted.length > 0 && (
-          <section>
-            <h2>{locale === 'es' ? 'Ofertas de tiendas' : 'Store offers'}</h2>
+      {sorted.length > 0 && (
+        <section>
+          <h2 className="section-title">{locale === 'es' ? 'Ofertas de tiendas' : 'Store offers'}</h2>
+          <div className="offers-wrap">
             <table className="offers">
               <thead>
                 <tr>
@@ -258,17 +235,18 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
               <tbody>
                 {sorted.map((l) => {
                   const delivery = l.deliveryOptions?.[0];
+                  const isBest = best?.id === l.id;
                   return (
-                    <tr key={l.id}>
+                    <tr key={l.id} className={isBest ? 'is-best' : undefined}>
                       <td>
                         {/* No public seller storefront yet — plain text, not a link. */}
                         {l.sellerName}
-                        {best && l.id === best.id && (
-                          <strong> · {locale === 'es' ? 'Mejor precio' : 'Best price'}</strong>
+                        {isBest && (
+                          <span className="best-pill">{locale === 'es' ? 'Mejor precio' : 'Best price'}</span>
                         )}
                       </td>
-                      <td>{money(l.priceMinorUnits, l.currency, locale)}</td>
-                      <td>
+                      <td className="offer-price">{formatMoney(l.priceMinorUnits, l.currency, locale)}</td>
+                      <td className={l.stock > 0 ? 'in-stock' : 'out-stock'}>
                         {l.stock > 0
                           ? locale === 'es' ? 'En stock' : 'In stock'
                           : locale === 'es' ? 'Agotado' : 'Out of stock'}
@@ -283,33 +261,32 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
                 })}
               </tbody>
             </table>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
 
-        <section className="related">
+      {(product.tags?.length > 0 || product.category) && (
+        <section>
+          {product.category && (
+            <p style={{ margin: '1.75rem 0 0.75rem' }}>
+              <Link className="chip" href={`${listingPath('categories', locale)}/${slugify(product.category)}`}>
+                {locale === 'es' ? 'Ver más en' : 'See more in'} {product.category} →
+              </Link>
+            </p>
+          )}
           {product.tags?.length > 0 && (
             <div className="taglist">
               {/* Mechanic landing pages need a new API filter; until then tags
                   link to real search results rather than a 404. */}
               {product.tags.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`${listingPath('search', locale)}?q=${encodeURIComponent(tag)}`}
-                >
+                <Link key={tag} className="chip" href={`${listingPath('search', locale)}?q=${encodeURIComponent(tag)}`}>
                   {tag}
                 </Link>
               ))}
             </div>
           )}
-          {product.category && (
-            <p style={{ marginTop: '1rem' }}>
-              <Link href={`${listingPath('categories', locale)}/${slugify(product.category)}`}>
-                {locale === 'es' ? 'Ver más en' : 'See more in'} {product.category} →
-              </Link>
-            </p>
-          )}
         </section>
-      </main>
-    </>
+      )}
+    </main>
   );
 }
