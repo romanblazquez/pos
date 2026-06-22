@@ -1,8 +1,6 @@
 /**
- * cn — className utility.
- * shadcn/ui-compatible: merges class strings, filtering falsy values.
- * Drop-in compatible with clsx/tailwind-merge without the extra dependency.
+ * Back-compat re-export. `cn` now lives in ./lib/utils (clsx + tailwind-merge).
+ * Existing consumers importing { cn } from '@retail-os/ui-react' keep working.
  */
-export function cn(...classes: (string | boolean | undefined | null)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+export { cn } from './lib/utils.js';
+export type { ClassValue } from 'clsx';

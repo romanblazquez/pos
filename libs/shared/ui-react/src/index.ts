@@ -1,7 +1,5 @@
+// @retail-os/ui-react — shadcn/ui + Tailwind v4 design system.
+// Import the theme once at the app root: import '@retail-os/ui-react/styles.css';
+export * from './lib/utils.js';
+export * from './components/ui/index.js';
 export * from './money.js';
-export * from './cn.js';
-export * from './components/Badge.js';
-export * from './components/Button.js';
-export * from './components/Input.js';
-export * from './components/Card.js';
-export * from './components/Table.js';
