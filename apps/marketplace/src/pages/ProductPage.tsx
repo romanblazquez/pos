@@ -218,15 +218,15 @@ export default function ProductPage({
           {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-700">{p.publisher}</p>}
           <h1 className="max-w-[18ch] font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
 
-          {/* Metadata chips */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {/* Metadata chips — GameStatPills design */}
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {p.minPlayers && p.maxPlayers && (
-              <Chip icon={<Users className="h-3.5 w-3.5" />} label={`${p.minPlayers}-${p.maxPlayers} jugadores`} />
+              <Chip icon={<Users className="h-5 w-5" />} value={`${p.minPlayers}–${p.maxPlayers}`} label="Jugadores" />
             )}
-            {p.minAge && <Chip icon={<ShieldCheck className="h-3.5 w-3.5" />} label={`+${p.minAge} años`} />}
-            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-3.5 w-3.5" />} label={`${p.playTimeMinutes} min`} />}
-            {p.bggRating && <Chip icon={<Star className="h-3.5 w-3.5 fill-current" />} label={`BGG ${p.bggRating.toFixed(1)}`} />}
-            {p.bggWeight && <Chip icon={<Brain className="h-3.5 w-3.5" />} label={`Complejidad ${p.bggWeight.toFixed(1)}/5`} />}
+            {p.minAge && <Chip icon={<ShieldCheck className="h-5 w-5" />} value={`${p.minAge}+`} label="Edad mínima" />}
+            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-5 w-5" />} value={`${p.playTimeMinutes}m`} label="Duración" />}
+            {p.bggRating && <Chip icon={<Star className="h-5 w-5 fill-current" />} value={p.bggRating.toFixed(1)} label="BGG Rating" />}
+            {p.bggWeight && <Chip icon={<Brain className="h-5 w-5" />} value={`${p.bggWeight.toFixed(1)}/5`} label="Complejidad" />}
           </div>
 
           {p.description && (
@@ -327,12 +327,12 @@ function plainText(html?: string) {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function Chip({ icon, label }: { icon: ReactNode; label: string }) {
+function Chip({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
   return (
-    <span className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[13px] border border-[--border]
-                     bg-[--bg-raised] px-3 py-2 text-center text-[11px] font-medium text-[--tx-muted] shadow-sm">
-      <span className="text-emerald-700">{icon}</span>
-      <span className="font-mono">{label}</span>
+    <span className="flex flex-1 min-w-[110px] flex-col items-center gap-1.5 rounded-[13px] border border-[--border] bg-[--bg-raised] px-3 py-[15px] text-center shadow-sm">
+      <span className="text-[--accent]">{icon}</span>
+      <span className="font-display text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-[--tx]">{value}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[1px] text-[--tx-faint]">{label}</span>
     </span>
   );
 }

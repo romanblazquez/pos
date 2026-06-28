@@ -65,3 +65,78 @@ export function CatalogFilterSection({
     </section>
   );
 }
+
+export function FilterToggle({
+  checked,
+  label,
+  description,
+  onClick,
+}: {
+  checked: boolean;
+  label: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors',
+        checked
+          ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950'
+          : 'border-[--border] bg-[--bg-subtle] hover:bg-[--bg-hover]',
+      )}
+    >
+      <span>
+        <span className="block text-sm font-semibold text-[--tx]">{label}</span>
+        <span className="mt-0.5 block text-xs text-[--tx-muted]">{description}</span>
+      </span>
+      <span className={cn(
+        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
+        checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-[--border-strong]',
+      )}>
+        {checked && (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
+export function FilterCategoryButton({
+  active,
+  label,
+  description,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  description: string;
+  count?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'mb-1 w-full rounded-lg px-2.5 py-2 text-left transition-colors',
+        active
+          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+          : 'border border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+      )}
+    >
+      <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+        <span>{label}</span>
+        {count !== undefined && (
+          <span className="rounded-full border border-current/15 px-1.5 py-0.5 text-[10px] font-medium opacity-70">{count}</span>
+        )}
+      </span>
+      <span className="mt-0.5 line-clamp-2 block text-xs text-[--tx-muted]">{description}</span>
+    </button>
+  );
+}

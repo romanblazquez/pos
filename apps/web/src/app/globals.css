@@ -141,9 +141,9 @@ button, input, select { font: inherit; }
 .product-h1 { max-width: 18ch; margin: .2rem 0 .65rem; font-family: var(--font-display); font-size: clamp(2.25rem, 5vw, 3.3rem); font-weight: 800; line-height: 1; letter-spacing: -.035em; }
 .product-sub { margin: 0 0 1.25rem; color: var(--muted-foreground); }
 .product-price-lead { color: var(--foreground); font-family: var(--font-display); font-size: 1.85rem; font-weight: 800; }
-.attrs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
-.attrs li { padding: .75rem .7rem; border: 1px solid var(--border); border-radius: 13px; background: var(--card); color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .58rem; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
-.attrs b { display: block; margin-bottom: .2rem; color: var(--foreground); font-family: var(--font-display); font-size: 1rem; font-weight: 800; letter-spacing: -.01em; text-transform: none; }
+.attrs { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.attrs li { flex: 1; min-width: 110px; padding: 15px .75rem; border: 1px solid var(--border); border-radius: 13px; background: var(--bg-raised, var(--card)); color: var(--tx-faint, var(--subtle-foreground)); font-family: var(--font-mono); font-size: .625rem; letter-spacing: .06em; text-align: center; text-transform: uppercase; }
+.attrs b { display: block; margin-bottom: .3rem; color: var(--foreground); font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; text-transform: none; }
 .prose { max-width: 72ch; color: color-mix(in srgb, var(--foreground) 85%, transparent); font-size: 1.06rem; line-height: 1.65; }
 
 .offers-wrap { overflow: hidden; margin-top: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); }

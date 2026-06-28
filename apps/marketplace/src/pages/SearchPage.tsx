@@ -1,15 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   Search,
   SearchX,
   SlidersHorizontal,
 } from 'lucide-react';
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { Button, cn } from '../components/ui/index.js';
+import {
+  CatalogFilterPanel,
+  CatalogFilterSection,
+  FilterToggle,
+  FilterCategoryButton,
+} from '@retail-os/ui-react';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
@@ -20,6 +26,14 @@ import {
   getCategoryOptions,
 } from '../marketplace-meta.js';
 
+const PRICE_OPTIONS = [
+  { label: 'Sin tope', value: undefined },
+  { label: 'Hasta $500', value: 500 },
+  { label: 'Hasta $1,000', value: 1000 },
+  { label: 'Hasta $1,500', value: 1500 },
+] as const;
+const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
+
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 24;
 
@@ -28,6 +42,8 @@ async function searchProducts(
   page: number,
   category?: string,
   inStockOnly?: boolean,
+  maxPrice?: number,
+  players?: number,
 ): Promise<{ results: Product[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -36,6 +52,8 @@ async function searchProducts(
   if (q) params.set('q', q);
   if (category) params.set('category', category);
   if (inStockOnly) params.set('inStock', 'true');
+  if (maxPrice) params.set('maxPrice', String(maxPrice));
+  if (players) params.set('minPlayers', String(players));
 
   const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
   if (!res.ok) throw new Error('Search failed');
@@ -63,16 +81,18 @@ export default function SearchPage({
 }) {
   const [draft, setDraft] = useState(query);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
+  const [players, setPlayers] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(1);
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   useEffect(() => setDraft(query), [query]);
-  useEffect(() => setPage(1), [query, category, inStockOnly]);
+  useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['search', query, category, inStockOnly, page],
-    queryFn: () => searchProducts(query, page, category, inStockOnly),
+    queryKey: ['search', query, category, inStockOnly, maxPrice, players, page],
+    queryFn: () => searchProducts(query, page, category, inStockOnly, maxPrice, players),
     placeholderData: (previous) => previous,
   });
 
@@ -114,60 +134,90 @@ export default function SearchPage({
         ]) : undefined}
       />
       <aside className="order-2 lg:order-1">
-        <div className="sticky top-24 rounded-lg border border-[--border] bg-[--bg-raised] p-4">
-          <div className="mb-4 flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
-            <p className="text-sm font-semibold text-[--tx]">Filtros</p>
-          </div>
+        <CatalogFilterPanel
+          title="Explorar"
+          subtitle={`${data?.total.toLocaleString('es-MX') ?? '—'} resultados`}
+          icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
+          action={(inStockOnly || maxPrice !== undefined || players !== undefined || category) ? (
+            <button
+              type="button"
+              onClick={() => { setInStockOnly(false); setMaxPrice(undefined); setPlayers(undefined); onSearch(query, undefined); }}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Limpiar
+            </button>
+          ) : undefined}
+        >
+          <CatalogFilterSection title="Disponibilidad">
+            <FilterToggle
+              checked={inStockOnly}
+              label="Solo con stock"
+              description="Oculta productos agotados"
+              onClick={() => setInStockOnly((v) => !v)}
+            />
+          </CatalogFilterSection>
 
-          <div className="space-y-5">
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[--tx-muted]">Categoría</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
-                <FilterButton
-                  active={!category}
-                  label="Todas"
-                  description="Sin filtro"
-                  onClick={() => onSearch(query, undefined)}
-                />
-                {categoryOptions.map((option) => (
-                  <FilterButton
-                    key={option.value}
-                    active={category === option.value}
-                    label={option.label}
-                    description={option.description}
-                    onClick={() => onSearch(query, option.value)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-[--border] pt-4">
-              <button
-                onClick={() => setInStockOnly((value) => !value)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors',
-                  inStockOnly
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                    : 'border-[--border] bg-[--bg-raised] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                )}
-              >
-                <span>
-                  <span className="block text-sm font-semibold">Solo con stock</span>
-                  <span className="block text-xs text-[--tx-muted]">Evita ofertas agotadas</span>
-                </span>
-                <span
+          <CatalogFilterSection title="Presupuesto">
+            <div className="grid grid-cols-2 gap-1.5">
+              {PRICE_OPTIONS.map((option) => (
+                <button
+                  key={option.value ?? 'none'}
+                  type="button"
+                  onClick={() => setMaxPrice(maxPrice === option.value ? undefined : option.value)}
                   className={cn(
-                    'flex h-5 w-5 items-center justify-center rounded-full border',
-                    inStockOnly ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-[--border]',
+                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+                    maxPrice === option.value
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
                   )}
                 >
-                  {inStockOnly && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                </span>
-              </button>
+                  {option.label}
+                </button>
+              ))}
             </div>
-          </div>
-        </div>
+          </CatalogFilterSection>
+
+          <CatalogFilterSection title="Jugadores">
+            <div className="flex flex-wrap gap-1.5">
+              {PLAYER_OPTIONS.map((p) => (
+                <button
+                  key={p ?? 'any'}
+                  type="button"
+                  onClick={() => setPlayers(players === p ? undefined : p)}
+                  className={cn(
+                    'h-8 min-w-8 rounded-lg border px-2 text-xs font-semibold transition-colors',
+                    players === p
+                      ? 'border-emerald-600 bg-emerald-700 text-white'
+                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+                  )}
+                >
+                  {p === undefined ? 'Todos' : p === 5 ? '5+' : p}
+                </button>
+              ))}
+            </div>
+          </CatalogFilterSection>
+
+          <CatalogFilterSection title="Categorías">
+            <div className="space-y-1">
+              <FilterCategoryButton
+                active={!category}
+                label="Todo el catálogo"
+                description="Todas las tiendas conectadas"
+                onClick={() => onSearch(query, undefined)}
+              />
+              {categoryOptions.map((option) => (
+                <FilterCategoryButton
+                  key={option.value}
+                  active={category === option.value}
+                  label={option.label}
+                  description={option.description}
+                  onClick={() => onSearch(query, option.value)}
+                />
+              ))}
+            </div>
+          </CatalogFilterSection>
+        </CatalogFilterPanel>
       </aside>
 
       <main className="order-1 min-w-0 lg:order-2">
@@ -360,33 +410,6 @@ function breadcrumbJsonLd(items: Array<[string, string]>) {
       item,
     })),
   };
-}
-
-function FilterButton({
-  active,
-  label,
-  description,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-[12rem] shrink-0 rounded-lg px-3 py-2 text-left transition-colors lg:w-full',
-        active
-          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-          : 'border border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-      )}
-    >
-      <span className="block text-sm font-semibold">{label}</span>
-      <span className="mt-0.5 line-clamp-2 block text-xs text-[--tx-muted]">{description}</span>
-    </button>
-  );
 }
 
 function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {

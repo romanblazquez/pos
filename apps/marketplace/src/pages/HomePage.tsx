@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowUpRight,
   BadgePercent,
-  Check,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -21,6 +20,8 @@ import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
+  FilterToggle,
+  FilterCategoryButton,
 } from '@retail-os/ui-react';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import {
@@ -484,40 +485,6 @@ function CategoryPill({ active, label, onClick }: { active: boolean; label: stri
   );
 }
 
-function CategorySideButton({
-  active,
-  label,
-  description,
-  count,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  description: string;
-  count?: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'mb-1 w-full rounded-lg px-2.5 py-2 text-left transition-colors',
-        active
-          ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-          : 'border border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-      )}
-    >
-      <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-        <span>{label}</span>
-        {count !== undefined && (
-          <span className="rounded-full border border-current/15 px-1.5 py-0.5 text-[10px] font-medium opacity-70">{count}</span>
-        )}
-      </span>
-      <span className="mt-0.5 line-clamp-2 block text-xs text-[--tx-muted]">{description}</span>
-    </button>
-  );
-}
-
 function MarketplaceCatalogFilters({
   activeCategory,
   activeFilterCount,
@@ -559,7 +526,7 @@ function MarketplaceCatalogFilters({
     >
 
       <CatalogFilterSection title="Disponibilidad">
-        <ToggleFilter
+        <FilterToggle
           checked={filters.inStockOnly}
           label="Solo con stock"
           description="Oculta productos agotados"
@@ -607,7 +574,7 @@ function MarketplaceCatalogFilters({
 
       <CatalogFilterSection title="Categorías">
         <div className="space-y-1">
-          <CategorySideButton
+          <FilterCategoryButton
             active={!activeCategory}
             label="Todo el catálogo"
             description="Todas las tiendas conectadas"
@@ -615,7 +582,7 @@ function MarketplaceCatalogFilters({
             onClick={() => onCategory(undefined)}
           />
           {categories.map((category) => (
-            <CategorySideButton
+            <FilterCategoryButton
               key={category.value}
               active={activeCategory === category.value}
               label={category.label}
@@ -627,41 +594,6 @@ function MarketplaceCatalogFilters({
         </div>
       </CatalogFilterSection>
     </CatalogFilterPanel>
-  );
-}
-
-function ToggleFilter({
-  checked,
-  label,
-  description,
-  onClick,
-}: {
-  checked: boolean;
-  label: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors',
-        checked
-          ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950'
-          : 'border-[--border] bg-[--bg-subtle] hover:bg-[--bg-hover]',
-      )}
-    >
-      <span>
-        <span className="block text-sm font-semibold text-[--tx]">{label}</span>
-        <span className="mt-0.5 block text-xs text-[--tx-muted]">{description}</span>
-      </span>
-      <span className={cn(
-        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border',
-        checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-[--border-strong]',
-      )}>
-        {checked && <Check className="h-3.5 w-3.5" />}
-      </span>
-    </button>
   );
 }
 
