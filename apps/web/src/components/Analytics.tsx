@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { GA_MEASUREMENT_ID } from '@/lib/site';
 
+const GA_ENABLED = process.env.NODE_ENV === 'production';
+
 declare global {
   interface Window {
     dataLayer: unknown[];
@@ -20,7 +22,7 @@ export function Analytics() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!GA_MEASUREMENT_ID || typeof window.gtag !== 'function') return;
+    if (!GA_ENABLED || !GA_MEASUREMENT_ID || typeof window.gtag !== 'function') return;
     window.gtag('event', 'page_view', {
       page_path: pathname,
       page_location: window.location.href,
@@ -28,7 +30,7 @@ export function Analytics() {
     });
   }, [pathname]);
 
-  if (!GA_MEASUREMENT_ID) return null;
+  if (!GA_ENABLED || !GA_MEASUREMENT_ID) return null;
 
   return (
     <>

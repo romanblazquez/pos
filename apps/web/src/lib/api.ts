@@ -101,6 +101,7 @@ export async function listProducts(opts: {
   limit?: number;
   offset?: number;
   inStock?: boolean;
+  minPlayers?: number;
   sortBy?: SortBy;
   /** Price bounds in MINOR units (centavos), matching the API contract. */
   minPriceMinor?: number;
@@ -113,6 +114,7 @@ export async function listProducts(opts: {
   if (opts.q) params.set('q', opts.q);
   if (opts.category) params.set('category', opts.category);
   if (opts.inStock) params.set('inStock', 'true');
+  if (opts.minPlayers) params.set('minPlayers', String(opts.minPlayers));
   if (opts.sortBy) params.set('sortBy', opts.sortBy);
   if (opts.minPriceMinor) params.set('minPrice', String(opts.minPriceMinor));
   if (opts.maxPriceMinor) params.set('maxPrice', String(opts.maxPriceMinor));

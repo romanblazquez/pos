@@ -37,8 +37,8 @@ export async function generateMetadata({
     category?: string;
     inStock?: string;
     sort?: string;
-    min?: string;
     max?: string;
+    players?: string;
   };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
@@ -64,7 +64,7 @@ export async function generateMetadata({
   // Faceted/filtered or deeper-page URLs are navigational — keep them out of the
   // index so only the clean base listing competes (spec §9).
   const filtered = Boolean(
-    searchParams.category || searchParams.inStock || searchParams.sort || searchParams.min || searchParams.max,
+    searchParams.category || searchParams.inStock || searchParams.sort || searchParams.max || searchParams.players,
   );
   const navigational = page > 1 || filtered;
 
@@ -97,7 +97,7 @@ export async function generateMetadata({
 // Serialize active filters (everything except page) so pagination preserves them.
 function filterQuery(sp: Record<string, string | undefined>): string {
   const p = new URLSearchParams();
-  for (const k of ['q', 'category', 'inStock', 'sort', 'min', 'max'] as const) {
+  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players'] as const) {
     if (sp[k]) p.set(k, sp[k] as string);
   }
   return p.toString();
@@ -158,8 +158,8 @@ export default async function ListingPage({
     category?: string;
     inStock?: string;
     sort?: string;
-    min?: string;
     max?: string;
+    players?: string;
   };
 }) {
   if (!isLocale(params.locale)) notFound();
@@ -177,16 +177,16 @@ export default async function ListingPage({
       category: categoryFromParam(searchParams.category, categories),
       inStock: searchParams.inStock === 'true',
       sort: (searchParams.sort as FilterState['sort']) || undefined,
-      min: searchParams.min ? Math.max(0, parseInt(searchParams.min, 10)) || undefined : undefined,
       max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
+      players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
     };
     const { results, total } = await listProducts({
       q,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
-      minPriceMinor: state.min != null ? state.min * 100 : undefined,
       maxPriceMinor: state.max != null ? state.max * 100 : undefined,
+      minPlayers: state.players,
       limit: 48,
     });
     const crumbs: Crumb[] = [
@@ -245,16 +245,16 @@ export default async function ListingPage({
       category: categoryFromParam(searchParams.category, categories),
       inStock: searchParams.inStock === 'true',
       sort: (searchParams.sort as FilterState['sort']) || undefined,
-      min: searchParams.min ? Math.max(0, parseInt(searchParams.min, 10)) || undefined : undefined,
       max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
+      players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
     };
-    const filtered = Boolean(state.category || state.inStock || state.sort || state.min || state.max);
+    const filtered = Boolean(state.category || state.inStock || state.sort || state.max || state.players);
     const { results, total } = await listProducts({
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
-      minPriceMinor: state.min != null ? state.min * 100 : undefined,
       maxPriceMinor: state.max != null ? state.max * 100 : undefined,
+      minPlayers: state.players,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     });

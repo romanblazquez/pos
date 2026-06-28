@@ -9,8 +9,8 @@ export interface FilterState {
   category?: string;
   inStock: boolean;
   sort?: SortBy;
-  min?: number;
   max?: number;
+  players?: number;
 }
 
 // Server-rendered faceted filters (no client JS): the whole search view is one
@@ -31,17 +31,17 @@ export function SearchFilters({
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categoría', all: 'Todas', avail: 'Disponibilidad', inStock: 'Solo con stock', sort: 'Ordenar', price: 'Precio (MXN)', min: 'mín', max: 'máx', apply: 'Aplicar filtros', clear: 'Limpiar' }
-      : { filters: 'Filters', cat: 'Category', all: 'All', avail: 'Availability', inStock: 'In stock only', sort: 'Sort', price: 'Price (MXN)', min: 'min', max: 'max', apply: 'Apply filters', clear: 'Clear' };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas' }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores' };
 
-  const sortOpts: { value: SortBy; es: string; en: string }[] = [
-    { value: 'rank_score', es: 'Relevancia', en: 'Relevance' },
-    { value: 'price_asc', es: 'Precio: menor a mayor', en: 'Price: low to high' },
-    { value: 'price_desc', es: 'Precio: mayor a menor', en: 'Price: high to low' },
-    { value: 'name', es: 'Nombre (A-Z)', en: 'Name (A-Z)' },
+  const budgetOpts = [
+    { label: locale === 'es' ? 'Hasta $500' : 'Up to $500', value: 500 },
+    { label: locale === 'es' ? 'Hasta $1,000' : 'Up to $1,000', value: 1000 },
+    { label: locale === 'es' ? 'Hasta $1,500' : 'Up to $1,500', value: 1500 },
   ];
+  const playerOpts = [1, 2, 3, 4, 5];
 
-  const active = Boolean(state.category || state.inStock || state.sort || state.min || state.max);
+  const active = Boolean(state.category || state.inStock || state.max || state.players);
 
   return (
     <CatalogFilterPanel
@@ -56,55 +56,74 @@ export function SearchFilters({
       ) : undefined}
     >
       <CatalogFilterSection title={t.avail}>
-        <label className="filter-toggle-card">
+        <label className="filter-toggle-card market-toggle">
           <span>
             <b>{t.inStock}</b>
-            <small>{locale === 'es' ? 'Oculta productos agotados' : 'Hide sold-out products'}</small>
+            <small>{t.inStockHint}</small>
           </span>
           <input type="checkbox" name="inStock" value="true" defaultChecked={state.inStock} />
         </label>
       </CatalogFilterSection>
 
       <CatalogFilterSection title={t.price}>
-        <div className="filter-price">
-          <label>
-            <span>{locale === 'es' ? 'Mínimo' : 'Minimum'}</span>
-            <input type="number" name="min" min={0} defaultValue={state.min ?? ''} placeholder={t.min} aria-label={t.min} />
+        <div className="market-chip-grid">
+          <label className={`market-chip ${state.max === undefined ? 'is-active' : ''}`}>
+            <input type="radio" name="max" value="" defaultChecked={state.max == null} />
+            {locale === 'es' ? 'Sin tope' : 'No cap'}
           </label>
-          <label>
-            <span>{locale === 'es' ? 'Máximo' : 'Maximum'}</span>
-            <input type="number" name="max" min={0} defaultValue={state.max ?? ''} placeholder={t.max} aria-label={t.max} />
-          </label>
+          {budgetOpts.map((o) => (
+            <label key={o.value} className={`market-chip ${state.max === o.value ? 'is-active' : ''}`}>
+              <input type="radio" name="max" value={String(o.value)} defaultChecked={state.max === o.value} />
+              {o.label}
+            </label>
+          ))}
         </div>
       </CatalogFilterSection>
 
-      <CatalogFilterSection title={t.sort}>
-        <select name="sort" defaultValue={state.sort ?? 'rank_score'} className="filter-select">
-          {sortOpts.map((o) => (
-            <option key={o.value} value={o.value}>
-              {locale === 'es' ? o.es : o.en}
-            </option>
+      <CatalogFilterSection title={t.players}>
+        <div className="market-players-row">
+          <label className={`market-player-chip ${state.players === undefined ? 'is-active' : ''}`}>
+            <input type="radio" name="players" value="" defaultChecked={state.players == null} />
+            {locale === 'es' ? 'Todos' : 'Any'}
+          </label>
+          {playerOpts.map((p) => (
+            <label key={p} className={`market-player-chip ${state.players === p ? 'is-active' : ''}`}>
+              <input type="radio" name="players" value={String(p)} defaultChecked={state.players === p} />
+              {p === 5 ? '5+' : p}
+            </label>
           ))}
-        </select>
+        </div>
       </CatalogFilterSection>
 
       <CatalogFilterSection title={t.cat}>
-        <div className="filter-category-list">
-        <label className="filter-opt" aria-current={!state.category || undefined}>
-          <input type="radio" name="category" value="" defaultChecked={!state.category} /> {t.all}
-        </label>
-        {categories.map((c) => {
-          const active = state.category === c.category;
-          return (
-            <label key={c.category} className="filter-opt" aria-current={active || undefined}>
-              <input type="radio" name="category" value={c.category} defaultChecked={active} />{' '}
-              {c.category} <span className="muted">({c.count})</span>
-            </label>
-          );
-        })}
+        <div className="market-category-list">
+          <label className={`market-category-card ${!state.category ? 'is-active' : ''}`}>
+            <input type="radio" name="category" value="" defaultChecked={!state.category} />
+            <span className="market-category-head">
+              <span>{t.all}</span>
+              <span className="market-category-count">{categories.reduce((sum, c) => sum + c.count, 0)}</span>
+            </span>
+            <span className="market-category-desc">{t.allStores}</span>
+          </label>
+          {categories.map((c) => {
+            const categoryActive = state.category === c.category;
+            return (
+              <label key={c.category} className={`market-category-card ${categoryActive ? 'is-active' : ''}`}>
+                <input type="radio" name="category" value={c.category} defaultChecked={categoryActive} />
+                <span className="market-category-head">
+                  <span>{c.category}</span>
+                  <span className="market-category-count">{c.count}</span>
+                </span>
+                <span className="market-category-desc">
+                  {locale === 'es' ? 'Colección curada del marketplace.' : 'Curated marketplace collection.'}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </CatalogFilterSection>
 
+      <input type="hidden" name="sort" value={state.sort ?? 'rank_score'} />
       <Button type="submit" className="mt-3 w-full">{t.apply}</Button>
     </CatalogFilterPanel>
   );

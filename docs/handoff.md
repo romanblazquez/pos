@@ -114,3 +114,83 @@
 - `pnpm tsc --noEmit -p apps/marketplace/tsconfig.json`: fails for the same
   existing shared-ui dependency gap (`@radix-ui/react-*` modules unresolved);
   no sidebar contract/import regression introduced by this continuation.
+
+### Apex SEO sidebar parity with marketplace UX
+- Updated `apps/web` filter sidebar interaction model to match the marketplace
+  visual/interaction language while preserving crawlable server GET semantics.
+- Replaced free-form price min/max fields with preset budget chips (sin tope,
+  hasta $500, $1,000, $1,500) and added players chips (todos, 1..5+).
+- Kept submit-based filtering for SEO stability and added hidden sort
+  persistence (`rank_score` default) so ranking remains deterministic.
+- Wired new `players` facet end-to-end in the apex listing/search route and
+  API client (`minPlayers` query param) and removed the obsolete `min` field
+  from this sidebar flow.
+- Added marketplace-like card/chip styles in `apps/web/src/app/globals.css`
+  (`market-*` classes) so Apex and app sidebars now look and behave consistently
+  across desktop breakpoints.
+
+### Dockerized local-dev hot reload stack
+- Added `docker-compose.dev.yml` for containerized development with live reload
+  against local source files (bind mount `.:/workspace`) across:
+  - `api-dev` on host port `3002`
+  - `web-dev` (Apex SEO Next.js) on host port `4500`
+  - `marketplace-dev` (Vite SPA) on host port `4300`
+- Configured polling-based file watching for Docker Desktop/macOS reliability:
+  `CHOKIDAR_USEPOLLING`, `WATCHPACK_POLLING`, and interval tuning.
+- Kept Postgres dependency external to the dev compose and pointed API to host
+  Postgres (`host.docker.internal:5432`), matching the existing infra stack.
+- Fixed startup race condition where `api-dev`, `web-dev`, and
+  `marketplace-dev` ran `pnpm install` concurrently over the same bind-mounted
+  workspace (causing intermittent `ERR_PNPM_ENOENT/ENOTEMPTY`).
+- Added a single `deps-dev` bootstrap service that performs dependency install
+  once; app services now depend on `deps-dev` completion and only start their
+  dev servers.
+- Fixed dependency visibility for app containers by switching to one shared
+  `dev_node_modules` volume across `deps-dev`, `api-dev`, `web-dev`, and
+  `marketplace-dev` (previous per-service node_modules volumes caused
+  `marketplace-dev` to fail with `vite: not found`).
+- Fixed marketplace container reachability from host by running Vite with
+  `--host 0.0.0.0` in `docker-compose.dev.yml` (logs showed
+  "Network: use --host to expose", and host requests were reset).
+- Corrected the command wiring to avoid passing a literal `--` to Vite via pnpm
+  script forwarding. `marketplace-dev` now runs
+  `pnpm exec vite --config apps/marketplace/vite.config.mts --host 0.0.0.0`,
+  which binds beyond loopback inside the container.
+- Added Prisma client generation (`pnpm db:generate`) to `deps-dev` bootstrap
+  so `api-dev` does not fail with `Cannot find module '.prisma/client/default'`
+  when starting inside Docker.
+- Updated admin-console dev proxy target to `http://localhost:3002` in
+  `apps/admin-console/vite.config.mts` so local admin actions (including BGG
+  import endpoints) work with the Dockerized API port instead of requiring a
+  separate host API instance on `3000`.
+- Fixed `api-dev` startup command in `docker-compose.dev.yml` to run `tsx`
+  directly instead of `pnpm dev:api`. The package script hardcodes
+  `DATABASE_URL=...localhost:5432`, which is invalid from inside Docker and
+  caused Prisma `P1001` DB connection failures.
+- Added explicit `api-dev` environment overrides for cross-compose infra access:
+  `REDIS_HOST=host.docker.internal`, `TYPESENSE_HOST=host.docker.internal`, and
+  companion port/API key values. This resolves container-local defaults to
+  `localhost` that previously caused Redis connection errors.
+
+### Analytics policy update (dev)
+- Disabled GA4 emission in development mode for both discovery surfaces:
+  - `apps/web/src/components/Analytics.tsx` now gates script/pageview logic to
+    `NODE_ENV === 'production'`.
+  - `apps/marketplace/src/analytics.ts` now gates init/events with
+    `!import.meta.env.DEV`.
+- Result: local/dev sessions no longer send GA4 traffic; production behavior is
+  unchanged.
+
+### Docker dev compose update (Apex)
+- Renamed storefront service from `web-dev` to `apex-dev` in
+  `docker-compose.dev.yml` for explicit Apex naming.
+- Moved Apex dev server to dedicated port `4600` and updated container command
+  to `next dev -p 4600 -H 0.0.0.0` so it can run independently from other local
+  frontends.
+
+### Docker dev compose update (Admin)
+- Added `admin-dev` service in `docker-compose.dev.yml`.
+- Service runs Vite admin console with host binding (`--host 0.0.0.0`) and
+  exposes `4500:4500` for local access.
+- Kept `deps-dev` and `api-dev` dependencies so admin starts with shared
+  dependencies and API availability.

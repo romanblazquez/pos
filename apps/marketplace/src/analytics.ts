@@ -1,4 +1,5 @@
 const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
+const GA_ENABLED = !import.meta.env.DEV;
 
 declare global {
   interface Window {
@@ -8,11 +9,11 @@ declare global {
 }
 
 export function analyticsConfigured() {
-  return Boolean(MEASUREMENT_ID);
+  return GA_ENABLED && Boolean(MEASUREMENT_ID);
 }
 
 export function initializeAnalytics() {
-  if (!MEASUREMENT_ID || document.querySelector(`script[data-ga-id="${MEASUREMENT_ID}"]`)) return;
+  if (!GA_ENABLED || !MEASUREMENT_ID || document.querySelector(`script[data-ga-id="${MEASUREMENT_ID}"]`)) return;
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = (...args: unknown[]) => window.dataLayer.push(args);
@@ -46,6 +47,6 @@ export function trackPageView(path: string, title = document.title) {
 }
 
 export function trackEvent(name: string, params: Record<string, unknown> = {}) {
-  if (!MEASUREMENT_ID || !window.gtag) return;
+  if (!GA_ENABLED || !MEASUREMENT_ID || !window.gtag) return;
   window.gtag('event', name, params);
 }

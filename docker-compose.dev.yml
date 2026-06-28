@@ -1,0 +1,104 @@
+name: retail-os-dev
+
+services:
+  deps-dev:
+    image: node:22
+    container_name: retail-os-deps-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm db:generate"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+
+  api-dev:
+    image: node:22
+    container_name: retail-os-api-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable && PORT=3002 pnpm exec tsx --tsconfig apps/api/tsconfig.json apps/api/src/main.ts"
+    environment:
+      DATABASE_URL: postgresql://retail:retail@host.docker.internal:5432/retail_os?schema=public
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: "6379"
+      TYPESENSE_HOST: host.docker.internal
+      TYPESENSE_PORT: "8108"
+      TYPESENSE_API_KEY: dev-typesense-key
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "200"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+    ports:
+      - "3002:3002"
+    depends_on:
+      deps-dev:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  apex-dev:
+    image: node:22
+    container_name: retail-os-apex-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable && API_BASE_URL=http://api-dev:3002 pnpm --filter web exec next dev -p 4600 -H 0.0.0.0"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING_INTERVAL: "200"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+    ports:
+      - "4600:4600"
+    depends_on:
+      deps-dev:
+        condition: service_completed_successfully
+      api-dev:
+        condition: service_started
+
+  admin-dev:
+    image: node:22
+    container_name: retail-os-admin-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable && pnpm exec vite --config apps/admin-console/vite.config.mts --host 0.0.0.0"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "200"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+    ports:
+      - "4500:4500"
+    depends_on:
+      deps-dev:
+        condition: service_completed_successfully
+      api-dev:
+        condition: service_started
+
+  marketplace-dev:
+    image: node:22
+    container_name: retail-os-marketplace-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable && VITE_API_URL=http://localhost:3002 pnpm exec vite --config apps/marketplace/vite.config.mts --host 0.0.0.0"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "200"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+    ports:
+      - "4300:4300"
+    depends_on:
+      deps-dev:
+        condition: service_completed_successfully
+      api-dev:
+        condition: service_started
+
+volumes:
+  dev_node_modules:
