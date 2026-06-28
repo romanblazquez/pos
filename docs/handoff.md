@@ -74,3 +74,19 @@
 - Validation: `next build apps/web`, the `apps/web` TypeScript project, and the
   shared `ui-react` TypeScript project all pass. The `apps/marketplace`
   TypeScript project and production Vite build also pass.
+
+### Shared catalogue filter/sidebar follow-up
+- Fixed the `apps/web` search/catalogue sidebar so it matches the working retail
+  app structure: constrained sticky scrolling, result count, reset action,
+  compact availability control, grouped price/sort/category sections, and a
+  bounded category list on desktop and mobile.
+- Extracted `CatalogFilterPanel` and `CatalogFilterSection` into `ui-react` and
+  reused them in both `apps/web` and `apps/marketplace`.
+- Kept each app's appropriate interaction model: crawlable native GET form
+  controls in the Next.js site and immediate React state updates in the Vite
+  retail app.
+- Added a narrow `@retail-os/ui-react/catalog-filter` path mapping so the retail
+  app does not import the full shared barrel. The final marketplace bundle stays
+  at approximately 338 KB JS / 46 KB CSS and has no Tailwind selector warning.
+- Validation: `apps/web`, `apps/marketplace`, and `ui-react` TypeScript projects
+  pass; both Next.js and Vite production builds pass.

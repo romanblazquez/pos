@@ -1,5 +1,6 @@
-import { SlidersHorizontal } from 'lucide-react';
-import { Button } from '@retail-os/ui-react';
+import Link from 'next/link';
+import { RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { Button, CatalogFilterPanel, CatalogFilterSection } from '@retail-os/ui-react';
 import type { CategoryCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 
@@ -19,10 +20,14 @@ export function SearchFilters({
   locale,
   categories,
   state,
+  total,
+  clearHref,
 }: {
   locale: Locale;
   categories: CategoryCount[];
   state: FilterState;
+  total: number;
+  clearHref: string;
 }) {
   const t =
     locale === 'es'
@@ -36,15 +41,55 @@ export function SearchFilters({
     { value: 'name', es: 'Nombre (A-Z)', en: 'Name (A-Z)' },
   ];
 
-  return (
-    <aside className="filters" aria-label={t.filters}>
-      <h2>
-        <SlidersHorizontal size={15} aria-hidden="true" />
-        {t.filters}
-      </h2>
+  const active = Boolean(state.category || state.inStock || state.sort || state.min || state.max);
 
-      <div className="filter-group">
-        <p className="filter-label">{t.cat}</p>
+  return (
+    <CatalogFilterPanel
+      title={locale === 'es' ? 'Explorar' : 'Explore'}
+      subtitle={`${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${locale === 'es' ? 'resultados' : 'results'}`}
+      icon={<SlidersHorizontal size={16} aria-hidden="true" />}
+      aria-label={t.filters}
+      action={active ? (
+        <Link className="filter-reset" href={clearHref}>
+          <RotateCcw size={12} aria-hidden="true" /> {t.clear}
+        </Link>
+      ) : undefined}
+    >
+      <CatalogFilterSection title={t.avail}>
+        <label className="filter-toggle-card">
+          <span>
+            <b>{t.inStock}</b>
+            <small>{locale === 'es' ? 'Oculta productos agotados' : 'Hide sold-out products'}</small>
+          </span>
+          <input type="checkbox" name="inStock" value="true" defaultChecked={state.inStock} />
+        </label>
+      </CatalogFilterSection>
+
+      <CatalogFilterSection title={t.price}>
+        <div className="filter-price">
+          <label>
+            <span>{locale === 'es' ? 'Mínimo' : 'Minimum'}</span>
+            <input type="number" name="min" min={0} defaultValue={state.min ?? ''} placeholder={t.min} aria-label={t.min} />
+          </label>
+          <label>
+            <span>{locale === 'es' ? 'Máximo' : 'Maximum'}</span>
+            <input type="number" name="max" min={0} defaultValue={state.max ?? ''} placeholder={t.max} aria-label={t.max} />
+          </label>
+        </div>
+      </CatalogFilterSection>
+
+      <CatalogFilterSection title={t.sort}>
+        <select name="sort" defaultValue={state.sort ?? 'rank_score'} className="filter-select">
+          {sortOpts.map((o) => (
+            <option key={o.value} value={o.value}>
+              {locale === 'es' ? o.es : o.en}
+            </option>
+          ))}
+        </select>
+      </CatalogFilterSection>
+
+      <CatalogFilterSection title={t.cat}>
+        <div className="filter-category-list">
         <label className="filter-opt" aria-current={!state.category || undefined}>
           <input type="radio" name="category" value="" defaultChecked={!state.category} /> {t.all}
         </label>
@@ -57,38 +102,11 @@ export function SearchFilters({
             </label>
           );
         })}
-      </div>
-
-      <div className="filter-group">
-        <p className="filter-label">{t.avail}</p>
-        <label className="filter-check">
-          <input type="checkbox" name="inStock" value="true" defaultChecked={state.inStock} />
-          {t.inStock}
-        </label>
-      </div>
-
-      <div className="filter-group">
-        <p className="filter-label">{t.sort}</p>
-        <select name="sort" defaultValue={state.sort ?? 'rank_score'} className="filter-select">
-          {sortOpts.map((o) => (
-            <option key={o.value} value={o.value}>
-              {locale === 'es' ? o.es : o.en}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="filter-group">
-        <p className="filter-label">{t.price}</p>
-        <div className="filter-price">
-          <input type="number" name="min" min={0} defaultValue={state.min ?? ''} placeholder={t.min} aria-label={t.min} />
-          <span>–</span>
-          <input type="number" name="max" min={0} defaultValue={state.max ?? ''} placeholder={t.max} aria-label={t.max} />
         </div>
-      </div>
+      </CatalogFilterSection>
 
-      <Button type="submit" className="w-full">{t.apply}</Button>
-    </aside>
+      <Button type="submit" className="mt-3 w-full">{t.apply}</Button>
+    </CatalogFilterPanel>
   );
 }
 

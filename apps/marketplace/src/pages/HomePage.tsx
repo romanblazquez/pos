@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { Button, cn } from '../components/ui/index.js';
+import {
+  CatalogFilterPanel as CatalogFilterPanelShell,
+  CatalogFilterSection,
+} from '@retail-os/ui-react/catalog-filter';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import {
   categoryDescription,
@@ -211,7 +215,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[16rem_1fr]">
         <aside className="hidden lg:block">
-          <CatalogFilterPanel
+          <MarketplaceCatalogFilters
             activeCategory={activeCategory}
             activeFilterCount={activeFilterCount}
             categories={categoryOptions}
@@ -382,7 +386,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <CatalogFilterPanel
+            <MarketplaceCatalogFilters
               activeCategory={activeCategory}
               activeFilterCount={activeFilterCount}
               categories={categoryOptions}
@@ -514,7 +518,7 @@ function CategorySideButton({
   );
 }
 
-function CatalogFilterPanel({
+function MarketplaceCatalogFilters({
   activeCategory,
   activeFilterCount,
   categories,
@@ -538,21 +542,12 @@ function CatalogFilterPanel({
   onReset: () => void;
 }) {
   return (
-    <div className={cn(
-      'rounded-xl border border-[--border] bg-[--bg-raised] p-3 shadow-sm',
-      !mobile && 'sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto',
-    )}>
-      <div className="flex items-start justify-between gap-3 border-b border-[--border] px-2 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-[--tx]">Explorar</p>
-            <p className="text-[11px] text-[--tx-muted]">{total?.toLocaleString('es-MX') ?? '—'} resultados</p>
-          </div>
-        </div>
-        {(activeCategory || activeFilterCount > 0) && (
+    <CatalogFilterPanelShell
+      title="Explorar"
+      subtitle={`${total?.toLocaleString('es-MX') ?? '—'} resultados`}
+      icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
+      sticky={!mobile}
+      action={(activeCategory || activeFilterCount > 0) ? (
           <button
             onClick={onReset}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]"
@@ -560,19 +555,19 @@ function CatalogFilterPanel({
             <RotateCcw className="h-3 w-3" />
             Limpiar
           </button>
-        )}
-      </div>
+        ) : undefined}
+    >
 
-      <FilterSection title="Disponibilidad">
+      <CatalogFilterSection title="Disponibilidad">
         <ToggleFilter
           checked={filters.inStockOnly}
           label="Solo con stock"
           description="Oculta productos agotados"
           onClick={() => onFilters({ inStockOnly: !filters.inStockOnly })}
         />
-      </FilterSection>
+      </CatalogFilterSection>
 
-      <FilterSection title="Presupuesto">
+      <CatalogFilterSection title="Presupuesto">
         <div className="grid grid-cols-2 gap-1.5">
           {PRICE_OPTIONS.map((option) => (
             <button
@@ -589,9 +584,9 @@ function CatalogFilterPanel({
             </button>
           ))}
         </div>
-      </FilterSection>
+      </CatalogFilterSection>
 
-      <FilterSection title="Jugadores">
+      <CatalogFilterSection title="Jugadores">
         <div className="flex flex-wrap gap-1.5">
           {PLAYER_OPTIONS.map((players) => (
             <button
@@ -608,9 +603,9 @@ function CatalogFilterPanel({
             </button>
           ))}
         </div>
-      </FilterSection>
+      </CatalogFilterSection>
 
-      <FilterSection title="Categorías">
+      <CatalogFilterSection title="Categorías">
         <div className="space-y-1">
           <CategorySideButton
             active={!activeCategory}
@@ -630,17 +625,8 @@ function CatalogFilterPanel({
             />
           ))}
         </div>
-      </FilterSection>
-    </div>
-  );
-}
-
-function FilterSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="border-b border-[--border] px-1 py-4 last:border-b-0 last:pb-1">
-      <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wider text-[--tx-faint]">{title}</p>
-      {children}
-    </div>
+      </CatalogFilterSection>
+    </CatalogFilterPanelShell>
   );
 }
 

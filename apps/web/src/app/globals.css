@@ -9,7 +9,16 @@
   --font-mono: var(--font-space-mono), 'Space Mono', monospace;
 }
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  --bg-raised: var(--card);
+  --bg-subtle: var(--muted);
+  --bg-hover: var(--accent);
+  --tx: var(--foreground);
+  --tx-muted: var(--muted-foreground);
+  --tx-faint: var(--subtle-foreground);
+  --accent-bg: #f6e4da;
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; line-height: 1.5; text-rendering: optimizeLegibility; }
@@ -114,7 +123,17 @@ button, input, select { font: inherit; }
 .filter-select, .filter-price input, .search-bar { border: 1px solid var(--input); border-radius: 10px; background: var(--card); color: var(--foreground); }
 .filter-select { width: 100%; padding: .55rem .65rem; font-size: .84rem; }
 .filter-price { display: flex; align-items: center; gap: .4rem; }
-.filter-price input { width: 100%; min-width: 0; padding: .5rem .55rem; font-size: .82rem; }
+.filter-price label { min-width: 0; flex: 1; }
+.filter-price label > span { display: block; margin-bottom: .3rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .58rem; text-transform: uppercase; }
+.filter-price input { width: 100%; min-width: 0; padding: .55rem .6rem; font-size: .82rem; }
+.filter-reset { display: inline-flex; align-items: center; gap: .25rem; padding: .3rem .45rem; border-radius: 6px; color: var(--muted-foreground); font-size: .68rem; font-weight: 700; }
+.filter-reset:hover { background: var(--accent); color: var(--foreground); }
+.filter-toggle-card { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .65rem .7rem; border: 1px solid var(--border); border-radius: 10px; background: var(--muted); cursor: pointer; }
+.filter-toggle-card b { display: block; color: var(--foreground); font-size: .84rem; }
+.filter-toggle-card small { display: block; margin-top: .15rem; color: var(--muted-foreground); font-size: .72rem; }
+.filter-toggle-card input { width: 18px; height: 18px; flex: none; accent-color: var(--primary); }
+.filter-category-list { max-height: 15rem; overflow-y: auto; padding-right: .2rem; scrollbar-width: thin; }
+.filter-opt .muted { margin-left: auto; font-family: var(--font-mono); font-size: .62rem; }
 .search-bar { width: min(100%, 620px); padding: .8rem 1rem; font-size: 1rem; box-shadow: 0 1px 2px rgb(43 38 34 / .04); }
 .search-bar:focus { border-color: var(--primary); outline: 3px solid rgb(180 80 46 / .14); }
 
@@ -157,6 +176,7 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 @media (max-width: 860px) {
   .search-layout { grid-template-columns: 1fr; }
   .filters { position: static; }
+  .catalog-filter-panel { position: static !important; max-height: 26rem !important; }
   .product-head { grid-template-columns: 1fr; }
   .product-figure { min-height: 340px; }
 }

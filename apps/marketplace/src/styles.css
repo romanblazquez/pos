@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
+@source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
 
 @theme {
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;

@@ -211,7 +211,13 @@ export default async function ListingPage({
             aria-label={locale === 'es' ? 'Buscar' : 'Search'}
           />
           <div className="search-layout">
-            <SearchFilters locale={locale} categories={categories} state={state} />
+            <SearchFilters
+              locale={locale}
+              categories={categories}
+              state={state}
+              total={total}
+              clearHref={listingPath('search', locale)}
+            />
             <div>
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'resultados' : 'results'}
@@ -270,7 +276,13 @@ export default async function ListingPage({
         <h1 className="page-title">{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
         <form method="get" action={base}>
           <div className="search-layout">
-            <SearchFilters locale={locale} categories={categories} state={state} />
+            <SearchFilters
+              locale={locale}
+              categories={categories}
+              state={state}
+              total={total}
+              clearHref={base}
+            />
             <div>
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
