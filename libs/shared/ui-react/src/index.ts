@@ -4,3 +4,4 @@ export * from './lib/utils.js';
 export * from './components/ui/index.js';
 export * from './components/catalog-filter.js';
 export * from './money.js';
+export * from './components/google-sign-in-button.js';

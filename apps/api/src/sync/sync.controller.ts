@@ -1,7 +1,7 @@
 import { Body, Controller, Headers, Inject, Post } from '@nestjs/common';
 import type { SaleIngestionRequest, SaleIngestionResponse } from '@retail-os/shared-types';
 import { SyncService } from './sync.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Roles } from '../auth/auth.guard.js';
 
 /**
  * Sync ingestion endpoint — the central counterpart of the edge sync-engine.
@@ -9,7 +9,7 @@ import { Public } from '../auth/auth.guard.js';
  * terminal re-delivering after a flaky network never creates a duplicate sale.
  * Implements the contract in `docs/api-spec.md`.
  */
-@Public()
+@Roles('admin', 'service')
 @Controller('sync')
 export class SyncController {
   constructor(@Inject(SyncService) private readonly sync: SyncService) {}

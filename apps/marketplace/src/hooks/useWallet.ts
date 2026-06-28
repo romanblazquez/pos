@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 export interface StoreCredit {
   balanceMinor: number;
@@ -13,7 +12,7 @@ export interface Wallet {
 }
 
 async function fetchWallet(customerId: string): Promise<Wallet> {
-  const res = await fetch(`${API}/api/v1/customers/${customerId}/wallet`);
+  const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/wallet`);
   if (!res.ok) throw new Error(`wallet fetch failed: ${res.status}`);
   return res.json() as Promise<Wallet>;
 }

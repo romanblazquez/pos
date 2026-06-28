@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const STORAGE_KEY = 'mkt_customer';
+import { useQueryClient } from '@tanstack/react-query';
+import type { BrowserSession } from '@retail-os/api-client';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 export interface Customer {
   id: string;
@@ -10,7 +10,6 @@ export interface Customer {
 }
 
 interface CustomerSession {
-  token: string;
   customer: Customer;
 }
 
@@ -19,7 +18,8 @@ interface CustomerCtx {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  loginWithGoogle: (credential: string, state: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const Ctx = createContext<CustomerCtx | null>(null);
@@ -27,55 +27,77 @@ const Ctx = createContext<CustomerCtx | null>(null);
 export function CustomerProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<CustomerSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSession(JSON.parse(raw) as CustomerSession);
-    } catch { /* ignore */ }
-    setIsLoading(false);
-  }, []);
-
-  function persist(s: CustomerSession | null) {
-    setSession(s);
-    if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    else localStorage.removeItem(STORAGE_KEY);
-  }
-
-  async function login(email: string, password: string) {
-    const res = await fetch(`${API}/api/v1/auth/customer/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    let active = true;
+    marketplaceApi.setUnauthenticatedHandler(() => {
+      setSession(null);
+      queryClient.clear();
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as { message?: string };
-      throw new Error(err.message ?? 'Credenciales inválidas');
+    marketplaceApi.refresh()
+      .then((next) => { if (active) accept(next); })
+      .finally(() => { if (active) setIsLoading(false); });
+    return () => {
+      active = false;
+      marketplaceApi.setUnauthenticatedHandler(undefined);
+    };
+  }, [queryClient]);
+
+  function accept(next: BrowserSession | null): void {
+    if (next?.customer) {
+      marketplaceApi.acceptSession(next);
+      setSession({ customer: next.customer });
+    } else {
+      marketplaceApi.clear();
+      setSession(null);
     }
-    const data = await res.json() as CustomerSession;
-    persist(data);
   }
 
-  async function register(email: string, password: string, name: string) {
-    const res = await fetch(`${API}/api/v1/auth/customer/register`, {
+  async function passwordRequest(path: string, body: Record<string, string>) {
+    const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as { message?: string };
-      throw new Error(err.message ?? 'No se pudo crear la cuenta');
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({})) as { message?: string };
+      throw new Error(error.message ?? 'No se pudo iniciar sesión');
     }
-    const data = await res.json() as CustomerSession;
-    persist(data);
+    accept(await response.json() as BrowserSession);
   }
 
-  function logout() {
-    persist(null);
+  function login(email: string, password: string) {
+    return passwordRequest('/api/v1/auth/customer/login', { email, password });
+  }
+
+  function register(email: string, password: string, name: string) {
+    return passwordRequest('/api/v1/auth/customer/register', { email, password, name });
+  }
+
+  async function loginWithGoogle(credential: string, state: string) {
+    const response = await fetch(`${API_BASE}/api/v1/auth/google`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app: 'marketplace', credential, state }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({})) as { message?: string };
+      throw new Error(error.message ?? 'Google no pudo verificar la cuenta');
+    }
+    accept(await response.json() as BrowserSession);
+  }
+
+  async function logout() {
+    await marketplaceApi.logout();
+    setSession(null);
+    queryClient.clear();
   }
 
   return (
-    <Ctx.Provider value={{ session, isLoading, login, register, logout }}>
+    <Ctx.Provider value={{ session, isLoading, login, register, loginWithGoogle, logout }}>
       {children}
     </Ctx.Provider>
   );

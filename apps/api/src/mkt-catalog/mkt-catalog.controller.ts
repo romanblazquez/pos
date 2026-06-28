@@ -4,10 +4,10 @@ import {
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { MktCatalogService } from './mkt-catalog.service.js';
 import { BggDiscoveryService } from './bgg-discovery.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Roles } from '../auth/auth.guard.js';
 
 @ApiTags('admin')
-@Public()
+@Roles('admin')
 @Controller('api/v1/admin/catalog')
 export class MktCatalogController {
   constructor(

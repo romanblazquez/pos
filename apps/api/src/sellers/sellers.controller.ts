@@ -22,14 +22,14 @@ import {
 import { SellersService } from './sellers.service.js';
 import { SellerMappingService } from './seller-mapping.service.js';
 import { BulkUpdateListingsDto, CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
-import { Public } from '../auth/auth.guard.js';
+import { Roles } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
 import { AiService } from '../ai/ai.service.js';
 
 @ApiTags('sellers')
 @ApiBearerAuth('seller-jwt')
-@Public()
+@Roles('seller', 'admin')
 @Controller('api/v1/sellers')
 export class SellersController {
   constructor(
@@ -40,6 +40,7 @@ export class SellersController {
   ) {}
 
   @Post()
+  @Roles('admin')
   @ApiOperation({
     summary: 'Create a new seller account',
     description:
@@ -72,6 +73,7 @@ export class SellersController {
   }
 
   @Get()
+  @Roles('admin')
   @ApiOperation({
     summary: 'List all sellers',
     description:

@@ -61,14 +61,135 @@ model Device {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  tenantId  String
-  email     String
-  name      String
-  roles     String[] // cashier | supervisor | store_manager | admin
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  id       String   @id @default(cuid())
+  tenantId String
+  email    String
+  name     String
+  roles    String[] // cashier | supervisor | store_manager | admin
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, email])
+}
+
+/// Global authentication identity. Domain profiles (customer, seller, tenant user)
+/// link to this record instead of treating an email address as an authorization key.
+model AuthPrincipal {
+  id              String                   @id @default(cuid())
+  email           String
+  normalizedEmail String                   @unique
+  displayName     String?
+  status          String                   @default("active") // active | suspended | disabled
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  identities      FederatedIdentity[]
+  sessions        AuthSession[]
+  customer        MktCustomer?
+  seller          Seller?
+  adminMembership PlatformAdminMembership?
+  auditEvents     AuditEvent[]
+
+  @@index([status])
+}
+
+/// Stable external identity. Google `sub`, not email, is the provider identifier.
+model FederatedIdentity {
+  id              String        @id @default(cuid())
+  principalId     String
+  provider        String
+  providerSubject String
+  providerEmail   String?
+  emailVerified   Boolean       @default(false)
+  hostedDomain    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  principal       AuthPrincipal @relation(fields: [principalId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@index([principalId])
+}
+
+/// Server-side refresh session. Only a SHA-256 hash of the refresh credential is stored.
+model AuthSession {
+  id                  String        @id @default(cuid())
+  principalId         String
+  familyId            String
+  role                String
+  audience            String
+  refreshTokenHash    String        @unique
+  expiresAt           DateTime
+  lastUsedAt          DateTime      @default(now())
+  revokedAt           DateTime?
+  replacedBySessionId String?
+  userAgent           String?
+  ipAddress           String?
+  createdAt           DateTime      @default(now())
+  principal           AuthPrincipal @relation(fields: [principalId], references: [id], onDelete: Cascade)
+
+  @@index([principalId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+/// One-time challenge binding a Google ID token nonce to the initiating app.
+model AuthChallenge {
+  id         String    @id @default(cuid())
+  app        String
+  stateHash  String    @unique
+  nonceHash  String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+/// One-time state for third-party OAuth callbacks. The state value itself is never stored.
+model OAuthTransaction {
+  id           String    @id @default(cuid())
+  provider     String
+  ownerId      String
+  stateHash    String    @unique
+  codeVerifier String?
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([provider, ownerId])
+  @@index([expiresAt])
+}
+
+/// Explicit allowlist for the platform administration trust boundary.
+model PlatformAdminMembership {
+  id          String         @id @default(cuid())
+  email       String         @unique
+  principalId String?        @unique
+  role        String         @default("platform_admin")
+  status      String         @default("active")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  principal   AuthPrincipal? @relation(fields: [principalId], references: [id])
+
+  @@index([status])
+}
+
+/// Append-only security and privileged-action audit trail.
+model AuditEvent {
+  id               String         @id @default(cuid())
+  actorPrincipalId String?
+  sessionId        String?
+  action           String
+  targetType       String?
+  targetId         String?
+  outcome          String         @default("success")
+  correlationId    String?
+  ipAddress        String?
+  metadata         Json?
+  createdAt        DateTime       @default(now())
+  actor            AuthPrincipal? @relation(fields: [actorPrincipalId], references: [id])
+
+  @@index([actorPrincipalId, createdAt])
+  @@index([action, createdAt])
+  @@index([correlationId])
 }
 
 // ─── Catalog ──────────────────────────────────────────────────────────────────
@@ -87,8 +208,8 @@ model Product {
   active          Boolean    @default(true)
   // Provenance: where this product originally came from.
   // null = created natively in Retail OS.
-  sourceType      String?    // 'tiendanube' | 'shopify' | 'csv' | 'api'
-  sourceId        String?    // external product id in the source system
+  sourceType      String? // 'tiendanube' | 'shopify' | 'csv' | 'api'
+  sourceId        String? // external product id in the source system
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   tenant          Tenant     @relation(fields: [tenantId], references: [id])
@@ -121,34 +242,34 @@ model Sale {
 }
 
 model SaleLine {
-  id              String   @id @default(cuid())
-  saleId          String
-  productId       String?
-  name            String
-  sku             String?
-  quantity        Float
-  unitPriceMinor  Int
-  discountMinor   Int      @default(0)
-  taxRatePercent  Float
-  lineTotalMinor  Int
-  sale            Sale     @relation(fields: [saleId], references: [id])
-  product         Product? @relation(fields: [productId], references: [id])
+  id             String   @id @default(cuid())
+  saleId         String
+  productId      String?
+  name           String
+  sku            String?
+  quantity       Float
+  unitPriceMinor Int
+  discountMinor  Int      @default(0)
+  taxRatePercent Float
+  lineTotalMinor Int
+  sale           Sale     @relation(fields: [saleId], references: [id])
+  product        Product? @relation(fields: [productId], references: [id])
 
   @@index([saleId])
 }
 
 model Payment {
-  id              String               @id
-  saleId          String
-  tenantId        String
-  provider        String
-  method          String
-  amountMinor     Int
-  status          String
-  providerRef     String?
-  createdAt       DateTime             @default(now())
-  sale            Sale                 @relation(fields: [saleId], references: [id])
-  webhookEvents   PaymentWebhookEvent[]
+  id            String                @id
+  saleId        String
+  tenantId      String
+  provider      String
+  method        String
+  amountMinor   Int
+  status        String
+  providerRef   String?
+  createdAt     DateTime              @default(now())
+  sale          Sale                  @relation(fields: [saleId], references: [id])
+  webhookEvents PaymentWebhookEvent[]
 
   @@index([saleId])
   @@index([tenantId])
@@ -158,20 +279,20 @@ model Payment {
 /// OAuth and credential storage per merchant–provider pair.
 /// Access tokens are stored encrypted; the plaintext never leaves the API process.
 model ProviderConnection {
-  id                   String   @id @default(cuid())
-  tenantId             String
-  provider             String   // 'mercadopago_point' | 'codi' | 'stripe_terminal' | …
-  mode                 String   @default("production") // production | development
-  status               String   @default("pending_oauth") // active | expired | error | pending_oauth | disconnected
-  encryptedAccessToken String?
+  id                    String    @id @default(cuid())
+  tenantId              String
+  provider              String // 'mercadopago_point' | 'codi' | 'stripe_terminal' | …
+  mode                  String    @default("production") // production | development
+  status                String    @default("pending_oauth") // active | expired | error | pending_oauth | disconnected
+  encryptedAccessToken  String?
   encryptedRefreshToken String?
-  tokenExpiresAt       DateTime?
-  clientId             String?
-  scope                String?
-  providerAccountId    String?  // MP merchant_id after OAuth
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+  tokenExpiresAt        DateTime?
+  clientId              String?
+  scope                 String?
+  providerAccountId     String? // MP merchant_id after OAuth
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, provider, mode])
   @@index([tenantId])
@@ -198,16 +319,16 @@ model TerminalAssignment {
 
 /// Append-only log of all inbound provider webhooks for audit and replay.
 model PaymentWebhookEvent {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   tenantId        String
   provider        String
   providerEventId String?
   paymentId       String?
   rawPayload      Json
-  processed       Boolean  @default(false)
+  processed       Boolean   @default(false)
   processedAt     DateTime?
-  createdAt       DateTime @default(now())
-  payment         Payment? @relation(fields: [paymentId], references: [id])
+  createdAt       DateTime  @default(now())
+  payment         Payment?  @relation(fields: [paymentId], references: [id])
 
   @@index([tenantId, provider])
   @@index([providerEventId])
@@ -216,15 +337,15 @@ model PaymentWebhookEvent {
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 /// Persists onboarding wizard progress so it survives restarts and can be resumed.
 model OnboardingState {
-  id             String   @id @default(cuid())
-  tenantId       String   @unique
+  id             String    @id @default(cuid())
+  tenantId       String    @unique
   currentStep    String
   completedSteps String[]
   data           Json
-  startedAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  startedAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   completedAt    DateTime?
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
 }
 
 // ─── Sync idempotency ─────────────────────────────────────────────────────────
@@ -242,28 +363,30 @@ model IngestionKey {
 
 // ─── Sellers ──────────────────────────────────────────────────────────────────
 model Seller {
-  id              String    @id @default(cuid())
+  id              String                 @id @default(cuid())
   name            String
-  slug            String    @unique
-  email           String    @unique
+  slug            String                 @unique
+  email           String                 @unique
   phone           String?
-  country         String    @default("MX")
-  timezone        String    @default("America/Mexico_City")
+  country         String                 @default("MX")
+  timezone        String                 @default("America/Mexico_City")
   logoUrl         String?
   description     String?
   // 'tiendanube' | 'shopify' | 'mercadolibre' | 'woocommerce' | 'odoo' | 'csv' | 'manual' | 'platform'
   connectorType   String?
-  connectorConfig Json?     // encrypted at app layer before persisting
-  tier            String    @default("starter") // starter | growth | pro | platform
-  status          String    @default("pending") // pending | active | suspended | churned
-  commissionRate  Decimal   @default(0.03) @db.Decimal(5, 4)
+  connectorConfig Json? // encrypted at app layer before persisting
+  tier            String                 @default("starter") // starter | growth | pro | platform
+  status          String                 @default("pending") // pending | active | suspended | churned
+  commissionRate  Decimal                @default(0.03) @db.Decimal(5, 4)
   passwordHash    String?
-  emailVerified   Boolean   @default(false)
-  verifyToken     String?   @unique
-  onboardingStep  String?   // current step if onboarding not complete
+  emailVerified   Boolean                @default(false)
+  verifyToken     String?                @unique
+  authPrincipalId String?                @unique
+  authPrincipal   AuthPrincipal?         @relation(fields: [authPrincipalId], references: [id])
+  onboardingStep  String? // current step if onboarding not complete
   onboardingData  Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
   listings        Listing[]
   orders          MarketplaceOrder[]
   score           SellerScore?
@@ -272,6 +395,7 @@ model Seller {
   rewardConfig    SellerRewardConfig?
   storeCredits    StoreCredit[]
   productMappings SellerProductMapping[]
+
   @@index([status])
   @@index([connectorType])
 }
@@ -282,9 +406,9 @@ model Seller {
 model SellerMpConnection {
   id             String   @id @default(cuid())
   sellerId       String   @unique
-  merchantId     String   // MP user_id (string form of numeric seller ID)
+  merchantId     String // MP user_id (string form of numeric seller ID)
   scope          String?
-  encryptedCreds Json     // { _enc: "iv:tag:ciphertext" }
+  encryptedCreds Json // { _enc: "iv:tag:ciphertext" }
   connectedAt    DateTime @default(now())
   updatedAt      DateTime @updatedAt
   seller         Seller   @relation(fields: [sellerId], references: [id])
@@ -293,27 +417,27 @@ model SellerMpConnection {
 model SellerScore {
   id                  String   @id @default(cuid())
   sellerId            String   @unique
-  fulfillmentRate     Float    @default(1.0)   // 0–1: % orders fulfilled on time
-  cancellationRate    Float    @default(0.0)   // 0–1: % orders cancelled by seller
-  stockAccuracy       Float    @default(1.0)   // 0–1: stock shown vs actual at order time
-  responseTimeHours   Float    @default(24.0)  // avg hours to confirm/reject order
-  customerSvcScore    Float    @default(5.0)   // 1–5
-  catalogCompleteness Float    @default(0.5)   // 0–1: % listings with full data
-  integrationHealth   Float    @default(1.0)   // 0–1: recent sync success rate
-  compositeScore      Float    @default(0.5)   // weighted aggregate, recalculated hourly
+  fulfillmentRate     Float    @default(1.0) // 0–1: % orders fulfilled on time
+  cancellationRate    Float    @default(0.0) // 0–1: % orders cancelled by seller
+  stockAccuracy       Float    @default(1.0) // 0–1: stock shown vs actual at order time
+  responseTimeHours   Float    @default(24.0) // avg hours to confirm/reject order
+  customerSvcScore    Float    @default(5.0) // 1–5
+  catalogCompleteness Float    @default(0.5) // 0–1: % listings with full data
+  integrationHealth   Float    @default(1.0) // 0–1: recent sync success rate
+  compositeScore      Float    @default(0.5) // weighted aggregate, recalculated hourly
   scoredAt            DateTime @default(now())
   seller              Seller   @relation(fields: [sellerId], references: [id])
 }
 
 // ─── Marketplace Products (canonical, cross-seller) ───────────────────────────
 model MktProduct {
-  id              String    @id @default(cuid())
-  slug            String    @unique
+  id              String                 @id @default(cuid())
+  slug            String                 @unique
   name            String
   description     String?
   images          String[]
-  bggId           String?   @unique  // BoardGameGeek ID — primary dedup anchor
-  category        String    @default("board-game")
+  bggId           String?                @unique // BoardGameGeek ID — primary dedup anchor
+  category        String                 @default("board-game")
   publisher       String?
   designer        String?
   yearPublished   Int?
@@ -323,19 +447,20 @@ model MktProduct {
   playTimeMinutes Int?
   language        String?
   edition         String?
-  condition       String    @default("new") // new | used | damaged
+  condition       String                 @default("new") // new | used | damaged
   tags            String[]
   // 'verified' = manually confirmed; 'pending' = auto-imported, needs review; 'duplicate' = merged
-  canonicalStatus String    @default("pending")
+  canonicalStatus String                 @default("pending")
   bggRating       Float?
-  bggWeight       Float?    // complexity 1–5
-  bggRank         Int?      // overall rank from BGG's daily ranks dump
+  bggWeight       Float? // complexity 1–5
+  bggRank         Int? // overall rank from BGG's daily ranks dump
   bggUsersRated   Int?
-  isExpansion     Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isExpansion     Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
   listings        Listing[]
   sellerMappings  SellerProductMapping[]
+
   @@index([category])
   @@index([canonicalStatus])
   @@index([bggId])
@@ -344,29 +469,30 @@ model MktProduct {
 
 // ─── Listings (seller × product × price × stock) ─────────────────────────────
 model Listing {
-  id              String    @id @default(cuid())
+  id              String                 @id @default(cuid())
   sellerId        String
   productId       String
   sellerSku       String?
-  sellerProductId String?   // ID in the seller's own system
+  sellerProductId String? // ID in the seller's own system
   sellerUrl       String?
-  priceMinorUnits Int       // price in minor currency units (centavos)
-  currency        String    @default("MXN")
-  condition       String    @default("new")
-  stock           Int       @default(0)
+  priceMinorUnits Int // price in minor currency units (centavos)
+  currency        String                 @default("MXN")
+  condition       String                 @default("new")
+  stock           Int                    @default(0)
   // 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown'
-  stockStatus     String    @default("unknown")
-  stockConfidence Float     @default(0.5)  // 0–1: based on sync recency + accuracy history
-  rankScore       Float     @default(0.0)  // composite, recalculated hourly
-  scoreBreakdown  Json?     // per-dimension scores for explainability
+  stockStatus     String                 @default("unknown")
+  stockConfidence Float                  @default(0.5) // 0–1: based on sync recency + accuracy history
+  rankScore       Float                  @default(0.0) // composite, recalculated hourly
+  scoreBreakdown  Json? // per-dimension scores for explainability
   lastSyncedAt    DateTime?
-  active          Boolean   @default(true)
-  seller          Seller    @relation(fields: [sellerId], references: [id])
-  product         MktProduct @relation(fields: [productId], references: [id])
+  active          Boolean                @default(true)
+  seller          Seller                 @relation(fields: [sellerId], references: [id])
+  product         MktProduct             @relation(fields: [productId], references: [id])
   deliveryOptions DeliveryOption[]
   orderLines      MarketplaceOrderLine[]
   promos          ListingPromo[]
   mapping         SellerProductMapping?
+
   @@unique([sellerId, sellerSku])
   @@index([productId, rankScore])
   @@index([sellerId, active])
@@ -379,7 +505,7 @@ model Listing {
 ///            escalated -> [admin acts] -> manual_matched | rejected
 ///            auto_matched / manual_matched rows ARE the fast-path cache for future syncs.
 model SellerProductMapping {
-  id              String    @id @default(cuid())
+  id              String      @id @default(cuid())
   sellerId        String
   // Stable per-seller external key (raw.externalId from the connector) — the cache lookup key.
   externalKey     String
@@ -389,7 +515,7 @@ model SellerProductMapping {
   // original title/images without re-fetching from the connector.
   rawPayload      Json
   // 'auto_matched' | 'manual_matched' | 'pending_review' | 'escalated' | 'rejected'
-  status          String    @default("pending_review")
+  status          String      @default("pending_review")
   // Cache-hit target once matched (any path).
   productId       String?
   // 'auto' | 'seller_manual' | 'admin_existing' | 'admin_new_bgg' | 'admin_new_standalone' | 'legacy_unreviewed'
@@ -397,16 +523,17 @@ model SellerProductMapping {
   matchConfidence Float?
   // Top candidate matches surfaced to seller/admin: [{ productId, name, score, bggId }]
   candidates      Json?
-  listingId       String?   @unique
-  sellerNote      String?   // seller's note when escalating ("not found, please add")
-  adminNote       String?   // admin's note / rejection reason
+  listingId       String?     @unique
+  sellerNote      String? // seller's note when escalating ("not found, please add")
+  adminNote       String? // admin's note / rejection reason
   resolvedAt      DateTime?
-  resolvedBy      String?   // adminId, or 'seller:<sellerId>' for audit
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  seller          Seller     @relation(fields: [sellerId], references: [id])
+  resolvedBy      String? // adminId, or 'seller:<sellerId>' for audit
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  seller          Seller      @relation(fields: [sellerId], references: [id])
   product         MktProduct? @relation(fields: [productId], references: [id])
   listing         Listing?    @relation(fields: [listingId], references: [id])
+
   @@unique([sellerId, externalKey])
   @@index([sellerId, status])
   @@index([status, createdAt])
@@ -421,120 +548,126 @@ model ListingPromo {
   listing          Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
   /// Additional store-credit % on top of the seller's global storeCashbackPct (0–0.50)
   bonusCashbackPct Float     @default(0)
-  label            String?   // e.g. "Promo semana del juego", shown in marketplace UI
+  label            String? // e.g. "Promo semana del juego", shown in marketplace UI
   startsAt         DateTime?
   endsAt           DateTime?
   active           Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   @@index([listingId, active])
 }
 
 model DeliveryOption {
-  id                String   @id @default(cuid())
-  listingId         String
-  carrierId         String?
-  name              String
-  estimatedDaysMin  Int
-  estimatedDaysMax  Int
-  priceMinorUnits   Int      // 0 = free
-  freeThresholdMinor Int?    // free shipping above this amount
-  regions           String[] // province codes or 'MX' for nationwide
+  id                 String   @id @default(cuid())
+  listingId          String
+  carrierId          String?
+  name               String
+  estimatedDaysMin   Int
+  estimatedDaysMax   Int
+  priceMinorUnits    Int // 0 = free
+  freeThresholdMinor Int? // free shipping above this amount
+  regions            String[] // province codes or 'MX' for nationwide
   // 'standard' | 'express' | 'pickup' | 'same_day'
-  type              String   @default("standard")
-  listing           Listing  @relation(fields: [listingId], references: [id])
+  type               String   @default("standard")
+  listing            Listing  @relation(fields: [listingId], references: [id])
+
   @@index([listingId])
 }
 
 // ─── Marketplace Customers ────────────────────────────────────────────────────
 model MktCustomer {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  name             String?
-  phone            String?
-  preferredRegion  String?
-  preferredCurrency String   @default("MXN")
-  passwordHash     String?
-  emailVerified    Boolean   @default(false)
-  verifyToken      String?   @unique
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  orders           MarketplaceOrder[]
-  addresses        MktAddress[]
-  wallet           CustomerWallet?
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  phone             String?
+  preferredRegion   String?
+  preferredCurrency String             @default("MXN")
+  passwordHash      String?
+  emailVerified     Boolean            @default(false)
+  verifyToken       String?            @unique
+  authPrincipalId   String?            @unique
+  authPrincipal     AuthPrincipal?     @relation(fields: [authPrincipalId], references: [id])
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  orders            MarketplaceOrder[]
+  addresses         MktAddress[]
+  wallet            CustomerWallet?
 }
 
 model MktAddress {
-  id           String      @id @default(cuid())
-  customerId   String
-  label        String?     // 'home' | 'work' | custom
-  street       String
-  city         String
-  state        String
-  postalCode   String
-  country      String      @default("MX")
-  isDefault    Boolean     @default(false)
-  customer     MktCustomer @relation(fields: [customerId], references: [id])
+  id         String      @id @default(cuid())
+  customerId String
+  label      String? // 'home' | 'work' | custom
+  street     String
+  city       String
+  state      String
+  postalCode String
+  country    String      @default("MX")
+  isDefault  Boolean     @default(false)
+  customer   MktCustomer @relation(fields: [customerId], references: [id])
 }
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 model MarketplaceOrder {
-  id                  String    @id @default(cuid())
-  customerId          String?
-  sellerId            String
+  id                     String                 @id @default(cuid())
+  customerId             String?
+  sellerId               String
   // pending | reserved | confirmed | shipped | delivered | cancelled | refunded
-  status              String    @default("pending")
-  currency            String    @default("MXN")
-  subtotalMinorUnits  Int
-  shippingMinorUnits  Int       @default(0)
-  totalMinorUnits     Int
-  commissionMinorUnits     Int   @default(0)
-  platformCashbackMinor    Int   @default(0)  // credited to buyer's platform wallet
-  storeCashbackMinor       Int   @default(0)  // credited to buyer's store wallet
-  platformCreditsApplied   Int   @default(0)  // platform credits used at checkout
-  storeCreditsApplied      Int   @default(0)  // store credits used at checkout
-  reservationId       String?   // seller-side hold ID
-  reservationExpiresAt DateTime?
-  mpPreferenceId      String?   // MercadoPago Checkout Pro preference id
-  paymentId           String?
-  paymentProvider     String?
-  sellerOrderId       String?   // order ID in seller's external system
-  deliveryAddress     Json?     // snapshot at order time
+  status                 String                 @default("pending")
+  currency               String                 @default("MXN")
+  subtotalMinorUnits     Int
+  shippingMinorUnits     Int                    @default(0)
+  totalMinorUnits        Int
+  commissionMinorUnits   Int                    @default(0)
+  platformCashbackMinor  Int                    @default(0) // credited to buyer's platform wallet
+  storeCashbackMinor     Int                    @default(0) // credited to buyer's store wallet
+  platformCreditsApplied Int                    @default(0) // platform credits used at checkout
+  storeCreditsApplied    Int                    @default(0) // store credits used at checkout
+  reservationId          String? // seller-side hold ID
+  reservationExpiresAt   DateTime?
+  mpPreferenceId         String? // MercadoPago Checkout Pro preference id
+  paymentId              String?
+  paymentProvider        String?
+  sellerOrderId          String? // order ID in seller's external system
+  deliveryAddress        Json? // snapshot at order time
   // Manual payout tracking — stopgap while sellers can't connect their own MP
   // account for real-time split payments (see MpSellerOAuthService). The platform
   // collects 100% via its own account; admin marks here once the seller's net
   // payout (total - commission) has actually been transferred outside the platform.
-  paidOutAt           DateTime?
-  paidOutBy           String?   // adminId or identifier of who recorded the payout
-  events              OrderEvent[]
-  lines               MarketplaceOrderLine[]
-  seller              Seller    @relation(fields: [sellerId], references: [id])
-  customer            MktCustomer? @relation(fields: [customerId], references: [id])
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  paidOutAt              DateTime?
+  paidOutBy              String? // adminId or identifier of who recorded the payout
+  events                 OrderEvent[]
+  lines                  MarketplaceOrderLine[]
+  seller                 Seller                 @relation(fields: [sellerId], references: [id])
+  customer               MktCustomer?           @relation(fields: [customerId], references: [id])
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
   @@index([sellerId, status])
   @@index([customerId])
   @@index([status, createdAt])
 }
 
 model MarketplaceOrderLine {
-  id              String           @id @default(cuid())
-  orderId         String
-  listingId       String
-  quantity        Int
-  unitPriceMinor  Int
-  lineTotalMinor  Int
-  order           MarketplaceOrder @relation(fields: [orderId], references: [id])
-  listing         Listing          @relation(fields: [listingId], references: [id])
+  id             String           @id @default(cuid())
+  orderId        String
+  listingId      String
+  quantity       Int
+  unitPriceMinor Int
+  lineTotalMinor Int
+  order          MarketplaceOrder @relation(fields: [orderId], references: [id])
+  listing        Listing          @relation(fields: [listingId], references: [id])
 }
 
 model OrderEvent {
   id        String           @id @default(cuid())
   orderId   String
-  type      String           // 'created' | 'reserved' | 'payment_captured' | 'confirmed' | etc.
+  type      String // 'created' | 'reserved' | 'payment_captured' | 'confirmed' | etc.
   payload   Json?
   createdAt DateTime         @default(now())
   order     MarketplaceOrder @relation(fields: [orderId], references: [id])
+
   @@index([orderId])
 }
 
@@ -542,11 +675,11 @@ model OrderEvent {
 
 /// Singleton row (id = 'default') — platform-wide commission and cashback config.
 model PlatformConfig {
-  id                 String   @id @default("default")
-  baseCommissionPct  Float    @default(0.05)   // 5% — charged to seller on every sale
-  minCommissionPct   Float    @default(0.02)   // 2% floor — seller can never pay less
-  platformCashbackPct Float   @default(0.01)   // 1% — credited to buyer from platform revenue
-  updatedAt          DateTime @updatedAt
+  id                  String   @id @default("default")
+  baseCommissionPct   Float    @default(0.05) // 5% — charged to seller on every sale
+  minCommissionPct    Float    @default(0.02) // 2% floor — seller can never pay less
+  platformCashbackPct Float    @default(0.01) // 1% — credited to buyer from platform revenue
+  updatedAt           DateTime @updatedAt
 }
 
 /// Per-seller loyalty program config. Seller-funded cashback reduces their commission.
@@ -555,17 +688,17 @@ model SellerRewardConfig {
   id               String   @id @default(cuid())
   sellerId         String   @unique
   seller           Seller   @relation(fields: [sellerId], references: [id])
-  storeCashbackPct Float    @default(0)  // 0–0.15 (0%–15%)
+  storeCashbackPct Float    @default(0) // 0–0.15 (0%–15%)
   updatedAt        DateTime @updatedAt
 }
 
 /// One wallet per customer. platformCreditsMinor usable on any seller.
 model CustomerWallet {
-  id                   String             @id @default(cuid())
-  customerId           String             @unique
-  customer             MktCustomer        @relation(fields: [customerId], references: [id])
-  platformCreditsMinor Int                @default(0)
-  updatedAt            DateTime           @updatedAt
+  id                   String              @id @default(cuid())
+  customerId           String              @unique
+  customer             MktCustomer         @relation(fields: [customerId], references: [id])
+  platformCreditsMinor Int                 @default(0)
+  updatedAt            DateTime            @updatedAt
   transactions         WalletTransaction[]
   storeCredits         StoreCredit[]
 }
@@ -579,6 +712,7 @@ model StoreCredit {
   seller       Seller         @relation(fields: [sellerId], references: [id])
   balanceMinor Int            @default(0)
   updatedAt    DateTime       @updatedAt
+
   @@unique([walletId, sellerId])
   @@index([walletId])
 }
@@ -590,31 +724,33 @@ model WalletTransaction {
   wallet      CustomerWallet @relation(fields: [walletId], references: [id])
   /// earn_platform | redeem_platform | earn_store | redeem_store
   type        String
-  amountMinor Int            // positive = credit, negative = debit
+  amountMinor Int // positive = credit, negative = debit
   sellerId    String?
   orderId     String?
   description String?
   createdAt   DateTime       @default(now())
+
   @@index([walletId, createdAt])
   @@index([orderId])
 }
 
 // ─── Connector sync health ────────────────────────────────────────────────────
 model ConnectorSyncLog {
-  id            String   @id @default(cuid())
-  sellerId      String
-  connectorType String
+  id              String    @id @default(cuid())
+  sellerId        String
+  connectorType   String
   // 'catalog' | 'inventory' | 'prices' | 'orders'
-  syncType      String
+  syncType        String
   // 'running' | 'success' | 'partial' | 'failed'
-  status        String
-  itemsSynced   Int      @default(0)
-  itemsFailed   Int      @default(0)
-  errors        Json?
-  startedAt     DateTime @default(now())
-  completedAt   DateTime?
+  status          String
+  itemsSynced     Int       @default(0)
+  itemsFailed     Int       @default(0)
+  errors          Json?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
   nextScheduledAt DateTime?
-  seller        Seller   @relation(fields: [sellerId], references: [id])
+  seller          Seller    @relation(fields: [sellerId], references: [id])
+
   @@index([sellerId, syncType, startedAt])
   @@index([status, startedAt])
 }

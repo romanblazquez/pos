@@ -21,7 +21,7 @@ export default defineConfig({
     strictPort: true,
     fs: { allow: [repoRoot] },
     proxy: {
-      '/api': { target: 'http://localhost:3002', changeOrigin: true },
+      '/api': { target: 'http://localhost:3000', changeOrigin: true },
     },
   },
   build: {

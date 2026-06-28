@@ -4,10 +4,67 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import type { NextFunction, Request, Response } from 'express';
+
+function allowedOrigins(): string[] {
+  const configured = process.env.ALLOWED_ORIGINS
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (configured?.length) return configured;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ALLOWED_ORIGINS is required in production');
+  }
+  return ['http://localhost:4300', 'http://localhost:4400', 'http://localhost:4500'];
+}
+
+function validateProductionConfig(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  const required = [
+    'JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY', 'JWT_KEY_ID',
+    'GOOGLE_MARKETPLACE_CLIENT_ID', 'GOOGLE_ADMIN_CLIENT_ID',
+    'MERCADOPAGO_WEBHOOK_SECRET', 'CREDENTIAL_ENCRYPTION_KEY',
+    'API_BASE_URL', 'ALLOWED_ORIGINS',
+  ];
+  const missing = required.filter((name) => !process.env[name]);
+  if (missing.length) throw new Error(`Missing required production configuration: ${missing.join(', ')}`);
+  if (!process.env.API_BASE_URL!.startsWith('https://')) throw new Error('API_BASE_URL must use HTTPS in production');
+  if (!/^[a-fA-F0-9]{64}$/.test(process.env.CREDENTIAL_ENCRYPTION_KEY!)) {
+    throw new Error('CREDENTIAL_ENCRYPTION_KEY must be exactly 64 hexadecimal characters');
+  }
+  if (process.env.MERCADOPAGO_WEBHOOK_SECRET!.length < 32) {
+    throw new Error('MERCADOPAGO_WEBHOOK_SECRET must contain at least 32 characters');
+  }
+  for (const origin of allowedOrigins()) {
+    if (!origin.startsWith('https://')) throw new Error(`Production origin must use HTTPS: ${origin}`);
+  }
+}
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  validateProductionConfig();
+  const app = await NestFactory.create(AppModule, { rawBody: true });
+  if (process.env.NODE_ENV === 'production') {
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  }
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+    crossOriginResourcePolicy: { policy: 'same-site' },
+  }));
+  app.use(cookieParser());
+  app.use('/api/v1/auth', (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    next();
+  });
+  app.enableCors({
+    origin: allowedOrigins(),
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Correlation-Id'],
+    maxAge: 600,
+  });
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,        // strip unknown properties
@@ -30,7 +87,7 @@ async function bootstrap(): Promise<void> {
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'seller-jwt',
+      'access-jwt',
     )
     .addTag('auth', 'Seller and customer authentication')
     .addTag('marketplace', 'Public product search and listing comparison')
@@ -45,14 +102,16 @@ async function bootstrap(): Promise<void> {
     .addTag('loyalty', 'Loyalty, cashback, and commission config — platform and seller rewards')
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-  });
+  if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') {
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: false,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
+      },
+    });
+  }
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);

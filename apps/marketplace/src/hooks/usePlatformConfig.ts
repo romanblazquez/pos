@@ -9,7 +9,7 @@ interface PlatformConfig {
 }
 
 async function fetchPlatformConfig(): Promise<PlatformConfig> {
-  const res = await fetch(`${API}/api/v1/admin/loyalty/config`);
+  const res = await fetch(`${API}/api/v1/marketplace/loyalty/config`);
   if (!res.ok) return { platformCashbackPct: 0.01, baseCommissionPct: 0.05, minCommissionPct: 0.02 };
   return res.json() as Promise<PlatformConfig>;
 }

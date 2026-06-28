@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useCustomer } from '../context/CustomerContext.js';
 import { Button } from './ui/index.js';
+import { GoogleSignInButton } from '@retail-os/ui-react';
+import { API_BASE } from '../lib/api-client.js';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -14,7 +16,8 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, register } = useCustomer();
+  const { login, register, loginWithGoogle } = useCustomer();
+  const googleClientId = import.meta.env.VITE_GOOGLE_MARKETPLACE_CLIENT_ID;
 
   function switchTab(t: 'login' | 'register') {
     setTab(t);
@@ -129,6 +132,32 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
           <Button type="submit" disabled={loading} className="w-full justify-center">
             {loading ? '…' : tab === 'login' ? 'Entrar' : 'Crear cuenta'}
           </Button>
+
+          {googleClientId && (
+            <>
+              <div className="flex items-center gap-3 text-xs text-[--tx-faint]">
+                <span className="h-px flex-1 bg-[--border]" /> o <span className="h-px flex-1 bg-[--border]" />
+              </div>
+              <GoogleSignInButton
+                app="marketplace"
+                clientId={googleClientId}
+                apiBase={API_BASE}
+                onError={setError}
+                onCredential={async (credential, state) => {
+                  setLoading(true);
+                  setError('');
+                  try {
+                    await loginWithGoogle(credential, state);
+                    onClose();
+                  } catch (googleError) {
+                    setError(googleError instanceof Error ? googleError.message : 'Google no pudo verificar la cuenta');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              />
+            </>
+          )}
 
           <p className="text-center text-xs text-[--tx-muted]">
             {tab === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}

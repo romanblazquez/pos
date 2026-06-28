@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent } from '../components/ui/index.js';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
@@ -27,7 +26,7 @@ export default function WalletPage() {
   const { data: txs, isLoading: tl } = useQuery<Transaction[]>({
     queryKey: ['wallet-transactions', session.customer.id],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/wallet/transactions`);
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${session.customer.id}/wallet/transactions`);
       if (!res.ok) throw new Error(`transactions fetch failed: ${res.status}`);
       return res.json() as Promise<Transaction[]>;
     },

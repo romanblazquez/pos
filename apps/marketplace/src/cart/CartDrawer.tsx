@@ -4,8 +4,7 @@ import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet, storeCreditFor } from '../hooks/useWallet.js';
 import { Button, inputCls, fmtExact } from '../components/ui/index.js';
-
-const API = import.meta.env.VITE_API_URL ?? '';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
@@ -13,7 +12,7 @@ function fmt(minor: number, currency = 'MXN') {
 
 type Step = 'cart' | 'form' | 'processing' | 'success' | 'error';
 
-export default function CartDrawer({ onClose }: { onClose: () => void }) {
+export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => void; onRequireAuth: () => void }) {
   const { items, remove, clear, total } = useCart();
   const { session } = useCustomer();
   const { addresses, create: createAddress } = useAddresses(session?.customer.id);
@@ -71,7 +70,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
       }
 
       const baseUrl = window.location.origin;
-      const res = await fetch(`${API}/api/v1/checkout`, {
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -263,7 +262,10 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
               <span>Total</span>
               <span>{fmt(total, items[0]?.currency)}</span>
             </div>
-            <Button className="w-full justify-center py-3" onClick={() => setStep('form')}>
+            <Button className="w-full justify-center py-3" onClick={() => {
+              if (!session) { onClose(); onRequireAuth(); return; }
+              setStep('form');
+            }}>
               Continuar con el pago →
             </Button>
           </div>

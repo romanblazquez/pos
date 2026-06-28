@@ -37,19 +37,18 @@ export class TiendanubeConnector implements IConnector {
 
   // ─── Auth ─────────────────────────────────────────────────────────────────
 
-  async startOAuth(sellerId: string, redirectUri: string): Promise<OAuthStartResult> {
+  async startOAuth(_sellerId: string, redirectUri: string, state: string): Promise<OAuthStartResult> {
     const clientId = process.env.TIENDANUBE_CLIENT_ID;
     if (!clientId) {
       // Dev-mode stub: return a fake authUrl the seller portal can detect
       if (process.env.NODE_ENV !== 'production') {
         return {
           authUrl: `${process.env.SELLER_PORTAL_URL ?? 'http://localhost:4400'}?oauth=error&msg=${encodeURIComponent('TIENDANUBE_CLIENT_ID not configured — add it to .env to test OAuth')}`,
-          state: 'dev-stub',
+          state,
         };
       }
       throw new Error('TIENDANUBE_CLIENT_ID not configured');
     }
-    const state = `${sellerId}:${Date.now()}`;
     const authUrl =
       `https://www.tiendanube.com/apps/${clientId}/authorize` +
       `?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;

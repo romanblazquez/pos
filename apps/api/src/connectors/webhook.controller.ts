@@ -1,4 +1,9 @@
-import { Body, Controller, Headers, HttpCode, Inject, Logger, Param, Post } from '@nestjs/common';
+import {
+  Body, Controller, Headers, HttpCode, Inject, Logger, Param, Post, Req, UnauthorizedException,
+} from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   ApiTags,
   ApiOperation,
@@ -10,6 +15,7 @@ import {
 import { Public } from '../auth/auth.guard.js';
 import { ConnectorSyncService } from './sync.service.js';
 import { PrismaService } from '@retail-os/db-postgres';
+import { ConnectorRegistryService } from './connector-registry.service.js';
 
 /**
  * Receives real-time push events from external connectors.
@@ -27,6 +33,7 @@ export class WebhookController {
   constructor(
     @Inject(PrismaService)        private readonly prisma: PrismaService,
     @Inject(ConnectorSyncService) private readonly sync: ConnectorSyncService,
+    @Inject(ConnectorRegistryService) private readonly registry: ConnectorRegistryService,
   ) {}
 
   /**
@@ -118,13 +125,12 @@ export class WebhookController {
   async tiendanubeWebhook(
     @Param('sellerId') sellerId: string,
     @Body() body: TiendanubeWebhookPayload,
-    @Headers('user-agent') ua: string,
+    @Headers('x-linkedstore-hmac-sha256') signature: string | undefined,
+    @Req() req: RawBodyRequest<Request>,
   ): Promise<{ ok: boolean }> {
-    // Basic origin check — Tiendanube identifies itself via User-Agent.
-    // Production environments should also verify an HMAC secret if configured.
-    if (ua && !ua.includes('TiendaNube') && !ua.includes('tiendanube')) {
-      this.log.warn(`[${sellerId}] Webhook rejected: unexpected User-Agent "${ua}"`);
-      return { ok: false };
+    this.verifySignature(req.rawBody, signature);
+    if (!body.store_id || !(await this.registry.credentialsMatchStore(sellerId, String(body.store_id)))) {
+      throw new UnauthorizedException('Webhook store does not match seller');
     }
 
     const event = body?.event;
@@ -145,6 +151,27 @@ export class WebhookController {
     }
 
     return { ok: true };
+  }
+
+  private verifySignature(rawBody: Buffer | undefined, signature: string | undefined): void {
+    const secret = process.env.TIENDANUBE_CLIENT_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new UnauthorizedException('Tiendanube webhook verification is not configured');
+      }
+      return;
+    }
+    if (!rawBody || !signature) throw new UnauthorizedException('Missing Tiendanube webhook signature');
+    const expected = createHmac('sha256', secret).update(rawBody).digest();
+    let supplied: Buffer;
+    try {
+      supplied = Buffer.from(signature, 'hex');
+    } catch {
+      throw new UnauthorizedException('Malformed Tiendanube webhook signature');
+    }
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
+      throw new UnauthorizedException('Invalid Tiendanube webhook signature');
+    }
   }
 
   private async handleProductDeleted(sellerId: string, externalProductId: string): Promise<void> {

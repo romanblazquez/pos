@@ -1,126 +1,171 @@
 import {
-  Body, Controller, Get, HttpCode, Inject, Post, Req, UseGuards,
+  BadRequestException, Body, Controller, Get, HttpCode, Inject,
+  Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody,
-} from '@nestjs/swagger';
-import type { Request } from 'express';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import {
-  RegisterSellerDto, RegisterCustomerDto, LoginDto, AuthResponseDto,
+  GoogleCredentialDto, LoginDto, RegisterCustomerDto, RegisterSellerDto, SessionAppDto,
 } from './auth.dto.js';
 import { AuthGuard, Public, Roles } from './auth.guard.js';
 import type { JwtPayload } from './jwt.js';
+import { GoogleAuthService } from './google-auth.service.js';
+import { SessionService, type SessionResponse } from './session.service.js';
+import { APP_SECURITY, refreshCookieOptions, type AuthApp } from './auth.constants.js';
+import { Throttle } from '@nestjs/throttler';
 
-type AuthRequest = Request & { user: JwtPayload };
+type AuthRequest = Request & { user: JwtPayload; cookies: Record<string, string | undefined> };
 
 @ApiTags('auth')
-@ApiBearerAuth('seller-jwt')
+@ApiBearerAuth('access-jwt')
 @UseGuards(AuthGuard)
+@Throttle({ default: { ttl: 60_000, limit: 20 } })
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly authService: AuthService,
+    @Inject(GoogleAuthService) private readonly googleAuth: GoogleAuthService,
+    @Inject(SessionService) private readonly sessions: SessionService,
+  ) {}
 
-  // ── Seller auth ────────────────────────────────────────────────────────────
+  @Public()
+  @Get('google/challenge')
+  @ApiOperation({ summary: 'Create a one-time Google login nonce and state' })
+  googleChallenge(@Query('app') app: string) {
+    if (app !== 'marketplace' && app !== 'admin') throw new BadRequestException('Invalid app');
+    return this.googleAuth.createChallenge(app);
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Verify Google identity and create a first-party session' })
+  async googleLogin(
+    @Body() dto: GoogleCredentialDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const identity = await this.googleAuth.authenticate(dto.credential, dto.state, dto.app);
+    const session = await this.sessions.create(identity, dto.app, this.metadata(req));
+    return this.attachSession(res, dto.app, session);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(
+    @Body() dto: SessionAppDto,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const session = await this.sessions.rotate(
+      req.cookies[APP_SECURITY[dto.app].cookieName] ?? '', dto.app, this.metadata(req),
+    );
+    return this.attachSession(res, dto.app, session);
+  }
+
+  @Public()
+  @Post('logout')
+  @HttpCode(204)
+  async logout(
+    @Body() dto: SessionAppDto,
+    @Req() req: AuthRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const cookieName = APP_SECURITY[dto.app].cookieName;
+    await this.sessions.revoke(req.cookies[cookieName], dto.app);
+    res.clearCookie(cookieName, refreshCookieOptions());
+  }
 
   @Public()
   @Post('seller/register')
-  @ApiOperation({
-    summary: 'Register a new seller',
-    description: 'Creates a new seller account and returns a JWT bearer token. Returns 409 if the email is already in use.',
-  })
-  @ApiBody({ type: RegisterSellerDto })
-  @ApiResponse({ status: 201, description: 'Seller registered — returns token and seller profile.', type: AuthResponseDto })
-  @ApiResponse({ status: 409, description: 'Email already registered.' })
-  registerSeller(@Body() dto: RegisterSellerDto) {
-    return this.authService.registerSeller(dto);
+  async registerSeller(
+    @Body() dto: RegisterSellerDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const identity = await this.authService.registerSeller(dto);
+    const session = await this.sessions.create(identity, 'seller', this.metadata(req));
+    return this.attachSession(res, 'seller', session);
   }
 
   @Public()
   @Post('seller/login')
   @HttpCode(200)
-  @ApiOperation({
-    summary: 'Seller login',
-    description: 'Authenticates a seller by email and password. Returns a JWT bearer token on success.',
-  })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Login successful — returns token and seller profile.', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Invalid email or password.' })
-  loginSeller(@Body() dto: LoginDto) {
-    return this.authService.loginSeller(dto);
+  async loginSeller(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const identity = await this.authService.loginSeller(dto);
+    const session = await this.sessions.create(identity, 'seller', this.metadata(req));
+    return this.attachSession(res, 'seller', session);
   }
 
+  @Get('seller/me')
+  @Roles('seller')
+  getSellerMe(@Req() req: AuthRequest) {
+    return this.authService.getSellerProfile(req.user.sellerId!);
+  }
+
+  // Backwards-compatible alias used by the current seller portal.
   @Get('me')
   @Roles('seller')
-  @ApiOperation({
-    summary: 'Get current seller profile',
-    description: 'Returns the authenticated seller\'s profile. Requires a valid seller JWT passed as `Authorization: Bearer <token>`.',
-  })
-  @ApiResponse({ status: 200, description: 'Authenticated seller profile object.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid bearer token.' })
-  async getSellerMe(@Req() req: AuthRequest) {
-    return this.authService.getSellerProfile(req.user.sub);
+  getLegacySellerMe(@Req() req: AuthRequest) {
+    return this.authService.getSellerProfile(req.user.sellerId!);
   }
 
   @Post('seller/onboarding')
   @Roles('seller')
-  @ApiOperation({
-    summary: 'Update seller onboarding step',
-    description: 'Records progress through the seller onboarding flow. Call once per step with the step identifier and any associated data collected in that step.',
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['step', 'data'],
-      properties: {
-        step: {
-          type: 'string',
-          description: 'Onboarding step identifier',
-          example: 'store_details',
-        },
-        data: {
-          type: 'object',
-          description: 'Arbitrary key-value pairs collected in this step',
-          example: { storeName: 'Acme Board Games', country: 'MX' },
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: 200, description: 'Updated seller record after applying the onboarding step.' })
-  @ApiResponse({ status: 401, description: 'Missing or invalid bearer token.' })
-  async updateOnboarding(
+  updateOnboarding(
     @Req() req: AuthRequest,
     @Body() body: { step: string; data: Record<string, unknown> },
   ) {
-    return this.authService.updateOnboardingStep(req.user.sub, body.step, body.data);
+    return this.authService.updateOnboardingStep(req.user.sellerId!, body.step, body.data);
   }
-
-  // ── Customer auth ──────────────────────────────────────────────────────────
 
   @Public()
   @Post('customer/register')
-  @ApiOperation({
-    summary: 'Register a new customer',
-    description: 'Creates a new buyer account. Returns a JWT bearer token for subsequent authenticated requests.',
-  })
-  @ApiBody({ type: RegisterCustomerDto })
-  @ApiResponse({ status: 201, description: 'Customer registered — returns token and customer profile.', type: AuthResponseDto })
-  @ApiResponse({ status: 409, description: 'Email already registered.' })
-  registerCustomer(@Body() dto: RegisterCustomerDto) {
-    return this.authService.registerCustomer(dto);
+  async registerCustomer(
+    @Body() dto: RegisterCustomerDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const identity = await this.authService.registerCustomer(dto);
+    const session = await this.sessions.create(identity, 'marketplace', this.metadata(req));
+    return this.attachSession(res, 'marketplace', session);
   }
 
   @Public()
   @Post('customer/login')
   @HttpCode(200)
-  @ApiOperation({
-    summary: 'Customer login',
-    description: 'Authenticates a buyer by email and password. Returns a JWT bearer token on success.',
-  })
-  @ApiBody({ type: LoginDto })
-  @ApiResponse({ status: 200, description: 'Login successful — returns token and customer profile.', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Invalid email or password.' })
-  loginCustomer(@Body() dto: LoginDto) {
-    return this.authService.loginCustomer(dto);
+  async loginCustomer(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const identity = await this.authService.loginCustomer(dto);
+    const session = await this.sessions.create(identity, 'marketplace', this.metadata(req));
+    return this.attachSession(res, 'marketplace', session);
+  }
+
+  @Get('customer/me')
+  @Roles('customer')
+  async getCustomerMe(@Req() req: AuthRequest) {
+    return this.authService.getCustomerProfile(req.user.customerId!);
+  }
+
+  private attachSession(res: Response, app: AuthApp, session: SessionResponse) {
+    res.cookie(APP_SECURITY[app].cookieName, session.refreshToken, refreshCookieOptions());
+    const { refreshToken: _, token, ...publicSession } = session;
+    return app === 'seller' ? { ...publicSession, token } : publicSession;
+  }
+
+  private metadata(req: Request) {
+    return {
+      userAgent: req.get('user-agent'),
+      ipAddress: req.ip,
+    };
   }
 }

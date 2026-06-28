@@ -5,7 +5,8 @@
     "noEmit": true,
     "types": ["node", "reflect-metadata"],
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

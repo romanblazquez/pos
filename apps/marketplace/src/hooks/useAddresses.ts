@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export interface Address {
   id: string;
@@ -32,7 +32,7 @@ export function useAddresses(customerId: string | undefined) {
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<Address[]> => {
-      const res = await fetch(`${API}/api/v1/customers/${customerId}/addresses`);
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/addresses`);
       if (!res.ok) throw new Error('fetch failed');
       return res.json() as Promise<Address[]>;
     },
@@ -43,7 +43,7 @@ export function useAddresses(customerId: string | undefined) {
 
   const create = useMutation({
     mutationFn: async (input: AddressInput): Promise<Address> => {
-      const res = await fetch(`${API}/api/v1/customers/${customerId}/addresses`, {
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/addresses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -56,7 +56,7 @@ export function useAddresses(customerId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, input }: { id: string; input: Partial<AddressInput> }): Promise<Address> => {
-      const res = await fetch(`${API}/api/v1/customers/${customerId}/addresses/${id}`, {
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/addresses/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
@@ -69,7 +69,7 @@ export function useAddresses(customerId: string | undefined) {
 
   const remove = useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const res = await fetch(`${API}/api/v1/customers/${customerId}/addresses/${id}`, { method: 'DELETE' });
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/addresses/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('delete failed');
     },
     onSuccess: invalidate,

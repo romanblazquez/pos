@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminApi, API_BASE } from './auth/api-client.js';
+import { useAdminAuth } from './auth/AdminAuth.js';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API = API_BASE;
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
 type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking';
@@ -24,6 +26,7 @@ function parseView(): AdminView {
 
 export default function App() {
   const [view, setView] = useState<AdminView>(parseView);
+  const { user, logout } = useAdminAuth();
 
   useEffect(() => {
     function onPop() { setView(parseView()); }
@@ -60,6 +63,10 @@ export default function App() {
           ))}
         </nav>
         <div className="p-4 border-t border-slate-800">
+          <p className="truncate text-xs text-slate-400">{user.email}</p>
+          <button onClick={() => { void logout(); }} className="mt-2 text-xs text-slate-500 hover:text-white">
+            Cerrar sesión
+          </button>
           <a
             href={`${API}/api/docs`}
             target="_blank"
@@ -91,7 +98,7 @@ function SellersView() {
     queryKey: ['admin-sellers', statusFilter],
     queryFn: async () => {
       const qs = statusFilter ? `?status=${statusFilter}` : '';
-      const res = await fetch(`${API}/api/v1/sellers${qs}`);
+      const res = await adminApi.fetch(`${API}/api/v1/sellers${qs}`);
       return res.json() as Promise<Seller[]>;
     },
   });
@@ -176,7 +183,7 @@ function CatalogView() {
         offset: String(page * PAGE_SIZE),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
       });
-      const res = await fetch(`${API}/api/v1/admin/catalog/products?${qs}`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/products?${qs}`);
       return res.json() as Promise<{ products: MktProduct[]; total: number }>;
     },
   });
@@ -188,7 +195,7 @@ function CatalogView() {
   // a product show up in the public marketplace.
   const enrichOneMut = useMutation({
     mutationFn: async (bggId: string) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
       return res.json() as Promise<{ name: string; slug: string }>;
     },
     onSuccess: (data) => {
@@ -199,7 +206,7 @@ function CatalogView() {
 
   const enrichBulkMut = useMutation({
     mutationFn: async (bggIds: string[]) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/bulk`, {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/import/bgg/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bggIds }),
@@ -425,7 +432,7 @@ function MappingRequestsView() {
   const sellersQuery = useQuery({
     queryKey: ['admin-sellers-all'],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/sellers?limit=200`);
+      const res = await adminApi.fetch(`${API}/api/v1/sellers?limit=200`);
       return res.json() as Promise<Seller[]>;
     },
   });
@@ -439,7 +446,7 @@ function MappingRequestsView() {
         offset: String(page * MAPPING_PAGE_SIZE),
         ...(sellerFilter ? { sellerId: sellerFilter } : {}),
       });
-      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests?${qs}`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/mapping-requests?${qs}`);
       return res.json() as Promise<{ requests: MappingRequest[]; total: number }>;
     },
   });
@@ -451,7 +458,7 @@ function MappingRequestsView() {
 
   const approveExistingMut = useMutation({
     mutationFn: async ({ id, productId }: { id: string; productId: string }) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-existing`, {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-existing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
@@ -463,7 +470,7 @@ function MappingRequestsView() {
 
   const approveNewMut = useMutation({
     mutationFn: async ({ id, bggId }: { id: string; bggId: string }) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-new`, {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/approve-new`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bggId }),
@@ -475,7 +482,7 @@ function MappingRequestsView() {
 
   const rejectMut = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/reject`, {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/mapping-requests/${id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
@@ -625,7 +632,7 @@ function MappingRequestDetail({
   const catalogSearch = useQuery({
     queryKey: ['mapping-catalog-search', catalogQ],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/products?search=${encodeURIComponent(catalogQ)}&limit=8`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/products?search=${encodeURIComponent(catalogQ)}&limit=8`);
       return (await res.json() as { products: MktProduct[] }).products;
     },
     enabled: !!catalogQ.trim(),
@@ -634,7 +641,7 @@ function MappingRequestDetail({
   const bggSearch = useQuery({
     queryKey: ['mapping-bgg-search', bggQ],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/bgg/search?q=${encodeURIComponent(bggQ)}`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/bgg/search?q=${encodeURIComponent(bggQ)}`);
       return res.json() as Promise<BggResult[]>;
     },
     enabled: !!bggQ.trim(),
@@ -823,7 +830,7 @@ function OrdersView() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/checkout/admin/orders?limit=50`);
+      const res = await adminApi.fetch(`${API}/api/v1/checkout/admin/orders?limit=50`);
       return res.json() as Promise<{ orders: Order[]; total: number }>;
     },
   });
@@ -833,7 +840,7 @@ function OrdersView() {
 
   const markPaidMut = useMutation({
     mutationFn: async (orderId: string) => {
-      const res = await fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/mark-paid-out`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/mark-paid-out`, { method: 'POST' });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
@@ -842,7 +849,7 @@ function OrdersView() {
 
   const unmarkPaidMut = useMutation({
     mutationFn: async (orderId: string) => {
-      const res = await fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/unmark-paid-out`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/checkout/admin/orders/${orderId}/unmark-paid-out`, { method: 'POST' });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
@@ -927,7 +934,7 @@ function BggImportView() {
     queryKey: ['bgg-search', q],
     queryFn: async () => {
       if (!q.trim()) return [];
-      const res = await fetch(`${API}/api/v1/admin/catalog/bgg/search?q=${encodeURIComponent(q)}`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/bgg/search?q=${encodeURIComponent(q)}`);
       return res.json() as Promise<BggResult[]>;
     },
     enabled: !!q.trim(),
@@ -935,7 +942,7 @@ function BggImportView() {
 
   const importMut = useMutation({
     mutationFn: async (bggId: string) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/import/bgg/${bggId}`, { method: 'POST' });
       return res.json() as Promise<{ name: string; slug: string }>;
     },
     onSuccess: (data) => {
@@ -946,7 +953,7 @@ function BggImportView() {
 
   const bulkMut = useMutation({
     mutationFn: async (ids: string[]) => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/import/bgg/bulk`, {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/import/bgg/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bggIds: ids }),
@@ -965,7 +972,7 @@ function BggImportView() {
   const fullImportStatus = useQuery({
     queryKey: ['bgg-full-catalog-status'],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog/status`);
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog/status`);
       return res.json() as Promise<{ running: boolean; total: number; imported: number; skipped: number; error?: string }>;
     },
     refetchInterval: (query) => (query.state.data?.running ? 1500 : false),
@@ -973,7 +980,7 @@ function BggImportView() {
 
   const startFullImportMut = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/admin/catalog/bgg-discovery/import-full-catalog`, { method: 'POST' });
       return res.json() as Promise<{ started: boolean }>;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bgg-full-catalog-status'] }),
@@ -1102,7 +1109,7 @@ function RankingView() {
   async function triggerRanking() {
     setTriggering(true);
     try {
-      const res = await fetch(`${API}/api/v1/admin/rankings/trigger`, { method: 'POST' });
+      const res = await adminApi.fetch(`${API}/api/v1/admin/rankings/trigger`, { method: 'POST' });
       const data = await res.json() as { jobId?: string };
       setJobResult(`Job encolado: ${data.jobId}`);
     } catch {

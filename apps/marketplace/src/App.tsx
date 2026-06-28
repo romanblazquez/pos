@@ -15,8 +15,8 @@ import AuthModal from './components/AuthModal.js';
 import { Button } from './components/ui/index.js';
 import { formatMoney } from './marketplace-meta.js';
 import { trackPageView } from './analytics.js';
+import { API_BASE, marketplaceApi } from './lib/api-client.js';
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 type Route =
   | { page: 'home' }
@@ -140,8 +140,8 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
     async function checkStatus(id: string, attempt: number): Promise<void> {
       if (cancelled) return;
       try {
-        if (attempt === 0) await fetch(`${API}/api/v1/checkout/orders/${id}/reconcile`, { method: 'POST' });
-        const res = await fetch(`${API}/api/v1/checkout/orders/${id}`);
+        if (attempt === 0) await marketplaceApi.fetch(`${API_BASE}/api/v1/checkout/orders/${id}/reconcile`, { method: 'POST' });
+        const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/checkout/orders/${id}`);
         if (!res.ok) throw new Error();
         const order = (await res.json()) as { status: string };
         if (cancelled) return;
@@ -298,7 +298,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
         {route.page === 'addresses' && session && <AddressesPage />}
       </main>
 
-      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} onRequireAuth={() => setAuthOpen(true)} />}
       {authOpen && (
         <AuthModal
           onClose={() => {

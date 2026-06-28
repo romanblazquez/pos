@@ -5,7 +5,7 @@ import {
 import { IsNumber, Min, Max } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LoyaltyService } from './loyalty.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Public, Roles } from '../auth/auth.guard.js';
 
 class UpdatePlatformConfigDto {
   @ApiPropertyOptional({ type: 'number', description: 'Base commission rate (0–0.30)', example: 0.05 })
@@ -22,7 +22,6 @@ class UpdatePlatformConfigDto {
 }
 
 @ApiTags('loyalty')
-@Public()
 @Controller('api/v1')
 export class LoyaltyController {
   constructor(@Inject(LoyaltyService) private readonly svc: LoyaltyService) {}
@@ -30,6 +29,7 @@ export class LoyaltyController {
   // ── Platform config (admin) ──────────────────────────────────────────────
 
   @Get('admin/loyalty/config')
+  @Roles('admin')
   @ApiOperation({
     summary: 'Get platform commission and cashback config',
     description:
@@ -42,7 +42,15 @@ export class LoyaltyController {
     return this.svc.getPlatformConfig();
   }
 
+  @Get('marketplace/loyalty/config')
+  @Public()
+  @ApiOperation({ summary: 'Get public marketplace cashback rates' })
+  getPublicPlatformConfig() {
+    return this.svc.getPlatformConfig();
+  }
+
   @Patch('admin/loyalty/config')
+  @Roles('admin')
   @ApiOperation({
     summary: 'Update platform commission and cashback rates (admin only)',
     description:
@@ -59,6 +67,7 @@ export class LoyaltyController {
   // ── Customer wallet ──────────────────────────────────────────────────────
 
   @Get('customers/:customerId/wallet')
+  @Roles('customer', 'admin')
   @ApiOperation({
     summary: 'Get customer wallet balances',
     description:
@@ -73,6 +82,7 @@ export class LoyaltyController {
   }
 
   @Get('customers/:customerId/wallet/transactions')
+  @Roles('customer', 'admin')
   @ApiOperation({
     summary: 'Get customer wallet transaction history',
     description: 'Returns the last 20 wallet movements — cashback earned and credits redeemed.',
@@ -86,6 +96,7 @@ export class LoyaltyController {
   // ── Fee preview (public — used by marketplace UI) ────────────────────────
 
   @Get('sellers/:sellerId/rewards/fee-preview')
+  @Public()
   @ApiOperation({
     summary: 'Preview commission and cashback amounts for a given order total',
     description:

@@ -1,6 +1,6 @@
 import {
   CanActivate, ExecutionContext, Injectable,
-  UnauthorizedException, SetMetadata, Inject,
+  ForbiddenException, UnauthorizedException, SetMetadata, Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { verifyToken, type TokenRole } from './jwt.js';
@@ -33,11 +33,15 @@ export class AuthGuard implements CanActivate {
         ctx.getHandler(), ctx.getClass(),
       ]);
       if (requiredRoles && !requiredRoles.includes(payload.role)) {
-        throw new UnauthorizedException('Insufficient role');
+        throw new ForbiddenException('Insufficient role');
       }
 
+      this.assertAudience(payload);
+      this.assertResourceOwnership(req, payload);
+
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof ForbiddenException || error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException('Invalid token');
     }
   }
@@ -46,5 +50,31 @@ export class AuthGuard implements CanActivate {
     const auth = req.headers.authorization;
     if (auth?.startsWith('Bearer ')) return auth.slice(7);
     return null;
+  }
+
+  private assertAudience(payload: ReturnType<typeof verifyToken>): void {
+    const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    const expected = {
+      customer: 'marketplace-api',
+      admin: 'admin-api',
+      seller: 'seller-api',
+      service: 'internal-api',
+    }[payload.role];
+    if (!audiences.includes(expected)) throw new UnauthorizedException('Token audience mismatch');
+  }
+
+  private assertResourceOwnership(req: Request, payload: ReturnType<typeof verifyToken>): void {
+    if (payload.role === 'admin' || payload.role === 'service') return;
+    const params = req.params as Record<string, string | undefined>;
+    if (payload.role === 'customer' && params.customerId && params.customerId !== payload.customerId) {
+      throw new ForbiddenException('Customer resource access denied');
+    }
+    if (payload.role === 'seller') {
+      const sellerParam = params.sellerId
+        ?? (req.originalUrl.startsWith('/api/v1/sellers/') ? params.id : undefined);
+      if (sellerParam && sellerParam !== payload.sellerId) {
+        throw new ForbiddenException('Seller resource access denied');
+      }
+    }
   }
 }

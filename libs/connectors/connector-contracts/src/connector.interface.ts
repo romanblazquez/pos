@@ -29,7 +29,7 @@ export interface IConnector {
 
   // ─── Auth ─────────────────────────────────────────────────────────────────
   /** Returns an OAuth URL to redirect the seller to, plus a CSRF state token. */
-  startOAuth(sellerId: string, redirectUri: string): Promise<OAuthStartResult>;
+  startOAuth(sellerId: string, redirectUri: string, state: string): Promise<OAuthStartResult>;
 
   /** Exchange an OAuth callback code for credentials. */
   exchangeCode(

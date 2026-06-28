@@ -5,7 +5,7 @@ import {
   ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse,
 } from '@nestjs/swagger';
 import { CustomerAddressService } from './customer-address.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Roles } from '../auth/auth.guard.js';
 
 const ADDRESS_BODY_SCHEMA = {
   type: 'object' as const,
@@ -21,7 +21,7 @@ const ADDRESS_BODY_SCHEMA = {
 };
 
 @ApiTags('customers')
-@Public()
+@Roles('customer', 'admin')
 @Controller('api/v1/customers/:customerId/addresses')
 export class CustomersController {
   constructor(@Inject(CustomerAddressService) private readonly svc: CustomerAddressService) {}

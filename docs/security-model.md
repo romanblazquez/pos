@@ -1,14 +1,15 @@
 # Security Model
 
 ## Identity & access
-- **JWT** bearer auth; tokens carry `userId`, `tenantId`, `storeId`, `roles`.
-- **RBAC** (`libs/platform/security`): fine-grained permissions (`sales.refund`,
+- **Google SSO + first-party JWT**: Google proves identity once; Retail OS issues short-lived, audience-bound access JWTs and rotating server-side refresh sessions. Browser refresh credentials are HttpOnly cookies and bearer tokens remain in memory.
+- **Admin allowlist**: a verified Google account still requires an active `PlatformAdminMembership`; there is no admin self-registration.
+- **RBAC** (`libs/platform/security` and Nest route guards): fine-grained permissions (`sales.refund`,
   `inventory.adjust`, …) bundled into roles (`cashier`, `supervisor`, `store_manager`,
-  `admin`). The same matrix gates launcher visibility, RWP intents, and (roadmap) NestJS
-  route guards. `can(principal, permission)` is the single check.
+  `admin`). Marketplace customer, seller, platform admin, and service audiences are isolated;
+  controller guards also enforce customer/seller resource ownership.
 
 ## Auditing
-Append-only **audit log** (`AuditEntry`) for money- and security-sensitive actions
+Append-only **audit log** (`AuditEvent`) for authenticated mutations and security-sensitive actions
 (logins, discounts, refunds, voids, device registration). Each entry carries a
 `correlationId`, joinable with the RWP event stream and the saga log.
 

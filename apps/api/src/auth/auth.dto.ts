@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEmail, IsOptional, IsString, MinLength, MaxLength,
+  IsEmail, IsIn, IsOptional, IsString, MinLength, MaxLength,
 } from 'class-validator';
 
 export class RegisterSellerDto {
@@ -61,9 +61,29 @@ export class AuthResponseDto {
   @ApiProperty({ type: 'string', description: 'JWT bearer token — include as Authorization: Bearer <token> on subsequent requests', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   token: string;
 
-  @ApiPropertyOptional({ type: 'object', description: 'Seller profile (present on seller auth endpoints)' })
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true, description: 'Seller profile (present on seller auth endpoints)' })
   seller?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ type: 'object', description: 'Customer profile (present on customer auth endpoints)' })
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true, description: 'Customer profile (present on customer auth endpoints)' })
   customer?: Record<string, unknown>;
+}
+
+export class GoogleCredentialDto {
+  @ApiProperty({ enum: ['marketplace', 'admin'] })
+  @IsIn(['marketplace', 'admin'])
+  app: 'marketplace' | 'admin';
+
+  @ApiProperty({ description: 'Google Identity Services ID token' })
+  @IsString() @MinLength(20)
+  credential: string;
+
+  @ApiProperty({ description: 'One-time state returned by the login challenge endpoint' })
+  @IsString() @MinLength(20)
+  state: string;
+}
+
+export class SessionAppDto {
+  @ApiProperty({ enum: ['marketplace', 'admin', 'seller'] })
+  @IsIn(['marketplace', 'admin', 'seller'])
+  app: 'marketplace' | 'admin' | 'seller';
 }

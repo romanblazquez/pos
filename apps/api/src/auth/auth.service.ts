@@ -1,7 +1,8 @@
 import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '@retail-os/db-postgres';
-import { signToken } from './jwt.js';
+import type { SessionIdentity } from './session.service.js';
+import type { Prisma } from '@prisma/client';
 
 export interface RegisterSellerDto {
   name: string;
@@ -31,12 +32,19 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 @Injectable()
 export class AuthService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async registerSeller(dto: RegisterSellerDto) {
-    const existing = await this.prisma.seller.findUnique({ where: { email: dto.email } });
+  async registerSeller(dto: RegisterSellerDto): Promise<SessionIdentity> {
+    const email = normalizeEmail(dto.email);
+    const existing = await this.prisma.seller.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -44,59 +52,90 @@ export class AuthService {
     const slugConflict = await this.prisma.seller.findUnique({ where: { slug } });
     if (slugConflict) slug = `${slug}-${Date.now()}`;
 
+    const principal = await this.ensurePrincipal(email, dto.name);
     const seller = await this.prisma.seller.create({
       data: {
         name: dto.name,
         slug,
-        email: dto.email,
+        email,
         phone: dto.phone,
         country: dto.country ?? 'MX',
         passwordHash,
         status: 'pending',
         onboardingStep: 'store-type',
+        authPrincipalId: principal.id,
       },
     });
-
-    const token = signToken({ sub: seller.id, role: 'seller', email: seller.email });
     return {
-      token,
+      principalId: principal.id,
+      email: seller.email,
+      name: seller.name,
+      role: 'seller',
       seller: this.publicSeller(seller),
     };
   }
 
-  async loginSeller(dto: LoginDto) {
-    const seller = await this.prisma.seller.findUnique({ where: { email: dto.email } });
+  async loginSeller(dto: LoginDto): Promise<SessionIdentity> {
+    const seller = await this.prisma.seller.findFirst({
+      where: { email: { equals: normalizeEmail(dto.email), mode: 'insensitive' } },
+    });
     if (!seller?.passwordHash) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(dto.password, seller.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
-    const token = signToken({ sub: seller.id, role: 'seller', email: seller.email });
-    return { token, seller: this.publicSeller(seller) };
+    const principal = seller.authPrincipalId
+      ? await this.prisma.authPrincipal.findUniqueOrThrow({ where: { id: seller.authPrincipalId } })
+      : await this.linkSellerPrincipal(seller.id, seller.email, seller.name);
+    return {
+      principalId: principal.id,
+      email: seller.email,
+      name: seller.name,
+      role: 'seller',
+      seller: this.publicSeller(seller),
+    };
   }
 
-  async registerCustomer(dto: RegisterCustomerDto) {
-    const existing = await this.prisma.mktCustomer.findUnique({ where: { email: dto.email } });
+  async registerCustomer(dto: RegisterCustomerDto): Promise<SessionIdentity> {
+    const email = normalizeEmail(dto.email);
+    const existing = await this.prisma.mktCustomer.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    const principal = await this.ensurePrincipal(email, dto.name);
     const customer = await this.prisma.mktCustomer.create({
-      data: { email: dto.email, name: dto.name, passwordHash },
+      data: { email, name: dto.name, passwordHash, authPrincipalId: principal.id },
     });
-
-    const token = signToken({ sub: customer.id, role: 'customer', email: customer.email });
-    return { token, customer: { id: customer.id, email: customer.email, name: customer.name } };
+    return {
+      principalId: principal.id,
+      email: customer.email,
+      name: customer.name,
+      role: 'customer',
+      customer: { id: customer.id, email: customer.email, name: customer.name },
+    };
   }
 
-  async loginCustomer(dto: LoginDto) {
-    const customer = await this.prisma.mktCustomer.findUnique({ where: { email: dto.email } });
+  async loginCustomer(dto: LoginDto): Promise<SessionIdentity> {
+    const customer = await this.prisma.mktCustomer.findFirst({
+      where: { email: { equals: normalizeEmail(dto.email), mode: 'insensitive' } },
+    });
     if (!customer?.passwordHash) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(dto.password, customer.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
-    const token = signToken({ sub: customer.id, role: 'customer', email: customer.email });
-    return { token, customer: { id: customer.id, email: customer.email, name: customer.name } };
+    const principal = customer.authPrincipalId
+      ? await this.prisma.authPrincipal.findUniqueOrThrow({ where: { id: customer.authPrincipalId } })
+      : await this.linkCustomerPrincipal(customer.id, customer.email, customer.name);
+    return {
+      principalId: principal.id,
+      email: customer.email,
+      name: customer.name,
+      role: 'customer',
+      customer: { id: customer.id, email: customer.email, name: customer.name },
+    };
   }
 
   async getSellerProfile(sellerId: string) {
@@ -105,6 +144,14 @@ export class AuthService {
       include: { score: true },
     });
     return this.publicSeller(seller);
+  }
+
+  async getCustomerProfile(customerId: string) {
+    const customer = await this.prisma.mktCustomer.findUniqueOrThrow({
+      where: { id: customerId },
+      select: { id: true, email: true, name: true, phone: true, emailVerified: true },
+    });
+    return customer;
   }
 
   async updateOnboardingStep(
@@ -126,7 +173,7 @@ export class AuthService {
       where: { id: sellerId },
       data: {
         onboardingStep: step,
-        onboardingData: merged,
+        onboardingData: merged as Prisma.InputJsonValue,
         // Activate seller when they reach the final step
         ...(step === 'complete' ? { status: 'active' } : {}),
       },
@@ -151,5 +198,29 @@ export class AuthService {
       onboardingStep: s.onboardingStep,
       emailVerified: s.emailVerified,
     };
+  }
+
+  private ensurePrincipal(email: string, displayName?: string | null) {
+    const normalizedEmail = email.trim().toLowerCase();
+    return this.prisma.authPrincipal.upsert({
+      where: { normalizedEmail },
+      create: { email, normalizedEmail, displayName },
+      update: { displayName: displayName ?? undefined },
+    });
+  }
+
+  private async linkSellerPrincipal(sellerId: string, email: string, name: string) {
+    const principal = await this.ensurePrincipal(email, name);
+    await this.prisma.seller.update({ where: { id: sellerId }, data: { authPrincipalId: principal.id } });
+    return principal;
+  }
+
+  private async linkCustomerPrincipal(customerId: string, email: string, name?: string | null) {
+    const principal = await this.ensurePrincipal(email, name);
+    await this.prisma.mktCustomer.update({
+      where: { id: customerId },
+      data: { authPrincipalId: principal.id },
+    });
+    return principal;
   }
 }

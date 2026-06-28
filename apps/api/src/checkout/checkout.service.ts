@@ -1,8 +1,8 @@
-import { Injectable, Inject, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { createHmac } from 'node:crypto';
+import { Injectable, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { MpSellerOAuthService } from './mp-seller-oauth.service.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
+import { verifyMercadoPagoSignature } from '../common/webhook-signature.js';
 
 const MP_BASE = 'https://api.mercadopago.com';
 
@@ -272,22 +272,7 @@ export class CheckoutService {
     xRequestId: string | undefined,
     dataId: string,
   ): void {
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) return; // skip verification in dev when secret not set
-
-    if (!xSignature) throw new UnauthorizedException('Missing x-signature header');
-
-    const parts = Object.fromEntries(
-      xSignature.split(',').map((p) => p.split('=')),
-    ) as Record<string, string>;
-    const ts = parts['ts'];
-    const v1 = parts['v1'];
-    if (!ts || !v1) throw new UnauthorizedException('Malformed x-signature');
-
-    const manifest = `id:${dataId};request-id:${xRequestId ?? ''};ts:${ts};`;
-    const expected = createHmac('sha256', secret).update(manifest).digest('hex');
-
-    if (expected !== v1) throw new UnauthorizedException('Webhook signature mismatch');
+    verifyMercadoPagoSignature(xSignature, xRequestId, dataId);
   }
 
   /**
@@ -510,6 +495,19 @@ export class CheckoutService {
         seller: { select: { name: true, slug: true } },
       },
     });
+  }
+
+  async assertCustomerOwnsOrder(orderId: string, customerId: string): Promise<void> {
+    const order = await this.prisma.marketplaceOrder.findFirst({
+      where: { id: orderId, customerId },
+      select: { id: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+  }
+
+  async getCustomerOrder(orderId: string, customerId: string) {
+    await this.assertCustomerOwnsOrder(orderId, customerId);
+    return this.getOrder(orderId);
   }
 
   // ── MercadoPago helpers ────────────────────────────────────────────────────

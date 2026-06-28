@@ -61,4 +61,11 @@ export class ConnectorRegistryService {
       },
     });
   }
+
+  async credentialsMatchStore(sellerId: string, storeId: string): Promise<boolean> {
+    const credentials = await this.loadCredentials(sellerId);
+    const configuredStoreId = (credentials as Record<string, unknown>).storeId
+      ?? (credentials as Record<string, unknown>).userId;
+    return String(configuredStoreId ?? '') === storeId;
+  }
 }

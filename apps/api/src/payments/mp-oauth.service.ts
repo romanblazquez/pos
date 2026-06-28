@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { OAuthStateService } from '../auth/oauth-state.service.js';
 
 export interface MpOAuthConfig {
   clientId: string;
@@ -43,17 +44,20 @@ export interface MpDiscoveredTerminal {
  */
 @Injectable()
 export class MpOAuthService {
+  constructor(@Inject(OAuthStateService) private readonly oauthState: OAuthStateService) {}
+
   private readonly tokens = new Map<string, MpToken>();
   private readonly MP_AUTH_URL = 'https://auth.mercadopago.com/authorization';
   private readonly MP_TOKEN_URL = 'https://api.mercadopago.com/oauth/token';
   private readonly MP_DEVICES_URL = 'https://api.mercadopago.com/terminals/terminals';
 
-  buildAuthorizationUrl(config: MpOAuthConfig, merchantId: string): string {
+  async buildAuthorizationUrl(config: MpOAuthConfig, merchantId: string): Promise<string> {
+    const state = await this.oauthState.create('mercadopago-terminal', merchantId);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: config.clientId,
       redirect_uri: config.redirectUri,
-      state: `${merchantId}:${Date.now()}`,
+      state,
     });
     return `${this.MP_AUTH_URL}?${params.toString()}`;
   }
@@ -61,8 +65,10 @@ export class MpOAuthService {
   async exchangeCode(
     config: MpOAuthConfig,
     code: string,
-    merchantId: string,
+    state: string,
   ): Promise<MpToken> {
+    const transaction = await this.oauthState.consumeByState('mercadopago-terminal', state);
+    const merchantId = transaction.ownerId;
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: config.clientId,

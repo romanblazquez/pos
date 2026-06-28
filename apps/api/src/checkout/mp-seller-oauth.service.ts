@@ -2,6 +2,7 @@ import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { randomBytes, createHash } from 'node:crypto';
 import { PrismaService } from '@retail-os/db-postgres';
 import { encryptCredentials, decryptCredentials } from '../connectors/credential-crypto.js';
+import { OAuthStateService } from '../auth/oauth-state.service.js';
 
 const MP_BASE = 'https://api.mercadopago.com';
 const MP_AUTH_BASE = 'https://auth.mercadopago.com';
@@ -23,7 +24,10 @@ interface StoredMpCreds {
 
 @Injectable()
 export class MpSellerOAuthService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(OAuthStateService) private readonly oauthState: OAuthStateService,
+  ) {}
 
   private get clientId() { return process.env.MERCADOPAGO_CLIENT_ID ?? ''; }
   private get clientSecret() { return process.env.MERCADOPAGO_CLIENT_SECRET ?? ''; }
@@ -44,13 +48,13 @@ export class MpSellerOAuthService {
    * (already opaque, base64url-encoded) `state` param instead, the same place
    * `sellerId` already rides — `exchangeCode` reads it back out below.
    */
-  getAuthUrl(sellerId: string): string {
+  async getAuthUrl(sellerId: string): Promise<string> {
     if (!this.clientId) {
       return `${this.portalUrl}?mp=error&msg=${encodeURIComponent('MERCADOPAGO_CLIENT_ID not configured')}`;
     }
     const codeVerifier = randomBytes(32).toString('base64url');
     const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
-    const state = Buffer.from(JSON.stringify({ sellerId, ts: Date.now(), codeVerifier })).toString('base64url');
+    const state = await this.oauthState.create('mercadopago-seller', sellerId, codeVerifier);
     const params = new URLSearchParams({
       client_id: this.clientId,
       response_type: 'code',
@@ -65,8 +69,9 @@ export class MpSellerOAuthService {
 
   /** Exchange OAuth code for tokens, persist encrypted, return sellerId. */
   async exchangeCode(code: string, state: string): Promise<string> {
-    const { sellerId, codeVerifier } = JSON.parse(Buffer.from(state, 'base64url').toString()) as
-      { sellerId: string; codeVerifier?: string };
+    const transaction = await this.oauthState.consumeByState('mercadopago-seller', state);
+    const sellerId = transaction.ownerId;
+    const codeVerifier = transaction.codeVerifier;
 
     const res = await fetch(`${MP_BASE}/oauth/token`, {
       method: 'POST',

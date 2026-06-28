@@ -3,8 +3,7 @@ import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
@@ -46,8 +45,8 @@ export default function AccountPage({
   const { session, logout } = useCustomer();
   if (!session) return null;
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     onLogout();
   }
 
@@ -56,7 +55,7 @@ export default function AccountPage({
   const { data: orders } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/v1/customers/${session.customer.id}/orders?limit=5`);
+      const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${session.customer.id}/orders?limit=5`);
       if (!res.ok) throw new Error(`orders fetch failed: ${res.status}`);
       return res.json() as Promise<Order[]>;
     },

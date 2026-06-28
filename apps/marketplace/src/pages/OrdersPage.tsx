@@ -2,8 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext.js';
 import { Card, CardContent, Badge, fmtExact } from '../components/ui/index.js';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 function fmt(minor: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
@@ -48,7 +47,7 @@ export default function OrdersPage() {
 
   const { data: orders, isLoading } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
-    queryFn: async () => (await fetch(`${API}/api/v1/customers/${session.customer.id}/orders`)).json() as Promise<Order[]>,
+    queryFn: async () => (await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${session.customer.id}/orders`)).json() as Promise<Order[]>,
   });
 
   // Self-heal stale "pending" orders — MercadoPago's webhook/redirect can miss
@@ -64,7 +63,7 @@ export default function OrdersPage() {
 
     Promise.all(
       pending.map((o) =>
-        fetch(`${API}/api/v1/checkout/orders/${o.id}/reconcile`, { method: 'POST' }).catch(() => null),
+        marketplaceApi.fetch(`${API_BASE}/api/v1/checkout/orders/${o.id}/reconcile`, { method: 'POST' }).catch(() => null),
       ),
     ).then(() => qc.invalidateQueries({ queryKey: ['customer-orders', session.customer.id] }));
   }, [orders, qc, session.customer.id]);

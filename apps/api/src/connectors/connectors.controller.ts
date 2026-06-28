@@ -11,20 +11,22 @@ import {
 import { ConnectorSyncService } from './sync.service.js';
 import { ConnectorRegistryService } from './connector-registry.service.js';
 import { SellersService } from '../sellers/sellers.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Public, Roles } from '../auth/auth.guard.js';
+import { OAuthStateService } from '../auth/oauth-state.service.js';
 
 const SELLER_PORTAL_URL = process.env.SELLER_PORTAL_URL ?? 'http://localhost:4400';
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:3000';
 
 @ApiTags('connectors')
 @ApiBearerAuth('seller-jwt')
-@Public()
+@Roles('seller', 'admin')
 @Controller('api/v1/sellers/:sellerId/connector')
 export class ConnectorsController {
   constructor(
     @Inject(ConnectorSyncService)     private readonly sync: ConnectorSyncService,
     @Inject(ConnectorRegistryService) private readonly registry: ConnectorRegistryService,
     @Inject(SellersService)           private readonly sellers: SellersService,
+    @Inject(OAuthStateService)        private readonly oauthState: OAuthStateService,
   ) {}
 
   /** Save connector type to seller record, then return OAuth start URL. */
@@ -68,7 +70,8 @@ export class ConnectorsController {
 
     const connector = await this.registry.forSeller(sellerId);
     const redirectUri = `${API_BASE_URL}/api/v1/sellers/${sellerId}/connector/oauth/callback`;
-    const result = await connector.startOAuth(sellerId, redirectUri);
+    const state = await this.oauthState.create(`connector:${connector.connectorType}`, sellerId);
+    const result = await connector.startOAuth(sellerId, redirectUri, state);
     return result; // { authUrl, state }
   }
 
@@ -78,6 +81,7 @@ export class ConnectorsController {
    * then sends the seller back to the portal with a success flag.
    */
   @Get('oauth/callback')
+  @Public()
   @Redirect()
   @ApiOperation({
     summary: 'OAuth redirect callback (called by connector platform)',
@@ -100,6 +104,7 @@ export class ConnectorsController {
   ) {
     try {
       const connector = await this.registry.forSeller(sellerId);
+      await this.oauthState.consume(`connector:${connector.connectorType}`, sellerId, state);
       const creds = await connector.exchangeCode(sellerId, code, state);
       await this.registry.saveCredentials(sellerId, creds);
 

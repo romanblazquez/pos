@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Headers } from '@nestjs/common';
 import { MpOAuthService } from './mp-oauth.service.js';
-import { Public } from '../auth/auth.guard.js';
+import { Public, Roles } from '../auth/auth.guard.js';
+import { verifyMercadoPagoSignature } from '../common/webhook-signature.js';
 
 interface DevCredentialsDto {
   merchantId: string;
@@ -26,7 +27,7 @@ interface WebhookPayload {
  * Access tokens never reach the frontend. In production, wrap all endpoints with
  * a JWT auth guard and limit dev-credentials endpoints to internal IPs.
  */
-@Public()
+@Roles('admin', 'service')
 @Controller('payments')
 export class PaymentsController {
   constructor(@Inject(MpOAuthService) private readonly mpOAuth: MpOAuthService) {}
@@ -34,13 +35,13 @@ export class PaymentsController {
   // ─── Mercado Pago OAuth ─────────────────────────────────────────────────────
   /** Step 1: return the URL to which the merchant should be redirected. */
   @Get('mercadopago/auth-url')
-  getMpAuthUrl(
+  async getMpAuthUrl(
     @Query('merchantId') merchantId: string,
     @Query('redirectUri') redirectUri: string,
-  ): { url: string } {
+  ): Promise<{ url: string }> {
     const clientId = process.env.MERCADOPAGO_CLIENT_ID ?? '';
     const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET ?? '';
-    const url = this.mpOAuth.buildAuthorizationUrl(
+    const url = await this.mpOAuth.buildAuthorizationUrl(
       { clientId, clientSecret, redirectUri, env: process.env.MERCADOPAGO_ENV === 'production' ? 'production' : 'test' },
       merchantId,
     );
@@ -49,15 +50,15 @@ export class PaymentsController {
 
   /** Step 2: MP redirects here; exchange code → tokens → discover terminals. */
   @Get('mercadopago/callback')
+  @Public()
   async mpOAuthCallback(@Query() query: OAuthCallbackQuery) {
-    const [merchantId] = (query.state ?? '').split(':');
     const clientId = process.env.MERCADOPAGO_CLIENT_ID ?? '';
     const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET ?? '';
     const redirectUri = process.env.MERCADOPAGO_REDIRECT_URI ?? '';
     const token = await this.mpOAuth.exchangeCode(
       { clientId, clientSecret, redirectUri, env: 'production' },
       query.code,
-      merchantId,
+      query.state,
     );
     const terminals = await this.mpOAuth.discoverTerminals(token.accessToken);
     return { merchantId: token.merchantId, scope: token.scope, terminals };
@@ -85,13 +86,14 @@ export class PaymentsController {
   // ─── Webhook ingestion ──────────────────────────────────────────────────────
   /** Inbound webhook from Mercado Pago. Validates, records, and maps to RWP event. */
   @Post('webhooks/mercadopago-point')
+  @Public()
   async receiveMpWebhook(
     @Body() body: WebhookPayload,
-    @Headers('x-signature') _signature?: string,
+    @Headers('x-signature') signature?: string,
+    @Headers('x-request-id') requestId?: string,
   ) {
-    // TODO(production): validate HMAC-SHA256 signature with MERCADOPAGO_WEBHOOK_SECRET.
-    // For now log and return 200 to prevent MP retries during development.
     const eventId = body.data?.id ?? 'unknown';
+    verifyMercadoPagoSignature(signature, requestId, eventId);
     const action = body.action ?? body.type ?? 'unknown';
     // TODO: look up the local payment by providerRef=eventId, update status,
     //       emit rwp.payment.completed or rwp.payment.failed via SSE/WebSocket.
