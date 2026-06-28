@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#F5EFE3;color:#2B2622;font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:#B4502E;color:#FBF6EC}
+a{color:inherit}
+::-webkit-scrollbar{height:8px;width:8px}
+::-webkit-scrollbar-thumb{background:#D8CBB0;border-radius:8px}
+@keyframes jp-toast{0%{opacity:0;transform:translate(-50%,12px) scale(.98)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes jp-shimmer{0%{background-position:-360px 0}100%{background-position:360px 0}}
+@keyframes jp-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes jp-spin{to{transform:rotate(360deg)}}
+@keyframes jp-pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+</style>
+</helmet>
+<header style="position:sticky;top:0;z-index:60;background:rgba(245,239,227,.82);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:14px">
+    <a href="#top" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:#2B2622;flex:none">
+      <span style="display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#B4502E;box-shadow:0 2px 5px rgba(43,38,34,.18)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#FBF6EC" aria-hidden="true"><path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/></svg>
+      </span>
+      <span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:19px;letter-spacing:-.02em">Juegospedia</span>
+    </a>
+    <nav style="margin-left:auto;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none">
+      <a href="#foundations" style="font-family:'Space Mono';font-size:12px;color:#6F6557;text-decoration:none;padding:7px 11px;border-radius:999px;white-space:nowrap" style-hover="background:#EBE1CD;color:#2B2622">Foundations</a>
+      <a href="#components" style="font-family:'Space Mono';font-size:12px;color:#6F6557;text-decoration:none;padding:7px 11px;border-radius:999px;white-space:nowrap" style-hover="background:#EBE1CD;color:#2B2622">Components</a>
+      <a href="#gameparts" style="font-family:'Space Mono';font-size:12px;color:#6F6557;text-decoration:none;padding:7px 11px;border-radius:999px;white-space:nowrap" style-hover="background:#EBE1CD;color:#2B2622">Game&nbsp;parts</a>
+      <a href="#pdp" style="font-family:'Space Mono';font-size:12px;color:#6F6557;text-decoration:none;padding:7px 11px;border-radius:999px;white-space:nowrap" style-hover="background:#EBE1CD;color:#2B2622">PDP</a>
+      <a href="#notes" style="font-family:'Space Mono';font-size:12px;color:#6F6557;text-decoration:none;padding:7px 11px;border-radius:999px;white-space:nowrap" style-hover="background:#EBE1CD;color:#2B2622">Notes</a>
+    </nav>
+  </div>
+</header>
+
+<section id="top" style="position:relative;overflow:hidden;border-bottom:1px solid #E6DBC4">
+  <div style="position:absolute;inset:0;background-image:radial-gradient(circle, rgba(43,38,34,.06) 1.4px, transparent 1.7px);background-size:24px 24px;opacity:.65"></div>
+  <div style="position:absolute;right:-90px;top:-90px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(180,80,46,.10), transparent 62%)"></div>
+  <div style="position:relative;max-width:1200px;margin:0 auto;padding:64px 24px 56px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:26px">
+      <span style="display:grid;place-items:center;width:54px;height:54px;border-radius:15px;background:#B4502E;box-shadow:0 6px 18px rgba(180,80,46,.28);animation:jp-bob 5s ease-in-out infinite">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="#FBF6EC" aria-hidden="true"><path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/></svg>
+      </span>
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2.5px;color:#B4502E;text-transform:uppercase">Design System &nbsp;·&nbsp; v1.0</span>
+    </div>
+    <h1 style="margin:0;font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(40px,7vw,76px);line-height:.98;letter-spacing:-.035em;max-width:15ch">The smart board-game marketplace<span style="color:#B4502E"> &amp; encyclopedia.</span></h1>
+    <p style="margin:22px 0 0;font-size:clamp(17px,2.2vw,21px);line-height:1.5;color:#6F6557;max-width:52ch">An original, premium system for discovering, comparing, understanding, saving and buying board games — part shop, part database, part collector's shelf.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:30px">
+      <span style="font-family:'Space Mono';font-size:12px;color:#6F6557;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:999px;padding:7px 13px">Light + Dark</span>
+      <span style="font-family:'Space Mono';font-size:12px;color:#6F6557;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:999px;padding:7px 13px">shadcn/ui + Tailwind</span>
+      <span style="font-family:'Space Mono';font-size:12px;color:#6F6557;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:999px;padding:7px 13px">Mobile-first</span>
+      <span style="font-family:'Space Mono';font-size:12px;color:#6F6557;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:999px;padding:7px 13px">WCAG AA</span>
+      <span style="font-family:'Space Mono';font-size:12px;color:#6F6557;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:999px;padding:7px 13px">SEO-first</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:42px">
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(43,38,34,.05)">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:2px;color:#B4502E;text-transform:uppercase">Discover</div>
+        <div style="margin-top:7px;font-size:14.5px;line-height:1.45;color:#6F6557">Rankings, mechanics, player-count fit & editorial guides.</div>
+      </div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(43,38,34,.05)">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:2px;color:#3E7C53;text-transform:uppercase">Compare</div>
+        <div style="margin-top:7px;font-size:14.5px;line-height:1.45;color:#6F6557">Live seller offers, price history, condition grades & best price.</div>
+      </div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(43,38,34,.05)">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:2px;color:#B5852F;text-transform:uppercase">Collect</div>
+        <div style="margin-top:7px;font-size:14.5px;line-height:1.45;color:#6F6557">Own, wishlist, played, want-to-play & trade your shelf.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="foundations" style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:60px 24px">
+    <div style="display:flex;align-items:baseline;gap:13px;margin-bottom:9px">
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#B4502E">01</span>
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#9A8E79;text-transform:uppercase">Foundations</span>
+    </div>
+    <h2 style="margin:0;font-family:'Bricolage Grotesque';font-weight:700;font-size:clamp(28px,4vw,40px);letter-spacing:-.025em">Tokens &amp; primitives</h2>
+    <p style="margin:12px 0 0;font-size:15.5px;line-height:1.55;color:#6F6557;max-width:60ch">A warm, tabletop-leaning take on shadcn/ui's token model. Neutral surfaces stay below 0.02 saturation; every accent shares a tight chroma so badges read as a family, not a circus.</p>
+
+    <h3 style="margin:44px 0 16px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Color · Light</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px">
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#F5EFE3;box-shadow:inset 0 0 0 1px rgba(43,38,34,.08)"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Background</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--background · #F5EFE3</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#FBF6EC;box-shadow:inset 0 0 0 1px rgba(43,38,34,.08)"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Surface</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--surface · #FBF6EC</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#FFFDF8;box-shadow:inset 0 0 0 1px rgba(43,38,34,.08)"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Card</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--card · #FFFDF8</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#EDE4D2"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Muted</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--muted · #EDE4D2</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#E6DBC4"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Border</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--border · #E6DBC4</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#2B2622"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Foreground</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--foreground · #2B2622</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#6F6557"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Muted FG</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--muted-fg · #6F6557</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#9A8E79"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Subtle FG</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--subtle-fg · #9A8E79</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#B4502E"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Primary · Clay</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--primary · #B4502E</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#3F5A4A"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Secondary · Forest</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--secondary · #3F5A4A</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#B5852F"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Accent · Gold</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--accent · #B5852F</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#3E7C53"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Success</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--success · #3E7C53</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#C0852F"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Warning</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--warning · #C0852F</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#46688A"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Info</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--info · #46688A</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#B23A2E"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Destructive</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--destructive · #B23A2E</div></div></div>
+      <div style="background:#FBF6EC;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden"><div style="height:58px;background:#F5EFE3;box-shadow:inset 0 0 0 3px rgba(180,80,46,.45)"></div><div style="padding:10px 12px"><div style="font-weight:600;font-size:13px">Focus ring</div><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:2px">--ring · clay/45%</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:48px 24px">
+    <h3 style="margin:0 0 6px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Color · Semantic (commerce)</h3>
+    <p style="margin:0 0 18px;font-size:14px;color:#6F6557;max-width:60ch">One token per shopping state, mapped to a status pill. Tints clear AA against their own text; dots carry the hue so the label stays legible.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(192px,1fr));gap:12px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#3E7C53"></span>In stock</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=in-stock</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Ready to ship today.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#F6EBD2;color:#8A5A12;border:1px solid #E7D3A6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#C0852F"></span>Low stock</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=low-stock</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Few left — nudge urgency.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#ECE6F3;color:#574079;border:1px solid #D9CEE6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#6B5191"></span>Preorder</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=preorder</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Charged on release; show date.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#F5E6D6;color:#8A4A18;border:1px solid #E6CDB2;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#B4632A"></span>Backorder</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=backorder</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Buy now, ships when restocked.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#E9E2D2;color:#2B2622;border:1px solid #D8CCB3;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;border:1.5px solid #2B2622"></span>Out of print</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=oop</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Archival; route to used market.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#DEEEEA;color:#2C6B5F;border:1px solid #C2DDD6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#3E7C6F"></span>Used</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=used</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Pairs with a condition grade.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#F2E6C8;color:#7E5A12;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="font-size:9px;color:#A9791F">◆</span>Rare</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=rare</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Scarce / collectible; brass.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#F6E1DC;color:#93291F;border:1px solid #E8C7BF;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#B23A2E"></span>Sale −20%</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=sale</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Discount; pair w/ strike price.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2C6B43" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Best price</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=best-price</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Lowest across all sellers.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#F4E9CF;color:#8A6312;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="color:#B5852F">★</span>Top ranked</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=top-ranked</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">High BGG-style rank; gold.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#E5EBE5;color:#354A3D;border:1px solid #CCD8CD;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#3F5A4A"></span>Community pick</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=community-pick</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Editor / community endorsed.</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:12px;padding:14px"><span style="display:inline-flex;align-items:center;gap:6px;background:#FBEFE0;color:#9C4324;border:1px solid #F0D9C2;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#B4502E"></span>New</span><div style="font-family:'Space Mono';font-size:10.5px;color:#9A8E79;margin-top:11px">state=new</div><div style="font-size:12.5px;color:#6F6557;margin-top:3px;line-height:1.4">Recently added to catalog.</div></div>
+    </div>
+
+    <h3 style="margin:40px 0 14px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#D7A654"></span>Color · Dark</h3>
+    <div style="background:#16130D;border:1px solid #2E2A20;border-radius:18px;padding:24px;background-image:radial-gradient(circle, rgba(255,255,255,.025) 1.2px, transparent 1.4px);background-size:22px 22px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#16130D;box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">bg · #16130D</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#201C14"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">surface · #201C14</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#28231A"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">card · #28231A</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#CE6A41"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">primary · #CE6A41</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#D7A654"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">accent · #D7A654</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#1E3A2E;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">felt · #1E3A2E</div></div>
+        <div style="flex:1;min-width:104px"><div style="height:46px;border-radius:9px;background:#F0E8D8"></div><div style="font-family:'Space Mono';font-size:10px;color:#8C8270;margin-top:6px">fg · #F0E8D8</div></div>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,.09);margin:20px 0"></div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <button style="border:none;cursor:pointer;background:#CE6A41;color:#1A140E;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;padding:11px 18px;border-radius:11px;box-shadow:0 4px 14px rgba(206,106,65,.3)">Add to cart</button>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(92,168,119,.15);color:#7FC79A;border:1px solid rgba(92,168,119,.3);font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#5CA877"></span>In stock</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(215,166,84,.14);color:#E0BC72;border:1px solid rgba(215,166,84,.3);font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;padding:5px 9px;border-radius:7px"><span style="color:#D7A654">★</span>Top ranked</span>
+        <div style="margin-left:auto;display:flex;align-items:baseline;gap:3px;color:#F0E8D8"><span style="font-size:13px;color:#B6AB94">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:24px;letter-spacing:-.02em">42</span><span style="font-size:14px;color:#B6AB94">.90</span></div>
+      </div>
+      <p style="margin:16px 0 0;font-size:12.5px;color:#8C8270;line-height:1.5">Dark mode keeps the same warmth: charcoal is warm-brown, not blue. <span style="color:#B6AB94">Felt green</span> is reserved for game-board surfaces (PDP gallery backdrops, collection shelves).</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:52px 24px">
+    <h3 style="margin:0 0 18px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Typography</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:50px;line-height:1;letter-spacing:-.03em">Ag</div><div style="margin-top:16px;font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#B4502E;text-transform:uppercase">Display</div><div style="font-weight:700;font-size:15px;margin-top:4px">Bricolage Grotesque</div><div style="font-size:13px;color:#6F6557;margin-top:5px;line-height:1.45">Headlines, game titles, prices. Warm and characterful without tipping childish.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;margin-top:9px">400 · 600 · 700 · 800</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px"><div style="font-family:'Hanken Grotesk';font-weight:600;font-size:50px;line-height:1;letter-spacing:-.02em">Ag</div><div style="margin-top:16px;font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#3E7C53;text-transform:uppercase">Text / UI</div><div style="font-weight:700;font-size:15px;margin-top:4px">Hanken Grotesk</div><div style="font-size:13px;color:#6F6557;margin-top:5px;line-height:1.45">Body copy, labels, buttons, descriptions. Highly legible, neutral, friendly.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;margin-top:9px">400 · 500 · 600 · 700</div></div>
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px"><div style="font-family:'Space Mono';font-weight:700;font-size:50px;line-height:1;letter-spacing:-.02em">Ag</div><div style="margin-top:16px;font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#B5852F;text-transform:uppercase">Metadata</div><div style="font-weight:700;font-size:15px;margin-top:4px">Space Mono</div><div style="font-size:13px;color:#6F6557;margin-top:5px;line-height:1.45">The "encyclopedia voice": stats, SKUs, badges, kickers. Signals data &amp; precision.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;margin-top:9px">400 · 700 · tabular</div></div>
+    </div>
+
+    <div style="margin-top:26px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:8px 22px">
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1;letter-spacing:-.035em">Carcassonne</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Display · Bricolage 800 · 52/50 · -3.5%</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-family:'Bricolage Grotesque';font-weight:700;font-size:34px;line-height:1.05;letter-spacing:-.025em">Best 2-player games</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">H1 · Bricolage 700 · 34/36</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-family:'Bricolage Grotesque';font-weight:700;font-size:26px;line-height:1.1;letter-spacing:-.02em">Seller offers</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">H2 · Bricolage 700 · 26/28</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-family:'Bricolage Grotesque';font-weight:700;font-size:20px;line-height:1.2">Expansions &amp; compatibility</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">H3 · Bricolage 700 · 20/24</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-size:18px;line-height:1.55;color:#3A332A">A modern classic of tile-laying and area control, easy to teach in five minutes.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Body L · Hanken 400 · 18/28</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-size:16px;line-height:1.5;color:#3A332A">Default running text for descriptions, reviews and editorial copy.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Body · Hanken 400 · 16/26</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-size:14px;line-height:1.45;color:#6F6557">Secondary text, helper copy, meta lines under cards.</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Small · Hanken 400 · 14/20</div></div>
+      <div style="display:flex;align-items:baseline;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;font-family:'Space Mono';font-size:12px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase">Players · 3–4 &nbsp; Time · 60 min</div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Caption · Mono 400 · 12 · +1.5</div></div>
+      <div style="display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid #ECE3D1;flex-wrap:wrap"><div style="flex:1;min-width:200px;display:flex;align-items:baseline;gap:2px"><span style="font-size:16px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:30px;letter-spacing:-.02em;font-variant-numeric:tabular-nums">42</span><span style="font-size:17px;color:#6F6557">.90</span></div><div style="font-family:'Space Mono';font-size:11px;color:#9A8E79;flex:none">Price · Bricolage 800 · tabular</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:52px 24px">
+    <h3 style="margin:0 0 18px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Scale &amp; feel</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Spacing · 4px base</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">1</span><div style="height:12px;width:4px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">4px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">2</span><div style="height:12px;width:8px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">8px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">3</span><div style="height:12px;width:12px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">12px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">4</span><div style="height:12px;width:16px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">16px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">6</span><div style="height:12px;width:24px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">24px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">8</span><div style="height:12px;width:32px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">32px</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:9px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">12</span><div style="height:12px;width:48px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">48px</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;width:18px">16</span><div style="height:12px;width:64px;background:#B4502E;border-radius:2px"></div><span style="font-family:'Space Mono';font-size:11px;color:#6F6557">64px</span></div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Radius</div>
+        <div style="display:flex;flex-wrap:wrap;gap:14px">
+          <div style="text-align:center"><div style="width:60px;height:44px;background:#EDE4D2;border:1px solid #D8CCB3;border-radius:6px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:6px">sm·6</div></div>
+          <div style="text-align:center"><div style="width:60px;height:44px;background:#EDE4D2;border:1px solid #D8CCB3;border-radius:10px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:6px">md·10</div></div>
+          <div style="text-align:center"><div style="width:60px;height:44px;background:#EDE4D2;border:1px solid #D8CCB3;border-radius:14px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:6px">lg·14</div></div>
+          <div style="text-align:center"><div style="width:60px;height:44px;background:#EDE4D2;border:1px solid #D8CCB3;border-radius:20px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:6px">xl·20</div></div>
+          <div style="text-align:center"><div style="width:60px;height:44px;background:#EDE4D2;border:1px solid #D8CCB3;border-radius:999px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:6px">pill</div></div>
+        </div>
+        <p style="margin:16px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Cards use <b>lg·14</b>; pills &amp; chips use <b>pill</b>; inputs &amp; buttons use <b>md·10</b>. Slightly soft — tactile, not bubbly.</p>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:16px">Elevation</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px">
+          <div style="text-align:center"><div style="width:62px;height:46px;background:#FFFDF8;border:1px solid #ECE3D1;border-radius:10px"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">e0 line</div></div>
+          <div style="text-align:center"><div style="width:62px;height:46px;background:#FFFDF8;border-radius:10px;box-shadow:0 1px 2px rgba(43,38,34,.06)"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">e1 card</div></div>
+          <div style="text-align:center"><div style="width:62px;height:46px;background:#FFFDF8;border-radius:10px;box-shadow:0 2px 8px rgba(43,38,34,.08)"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">e2 hover</div></div>
+          <div style="text-align:center"><div style="width:62px;height:46px;background:#FFFDF8;border-radius:10px;box-shadow:0 10px 26px rgba(43,38,34,.12)"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">e3 pop</div></div>
+          <div style="text-align:center"><div style="width:62px;height:46px;background:#FFFDF8;border-radius:10px;box-shadow:0 20px 48px rgba(43,38,34,.18)"></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">e4 modal</div></div>
+        </div>
+        <p style="margin:16px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Shadows are warm-tinted (brown-black), never neutral grey — they sit naturally on parchment.</p>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:11px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Motion</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <span style="display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#B4502E;animation:jp-bob 2.4s ease-in-out infinite"><svg width="26" height="26" viewBox="0 0 24 24" fill="#FBF6EC"><path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/></svg></span>
+          <div style="font-size:12.5px;color:#6F6557;line-height:1.5">One playful beat: add-to-cart gives a subtle <b>pop / overshoot</b>. Everything else is quick &amp; calm.</div>
+        </div>
+        <div style="font-family:'Space Mono';font-size:11px;color:#6F6557;line-height:1.9">
+          fast 120ms&nbsp;·&nbsp;press, hover<br>
+          base 180ms&nbsp;·&nbsp;most transitions<br>
+          slow 240ms&nbsp;·&nbsp;popovers, toasts<br>
+          page 320ms&nbsp;·&nbsp;drawers, sheets<br>
+          ease <span style="color:#9A8E79">cubic-bezier(.2,0,0,1)</span>
+        </div>
+        <p style="margin:14px 0 0;font-size:12px;color:#9A8E79;line-height:1.5">All motion respects <span style="font-family:'Space Mono'">prefers-reduced-motion</span>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:52px 24px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:22px">
+        <h3 style="margin:0 0 4px;font-family:'Bricolage Grotesque';font-weight:700;font-size:17px;display:flex;align-items:center;gap:9px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Iconography · Lucide</h3>
+        <p style="margin:0 0 18px;font-size:13px;color:#6F6557;line-height:1.5">1.8px stroke, 24px grid, round caps. Two house glyphs extend the set: the <b>meeple</b> and a <b>complexity</b> mark.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:18px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="#B4502E" stroke="none"><path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">meeple</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8" cy="8" r="1.1" fill="#2B2622" stroke="none"/><circle cx="16" cy="8" r="1.1" fill="#2B2622" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="#2B2622" stroke="none"/><circle cx="8" cy="16" r="1.1" fill="#2B2622" stroke="none"/><circle cx="16" cy="16" r="1.1" fill="#2B2622" stroke="none"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">dice</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="7" rx="1.2" fill="#2B2622" stroke="none"/><rect x="10" y="8.5" width="4" height="11.5" rx="1.2" fill="#2B2622" stroke="none"/><rect x="17" y="4" width="4" height="16" rx="1.2" fill="#2B2622" stroke="none"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">weight</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">players</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">time</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">rating</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">wishlist</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18.2" r="1.7"/><circle cx="17.4" cy="18.2" r="1.7"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">shipping</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5V4a1 1 0 0 1 1-1h7.5l8.5 8.5-8.5 8.5L3 11.5Z"/><circle cx="7.6" cy="7.6" r="1.4" fill="#2B2622" stroke="none"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">price</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">stock</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">alert</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:54px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2622" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8.5V20l-4 1.5v-8z"/></svg><span style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79">filter</span></div>
+        </div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:22px">
+        <h3 style="margin:0 0 4px;font-family:'Bricolage Grotesque';font-weight:700;font-size:17px;display:flex;align-items:center;gap:9px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Image ratios</h3>
+        <p style="margin:0 0 18px;font-size:13px;color:#6F6557;line-height:1.5">Fixed aspect slots keep grids tidy &amp; CLS-free. Box renders on a soft pad, never cropped.</p>
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:20px">
+          <div style="text-align:center"><div style="width:108px;height:144px;border:1px solid #E6DBC4;border-radius:10px;background:repeating-linear-gradient(45deg,#F1E8D6,#F1E8D6 9px,#EAE0CC 9px,#EAE0CC 18px);display:grid;place-items:center"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79">[ box ]</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">3:4 · product</div></div>
+          <div style="text-align:center"><div style="width:200px;height:112px;border:1px solid #E6DBC4;border-radius:10px;background:repeating-linear-gradient(45deg,#F1E8D6,#F1E8D6 9px,#EAE0CC 9px,#EAE0CC 18px);display:grid;place-items:center"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79">[ hero ]</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">16:9 · banner</div></div>
+          <div style="text-align:center"><div style="width:150px;height:112px;border:1px solid #E6DBC4;border-radius:10px;background:repeating-linear-gradient(45deg,#F1E8D6,#F1E8D6 9px,#EAE0CC 9px,#EAE0CC 18px);display:grid;place-items:center"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79">[ article ]</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">4:3 · editorial</div></div>
+          <div style="text-align:center"><div style="width:112px;height:112px;border:1px solid #E6DBC4;border-radius:10px;background:repeating-linear-gradient(45deg,#F1E8D6,#F1E8D6 9px,#EAE0CC 9px,#EAE0CC 18px);display:grid;place-items:center"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79">[ shelf ]</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:8px">1:1 · collection</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:52px 24px">
+    <h3 style="margin:0 0 4px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>System states</h3>
+    <p style="margin:0 0 18px;font-size:14px;color:#6F6557;max-width:60ch">Loading, empty, error and offline — designed, not afterthoughts. Microcopy keeps a light tabletop tone without being cute.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:16px"><div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Skeleton</div><div style="height:120px;border-radius:9px;background:linear-gradient(90deg,#EDE4D2 0px,#F5EDDC 60px,#EDE4D2 120px);background-size:360px 100%;animation:jp-shimmer 1.3s infinite linear"></div><div style="height:11px;width:80%;border-radius:5px;margin-top:12px;background:linear-gradient(90deg,#EDE4D2 0px,#F5EDDC 60px,#EDE4D2 120px);background-size:360px 100%;animation:jp-shimmer 1.3s infinite linear"></div><div style="height:11px;width:55%;border-radius:5px;margin-top:8px;background:linear-gradient(90deg,#EDE4D2 0px,#F5EDDC 60px,#EDE4D2 120px);background-size:360px 100%;animation:jp-shimmer 1.3s infinite linear"></div><div style="height:18px;width:38%;border-radius:5px;margin-top:14px;background:linear-gradient(90deg,#EDE4D2 0px,#F5EDDC 60px,#EDE4D2 120px);background-size:360px 100%;animation:jp-shimmer 1.3s infinite linear"></div></div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:16px;display:flex;flex-direction:column"><div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Empty</div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px 4px"><span style="display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#F1E8D6;margin-bottom:12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><div style="font-weight:700;font-size:14.5px">No games fit those filters</div><div style="font-size:12.5px;color:#6F6557;margin-top:5px;line-height:1.45">Try widening the player count or complexity.</div><button style="margin-top:14px;border:1px solid #D8CCB3;background:transparent;color:#2B2622;font-family:'Hanken Grotesk';font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:9px;cursor:pointer">Clear all filters</button></div></div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:16px;display:flex;flex-direction:column"><div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Error</div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px 4px"><span style="display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#F6E1DC;margin-bottom:12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B23A2E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span><div style="font-weight:700;font-size:14.5px">That didn't load</div><div style="font-size:12.5px;color:#6F6557;margin-top:5px;line-height:1.45">A gremlin knocked the table. Give it another roll.</div><button style="margin-top:14px;border:none;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:12.5px;padding:9px 15px;border-radius:9px;cursor:pointer">Retry</button></div></div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:16px;display:flex;flex-direction:column"><div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Offline</div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px 4px"><span style="display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#EDE4D2;margin-bottom:12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3 22 21"/><path d="M5 12.5a10 10 0 0 1 4-2.4"/><path d="M2 8.8A15 15 0 0 1 7 6"/><path d="M19.7 12.5A10 10 0 0 0 14 9.7"/><path d="M22 8.8a15 15 0 0 0-3.6-2.3"/><path d="M9 16.1a5 5 0 0 1 5.5-.3"/><path d="M12 20h.01"/></svg></span><div style="font-weight:700;font-size:14.5px">You're offline</div><div style="font-size:12.5px;color:#6F6557;margin-top:5px;line-height:1.45">We'll reconnect automatically. Your cart is saved.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="components" style="border-bottom:1px solid #E6DBC4;background:#F1E8D6">
+  <div style="max-width:1200px;margin:0 auto;padding:60px 24px">
+    <div style="display:flex;align-items:baseline;gap:13px;margin-bottom:9px">
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#B4502E">02</span>
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#9A8E79;text-transform:uppercase">Core components</span>
+    </div>
+    <h2 style="margin:0;font-family:'Bricolage Grotesque';font-weight:700;font-size:clamp(28px,4vw,40px);letter-spacing:-.025em">The shadcn/ui kit, warmed up</h2>
+    <p style="margin:12px 0 0;font-size:15.5px;line-height:1.55;color:#6F6557;max-width:62ch">Every primitive maps to a shadcn/ui component (<span style="font-family:'Space Mono';font-size:13px">Button, Badge, Card, Tabs, Sheet, Command…</span>) restyled with the tokens above. States are documented inline.</p>
+
+    <h3 style="margin:38px 0 16px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Buttons</h3>
+    <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:22px">
+      <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Variants</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button style="display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px;box-shadow:0 1px 2px rgba(43,38,34,.12)" style-hover="background:#9C4324">Primary</button>
+        <button style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#EFE7D6;color:#2B2622;border:1px solid #DCCFB4;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px" style-hover="background:#E7DcC4">Secondary</button>
+        <button style="cursor:pointer;background:transparent;color:#2B2622;border:none;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 16px;border-radius:10px" style-hover="background:#EAE0CC">Ghost</button>
+        <button style="cursor:pointer;background:transparent;color:#B4502E;border:none;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 6px;text-decoration:underline;text-underline-offset:3px">Link</button>
+        <button style="cursor:pointer;background:#B23A2E;color:#FBF6EC;border:none;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px" style-hover="background:#9C3025">Destructive</button>
+        <button style="cursor:pointer;background:#3E7C53;color:#FBF6EC;border:none;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px" style-hover="background:#356B48">Success</button>
+      </div>
+
+      <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin:22px 0 14px">Commerce</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button onClick="{{ addToCart }}" style="display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;padding:12px 20px;border-radius:10px;box-shadow:0 3px 10px rgba(180,80,46,.28)" style-hover="background:#9C4324" style-active="animation:jp-pop .28s ease"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 2h3l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.2a1.5 1.5 0 0 0 1.5-1.2L21 6H6"/></svg>Add to cart · €42.90</button>
+        <button style="display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;background:#6B5191;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:14px;padding:12px 20px;border-radius:10px" style-hover="background:#5C4480"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBF6EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Preorder</button>
+        <button onClick="{{ addWishlist }}" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#FFFDF8;color:#2B2622;border:1px solid #DCCFB4;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px" style-hover="border-color:#B4502E;color:#B4502E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg>Wishlist</button>
+        <button style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#FFFDF8;color:#6B5191;border:1px solid #D9CEE6;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px" style-hover="background:#F3EEF8"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B5191" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>Notify me</button>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:30px;margin-top:24px">
+        <div>
+          <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:12px">Sizes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button style="border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:7px 13px;border-radius:8px">Small</button>
+            <button style="border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:14px;padding:11px 18px;border-radius:10px">Medium</button>
+            <button style="border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:16px;padding:14px 24px;border-radius:12px">Large</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:12px">States</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button style="border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:9px 15px;border-radius:9px">Default</button>
+            <button style="border:none;cursor:pointer;background:#9C4324;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:9px 15px;border-radius:9px">Hover</button>
+            <button style="border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:9px 15px;border-radius:9px;box-shadow:0 0 0 3px rgba(180,80,46,.35)">Focus</button>
+            <button disabled="disabled" style="border:none;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:9px 15px;border-radius:9px;opacity:.42;cursor:not-allowed">Disabled</button>
+            <button style="display:inline-flex;align-items:center;gap:8px;border:none;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;padding:9px 15px;border-radius:9px;cursor:progress"><span style="width:13px;height:13px;border:2px solid rgba(251,246,236,.4);border-top-color:#FBF6EC;border-radius:50%;animation:jp-spin .7s linear infinite"></span>Adding…</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4;background:#F1E8D6">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 52px">
+    <h3 style="margin:0 0 16px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Badges &amp; chips</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Full inventory</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#FBEFE0;color:#9C4324;border:1px solid #F0D9C2;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">New</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#B23A2E;color:#FBF1ED;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Sale −20%</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#B4502E;color:#FBF1ED;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Hot</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#F4E9CF;color:#8A6312;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="color:#B5852F">★</span>Top rated</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#3E7C53"></span>In stock</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#F6EBD2;color:#8A5A12;border:1px solid #E7D3A6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="width:6px;height:6px;border-radius:50%;background:#C0852F"></span>Low · 3 left</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#ECE6F3;color:#574079;border:1px solid #D9CEE6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Preorder</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#F5E6D6;color:#8A4A18;border:1px solid #E6CDB2;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Backorder</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:transparent;color:#2B2622;border:1.5px solid #B6A98C;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:4px 8px;border-radius:7px">Out of print</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#F2E6C8;color:#7E5A12;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><span style="font-size:9px;color:#A9791F">◆</span>Rare</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#DEEEEA;color:#2C6B5F;border:1px solid #C2DDD6;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Used · VG</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px">Expansion</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;background:#3E7C53;color:#EAF3EC;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 9px;border-radius:7px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#EAF3EC" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Best price</span>
+        </div>
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin:20px 0 12px">Style &amp; size</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span style="background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;padding:5px 9px;border-radius:7px">Soft</span>
+          <span style="background:#3E7C53;color:#EAF3EC;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;padding:5px 9px;border-radius:7px">Solid</span>
+          <span style="background:transparent;color:#2C6B43;border:1.5px solid #3E7C53;font-family:'Space Mono';font-size:11px;font-weight:700;text-transform:uppercase;padding:4px 8px;border-radius:7px">Outline</span>
+          <span style="background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px">sm</span>
+          <span style="background:#E4EFE4;color:#2C6B43;border:1px solid #CBE0CD;font-family:'Space Mono';font-size:12px;font-weight:700;text-transform:uppercase;padding:6px 11px;border-radius:8px">md</span>
+        </div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Filter chips · active</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#F6E4DA;color:#9C4324;border:1px solid #EBCDBE;font-size:13px;font-weight:600;padding:6px 8px 6px 12px;border-radius:999px">Cooperative <span style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#E7C3B2;cursor:pointer">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#F6E4DA;color:#9C4324;border:1px solid #EBCDBE;font-size:13px;font-weight:600;padding:6px 8px 6px 12px;border-radius:999px">2 players <span style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#E7C3B2;cursor:pointer">✕</span></span>
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#F6E4DA;color:#9C4324;border:1px solid #EBCDBE;font-size:13px;font-weight:600;padding:6px 8px 6px 12px;border-radius:999px">Under €40 <span style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#E7C3B2;cursor:pointer">✕</span></span>
+          <button style="background:none;border:none;color:#6F6557;font-family:'Hanken Grotesk';font-weight:600;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Clear all</button>
+        </div>
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin:20px 0 12px">Category chips · toggle</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span style="background:#B4502E;color:#FBF6EC;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer">Strategy</span>
+          <span style="background:transparent;color:#2B2622;border:1px solid #DCCFB4;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer">Family</span>
+          <span style="background:transparent;color:#2B2622;border:1px solid #DCCFB4;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer">Party</span>
+          <span style="background:transparent;color:#2B2622;border:1px solid #DCCFB4;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer">Co-op</span>
+          <span style="background:transparent;color:#2B2622;border:1px solid #DCCFB4;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;cursor:pointer">Solo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4;background:#F1E8D6">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 52px">
+    <h3 style="margin:0 0 16px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Search &amp; command palette</h3>
+    <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px;max-width:560px">
+      <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:12px">Global search · ⌘K</div>
+      <div style="display:flex;align-items:center;gap:10px;background:#FFFFFF;border:1.5px solid #B4502E;border-radius:12px;padding:12px 14px;box-shadow:0 0 0 3px rgba(180,80,46,.14)">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span style="flex:1;font-size:15px;color:#2B2622">catan<span style="display:inline-block;width:1.5px;height:17px;background:#B4502E;margin-left:1px;vertical-align:middle;animation:jp-pop 1s steps(1) infinite"></span></span>
+        <span style="font-family:'Space Mono';font-size:11px;color:#9A8E79;background:#F1E8D6;border:1px solid #E0D4BC;border-radius:6px;padding:3px 7px">⌘K</span>
+      </div>
+      <div style="margin-top:10px;border:1px solid #E6DBC4;border-radius:12px;overflow:hidden;box-shadow:0 10px 26px rgba(43,38,34,.10)">
+        <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;padding:11px 14px 7px">Games</div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 14px;background:#F6E4DA;cursor:pointer"><div style="width:30px;height:38px;border-radius:5px;background:repeating-linear-gradient(45deg,#E7D3A6,#E7D3A6 5px,#DEC691 5px,#DEC691 10px);flex:none"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">Catan <span style="color:#9A8E79;font-weight:400">(5th Edition)</span></div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557">3–4 players · 60 min · ★ 7.1</div></div><span style="font-family:'Space Mono';font-size:11px;color:#9C4324">↵</span></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 14px;cursor:pointer"><div style="width:30px;height:38px;border-radius:5px;background:repeating-linear-gradient(45deg,#CBDDD2,#CBDDD2 5px,#BBD2C5 5px,#BBD2C5 10px);flex:none"></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">Catan: Seafarers <span style="color:#9A8E79;font-weight:400">expansion</span></div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557">3–4 players · 90 min · ★ 7.3</div></div></div>
+        <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;padding:11px 14px 7px;border-top:1px solid #ECE3D1">Mechanics · Publishers</div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 14px;cursor:pointer"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:7px;background:#E3EAF1;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A5876" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span><div style="flex:1"><div style="font-weight:600;font-size:14px">Trading &amp; negotiation</div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557">Mechanic · 412 games</div></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:9px 14px 12px;cursor:pointer"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:7px;background:#EDE4D2;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"/><path d="M9 21v-6h6v6"/></svg></span><div style="flex:1"><div style="font-weight:600;font-size:14px">KOSMOS</div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557">Publisher · 186 games</div></div></div>
+      </div>
+      <p style="margin:13px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Typo-tolerant (<span style="font-family:'Space Mono';font-size:11.5px">"catn" → Catan</span>), grouped results, keyboard-first. Falls back to <b>recent</b> + <b>trending</b> when empty.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4;background:#F1E8D6">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 56px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Form controls</div>
+        <label style="display:block;font-size:12.5px;font-weight:600;color:#6F6557;margin-bottom:6px">Delivery postcode</label>
+        <input value="2000" readonly="readonly" style="width:100%;font-family:'Hanken Grotesk';font-size:15px;color:#2B2622;background:#fff;border:1px solid #DCCFB4;border-radius:10px;padding:11px 13px;outline:none">
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <div style="flex:1"><input value="Focused" readonly="readonly" style="width:100%;font-family:'Hanken Grotesk';font-size:14px;color:#2B2622;background:#fff;border:1.5px solid #B4502E;border-radius:10px;padding:10px 12px;outline:none;box-shadow:0 0 0 3px rgba(180,80,46,.14)"></div>
+          <div style="flex:1"><input value="0000" readonly="readonly" style="width:100%;font-family:'Hanken Grotesk';font-size:14px;color:#B23A2E;background:#fff;border:1.5px solid #B23A2E;border-radius:10px;padding:10px 12px;outline:none"></div>
+        </div>
+        <div style="font-size:11.5px;color:#B23A2E;margin-top:5px;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B23A2E" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>Enter a valid 4-digit postcode</div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:18px">
+          <div style="display:inline-flex;align-items:center;justify-content:space-between;gap:10px;min-width:170px;background:#fff;border:1px solid #DCCFB4;border-radius:10px;padding:9px 13px;cursor:pointer"><span style="font-size:13px;color:#6F6557">Sort: <b style="color:#2B2622">Best match</b></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div style="display:inline-flex;align-items:center;border:1px solid #DCCFB4;border-radius:10px;overflow:hidden;background:#fff"><button onClick="{{ decQty }}" style="border:none;background:transparent;cursor:pointer;font-size:18px;color:#2B2622;width:38px;height:38px" style-hover="background:#F1E8D6">−</button><span style="width:34px;text-align:center;font-family:'Space Mono';font-weight:700;font-size:14px;font-variant-numeric:tabular-nums">{{ qty }}</span><button onClick="{{ incQty }}" style="border:none;background:transparent;cursor:pointer;font-size:18px;color:#2B2622;width:38px;height:38px" style-hover="background:#F1E8D6">+</button></div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-top:18px">
+          <div style="display:inline-flex;align-items:center;gap:9px"><span style="width:40px;height:23px;border-radius:999px;background:#3E7C53;position:relative;flex:none"><span style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span><span style="font-size:13.5px;color:#2B2622">In stock only</span></div>
+          <div style="display:inline-flex;align-items:center;gap:8px"><span style="width:19px;height:19px;border-radius:5px;background:#B4502E;display:grid;place-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FBF6EC" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span style="font-size:13.5px;color:#2B2622">Free shipping</span></div>
+          <div style="display:inline-flex;align-items:center;gap:8px"><span style="width:19px;height:19px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></span><span style="font-size:13.5px;color:#2B2622">New only</span></div>
+        </div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Space Mono';font-size:10.5px;letter-spacing:1.5px;color:#9A8E79;text-transform:uppercase;margin-bottom:14px">Tabs &amp; accordion</div>
+        <div style="display:flex;gap:4px;border-bottom:1px solid #E6DBC4">
+          <span style="font-weight:600;font-size:14px;color:#B4502E;padding:9px 12px;border-bottom:2px solid #B4502E;margin-bottom:-1px">Overview</span>
+          <span style="font-weight:600;font-size:14px;color:#6F6557;padding:9px 12px;cursor:pointer">Specs</span>
+          <span style="font-weight:600;font-size:14px;color:#6F6557;padding:9px 12px;cursor:pointer">Reviews · 1.2k</span>
+        </div>
+        <div style="margin-top:16px">
+          <div style="border:1px solid #E6DBC4;border-radius:10px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:#F6F0E4;cursor:pointer"><span style="font-weight:600;font-size:14px">How does shipping work?</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="2.2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg></div>
+            <div style="padding:4px 15px 14px;font-size:13.5px;color:#6F6557;line-height:1.55">Free over €60. Orders ship in 1–2 business days; multi-seller carts may arrive separately. A customer hold lets you combine preorders into one shipment.</div>
+          </div>
+          <div style="border:1px solid #E6DBC4;border-top:none;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;cursor:pointer"><span style="font-weight:600;font-size:14px;color:#2B2622">Is this the new or used edition?</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div style="border:1px solid #E6DBC4;border-top:none;border-radius:0 0 10px 10px;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;cursor:pointer"><span style="font-weight:600;font-size:14px;color:#2B2622">Can I combine preorders?</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4;background:#F1E8D6">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 58px">
+    <h3 style="margin:0 0 4px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>Product card · the workhorse</h3>
+    <p style="margin:0 0 18px;font-size:14px;color:#6F6557;max-width:62ch">One card, every state. Metadata stays visible (good for SEO &amp; scanning): stat pills, rating, price, stock and seller count all render server-side.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(218px,1fr));gap:16px">
+
+      <article style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(43,38,34,.05)" style-hover="box-shadow:0 12px 26px rgba(43,38,34,.13);transform:translateY(-3px)">
+        <div style="position:relative;aspect-ratio:3/4;background:repeating-linear-gradient(45deg,#EFE0C4,#EFE0C4 10px,#E7D5B2 10px,#E7D5B2 20px)">
+          <span style="position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;gap:4px;background:#F4E9CF;color:#8A6312;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px"><span style="color:#B5852F">★</span>Top 100</span>
+          <button style="position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,253,248,.9);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(4px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></button>
+          <span style="position:absolute;bottom:8px;left:9px;font-family:'Space Mono';font-size:10px;color:#9A8E79;background:rgba(255,253,248,.85);padding:2px 6px;border-radius:5px">[ box ]</span>
+        </div>
+        <div style="padding:13px 14px">
+          <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase">KOSMOS</div>
+          <h4 style="margin:3px 0 0;font-family:'Bricolage Grotesque';font-weight:700;font-size:16.5px;line-height:1.18">Catan <span style="color:#9A8E79;font-weight:500;font-size:14px">5th Ed.</span></h4>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:9px;font-family:'Space Mono';font-size:11px;color:#6F6557">
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/></svg>3–4</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>60m</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#9A8E79" stroke="none"><rect x="2" y="13" width="3.2" height="7" rx="1"/><rect x="8" y="9" width="3.2" height="11" rx="1"/><rect x="14" y="5.5" width="3.2" height="14.5" rx="1" fill="#D8CCB3"/></svg>2.3</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#B5852F" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span style="font-weight:700;font-size:13.5px">7.1</span><span style="font-size:12px;color:#9A8E79">(4.2k)</span></div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:11px"><div style="display:flex;align-items:baseline;gap:1px"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;font-variant-numeric:tabular-nums">42</span><span style="font-size:13px;color:#6F6557">.90</span></div><span style="display:inline-flex;align-items:center;gap:4px;background:#E4EFE4;color:#2C6B43;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px"><span style="width:5px;height:5px;border-radius:50%;background:#3E7C53"></span>In stock</span></div>
+          <button onClick="{{ addToCart }}" style="width:100%;margin-top:12px;border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;padding:10px;border-radius:9px" style-hover="background:#9C4324" style-active="animation:jp-pop .28s ease">Add to cart</button>
+        </div>
+      </article>
+
+      <article style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(43,38,34,.05)" style-hover="box-shadow:0 12px 26px rgba(43,38,34,.13);transform:translateY(-3px)">
+        <div style="position:relative;aspect-ratio:3/4;background:repeating-linear-gradient(45deg,#D9E4D5,#D9E4D5 10px,#CBDBC6 10px,#CBDBC6 20px)">
+          <span style="position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;background:#B23A2E;color:#FBF1ED;font-family:'Space Mono';font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px">Sale −19%</span>
+          <button style="position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,253,248,.9);display:grid;place-items:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="#B4502E" stroke="#B4502E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></button>
+          <span style="position:absolute;bottom:8px;left:9px;font-family:'Space Mono';font-size:10px;color:#7C8C78;background:rgba(255,253,248,.85);padding:2px 6px;border-radius:5px">[ box ]</span>
+        </div>
+        <div style="padding:13px 14px">
+          <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase">STONEMAIER</div>
+          <h4 style="margin:3px 0 0;font-family:'Bricolage Grotesque';font-weight:700;font-size:16.5px;line-height:1.18">Wingspan</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:9px;font-family:'Space Mono';font-size:11px;color:#6F6557">
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/></svg>1–5</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>70m</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#9A8E79" stroke="none"><rect x="2" y="13" width="3.2" height="7" rx="1"/><rect x="8" y="9" width="3.2" height="11" rx="1"/><rect x="14" y="5.5" width="3.2" height="14.5" rx="1" fill="#D8CCB3"/></svg>2.4</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#B5852F" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span style="font-weight:700;font-size:13.5px">8.1</span><span style="font-size:12px;color:#9A8E79">(5.8k)</span></div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:11px"><div style="display:flex;align-items:baseline;gap:5px"><div style="display:flex;align-items:baseline;gap:1px;color:#B23A2E"><span style="font-size:13px">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;font-variant-numeric:tabular-nums">48</span></div><span style="font-size:12px;color:#9A8E79;text-decoration:line-through">€59</span></div><span style="display:inline-flex;align-items:center;gap:4px;background:#F6EBD2;color:#8A5A12;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px"><span style="width:5px;height:5px;border-radius:50%;background:#C0852F"></span>3 left</span></div>
+          <button onClick="{{ addToCart }}" style="width:100%;margin-top:12px;border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;padding:10px;border-radius:9px" style-hover="background:#9C4324" style-active="animation:jp-pop .28s ease">Add to cart</button>
+        </div>
+      </article>
+
+      <article style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(43,38,34,.05)" style-hover="box-shadow:0 12px 26px rgba(43,38,34,.13);transform:translateY(-3px)">
+        <div style="position:relative;aspect-ratio:3/4;background:repeating-linear-gradient(45deg,#E4DCEC,#E4DCEC 10px,#D7CCE4 10px,#D7CCE4 20px)">
+          <span style="position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;background:#6B5191;color:#F1ECF7;font-family:'Space Mono';font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px">Preorder</span>
+          <button style="position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,253,248,.9);display:grid;place-items:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></button>
+          <span style="position:absolute;bottom:8px;left:9px;font-family:'Space Mono';font-size:10px;color:#8A7CA0;background:rgba(255,253,248,.85);padding:2px 6px;border-radius:5px">[ box ]</span>
+        </div>
+        <div style="padding:13px 14px">
+          <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase">DAYS OF WONDER</div>
+          <h4 style="margin:3px 0 0;font-family:'Bricolage Grotesque';font-weight:700;font-size:16.5px;line-height:1.18">Heat: Pedal to the Metal</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:9px;font-family:'Space Mono';font-size:11px;color:#6F6557">
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/></svg>1–6</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>60m</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#9A8E79" stroke="none"><rect x="2" y="13" width="3.2" height="7" rx="1"/><rect x="8" y="9" width="3.2" height="11" rx="1"/><rect x="14" y="5.5" width="3.2" height="14.5" rx="1" fill="#D8CCB3"/></svg>2.3</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#B5852F" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span style="font-weight:700;font-size:13.5px">7.9</span><span style="font-size:12px;color:#9A8E79">(2.1k)</span></div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:11px"><div style="display:flex;align-items:baseline;gap:1px"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;font-variant-numeric:tabular-nums">36</span></div><span style="font-family:'Space Mono';font-size:10px;color:#574079">Ships Aug 14</span></div>
+          <button style="width:100%;margin-top:12px;border:none;cursor:pointer;background:#6B5191;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;padding:10px;border-radius:9px" style-hover="background:#5C4480">Preorder</button>
+        </div>
+      </article>
+
+      <article style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(43,38,34,.05)" style-hover="box-shadow:0 12px 26px rgba(43,38,34,.13);transform:translateY(-3px)">
+        <div style="position:relative;aspect-ratio:3/4;background:repeating-linear-gradient(45deg,#E7DAC0,#E7DAC0 10px,#DCCBA6 10px,#DCCBA6 20px)">
+          <span style="position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;gap:4px;background:#F2E6C8;color:#7E5A12;border:1px solid #E2CF9C;font-family:'Space Mono';font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px"><span style="font-size:8px;color:#A9791F">◆</span>Rare</span>
+          <span style="position:absolute;top:38px;left:9px;display:inline-flex;align-items:center;background:transparent;color:#5A4A2E;border:1.5px solid #B6A98C;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:rgba(255,253,248,.7)">Out of print</span>
+          <button style="position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,253,248,.9);display:grid;place-items:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6F6557" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></button>
+        </div>
+        <div style="padding:13px 14px">
+          <div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase">AVALON HILL · 1979</div>
+          <h4 style="margin:3px 0 0;font-family:'Bricolage Grotesque';font-weight:700;font-size:16.5px;line-height:1.18">Dune <span style="color:#9A8E79;font-weight:500;font-size:14px">1st Print</span></h4>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:9px;font-family:'Space Mono';font-size:11px;color:#6F6557">
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/></svg>2–6</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>180m</span>
+            <span style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#9A8E79" stroke="none"><rect x="2" y="13" width="3.2" height="7" rx="1"/><rect x="8" y="9" width="3.2" height="11" rx="1"/><rect x="14" y="5.5" width="3.2" height="14.5" rx="1"/></svg>3.3</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#B5852F" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><span style="font-weight:700;font-size:13.5px">7.6</span><span style="font-size:12px;color:#9A8E79">(980)</span></div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:11px"><div><div style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79;text-transform:uppercase">from</div><div style="display:flex;align-items:baseline;gap:1px"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;font-variant-numeric:tabular-nums">74</span></div></div><span style="display:inline-flex;align-items:center;background:#DEEEEA;color:#2C6B5F;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:3px 7px;border-radius:6px">Used · VG</span></div>
+          <button style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #DCCFB4;cursor:pointer;background:#fff;color:#2B2622;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;padding:10px;border-radius:9px" style-hover="border-color:#B4502E;color:#B4502E">12 offers ›</button>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section id="gameparts" style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:60px 24px">
+    <div style="display:flex;align-items:baseline;gap:13px;margin-bottom:9px">
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#B4502E">03</span>
+      <span style="font-family:'Space Mono';font-size:12px;letter-spacing:2px;color:#9A8E79;text-transform:uppercase">Board-game components</span>
+    </div>
+    <h2 style="margin:0;font-family:'Bricolage Grotesque';font-weight:700;font-size:clamp(28px,4vw,40px);letter-spacing:-.025em">The encyclopedia layer</h2>
+    <p style="margin:12px 0 0;font-size:15.5px;line-height:1.55;color:#6F6557;max-width:62ch">Domain components no generic shop has. These turn a listing into something you can <i>understand</i> — and they're the SEO-rich, structured metadata that makes pages rank.</p>
+
+    <h3 style="margin:40px 0 14px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>GameStatPills</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+      <div style="flex:1;min-width:118px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:13px;padding:15px 12px;text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;margin-top:8px;letter-spacing:-.02em">3–4</div><div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Players</div></div>
+      <div style="flex:1;min-width:118px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:13px;padding:15px 12px;text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;margin-top:8px;letter-spacing:-.02em">60–90<span style="font-size:13px;color:#6F6557">m</span></div><div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Playtime</div></div>
+      <div style="flex:1;min-width:118px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:13px;padding:15px 12px;text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M12 2 3 6v6c0 5 4 8 9 10 5-2 9-5 9-10V6Z"/></svg><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;margin-top:8px;letter-spacing:-.02em">10<span style="font-size:13px;color:#6F6557">+</span></div><div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Age</div></div>
+      <div style="flex:1;min-width:118px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:13px;padding:15px 12px;text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="#B4502E" stroke="none" style="margin:0 auto"><rect x="2" y="13" width="3.4" height="7" rx="1"/><rect x="8.3" y="9" width="3.4" height="11" rx="1"/><rect x="14.6" y="5" width="3.4" height="15" rx="1" fill="#E2C6BB"/></svg><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;margin-top:8px;letter-spacing:-.02em">2.3<span style="font-size:13px;color:#6F6557">/5</span></div><div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Weight</div></div>
+      <div style="flex:1;min-width:118px;background:#FFFDF8;border:1px solid #E6DBC4;border-radius:13px;padding:15px 12px;text-align:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4502E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><path d="M5 8h14M5 8a2 2 0 0 1 0-4h9l5 4M5 8v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M9 13h6"/></svg><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:21px;margin-top:8px;letter-spacing:-.02em">Low</div><div style="font-family:'Space Mono';font-size:10px;letter-spacing:1px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Language</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><span style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">ComplexityMeter</span><span style="font-family:'Space Mono';font-size:12px;color:#8A5A12;background:#F6EBD2;border:1px solid #E7D3A6;padding:3px 9px;border-radius:7px">2.3 / 5 · Medium-light</span></div>
+        <div style="position:relative;height:12px;border-radius:8px;background:linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%);box-shadow:inset 0 0 0 1px rgba(43,38,34,.08)">
+          <div style="position:absolute;left:46%;top:-6px;width:3px;height:24px;background:#2B2622;border-radius:3px;box-shadow:0 0 0 3px #FFFDF8"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:11px;font-family:'Space Mono';font-size:10.5px;color:#9A8E79;text-transform:uppercase">
+          <span style="color:#3E7C53;font-weight:700">Light</span><span>Medium</span><span>Heavy</span><span>Expert</span>
+        </div>
+        <p style="margin:14px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Maps BGG-style weight (1–5) to a 4-band scale. The band, not just the number, drives "learning difficulty" copy.</p>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><span style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">PlayerCountFit</span><span style="font-family:'Space Mono';font-size:12px;color:#2C6B43;background:#E4EFE4;border:1px solid #CBE0CD;padding:3px 9px;border-radius:7px">Best with 3–4</span></div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#EDE4D2;border:1px dashed #D8CCB3;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#B6A98C;text-decoration:line-through">1</div><div style="font-family:'Space Mono';font-size:9px;color:#B6A98C;margin-top:5px;text-transform:uppercase">No</div></div>
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#F6EBD2;border:1px solid #E7D3A6;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#8A5A12">2</div><div style="font-family:'Space Mono';font-size:9px;color:#8A5A12;margin-top:5px;text-transform:uppercase">OK</div></div>
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#3E7C53;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#EAF3EC">3</div><div style="font-family:'Space Mono';font-size:9px;color:#2C6B43;font-weight:700;margin-top:5px;text-transform:uppercase">Best</div></div>
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#3E7C53;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#EAF3EC">4</div><div style="font-family:'Space Mono';font-size:9px;color:#2C6B43;font-weight:700;margin-top:5px;text-transform:uppercase">Best</div></div>
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#E4EFE4;border:1px solid #CBE0CD;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#3E7C53">5</div><div style="font-family:'Space Mono';font-size:9px;color:#2C6B43;margin-top:5px;text-transform:uppercase">Good</div></div>
+          <div style="flex:1;text-align:center"><div style="height:38px;border-radius:9px;background:#EDE4D2;border:1px solid #E0D4BC;display:grid;place-items:center;font-family:'Space Mono';font-weight:700;font-size:14px;color:#9A8E79">6</div><div style="font-family:'Space Mono';font-size:9px;color:#9A8E79;margin-top:5px;text-transform:uppercase">Ext</div></div>
+        </div>
+        <p style="margin:14px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Community player-count poll, distilled. "Ext" = supported only with an expansion.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 56px">
+    <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px;margin-bottom:14px">
+      <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:13px">MechanicsTags &amp; categories</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Trading &amp; negotiation</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Dice rolling</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Route &amp; network building</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Modular board</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#E3EAF1;color:#3A5876;border:1px solid #CCD9E5;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Variable setup</span>
+        <span style="width:1px;height:24px;background:#E0D4BC;margin:0 4px"></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EDE4D2;color:#6F6557;border:1px solid #E0D4BC;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Family</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EDE4D2;color:#6F6557;border:1px solid #E0D4BC;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Economic</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EDE4D2;color:#6F6557;border:1px solid #E0D4BC;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px">Gateway</span>
+      </div>
+      <p style="margin:13px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Mechanics are <b>blue</b> (functional facets, each links to a faceted hub); categories are <b>neutral</b> (themes). Both are crawlable internal links.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:14px">GameRankBadge</div>
+        <div style="display:flex;align-items:center;gap:11px;background:#F4E9CF;border:1px solid #E2CF9C;border-radius:12px;padding:13px 15px">
+          <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#B5852F;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="#FBF6EC" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg></span>
+          <div><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:22px;line-height:1;color:#7E5A12">#418</div><div style="font-family:'Space Mono';font-size:10.5px;color:#8A6312;text-transform:uppercase;letter-spacing:1px;margin-top:2px">Overall rank</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <div style="flex:1;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:10px;padding:11px 13px"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:18px;color:#2B2622">#28</div><div style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Family</div></div>
+          <div style="flex:1;background:#FBF6EC;border:1px solid #E6DBC4;border-radius:10px;padding:11px 13px"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:18px;color:#2B2622">#112</div><div style="font-family:'Space Mono';font-size:9.5px;color:#9A8E79;text-transform:uppercase;margin-top:2px">Strategy</div></div>
+        </div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:14px">CommunityRatingSummary</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="text-align:center;flex:none"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:38px;line-height:1;letter-spacing:-.03em">7.1</div><div style="display:flex;gap:1px;justify-content:center;margin-top:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="#B5852F"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><svg width="13" height="13" viewBox="0 0 24 24" fill="#B5852F"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><svg width="13" height="13" viewBox="0 0 24 24" fill="#B5852F"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><svg width="13" height="13" viewBox="0 0 24 24" fill="#D8CCB3"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg><svg width="13" height="13" viewBox="0 0 24 24" fill="#D8CCB3"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 18.9 6.1 21l1.2-6.5L2.5 9.4l6.6-.9z"/></svg></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79;margin-top:5px">4,210 ratings</div></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79;width:14px">10</span><div style="flex:1;height:6px;border-radius:3px;background:#EDE4D2"><div style="width:62%;height:100%;border-radius:3px;background:#3E7C53"></div></div></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79;width:14px">8</span><div style="flex:1;height:6px;border-radius:3px;background:#EDE4D2"><div style="width:80%;height:100%;border-radius:3px;background:#3E7C53"></div></div></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79;width:14px">6</span><div style="flex:1;height:6px;border-radius:3px;background:#EDE4D2"><div style="width:45%;height:100%;border-radius:3px;background:#C0852F"></div></div></div>
+            <div style="display:flex;align-items:center;gap:7px"><span style="font-family:'Space Mono';font-size:10px;color:#9A8E79;width:14px">4</span><div style="flex:1;height:6px;border-radius:3px;background:#EDE4D2"><div style="width:18%;height:100%;border-radius:3px;background:#B4632A"></div></div></div>
+          </div>
+        </div>
+        <div style="font-family:'Space Mono';font-size:11px;color:#6F6557;margin-top:12px;border-top:1px solid #ECE3D1;padding-top:10px">1,180 written reviews · 89% would recommend</div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:6px">CollectionActions</div>
+        <div style="font-size:11.5px;color:#9A8E79;margin-bottom:13px;font-family:'Space Mono'">try the toggles ↓</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+          <button onClick="{{ toggleOwn }}" style="display:flex;align-items:center;gap:8px;background:#FBF6EC;border:1px solid #DCCFB4;border-radius:11px;padding:11px 12px;cursor:pointer;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;color:#2B2622" style-hover="border-color:#B4502E"><sc-if value="{{ own }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="#B4502E" stroke="#FBF6EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke="none"/><path d="M8 12l3 3 5-6"/></svg></sc-if><sc-if value="{{ notOwn }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></sc-if>Own</button>
+          <button onClick="{{ toggleWish }}" style="display:flex;align-items:center;gap:8px;background:#FBF6EC;border:1px solid #DCCFB4;border-radius:11px;padding:11px 12px;cursor:pointer;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;color:#2B2622" style-hover="border-color:#B4502E"><sc-if value="{{ wish }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="#B4502E" stroke="#B4502E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></sc-if><sc-if value="{{ notWish }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 6.6a5 5 0 0 0-7.1 0L12 8.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 22l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></sc-if>Wishlist</button>
+          <button onClick="{{ togglePlayed }}" style="display:flex;align-items:center;gap:8px;background:#FBF6EC;border:1px solid #DCCFB4;border-radius:11px;padding:11px 12px;cursor:pointer;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;color:#2B2622" style-hover="border-color:#B4502E"><sc-if value="{{ played }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="#3E7C53" stroke="#FBF6EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke="none"/><path d="M8 12l3 3 5-6"/></svg></sc-if><sc-if value="{{ notPlayed }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></sc-if>Played</button>
+          <button onClick="{{ toggleWant }}" style="display:flex;align-items:center;gap:8px;background:#FBF6EC;border:1px solid #DCCFB4;border-radius:11px;padding:11px 12px;cursor:pointer;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;color:#2B2622" style-hover="border-color:#B4502E"><sc-if value="{{ want }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="#B4502E" stroke="#B4502E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></sc-if><sc-if value="{{ notWant }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A8E79" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></sc-if>Want</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:1px solid #E6DBC4">
+  <div style="max-width:1200px;margin:0 auto;padding:8px 24px 60px">
+    <h3 style="margin:0 0 4px;font-family:'Bricolage Grotesque';font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px"><span style="width:7px;height:7px;border-radius:50%;background:#B4502E"></span>SellerOfferComparisonTable</h3>
+    <p style="margin:0 0 16px;font-size:14px;color:#6F6557;max-width:62ch">The marketplace buy-box. Seller trust, condition and <b>total</b> (item + shipping) side by side — the lowest total wins the badge. Powers <span style="font-family:'Space Mono';font-size:12.5px">AggregateOffer</span> schema.</p>
+    <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(43,38,34,.05)">
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border-left:4px solid #B4502E;background:#FBF3EA">
+        <div style="flex:1;min-width:150px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;font-size:15px">Juegospedia Direct</span><span style="display:inline-flex;align-items:center;gap:4px;background:#E4EFE4;color:#2C6B43;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:6px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#2C6B43" stroke-width="3.5"><path d="M20 6 9 17l-5-5"/></svg>Best price</span></div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557;margin-top:3px">★ 4.9 (12k) · New · Free shipping · In stock</div></div>
+        <div style="text-align:right;flex:none"><div style="display:flex;align-items:baseline;gap:1px;justify-content:flex-end"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:23px;font-variant-numeric:tabular-nums">42</span><span style="font-size:13px;color:#6F6557">.90</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79">total €42.90</div></div>
+        <button onClick="{{ addToCart }}" style="flex:none;border:none;cursor:pointer;background:#B4502E;color:#FBF6EC;font-family:'Hanken Grotesk';font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:9px" style-hover="background:#9C4324" style-active="animation:jp-pop .28s ease">Add</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border-top:1px solid #ECE3D1">
+        <div style="flex:1;min-width:150px"><div style="font-weight:700;font-size:15px">BrettSpiel DE</div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557;margin-top:3px">★ 4.8 (3.4k) · New · +€6.90 ship · 2 left</div></div>
+        <div style="text-align:right;flex:none"><div style="display:flex;align-items:baseline;gap:1px;justify-content:flex-end"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:23px;font-variant-numeric:tabular-nums">39</span><span style="font-size:13px;color:#6F6557">.50</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79">total €46.40</div></div>
+        <button style="flex:none;border:1px solid #DCCFB4;cursor:pointer;background:#fff;color:#2B2622;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:9px" style-hover="border-color:#B4502E;color:#B4502E">Add</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border-top:1px solid #ECE3D1">
+        <div style="flex:1;min-width:150px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;font-size:15px">MeepleMarket</span><span style="background:#DEEEEA;color:#2C6B5F;font-family:'Space Mono';font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:6px">Used · Like New</span></div><div style="font-family:'Space Mono';font-size:11px;color:#6F6557;margin-top:3px">★ 4.7 (980) · +€4.50 ship · 1 left</div></div>
+        <div style="text-align:right;flex:none"><div style="display:flex;align-items:baseline;gap:1px;justify-content:flex-end"><span style="font-size:13px;color:#6F6557">€</span><span style="font-family:'Bricolage Grotesque';font-weight:800;font-size:23px;font-variant-numeric:tabular-nums">34</span><span style="font-size:13px;color:#6F6557">.00</span></div><div style="font-family:'Space Mono';font-size:10px;color:#9A8E79">total €38.50</div></div>
+        <button style="flex:none;border:1px solid #DCCFB4;cursor:pointer;background:#fff;color:#2B2622;font-family:'Hanken Grotesk';font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:9px" style-hover="border-color:#B4502E;color:#B4502E">Add</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:14px">
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;margin-bottom:4px">UsedConditionSelector</div>
+        <div style="font-size:12.5px;color:#6F6557;margin-bottom:14px">Selected: <b style="color:#2B2622">{{ condLabel }}</b> · <b style="color:#B4502E">{{ condPrice }}</b> — <span style="color:#6F6557">{{ condNote }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <button onClick="{{ setCond0 }}" style="display:flex;align-items:center;gap:11px;background:#FBF6EC;border:1px solid #E0D4BC;border-radius:10px;padding:10px 13px;cursor:pointer;text-align:left" style-hover="border-color:#B4502E"><span style="width:17px;height:17px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center;flex:none"><sc-if value="{{ isCond0 }}" hint-placeholder-val="{{ false }}"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></sc-if></span><span style="flex:1;font-weight:600;font-size:13.5px;color:#2B2622">New</span><span style="font-family:'Space Mono';font-size:12px;color:#6F6557">€42.90</span></button>
+          <button onClick="{{ setCond1 }}" style="display:flex;align-items:center;gap:11px;background:#FBF6EC;border:1px solid #E0D4BC;border-radius:10px;padding:10px 13px;cursor:pointer;text-align:left" style-hover="border-color:#B4502E"><span style="width:17px;height:17px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center;flex:none"><sc-if value="{{ isCond1 }}" hint-placeholder-val="{{ true }}"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></sc-if></span><span style="flex:1;font-weight:600;font-size:13.5px;color:#2B2622">Like New</span><span style="font-family:'Space Mono';font-size:12px;color:#6F6557">€38.00</span></button>
+          <button onClick="{{ setCond2 }}" style="display:flex;align-items:center;gap:11px;background:#FBF6EC;border:1px solid #E0D4BC;border-radius:10px;padding:10px 13px;cursor:pointer;text-align:left" style-hover="border-color:#B4502E"><span style="width:17px;height:17px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center;flex:none"><sc-if value="{{ isCond2 }}" hint-placeholder-val="{{ false }}"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></sc-if></span><span style="flex:1;font-weight:600;font-size:13.5px;color:#2B2622">Very Good</span><span style="font-family:'Space Mono';font-size:12px;color:#6F6557">€34.00</span></button>
+          <button onClick="{{ setCond3 }}" style="display:flex;align-items:center;gap:11px;background:#FBF6EC;border:1px solid #E0D4BC;border-radius:10px;padding:10px 13px;cursor:pointer;text-align:left" style-hover="border-color:#B4502E"><span style="width:17px;height:17px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center;flex:none"><sc-if value="{{ isCond3 }}" hint-placeholder-val="{{ false }}"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></sc-if></span><span style="flex:1;font-weight:600;font-size:13.5px;color:#2B2622">Good</span><span style="font-family:'Space Mono';font-size:12px;color:#6F6557">€29.00</span></button>
+          <button onClick="{{ setCond4 }}" style="display:flex;align-items:center;gap:11px;background:#FBF6EC;border:1px solid #E0D4BC;border-radius:10px;padding:10px 13px;cursor:pointer;text-align:left" style-hover="border-color:#B4502E"><span style="width:17px;height:17px;border-radius:50%;border:2px solid #B4502E;display:grid;place-items:center;flex:none"><sc-if value="{{ isCond4 }}" hint-placeholder-val="{{ false }}"><span style="width:9px;height:9px;border-radius:50%;background:#B4502E"></span></sc-if></span><span style="flex:1;font-weight:600;font-size:13.5px;color:#2B2622">Acceptable <span style="color:#B4632A;font-size:11px">· check components</span></span><span style="font-family:'Space Mono';font-size:12px;color:#6F6557">€24.00</span></button>
+        </div>
+      </div>
+
+      <div style="background:#FFFDF8;border:1px solid #E6DBC4;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><span style="font-family:'Bricolage Grotesque';font-weight:700;font-size:15px">PriceHistoryMiniChart</span><span style="font-family:'Space Mono';font-size:11px;color:#2C6B43;background:#E4EFE4;border:1px solid #CBE0CD;padding:3px 8px;border-radius:6px">90-day low €38</span></div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:96px;padding-bottom:2px">
+          <div style="flex:1;height:70%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:64%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:78%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:72%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:55%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:48%;background:#3E7C53;border-radius:3px"></div><div style="flex:1;height:58%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:66%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:60%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:74%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:82%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:68%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:62%;background:#E0D4BC;border-radius:3px"></div><div style="flex:1;height:72%;background:#B4502E;border-radius:3px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:9px;font-family:'Space Mono';font-size:10px;color:#9A8E79"><span>90d ago</span><span style="color:#3E7C53">▼ low</span><span>now €42.90</span></div>
+        <p style="margin:13px 0 0;font-size:12.5px;color:#6F6557;line-height:1.5">Builds price confidence &amp; powers stock-alert "notify on price drop". Green bar = historic low; clay = today.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div onClick="{{ addToCart }}" style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;pointer-events:none">
+  <sc-if value="{{ toastShown }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;gap:11px;background:#2B2622;color:#FBF6EC;padding:13px 18px;border-radius:12px;box-shadow:0 16px 40px rgba(43,38,34,.32);animation:jp-toast .24s cubic-bezier(.2,0,0,1);font-family:'Hanken Grotesk';font-weight:600;font-size:14px">
+      <span style="display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#3E7C53;flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FBF6EC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+      {{ toast }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    toast: null,
+    tab: 0,
+    qty: 1,
+    coll: { own:false, wish:false, played:false, want:false },
+    cond: 1,
+  };
+  notify(msg){
+    clearTimeout(this._t);
+    this.setState({ toast: msg });
+    this._t = setTimeout(()=>this.setState({ toast:null }), 2600);
+  }
+  renderVals(){
+    const s = this.state;
+    const setTab = (i)=> this.setState({ tab:i });
+    const toggle = (k)=> this.setState(st=>({ coll:{...st.coll, [k]:!st.coll[k]} }));
+    return {
+      toast: s.toast,
+      toastShown: !!s.toast,
+      addToCart: ()=> this.notify('Added to cart · Catan (5th Ed.)'),
+      notifyAlert: ()=> this.notify("Stock alert set — we'll email you"),
+      addWishlist: ()=>{ toggle('wish'); this.notify(this.state.coll.wish ? 'Removed from wishlist' : 'Saved to wishlist'); },
+      tab: s.tab,
+      isOverview: s.tab===0, isSpecs: s.tab===1, isReviews: s.tab===2,
+      setOverview: ()=>setTab(0), setSpecs: ()=>setTab(1), setReviews: ()=>setTab(2),
+      qty: s.qty,
+      incQty: ()=> this.setState(st=>({ qty: Math.min(99, st.qty+1) })),
+      decQty: ()=> this.setState(st=>({ qty: Math.max(1, st.qty-1) })),
+      own: s.coll.own, wish: s.coll.wish, played: s.coll.played, want: s.coll.want,
+      notOwn: !s.coll.own, notWish: !s.coll.wish, notPlayed: !s.coll.played, notWant: !s.coll.want,
+      toggleOwn: ()=>toggle('own'), toggleWish: ()=>toggle('wish'),
+      togglePlayed: ()=>toggle('played'), toggleWant: ()=>toggle('want'),
+      cond: s.cond,
+      isCond0: s.cond===0, isCond1: s.cond===1, isCond2: s.cond===2, isCond3: s.cond===3, isCond4: s.cond===4,
+      setCond0: ()=>this.setState({cond:0}), setCond1: ()=>this.setState({cond:1}),
+      setCond2: ()=>this.setState({cond:2}), setCond3: ()=>this.setState({cond:3}), setCond4: ()=>this.setState({cond:4}),
+      condLabel: ['New','Like New','Very Good','Good','Acceptable'][s.cond],
+      condPrice: ['€42.90','€38.00','€34.00','€29.00','€24.00'][s.cond],
+      condNote: ['Factory sealed, in shrink.','Opened, unplayed, as-new.','Light shelf wear, 100% complete.','Played, complete, good shape.','Complete & playable; visible wear.'][s.cond],
+    };
+  }
+}
+</script>
+</body>
+</html>
