@@ -3,6 +3,7 @@ import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button, CatalogFilterPanel, CatalogFilterSection } from '@retail-os/ui-react';
 import type { CategoryCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
+import { FormAutoSubmit } from './FormAutoSubmit';
 
 export interface FilterState {
   q: string;
@@ -167,7 +168,9 @@ export function SearchFilters({
       </CatalogFilterSection>
 
       <input type="hidden" name="sort" value={state.sort ?? 'rank_score'} />
-      <Button type="submit" className="mt-3 w-full">{t.apply}</Button>
+      <FormAutoSubmit />
+      {/* Fallback submit for no-JS environments */}
+      <Button type="submit" className="mt-3 w-full js-hidden">{t.apply}</Button>
     </CatalogFilterPanel>
   );
 }
