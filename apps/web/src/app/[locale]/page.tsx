@@ -18,6 +18,14 @@ const T = {
     cats: 'Explora por categoría',
     featured: 'Disponibles ahora',
     all: 'Ver todo el catálogo',
+    searchPlaceholder: 'Busca Catan, cooperativos, 2 jugadores…',
+    searchAction: 'Buscar juegos',
+    discover: 'Descubre',
+    discoverText: 'Rankings, mecánicas, categorías y juegos que encajan con tu mesa.',
+    compare: 'Compara',
+    compareText: 'Precios y stock de tiendas verificadas, reunidos en un solo lugar.',
+    collect: 'Elige mejor',
+    collectText: 'Datos claros de jugadores, duración y edad antes de comprar.',
   },
   en: {
     title: 'Juegospedia — Board game price comparison',
@@ -28,6 +36,14 @@ const T = {
     cats: 'Browse by category',
     featured: 'Available now',
     all: 'See the full catalogue',
+    searchPlaceholder: 'Search Catan, cooperative, 2 players…',
+    searchAction: 'Search games',
+    discover: 'Discover',
+    discoverText: 'Rankings, mechanics, categories and games that fit your table.',
+    compare: 'Compare',
+    compareText: 'Prices and stock from verified stores, gathered in one place.',
+    collect: 'Choose better',
+    collectText: 'Clear player, time and age data before you buy.',
   },
 } satisfies Record<Locale, Record<string, string>>;
 
@@ -63,15 +79,27 @@ export default async function HomePage({ params }: { params: { locale: string } 
       <section className="hero">
         <div className="container">
           <p className="eyebrow">{t.eyebrow}</p>
-          <h1>{t.h1}</h1>
+          <h1>
+            {locale === 'es' ? <>La enciclopedia de juegos de mesa, <em>con el mejor precio.</em></> : <>The board-game encyclopedia, <em>at the best price.</em></>}
+          </h1>
           <p>{t.lead}</p>
+          <form className="hero-search" action={listingPath('search', locale)} method="get">
+            <input name="q" type="search" placeholder={t.searchPlaceholder} aria-label={t.searchAction} />
+            <button type="submit">{t.searchAction} →</button>
+          </form>
+          <div className="value-grid">
+            <article><span>01</span><h2>{t.discover}</h2><p>{t.discoverText}</p></article>
+            <article><span>02</span><h2>{t.compare}</h2><p>{t.compareText}</p></article>
+            <article><span>03</span><h2>{t.collect}</h2><p>{t.collectText}</p></article>
+          </div>
         </div>
       </section>
 
       <main className="container">
         {categories.length > 0 && (
           <>
-            <h2 className="section-title">{t.cats}</h2>
+            <p className="section-kicker home-section-kicker">{locale === 'es' ? 'Explorar' : 'Explore'}</p>
+            <h2 className="section-title home-section-title">{t.cats}</h2>
             <div className="taglist">
               {categories.map((c) => (
                 <Link
@@ -88,7 +116,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
         {featured.length > 0 && (
           <>
-            <h2 className="section-title">{t.featured}</h2>
+            <p className="section-kicker home-section-kicker">{locale === 'es' ? 'Marketplace' : 'Marketplace'}</p>
+            <h2 className="section-title home-section-title">{t.featured}</h2>
             <div className="grid">
               {featured.map((p) => (
                 <ProductCard key={p.id} product={p} locale={locale} />

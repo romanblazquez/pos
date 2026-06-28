@@ -205,7 +205,7 @@ export default function ProductPage({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:py-8">
       <SeoHead
         title={`${p.name} — precio y disponibilidad | Juegospedia`}
         description={description.slice(0, 160)}
@@ -223,13 +223,13 @@ export default function ProductPage({
         },
         { label: p.name },
       ]} />
-      <div className="grid md:grid-cols-2 gap-8 mb-10">
+      <div className="mb-12 grid gap-8 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:gap-14">
 
         {/* Images */}
         <div className="flex flex-col gap-3">
-          <div className="aspect-square rounded-2xl overflow-hidden bg-[--bg-subtle]">
+          <div className="aspect-[3/4] overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm">
             {p.images[selectedImage] ? (
-              <img src={p.images[selectedImage]} alt={p.name} className="w-full h-full object-cover" />
+              <img src={p.images[selectedImage]} alt={p.name} className="h-full w-full object-contain p-5" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[--tx-faint]">
                 <PackageCheck className="h-16 w-16" aria-hidden="true" />
@@ -245,7 +245,7 @@ export default function ProductPage({
                   className={`w-14 h-14 rounded-lg overflow-hidden border-2 bg-[--bg-subtle] transition-colors
                     ${selectedImage === i ? 'border-emerald-500' : 'border-[--border]'}`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={img} alt="" className="h-full w-full object-contain p-1" />
                 </button>
               ))}
             </div>
@@ -253,12 +253,12 @@ export default function ProductPage({
         </div>
 
         {/* Info */}
-        <div className="flex flex-col gap-4">
-          {p.publisher && <p className="text-sm text-[--tx-muted]">{p.publisher}</p>}
-          <h1 className="text-3xl font-bold text-[--tx]">{p.name}</h1>
+        <div className="flex flex-col gap-4 lg:pt-2">
+          {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-700">{p.publisher}</p>}
+          <h1 className="max-w-[18ch] font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
 
           {/* Metadata chips */}
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {p.minPlayers && p.maxPlayers && (
               <Chip icon={<Users className="h-3.5 w-3.5" />} label={`${p.minPlayers}-${p.maxPlayers} jugadores`} />
             )}
@@ -270,7 +270,7 @@ export default function ProductPage({
 
           {p.description && (
             <div
-              className="text-sm text-[--tx-muted] leading-relaxed"
+              className="max-w-[70ch] text-base leading-relaxed text-[--tx-muted]"
               dangerouslySetInnerHTML={{ __html: p.description }}
             />
           )}
@@ -281,15 +281,14 @@ export default function ProductPage({
               (l) => platformCashback + l.storeCashbackPct + l.promoBonus,
             ));
             return (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950
-                              border border-emerald-200 dark:border-emerald-800 flex flex-col gap-2">
+              <div className="flex flex-col gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
                 <div className="flex items-baseline justify-between">
                   <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Desde</p>
                   <p className="text-xs text-emerald-600 dark:text-emerald-500">
                     {activeListings.length} tienda{activeListings.length > 1 ? 's' : ''} con stock
                   </p>
                 </div>
-                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-200">
+                <p className="font-display text-4xl font-extrabold tracking-tight text-emerald-900 dark:text-emerald-200">
                   {fmt(Math.min(...activeListings.map((l) => l.priceMinorUnits)), activeListings[0].currency)}
                 </p>
                 {bestCashback > 0 && (
@@ -315,7 +314,7 @@ export default function ProductPage({
       {/* Listings comparison */}
       <section>
         <div className="flex items-baseline justify-between mb-1">
-          <h2 className="text-xl font-semibold text-[--tx]">Comparar tiendas</h2>
+          <h2 className="font-display text-2xl font-bold tracking-tight text-[--tx]">Comparar tiendas</h2>
           {inStockListings.length > 0 && (
             <span className="text-xs text-[--tx-faint]">
               {inStockListings.length} con stock{outOfStockListings.length > 0 && ` · ${outOfStockListings.length} agotada${outOfStockListings.length > 1 ? 's' : ''}`}
@@ -455,7 +454,7 @@ function ListingRow({
 
   return (
     <div
-      className={`relative rounded-xl border p-4 flex flex-wrap items-center gap-4 transition-colors
+      className={`relative flex flex-wrap items-center gap-4 rounded-[14px] border p-4 shadow-sm transition-colors
       ${isBestOverall
         ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950'
         : 'border-[--border] bg-[--bg-raised]'}
@@ -588,9 +587,10 @@ function ListingRow({
 
 function Chip({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full
-                     bg-[--bg-subtle] text-xs text-[--tx-muted] font-medium">
-      {icon} {label}
+    <span className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[13px] border border-[--border]
+                     bg-[--bg-raised] px-3 py-2 text-center text-[11px] font-medium text-[--tx-muted] shadow-sm">
+      <span className="text-emerald-700">{icon}</span>
+      <span className="font-mono">{label}</span>
     </span>
   );
 }

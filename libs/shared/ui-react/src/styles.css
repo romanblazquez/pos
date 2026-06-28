@@ -6,8 +6,8 @@
  *
  *     import '@retail-os/ui-react/styles.css';
  *
- * Brand: emerald primary (#15803d / emerald-700) over a warm-stone neutral base,
- * matching the customer-facing marketplace palette. Dark mode is opt-in via either
+ * Brand: clay primary over parchment neutrals, with forest and brass accents.
+ * Dark mode is opt-in via either
  * `.dark` (shadcn default) or `[data-theme="dark"]` on a parent (marketplace app).
  * Semantic tokens follow the shadcn/ui naming so components stay portable.
  * ──────────────────────────────────────────────────────────────────────────── */
@@ -16,88 +16,97 @@
 @custom-variant dark (&:is(.dark *, .dark), &:where([data-theme=dark], [data-theme=dark] *));
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.875rem;
 
   /* Surfaces */
-  --background: oklch(0.992 0.003 80);
-  --foreground: oklch(0.216 0.006 56);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.216 0.006 56);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.216 0.006 56);
+  --background: #f5efe3;
+  --surface: #fbf6ec;
+  --foreground: #2b2622;
+  --card: #fffdf8;
+  --card-foreground: #2b2622;
+  --popover: #fffdf8;
+  --popover-foreground: #2b2622;
 
   /* Brand */
-  --primary: oklch(0.585 0.122 163);
-  --primary-foreground: oklch(0.985 0.017 160);
+  --primary: #b4502e;
+  --primary-foreground: #fbf6ec;
+  --forest: #3f5a4a;
+  --gold: #b5852f;
 
   /* Neutrals */
-  --secondary: oklch(0.967 0.004 80);
-  --secondary-foreground: oklch(0.27 0.007 56);
-  --muted: oklch(0.967 0.004 80);
-  --muted-foreground: oklch(0.553 0.009 56);
-  --accent: oklch(0.95 0.03 162);
-  --accent-foreground: oklch(0.37 0.07 163);
+  --secondary: #efe7d6;
+  --secondary-foreground: #2b2622;
+  --muted: #ede4d2;
+  --muted-foreground: #6f6557;
+  --subtle-foreground: #9a8e79;
+  --accent: #f1e8d6;
+  --accent-foreground: #2b2622;
 
   /* Status */
-  --destructive: oklch(0.577 0.215 27.3);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.585 0.122 163);
-  --success-foreground: oklch(0.985 0.017 160);
-  --warning: oklch(0.769 0.158 70);
-  --warning-foreground: oklch(0.27 0.05 70);
+  --destructive: #b23a2e;
+  --destructive-foreground: #fbf1ed;
+  --success: #3e7c53;
+  --success-foreground: #eaf3ec;
+  --warning: #c0852f;
+  --warning-foreground: #8a5a12;
+  --info: #46688a;
 
   /* Lines & focus */
-  --border: oklch(0.917 0.004 80);
-  --input: oklch(0.917 0.004 80);
-  --ring: oklch(0.585 0.122 163);
+  --border: #e6dbc4;
+  --input: #dccfb4;
+  --ring: #b4502e;
 
   /* Charts */
-  --chart-1: oklch(0.585 0.122 163);
-  --chart-2: oklch(0.6 0.118 185);
-  --chart-3: oklch(0.398 0.07 227);
-  --chart-4: oklch(0.769 0.158 70);
-  --chart-5: oklch(0.627 0.198 35);
+  --chart-1: #b4502e;
+  --chart-2: #3e7c53;
+  --chart-3: #46688a;
+  --chart-4: #b5852f;
+  --chart-5: #6b5191;
 
   /* Sidebar */
-  --sidebar: oklch(0.985 0.003 80);
-  --sidebar-foreground: oklch(0.216 0.006 56);
-  --sidebar-primary: oklch(0.585 0.122 163);
-  --sidebar-primary-foreground: oklch(0.985 0.017 160);
-  --sidebar-accent: oklch(0.967 0.004 80);
-  --sidebar-accent-foreground: oklch(0.27 0.007 56);
-  --sidebar-border: oklch(0.917 0.004 80);
-  --sidebar-ring: oklch(0.585 0.122 163);
+  --sidebar: #fbf6ec;
+  --sidebar-foreground: #2b2622;
+  --sidebar-primary: #b4502e;
+  --sidebar-primary-foreground: #fbf6ec;
+  --sidebar-accent: #ede4d2;
+  --sidebar-accent-foreground: #2b2622;
+  --sidebar-border: #e6dbc4;
+  --sidebar-ring: #b4502e;
 }
 
 .dark,
 [data-theme="dark"] {
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.97 0 0);
+  --background: #16130d;
+  --surface: #201c14;
+  --foreground: #f0e8d8;
+  --card: #28231a;
+  --card-foreground: #f0e8d8;
+  --popover: #28231a;
+  --popover-foreground: #f0e8d8;
 
-  --primary: oklch(0.696 0.143 163);
-  --primary-foreground: oklch(0.18 0.03 164);
+  --primary: #ce6a41;
+  --primary-foreground: #1a140e;
+  --forest: #5ca877;
+  --gold: #d7a654;
 
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.3 0.04 164);
-  --accent-foreground: oklch(0.92 0.04 162);
+  --secondary: #312b20;
+  --secondary-foreground: #f0e8d8;
+  --muted: #312b20;
+  --muted-foreground: #b6ab94;
+  --subtle-foreground: #8c8270;
+  --accent: #1e3a2e;
+  --accent-foreground: #f0e8d8;
 
-  --destructive: oklch(0.704 0.191 22);
-  --destructive-foreground: oklch(0.98 0 0);
-  --success: oklch(0.696 0.143 163);
-  --success-foreground: oklch(0.18 0.03 164);
-  --warning: oklch(0.828 0.149 84);
-  --warning-foreground: oklch(0.24 0.05 70);
+  --destructive: #d06152;
+  --destructive-foreground: #fff1ed;
+  --success: #5ca877;
+  --success-foreground: #eaf3ec;
+  --warning: #d7a654;
+  --warning-foreground: #f0d79d;
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.696 0.143 163);
+  --border: #3a3428;
+  --input: #4a4233;
+  --ring: #ce6a41;
 
   --chart-1: oklch(0.696 0.143 163);
   --chart-2: oklch(0.696 0.17 162);
@@ -105,14 +114,14 @@
   --chart-4: oklch(0.627 0.265 304);
   --chart-5: oklch(0.645 0.246 16);
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.696 0.143 163);
-  --sidebar-primary-foreground: oklch(0.18 0.03 164);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.696 0.143 163);
+  --sidebar: #201c14;
+  --sidebar-foreground: #f0e8d8;
+  --sidebar-primary: #ce6a41;
+  --sidebar-primary-foreground: #1a140e;
+  --sidebar-accent: #312b20;
+  --sidebar-accent-foreground: #f0e8d8;
+  --sidebar-border: #3a3428;
+  --sidebar-ring: #ce6a41;
 }
 
 /* Map the semantic tokens onto Tailwind's color/radius scale so utilities like

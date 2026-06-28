@@ -44,13 +44,13 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
   return (
     <button
       onClick={onClick}
-      className="group flex min-h-[22rem] flex-col overflow-hidden rounded-lg border border-[--border]
+      className="group flex min-h-[25rem] flex-col overflow-hidden rounded-[14px] border border-[--border]
                  bg-[--bg-raised] text-left shadow-sm transition-all duration-200
-                 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-lg
+                 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-xl
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
-      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-[--bg-subtle]">
-        <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#f8fafc,#d9f99d_48%,#bfdbfe)] text-emerald-900 dark:bg-[linear-gradient(135deg,#1c1917,#064e3b_52%,#1e3a8a)] dark:text-emerald-200">
+      <div className="relative aspect-[3/4] shrink-0 overflow-hidden bg-[--bg-subtle]">
+        <div className="absolute inset-0 flex items-center justify-center bg-[repeating-linear-gradient(45deg,#efe5d2,#efe5d2_10px,#e8dcc5_10px,#e8dcc5_20px)] text-emerald-900 dark:bg-[--bg-subtle] dark:text-emerald-200">
           <PackageCheck className="h-10 w-10" aria-hidden="true" />
         </div>
         {product.images[0] ? (
@@ -58,7 +58,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
             src={product.images[0]}
             alt={product.name}
             loading={priority ? 'eager' : 'lazy'}
-            className="relative h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="relative h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.025]"
           />
         ) : (
           <div className="relative flex h-full w-full items-center justify-center text-[--tx-faint]">
@@ -67,9 +67,9 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
         )}
 
         {product.category && (
-          <span className="absolute left-2 top-2 inline-flex max-w-[82%] items-center gap-1 rounded-full
-                           border border-[--border] bg-[--bg-raised] px-2 py-1 text-[10px] font-semibold
-                           text-[--tx-muted] shadow-sm">
+          <span className="absolute left-2 top-2 inline-flex max-w-[82%] items-center gap-1 rounded-md
+                           border border-[--border] bg-[--bg-raised]/90 px-2 py-1 font-mono text-[10px] font-bold
+                           uppercase tracking-wide text-[--tx-muted] shadow-sm backdrop-blur-sm">
             <Tags className="h-3 w-3" aria-hidden="true" />
             <span className="truncate">{categoryLabel(product.category)}</span>
           </span>
@@ -91,11 +91,12 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[--tx] transition-colors group-hover:text-emerald-600">
+        {product.publisher && <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[--tx-faint]">{product.publisher}</p>}
+        <h3 className="line-clamp-2 font-display text-[17px] font-bold leading-tight text-[--tx] transition-colors group-hover:text-emerald-600">
           {product.name}
         </h3>
 
-        <div className="flex min-h-9 flex-wrap gap-x-3 gap-y-1 text-xs text-[--tx-faint]">
+        <div className="flex min-h-9 flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-[--tx-faint]">
           {players && (
             <span className="inline-flex items-center gap-1">
               <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -118,8 +119,8 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
         </div>
 
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-[--border] pt-3">
-          <span className="text-sm font-bold leading-tight text-[--tx]">{priceLabel}</span>
-          <span className={`shrink-0 text-xs font-medium ${hasStock ? 'text-emerald-600 dark:text-emerald-400' : 'text-[--tx-faint]'}`}>
+          <span className="font-display text-xl font-extrabold leading-tight text-[--tx]">{priceLabel}</span>
+          <span className={`shrink-0 rounded-md px-2 py-1 font-mono text-[10px] font-bold uppercase ${hasStock ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200' : 'bg-[--bg-subtle] text-[--tx-faint]'}`}>
             {hasStock ? `${product.inStockListings} tienda${product.inStockListings > 1 ? 's' : ''}` : 'Sin stock'}
           </span>
         </div>

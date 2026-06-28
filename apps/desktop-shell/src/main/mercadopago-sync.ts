@@ -1,4 +1,5 @@
 import { createServer, type Server } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { shell } from 'electron';
 import type { Db } from '@retail-os/local-db';
 
@@ -222,13 +223,35 @@ export class MercadoPagoSync {
     clientSecret: string,
   ): Promise<{ accessToken: string; refreshToken: string; merchantId: string; expiresIn: number }> {
     return new Promise((resolve, reject) => {
+      const expectedState = randomBytes(32).toString('hex');
       const server = createServer(async (req, res) => {
         try {
           const url = new URL(req.url ?? '/', 'http://localhost');
+          const returnedState = url.searchParams.get('state');
+          if (returnedState !== expectedState) {
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end('<h1>Error: respuesta de autorizacion no valida</h1>');
+            cleanup();
+            reject(new Error('OAuth state mismatch'));
+            return;
+          }
+
+          const oauthError = url.searchParams.get('error');
+          if (oauthError) {
+            const description = url.searchParams.get('error_description') ?? oauthError;
+            res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end('<h1>Autorizacion de Mercado Pago cancelada</h1>');
+            cleanup();
+            reject(new Error(`OAuth authorization failed: ${description}`));
+            return;
+          }
+
           const code = url.searchParams.get('code');
           if (!code) {
             res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end('<h1>Error: no se recibio codigo de autorizacion</h1>');
+            cleanup();
+            reject(new Error('OAuth callback did not include an authorization code'));
             return;
           }
 
@@ -277,7 +300,7 @@ export class MercadoPagoSync {
           response_type: 'code',
           client_id: clientId,
           redirect_uri: redirectUri,
-          state: String(Date.now()),
+          state: expectedState,
         });
         void shell.openExternal(`${MP_AUTH_URL}?${params.toString()}`);
       });

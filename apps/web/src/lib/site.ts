@@ -14,6 +14,12 @@ export const API_BASE_URL = (
 
 export const SITE_NAME = 'Juegospedia';
 
+// GA4 Measurement ID. Public by design (it ships in client HTML). Always on for
+// now — no consent gate, ad signals stay off. Override via env per-environment.
+export const GA_MEASUREMENT_ID = (
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? 'G-TYVHMB01K1'
+).trim();
+
 // The transactional SPA (cart / checkout / account) stays on its own host after
 // the apex cutover. Public SSR pages hand off here to complete a purchase.
 export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.juegospedia.com').replace(

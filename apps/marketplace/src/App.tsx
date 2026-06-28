@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
-import { Home, Moon, Search, ShoppingCart, Store, Sun, User, Wallet } from 'lucide-react';
+import { Moon, Search, ShoppingCart, Store, Sun, User, Wallet } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
@@ -14,7 +14,6 @@ import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { Button } from './components/ui/index.js';
 import { formatMoney } from './marketplace-meta.js';
-import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner.js';
 import { trackPageView } from './analytics.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -308,7 +307,6 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
           }}
         />
       )}
-      <AnalyticsConsentBanner />
     </div>
   );
 }
@@ -340,18 +338,18 @@ function Header({
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[--border] bg-[--bg-raised]">
+    <header className="sticky top-0 z-40 border-b border-[--border] bg-[color:color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0">
         <div className="flex items-center gap-2">
         <button
           onClick={onHome}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[--bg-subtle] px-2 py-1 text-base font-bold text-[--tx]
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg px-1 py-1 font-display text-lg font-extrabold tracking-[-0.02em] text-[--tx]
                        transition-colors hover:text-emerald-700 dark:hover:text-emerald-400"
         >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-white">
-              <Home className="h-4 w-4" aria-hidden="true" />
+            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-emerald-700 text-white shadow-sm">
+              <MeepleMark />
             </span>
-            <span className="max-w-[11rem] truncate tracking-tight">BoardGame Market</span>
+            <span className="max-w-[11rem] truncate">Juegospedia</span>
         </button>
 
           <div className="ml-auto flex items-center gap-1 lg:hidden">
@@ -442,6 +440,14 @@ function Header({
         </nav>
       </div>
     </header>
+  );
+}
+
+function MeepleMark() {
+  return (
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z" />
+    </svg>
   );
 }
 

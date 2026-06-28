@@ -28,3 +28,49 @@
 
 ### Validation (IA move)
 - `pnpm typecheck`: pass
+
+## 2026-06-28 continuation
+
+### Validation on current `main`
+- Rebuilt `better-sqlite3` locally for Node 22 / ABI 127 using the repository's
+  `rebuild:node` workflow; this resolves the native-module mismatch recorded
+  above.
+- `pnpm test`: pass (9 files, 29 tests).
+- `tsc --noEmit -p apps/desktop-shell/tsconfig.json`: pass.
+- Root `pnpm typecheck`: fail. The failures are outside the desktop-shell
+  handoff scope and include stale/missing Prisma client generation, missing
+  Vite `ImportMeta.env` types, and `apps/web` path-alias resolution. Do not use
+  the June 2 root type-check result as the current repository status.
+
+### OAuth callback hardening
+- Replaced the timestamp OAuth `state` with a cryptographically random value
+  and reject callbacks whose state does not match.
+- Authorization denials and callbacks without a code now fail immediately and
+  close the local callback server instead of remaining in `connecting` until
+  the two-minute timeout.
+
+### Remaining Mercado Pago production hardening
+- Encrypt the persisted token/credential blob. `MercadoPagoSync` currently
+  serializes the access token, refresh token, client ID, and client secret as
+  plaintext JSON in `provider_connections.encrypted_access_token`; the column
+  name does not provide encryption.
+- Add focused tests for OAuth callback validation, token refresh persistence,
+  tenant-scoped disconnect/load queries, and legacy persisted-token migration.
+
+### Juegospedia design-system migration
+- Migrated both the public `apps/web` catalogue and the transactional
+  `apps/marketplace` SPA from the earlier emerald/Inter theme to the Claude
+  Design handoff's parchment, clay, forest, and brass system.
+- Added the Bricolage Grotesque, Hanken Grotesk, and Space Mono type roles,
+  self-hosted by `next/font`, plus the meeple brand mark.
+- Reworked the header/footer, patterned home hero and search, value cards,
+  category chips, product cards, faceted filters, product detail, offer table,
+  pagination, responsive layouts, and empty catalogue states.
+- Updated the transactional SPA's Juegospedia/meeple header, home discovery
+  hero, 3:4 product cards, product gallery, metadata, price summary, seller
+  comparison rows, badges, buttons, and dark theme.
+- Updated shared UI tokens and button geometry so imported primitives use the
+  same design language.
+- Validation: `next build apps/web`, the `apps/web` TypeScript project, and the
+  shared `ui-react` TypeScript project all pass. The `apps/marketplace`
+  TypeScript project and production Vite build also pass.

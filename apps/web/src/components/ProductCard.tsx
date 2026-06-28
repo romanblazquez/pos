@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Clock3, Users } from 'lucide-react';
 import type { ProductSummary } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { listingPath, type Locale } from '@/lib/segments';
@@ -24,7 +25,20 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
         )}
       </div>
       <div className="card-body">
+        <div className="card-category">{product.publisher ?? product.category}</div>
         <h3 className="card-title">{product.name}</h3>
+        <div className="card-meta">
+          {(product.minPlayers || product.maxPlayers) && (
+            <span>
+              <Users size={12} aria-hidden="true" />{' '}
+              {product.minPlayers ?? '?'}
+              {product.maxPlayers && product.maxPlayers !== product.minPlayers ? `–${product.maxPlayers}` : ''}
+            </span>
+          )}
+          {product.playTimeMinutes && (
+            <span><Clock3 size={12} aria-hidden="true" /> {product.playTimeMinutes}m</span>
+          )}
+        </div>
         <div className="card-foot">
           {hasPrice ? (
             <span className="card-price">
@@ -34,15 +48,20 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
           ) : (
             <span className="card-price card-price--na">{locale === 'es' ? 'Sin oferta' : 'No offer'}</span>
           )}
-          {product.totalListings > 0 && (
-            <span className="card-stores">
-              {product.totalListings}{' '}
-              {product.totalListings === 1
-                ? locale === 'es' ? 'tienda' : 'store'
-                : locale === 'es' ? 'tiendas' : 'stores'}
-            </span>
-          )}
+          <span className={`stock-pill${inStock ? '' : ' out'}`}>
+            {inStock
+              ? locale === 'es' ? 'En stock' : 'In stock'
+              : locale === 'es' ? 'Agotado' : 'Sold out'}
+          </span>
         </div>
+        {product.totalListings > 0 && (
+          <span className="card-stores">
+            {product.totalListings}{' '}
+            {product.totalListings === 1
+              ? locale === 'es' ? 'tienda comparada' : 'store compared'
+              : locale === 'es' ? 'tiendas comparadas' : 'stores compared'}
+          </span>
+        )}
       </div>
     </Link>
   );

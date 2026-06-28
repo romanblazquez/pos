@@ -16,6 +16,7 @@ import { breadcrumbLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
+import { CatalogEmpty } from '@/components/CatalogEmpty';
 import {
   entityPath,
   homePath,
@@ -138,9 +139,13 @@ export default async function DetailPage({
         <p className="muted">
           {results.length} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
         </p>
-        <div className="grid" style={{ marginTop: '1.25rem' }}>
-          {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-        </div>
+        {results.length > 0 ? (
+          <div className="grid" style={{ marginTop: '1.25rem' }}>
+            {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+          </div>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('categories', locale)} />
+        )}
       </main>
     );
   }

@@ -137,26 +137,26 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
 
   return (
     <div>
-      <section className="border-b border-[--border] bg-[--bg-raised]">
-        <div className="mx-auto max-w-7xl px-4 py-6">
+      <section className="market-surface-pattern border-b border-[--border] bg-[--bg]">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="rounded-lg border border-[--border] bg-[--bg-raised] p-5 shadow-sm">
+            <div className="rounded-[14px] border border-[--border] bg-[--bg-raised]/90 p-6 shadow-sm backdrop-blur-sm sm:p-8">
               <div className="flex flex-col gap-5">
                 <div className="max-w-3xl">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                     <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                     Marketplace verificado
                   </div>
-                  <h1 className="text-3xl font-bold leading-tight tracking-normal text-[--tx] sm:text-4xl">
+                  <h1 className="max-w-[18ch] font-display text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] text-[--tx] sm:text-5xl">
                     Encuentra juegos con stock real, mejor precio y créditos.
                   </h1>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[--tx-muted] sm:text-base">
+                  <p className="mt-4 max-w-2xl text-base leading-7 text-[--tx-muted] sm:text-lg">
                     Busca una vez y compara tiendas conectadas, disponibilidad, envío y cashback sin abrir diez pestañas.
                   </p>
                 </div>
 
                 <form
-                  className="flex flex-col gap-2 rounded-lg border border-[--border] bg-[--bg-subtle] p-2 sm:flex-row"
+                  className="flex flex-col gap-2 rounded-[13px] border border-[--border] bg-[--bg-subtle] p-2 shadow-sm sm:flex-row"
                   onSubmit={(e) => {
                     e.preventDefault();
                     onSearch(q.trim(), activeCategory);
@@ -169,7 +169,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
                       placeholder="Busca Catan, Root, Wingspan..."
-                      className="h-10 w-full rounded-md border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm text-[--tx]
+                      className="h-11 w-full rounded-[10px] border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm text-[--tx]
                                  placeholder:text-[--tx-faint] focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>

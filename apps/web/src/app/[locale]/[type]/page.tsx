@@ -7,6 +7,7 @@ import { breadcrumbLd, itemListLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
+import { CatalogEmpty } from '@/components/CatalogEmpty';
 import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
 import {
   homePath,
@@ -215,9 +216,13 @@ export default async function ListingPage({
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'resultados' : 'results'}
               </p>
-              <div className="grid">
-                {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-              </div>
+              {results.length > 0 ? (
+                <div className="grid">
+                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+                </div>
+              ) : (
+                <CatalogEmpty locale={locale} clearHref={listingPath('search', locale)} />
+              )}
             </div>
           </div>
         </form>
@@ -270,9 +275,13 @@ export default async function ListingPage({
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
               </p>
-              <div className="grid">
-                {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-              </div>
+              {results.length > 0 ? (
+                <div className="grid">
+                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+                </div>
+              ) : (
+                <CatalogEmpty locale={locale} clearHref={base} />
+              )}
               <Pager base={base} page={page} total={total} locale={locale} query={filterQuery(searchParams)} />
             </div>
           </div>
