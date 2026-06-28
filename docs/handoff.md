@@ -90,3 +90,27 @@
   at approximately 338 KB JS / 46 KB CSS and has no Tailwind selector warning.
 - Validation: `apps/web`, `apps/marketplace`, and `ui-react` TypeScript projects
   pass; both Next.js and Vite production builds pass.
+
+## 2026-06-27 continuation
+
+### Apex SEO + App sidebar parity guardrail
+- Enforced the same shared sidebar component contract for both user surfaces:
+  - SEO/crawlable site (`apps/web`) now imports `CatalogFilterPanel` and
+    `CatalogFilterSection` from `@retail-os/ui-react`.
+  - Transactional app (`apps/marketplace`) now uses the same public import path
+    and the same component name (`CatalogFilterPanel`) instead of a local alias.
+- Architectural decision for the monorepo: sidebar shell and section structure
+  live in `libs/shared/ui-react`, while each app supplies its own interaction
+  mode (server GET form for editorial SEO and instant client state for app UX).
+- Product rationale: keeps filtering semantics and merchandising hierarchy
+  consistent across discovery channels, reducing cognitive load and preserving a
+  stable retail comparison journey for board game shoppers.
+
+### Validation
+- `pnpm tsc --noEmit -p apps/web/tsconfig.json`: fails due existing workspace
+  dependency/env gaps (`next` and several Radix packages not resolved in this
+  shell), but no new `@retail-os/ui-react/catalog-filter` path error after
+  unifying imports through `@retail-os/ui-react`.
+- `pnpm tsc --noEmit -p apps/marketplace/tsconfig.json`: fails for the same
+  existing shared-ui dependency gap (`@radix-ui/react-*` modules unresolved);
+  no sidebar contract/import regression introduced by this continuation.

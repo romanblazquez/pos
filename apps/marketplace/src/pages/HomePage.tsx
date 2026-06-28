@@ -19,9 +19,9 @@ import {
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { Button, cn } from '../components/ui/index.js';
 import {
-  CatalogFilterPanel as CatalogFilterPanelShell,
+  CatalogFilterPanel,
   CatalogFilterSection,
-} from '@retail-os/ui-react/catalog-filter';
+} from '@retail-os/ui-react';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import {
   categoryDescription,
@@ -542,7 +542,7 @@ function MarketplaceCatalogFilters({
   onReset: () => void;
 }) {
   return (
-    <CatalogFilterPanelShell
+    <CatalogFilterPanel
       title="Explorar"
       subtitle={`${total?.toLocaleString('es-MX') ?? '—'} resultados`}
       icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
@@ -626,7 +626,7 @@ function MarketplaceCatalogFilters({
           ))}
         </div>
       </CatalogFilterSection>
-    </CatalogFilterPanelShell>
+    </CatalogFilterPanel>
   );
 }
 

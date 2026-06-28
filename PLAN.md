@@ -111,7 +111,8 @@ Last updated: 2026-06-16
 - [x] Cart drawer + MercadoPago checkout flow
 - [x] Order confirmation + status polling page
 - [ ] Customer register/login UI (wallet balance, order history)
-- [ ] Category filter sidebar on search/home
+- [x] Category filter sidebar on search/home
+- [x] Shared filter/sidebar shell contract between SEO (`apps/web`) and app (`apps/marketplace`) via `@retail-os/ui-react`
 - [ ] Wallet balance in header for logged-in customers
 
 ### P2 — Admin Console (http://localhost:4500)
