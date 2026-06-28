@@ -80,6 +80,26 @@ services:
       api-dev:
         condition: service_started
 
+  seller-portal-dev:
+    image: node:22
+    container_name: retail-os-seller-portal-dev
+    working_dir: /workspace
+    command: >-
+      sh -lc "corepack enable && VITE_API_URL=http://localhost:3002 pnpm exec vite --config apps/seller-portal/vite.config.mts --host 0.0.0.0"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "200"
+    volumes:
+      - .:/workspace
+      - dev_node_modules:/workspace/node_modules
+    ports:
+      - "4400:4400"
+    depends_on:
+      deps-dev:
+        condition: service_completed_successfully
+      api-dev:
+        condition: service_started
+
   marketplace-dev:
     image: node:22
     container_name: retail-os-marketplace-dev

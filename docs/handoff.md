@@ -194,3 +194,9 @@
   exposes `4500:4500` for local access.
 - Kept `deps-dev` and `api-dev` dependencies so admin starts with shared
   dependencies and API availability.
+
+### Docker dev compose update (Seller portal)
+- Added `seller-portal-dev` service in `docker-compose.dev.yml`.
+- Service runs the seller portal Vite dev server on `4400:4400` with host
+  binding and points `VITE_API_URL` at `http://localhost:3002` so it can reach
+  the host-mapped API from the browser.
