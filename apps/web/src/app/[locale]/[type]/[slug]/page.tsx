@@ -221,6 +221,13 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
                 </li>
               ))}
           </ul>
+
+          {product.minPlayers && product.maxPlayers && (
+            <PlayerCountFit minPlayers={product.minPlayers} maxPlayers={product.maxPlayers} locale={locale} />
+          )}
+          {product.bggWeight && (
+            <ComplexityMeter weight={product.bggWeight} locale={locale} />
+          )}
         </div>
       </div>
 
@@ -295,5 +302,78 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
         </section>
       )}
     </main>
+  );
+}
+
+function ComplexityMeter({ weight, locale }: { weight: number; locale: string }) {
+  const pct = (weight / 5) * 100;
+  const band =
+    weight < 2 ? (locale === 'es' ? 'Ligero' : 'Light') :
+    weight < 2.5 ? (locale === 'es' ? 'Medio-ligero' : 'Medium-light') :
+    weight < 3.5 ? (locale === 'es' ? 'Medio' : 'Medium') :
+    weight < 4.5 ? (locale === 'es' ? 'Pesado' : 'Heavy') :
+    (locale === 'es' ? 'Experto' : 'Expert');
+
+  return (
+    <div style={{ marginTop: '1rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))', padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
+          {locale === 'es' ? 'Complejidad' : 'Complexity'}
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#8A5A12', background: '#F6EBD2', border: '1px solid #E7D3A6', padding: '3px 9px', borderRadius: 7 }}>
+          {weight.toFixed(1)} / 5 · {band}
+        </span>
+      </div>
+      <div style={{ position: 'relative', height: 12, borderRadius: 8, background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px rgba(43,38,34,.08)' }}>
+        <div style={{ position: 'absolute', left: `${pct}%`, top: '50%', width: 3, height: 24, background: '#2B2622', borderRadius: 3, transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised, #FFFDF8)' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, textTransform: 'uppercase', color: 'var(--tx-faint, var(--subtle-foreground))' }}>
+        <span style={{ color: '#3E7C53', fontWeight: 700 }}>{locale === 'es' ? 'Ligero' : 'Light'}</span>
+        <span>{locale === 'es' ? 'Medio' : 'Medium'}</span>
+        <span>{locale === 'es' ? 'Pesado' : 'Heavy'}</span>
+        <span>{locale === 'es' ? 'Experto' : 'Expert'}</span>
+      </div>
+    </div>
+  );
+}
+
+function PlayerCountFit({ minPlayers, maxPlayers, locale }: { minPlayers: number; maxPlayers: number; locale: string }) {
+  const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
+  const badge = minPlayers === maxPlayers
+    ? `${minPlayers} ${locale === 'es' ? 'jugadores' : 'players'}`
+    : `${minPlayers}–${maxPlayers} ${locale === 'es' ? 'jugadores' : 'players'}`;
+
+  return (
+    <div style={{ marginTop: '1rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))', padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
+          {locale === 'es' ? 'Jugadores' : 'Players'}
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#2C6B43', background: '#E4EFE4', border: '1px solid #CBE0CD', padding: '3px 9px', borderRadius: 7 }}>
+          {badge}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {counts.map((n) => {
+          const isMin = n === minPlayers && minPlayers < maxPlayers;
+          const isSupported = n >= minPlayers && n <= maxPlayers;
+          const bg = !isSupported ? '#EDE4D2' : isMin ? '#F6EBD2' : '#3E7C53';
+          const border = !isSupported ? '1px dashed #D8CCB3' : isMin ? '1px solid #E7D3A6' : undefined;
+          const color = !isSupported ? '#B6A98C' : isMin ? '#8A5A12' : '#EAF3EC';
+          const label = !isSupported ? 'No' : isMin ? 'OK' : locale === 'es' ? 'Bien' : 'Good';
+          const labelColor = !isSupported ? '#B6A98C' : isMin ? '#8A5A12' : '#2C6B43';
+          return (
+            <div key={n} style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ height: 38, borderRadius: 9, background: bg, border, display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color, textDecoration: !isSupported ? 'line-through' : undefined }}>
+                {n}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', color: labelColor, marginTop: 5, fontWeight: isSupported && !isMin ? 700 : undefined }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

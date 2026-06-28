@@ -2,13 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
-  Brain,
   Clock3,
   Gift,
   PackageCheck,
   ShieldCheck,
   Star,
-  Users,
 } from 'lucide-react';
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
@@ -220,14 +218,18 @@ export default function ProductPage({
 
           {/* Metadata chips — GameStatPills design */}
           <div className="flex flex-wrap gap-2 sm:gap-3">
-            {p.minPlayers && p.maxPlayers && (
-              <Chip icon={<Users className="h-5 w-5" />} value={`${p.minPlayers}–${p.maxPlayers}`} label="Jugadores" />
-            )}
             {p.minAge && <Chip icon={<ShieldCheck className="h-5 w-5" />} value={`${p.minAge}+`} label="Edad mínima" />}
             {p.playTimeMinutes && <Chip icon={<Clock3 className="h-5 w-5" />} value={`${p.playTimeMinutes}m`} label="Duración" />}
             {p.bggRating && <Chip icon={<Star className="h-5 w-5 fill-current" />} value={p.bggRating.toFixed(1)} label="BGG Rating" />}
-            {p.bggWeight && <Chip icon={<Brain className="h-5 w-5" />} value={`${p.bggWeight.toFixed(1)}/5`} label="Complejidad" />}
           </div>
+
+          {p.minPlayers && p.maxPlayers && (
+            <PlayerCountFit minPlayers={p.minPlayers} maxPlayers={p.maxPlayers} />
+          )}
+
+          {p.bggWeight && (
+            <ComplexityMeter weight={p.bggWeight} />
+          )}
 
           {p.description && (
             <div
@@ -334,6 +336,78 @@ function Chip({ icon, value, label }: { icon: ReactNode; value: string; label: s
       <span className="font-display text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-[--tx]">{value}</span>
       <span className="font-mono text-[10px] uppercase tracking-[1px] text-[--tx-faint]">{label}</span>
     </span>
+  );
+}
+
+function ComplexityMeter({ weight }: { weight: number }) {
+  const pct = (weight / 5) * 100;
+  const band =
+    weight < 2 ? 'Light' :
+    weight < 2.5 ? 'Medium-light' :
+    weight < 3.5 ? 'Medium' :
+    weight < 4.5 ? 'Heavy' : 'Expert';
+  return (
+    <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-display font-bold text-[15px] text-[--tx]">Complejidad</span>
+        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
+              style={{ color: '#8A5A12', background: '#F6EBD2', borderColor: '#E7D3A6' }}>
+          {weight.toFixed(1)} / 5 · {band}
+        </span>
+      </div>
+      <div className="relative h-3 rounded-full"
+           style={{ background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px rgba(43,38,34,.08)' }}>
+        <div className="absolute top-1/2 rounded-sm"
+             style={{ left: `${pct}%`, width: 3, height: 24, background: '#2B2622', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px #FFFDF8' }} />
+      </div>
+      <div className="flex justify-between mt-2.5 font-mono text-[10.5px] uppercase">
+        <span style={{ color: '#3E7C53', fontWeight: 700 }}>Light</span>
+        <span className="text-[--tx-faint]">Medium</span>
+        <span className="text-[--tx-faint]">Heavy</span>
+        <span className="text-[--tx-faint]">Expert</span>
+      </div>
+    </div>
+  );
+}
+
+function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPlayers: number }) {
+  const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
+  const badge = `${minPlayers === maxPlayers ? minPlayers : `${minPlayers}–${maxPlayers}`} jugadores`;
+
+  function slotStyle(n: number): { bg: string; border?: string; color: string; label: string; labelColor: string; strikethrough?: boolean; bold?: boolean } {
+    if (n < minPlayers) return { bg: '#EDE4D2', border: '1px dashed #D8CCB3', color: '#B6A98C', label: 'No', labelColor: '#B6A98C', strikethrough: true };
+    if (n === minPlayers && minPlayers < maxPlayers) return { bg: '#F6EBD2', border: '1px solid #E7D3A6', color: '#8A5A12', label: 'OK', labelColor: '#8A5A12' };
+    if (n <= maxPlayers) return { bg: '#3E7C53', color: '#EAF3EC', label: 'Best', labelColor: '#2C6B43', bold: true };
+    return { bg: '#EDE4D2', border: '1px solid #E0D4BC', color: '#9A8E79', label: 'Ext', labelColor: '#9A8E79' };
+  }
+
+  return (
+    <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-display font-bold text-[15px] text-[--tx]">Jugadores</span>
+        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
+              style={{ color: '#2C6B43', background: '#E4EFE4', borderColor: '#CBE0CD' }}>
+          {badge}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        {counts.map((n) => {
+          const s = slotStyle(n);
+          return (
+            <div key={n} className="flex-1 text-center">
+              <div className="h-[38px] rounded-[9px] grid place-items-center font-mono font-bold text-[14px]"
+                   style={{ background: s.bg, border: s.border, color: s.color, textDecoration: s.strikethrough ? 'line-through' : undefined }}>
+                {n}
+              </div>
+              <div className="font-mono text-[9px] uppercase mt-[5px]"
+                   style={{ color: s.labelColor, fontWeight: s.bold ? 700 : undefined }}>
+                {s.label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
