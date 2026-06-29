@@ -12,7 +12,9 @@ import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
 import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
+import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
+import { CatalogSearch } from '@retail-os/ui-react';
 import { formatMoney } from './marketplace-meta.js';
 import { trackPageView } from './analytics.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
@@ -26,6 +28,27 @@ type Route =
   | { page: 'wallet' }
   | { page: 'orders' }
   | { page: 'addresses' };
+
+type Theme = 'light' | 'dark';
+
+function readSharedTheme(): Theme | null {
+  const cookie = document.cookie.match(/(?:^|;\s*)jp-theme=(light|dark)(?:;|$)/)?.[1];
+  return cookie === 'light' || cookie === 'dark' ? cookie : null;
+}
+
+function persistSharedTheme(theme: Theme) {
+  const sharedDomain = location.hostname === 'juegospedia.com' || location.hostname.endsWith('.juegospedia.com');
+  const secure = location.protocol === 'https:';
+  document.cookie = [
+    `jp-theme=${theme}`,
+    'Path=/',
+    'Max-Age=31536000',
+    'SameSite=Lax',
+    sharedDomain ? 'Domain=.juegospedia.com' : '',
+    secure ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
+  localStorage.setItem('jp-theme', theme);
+}
 
 function parseRoute(pathname: string, search: string): Route {
   if (pathname.startsWith('/product/')) {
@@ -64,16 +87,39 @@ function routePath(r: Route): string {
 }
 
 export default function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const stored = localStorage.getItem('mkt_theme');
+  const [theme, setTheme] = useState<Theme>(() => {
+    const shared = readSharedTheme();
+    if (shared) return shared;
+    const stored = localStorage.getItem('jp-theme') ?? localStorage.getItem('mkt_theme');
     if (stored === 'dark' || stored === 'light') return stored;
-    return 'light';
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('mkt_theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    persistSharedTheme(theme);
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute(
+      'content',
+      theme === 'dark' ? '#CE6A41' : '#B4502E',
+    );
   }, [theme]);
+
+  useEffect(() => {
+    const syncSharedTheme = () => {
+      const shared = readSharedTheme();
+      if (shared) setTheme(shared);
+    };
+    const syncWhenVisible = () => {
+      if (document.visibilityState === 'visible') syncSharedTheme();
+    };
+    window.addEventListener('focus', syncSharedTheme);
+    document.addEventListener('visibilitychange', syncWhenVisible);
+    return () => {
+      window.removeEventListener('focus', syncSharedTheme);
+      document.removeEventListener('visibilitychange', syncWhenVisible);
+    };
+  }, []);
 
   return (
     <CustomerProvider>
@@ -231,6 +277,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
         theme={theme}
         onToggleTheme={toggleTheme}
         onSearch={(q) => navigate({ page: 'search', q })}
+        onProduct={(slug) => navigate({ page: 'product', slug })}
         onHome={() => navigate({ page: 'home' })}
         onCartOpen={() => setCartOpen(true)}
         onAccountClick={() => navigate({ page: 'account' })}
@@ -312,11 +359,12 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
 }
 
 function Header({
-  theme, onToggleTheme, onSearch, onHome, onCartOpen, onAccountClick, onWalletClick, onAuthClick,
+  theme, onToggleTheme, onSearch, onProduct, onHome, onCartOpen, onAccountClick, onWalletClick, onAuthClick,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onSearch: (q: string) => void;
+  onProduct: (slug: string) => void;
   onHome: () => void;
   onCartOpen: () => void;
   onAccountClick: () => void;
@@ -341,16 +389,18 @@ function Header({
     <header className="sticky top-0 z-40 border-b border-[--border] bg-[color:color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 lg:h-16 lg:flex-row lg:items-center lg:gap-4 lg:py-0">
         <div className="flex items-center gap-2">
-        <button
-          onClick={onHome}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg px-1 py-1 font-display text-lg font-extrabold tracking-[-0.02em] text-[--tx]
-                       transition-colors hover:text-emerald-700 dark:hover:text-emerald-400"
-        >
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-emerald-700 text-white shadow-sm">
-              <MeepleMark />
+          <button
+            type="button"
+            aria-label="Ir al inicio de Juegospedia"
+            onClick={onHome}
+            className="inline-flex shrink-0 items-center gap-2.5 rounded-lg px-1 py-1 font-display text-xl font-extrabold tracking-[-0.03em] text-[--tx]
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--brand-tile)] text-[var(--brand-mark)] shadow-sm">
+              <BrandMark className="h-5 w-5" />
             </span>
-            <span className="max-w-[11rem] truncate">Juegospedia</span>
-        </button>
+            <span className="max-w-[11rem] truncate">Juegos<span className="text-[var(--brand-word)]">pedia</span></span>
+          </button>
 
           <div className="ml-auto flex items-center gap-1 lg:hidden">
             {session && (
@@ -372,15 +422,14 @@ function Header({
           className="relative flex w-full min-w-0 flex-1 gap-2 lg:max-w-2xl"
           onSubmit={submitSearch}
         >
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--tx-faint]" aria-hidden="true" />
-          <input
-            type="search"
+          <CatalogSearch
+            endpoint={`${API_BASE}/api/v1/products/suggestions`}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onValueChange={setQ}
+            onSearch={onSearch}
+            onProduct={onProduct}
             placeholder="Busca Catan, Root, Wingspan..."
-            className="h-10 min-w-0 flex-1 rounded-lg border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm
-                       bg-[--bg-input] text-[--tx] placeholder:text-[--tx-faint]
-                       focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            globalShortcut
           />
           <Button type="submit" className="min-w-10 shrink-0 px-3 sm:px-4">
             <Search className="h-4 w-4" aria-hidden="true" />
@@ -440,14 +489,6 @@ function Header({
         </nav>
       </div>
     </header>
-  );
-}
-
-function MeepleMark() {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z" />
-    </svg>
   );
 }
 

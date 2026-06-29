@@ -7,15 +7,26 @@
       name="description"
       content="Compara precios, disponibilidad, envíos y créditos de juegos de mesa en tiendas conectadas de México."
     />
-    <meta name="theme-color" content="#15803d" />
-    <meta property="og:title" content="BoardGame Market — Compara, elige, juega" />
+    <meta name="theme-color" content="#B4502E" />
+    <meta property="og:title" content="Juegospedia — Compara, juega, colecciona" />
     <meta
       property="og:description"
       content="Encuentra juegos de mesa con stock real, mejor precio disponible y créditos para tu próxima compra."
     />
     <meta property="og:type" content="website" />
-    <title>BoardGame Market — Compara, elige, juega</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:site_name" content="Juegospedia" />
+    <title>Juegospedia — Compara, juega, colecciona</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <script>
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)jp-theme=(light|dark)(?:;|$)/);
+        const stored = localStorage.getItem('jp-theme') || localStorage.getItem('mkt_theme');
+        const theme = match?.[1] || stored || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#CE6A41' : '#B4502E';
+      } catch (_) {}
+    </script>
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>

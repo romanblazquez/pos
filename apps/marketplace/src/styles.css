@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 @source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
+@source "../../../libs/shared/ui-react/src/components/catalog-search.tsx";
 
 @theme {
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
@@ -33,6 +34,7 @@
     --bg-raised: #fffdf8;
     --bg-subtle: #f1e8d6;
     --bg-input:  #fffdf8;
+    --search-input: #ffffff;
     --bg-hover:  #ede4d2;
 
     /* Borders */
@@ -45,8 +47,11 @@
     --tx-faint: #9a8e79;
 
     /* Brand accent */
-    --accent:    #b4502e;
-    --accent-bg: #f6e4da;
+    --accent:          #b4502e;
+    --accent-bg:       #f6e4da;
+    --brand-tile:      #b4502e;
+    --brand-mark:      #fbf6ec;
+    --brand-word:      #b4502e;
 
     /* Radius scale */
     --radius: 0.875rem;
@@ -57,6 +62,7 @@
     --bg-raised: #28231a;
     --bg-subtle: #201c14;
     --bg-input:  #201c14;
+    --search-input: #201c14;
     --bg-hover:  #312b20;
 
     --border:       #3a3428;
@@ -66,8 +72,11 @@
     --tx-muted: #b6ab94;
     --tx-faint: #8c8270;
 
-    --accent:    #ce6a41;
-    --accent-bg: #3d2117;
+    --accent:          #ce6a41;
+    --accent-bg:       #3d2117;
+    --brand-tile:      #ce6a41;
+    --brand-mark:      #1a140e;
+    --brand-word:      #ce6a41;
   }
 
   * { box-sizing: border-box; margin: 0; }

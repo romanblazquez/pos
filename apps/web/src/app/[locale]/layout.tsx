@@ -7,6 +7,7 @@ import { organizationLd, webSiteLd } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Analytics } from '@/components/Analytics';
 import { MeepleMark } from '@/components/MeepleMark';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { LOCALES, isLocale, listingPath, type Locale } from '@/lib/segments';
 import '../globals.css';
 
@@ -25,6 +26,7 @@ const mono = Space_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  icons: { icon: [{ url: '/favicon.svg?v=2', type: 'image/svg+xml' }] },
   title: {
     default: `${SITE_NAME} — Compara precios de juegos de mesa`,
     template: `%s · ${SITE_NAME}`,
@@ -51,6 +53,19 @@ export default function LocaleLayout({
 
   return (
     <html lang={locale} className={`${hanken.variable} ${bricolage.variable} ${mono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var match = document.cookie.match(/(?:^|;\\s*)jp-theme=(light|dark)(?:;|$)/);
+            var theme = match ? match[1] : localStorage.getItem('jp-theme');
+            if (theme !== 'light' && theme !== 'dark') {
+              theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.dataset.theme = theme;
+            document.documentElement.style.colorScheme = theme;
+          } catch (_) {}
+        ` }} />
+      </head>
       <body>
         <Analytics />
         <JsonLd data={[organizationLd(), webSiteLd()]} />
@@ -58,7 +73,7 @@ export default function LocaleLayout({
           <div className="container">
             <Link href={`/${locale}`} className="brand" aria-label={SITE_NAME}>
               <span className="brand-mark"><MeepleMark /></span>
-              <span>Juegospedia</span>
+              <span>Juegos<span className="brand-word-accent">pedia</span></span>
             </Link>
             <nav className="nav" aria-label={locale === 'es' ? 'Principal' : 'Main'}>
               <Link href={listingPath('games', locale)}>{t.games}</Link>
@@ -68,6 +83,7 @@ export default function LocaleLayout({
             <Link className="header-search" href={listingPath('search', locale)}>
               <span aria-hidden="true">⌕</span> {t.search}
             </Link>
+            <ThemeToggle locale={locale} />
           </div>
         </header>
 
@@ -77,7 +93,7 @@ export default function LocaleLayout({
           <div className="container">
             <span className="brand footer-brand">
               <span className="brand-mark"><MeepleMark size={17} /></span>
-              <span>Juegospedia</span>
+              <span>Juegos<span className="brand-word-accent">pedia</span></span>
             </span>
             <span>{t.tagline}</span>
             <span className="nav-spacer" />

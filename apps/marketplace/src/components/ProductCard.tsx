@@ -1,4 +1,5 @@
-import { Clock3, Gift, PackageCheck, Star, Tags, Users } from 'lucide-react';
+import { Check, Clock3, Gift, PackageCheck, Star, Users } from 'lucide-react';
+import { commerceStateLabel, resolveCommerceState, type CommerceState } from '@retail-os/ui-react';
 import { categoryLabel, formatMoney } from '../marketplace-meta.js';
 
 export interface Product {
@@ -30,6 +31,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
   priority?: boolean;
 }) {
   const hasStock = product.inStockListings > 0;
+  const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const samePrice = product.minPriceMinor === product.maxPriceMinor;
   const priceLabel = samePrice
     ? formatMoney(product.minPriceMinor)
@@ -49,7 +51,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
                  hover:-translate-y-1 hover:border-emerald-400 hover:shadow-xl
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
-      <div className="relative aspect-[3/4] shrink-0 overflow-hidden bg-[--bg-subtle]">
+      <div className="relative aspect-square shrink-0 overflow-hidden bg-[--bg-subtle]">
         <div className="absolute inset-0 flex items-center justify-center bg-[repeating-linear-gradient(45deg,#efe5d2,#efe5d2_10px,#e8dcc5_10px,#e8dcc5_20px)] text-emerald-900 dark:bg-[--bg-subtle] dark:text-emerald-200">
           <PackageCheck className="h-10 w-10" aria-hidden="true" />
         </div>
@@ -58,7 +60,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
             src={product.images[0]}
             alt={product.name}
             loading={priority ? 'eager' : 'lazy'}
-            className="relative h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.025]"
+            className="relative h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]"
           />
         ) : (
           <div className="relative flex h-full w-full items-center justify-center text-[--tx-faint]">
@@ -66,14 +68,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
           </div>
         )}
 
-        {product.category && (
-          <span className="absolute left-2 top-2 inline-flex max-w-[82%] items-center gap-1 rounded-md
-                           border border-[--border] bg-[--bg-raised]/90 px-2 py-1 font-mono text-[10px] font-bold
-                           uppercase tracking-wide text-[--tx-muted] shadow-sm backdrop-blur-sm">
-            <Tags className="h-3 w-3" aria-hidden="true" />
-            <span className="truncate">{categoryLabel(product.category)}</span>
-          </span>
-        )}
+        <CommerceBadge state={commerceState} />
 
         {hasStock && cashbackPct > 0 && (
           <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-500
@@ -83,15 +78,12 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
           </span>
         )}
 
-        {!hasStock && (
-          <div className="absolute inset-x-0 bottom-0 flex justify-center bg-red-600 py-2">
-            <span className="rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white">Sin stock</span>
-          </div>
-        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">
-        {product.publisher && <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[--tx-faint]">{product.publisher}</p>}
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[--tx-faint]">
+          {product.publisher ?? categoryLabel(product.category)}
+        </p>
         <h3 className="line-clamp-2 font-display text-[17px] font-bold leading-tight text-[--tx] transition-colors group-hover:text-emerald-600">
           {product.name}
         </h3>
@@ -126,5 +118,33 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
         </div>
       </div>
     </button>
+  );
+}
+
+const COMMERCE_BADGE_STYLES: Record<CommerceState, string> = {
+  'in-stock': 'border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]',
+  'low-stock': 'border-[#E7D3A6] bg-[#F6EBD2] text-[#8A5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]',
+  'out-of-stock': 'border-[#D8CCB3] bg-[#E9E2D2] text-[#2B2622] dark:border-[#4A4233] dark:bg-[#312B20] dark:text-[#B6AB94]',
+  preorder: 'border-[#D9CEE6] bg-[#ECE6F3] text-[#574079] dark:border-[#A88AD0]/30 dark:bg-[#A88AD0]/15 dark:text-[#C9B6EC]',
+  backorder: 'border-[#E6CDB2] bg-[#F5E6D6] text-[#8A4A18] dark:border-[#D18A50]/30 dark:bg-[#D18A50]/15 dark:text-[#E7AC78]',
+  'out-of-print': 'border-[#D8CCB3] bg-[#E9E2D2] text-[#2B2622] dark:border-[#4A4233] dark:bg-[#312B20] dark:text-[#B6AB94]',
+  used: 'border-[#C2DDD6] bg-[#DEEEEA] text-[#2C6B5F] dark:border-[#5CA895]/30 dark:bg-[#5CA895]/15 dark:text-[#83C9B8]',
+  rare: 'border-[#E2CF9C] bg-[#F2E6C8] text-[#7E5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]',
+  sale: 'border-[#E8C7BF] bg-[#F6E1DC] text-[#93291F] dark:border-[#D06152]/30 dark:bg-[#D06152]/15 dark:text-[#E68A7C]',
+  'best-price': 'border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]',
+  'top-ranked': 'border-[#E2CF9C] bg-[#F4E9CF] text-[#8A6312] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]',
+  'community-pick': 'border-[#CCD8CD] bg-[#E5EBE5] text-[#354A3D] dark:border-[#789981]/30 dark:bg-[#789981]/15 dark:text-[#A9C5AF]',
+  new: 'border-[#F0D9C2] bg-[#FBEFE0] text-[#9C4324] dark:border-[#CE6A41]/30 dark:bg-[#CE6A41]/15 dark:text-[#E89270]',
+};
+
+function CommerceBadge({ state }: { state: CommerceState }) {
+  const special = state === 'rare' ? '◆' : state === 'top-ranked' ? '★' : null;
+  return (
+    <span className={`absolute left-2 top-2 inline-flex max-w-[82%] items-center gap-1.5 rounded-[7px] border px-2.5 py-1
+                      font-mono text-[10px] font-bold uppercase tracking-[0.04em] shadow-sm backdrop-blur-sm
+                      ${COMMERCE_BADGE_STYLES[state]}`}>
+      {special ? <span aria-hidden="true">{special}</span> : state === 'best-price' ? <Check className="h-3 w-3" aria-hidden="true" /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />}
+      <span className="truncate">{commerceStateLabel(state)}</span>
+    </span>
   );
 }

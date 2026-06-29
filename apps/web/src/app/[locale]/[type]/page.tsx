@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
+import { CatalogSearchField } from '@/components/CatalogSearchField';
 import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
 import {
   homePath,
@@ -202,13 +203,13 @@ export default async function ListingPage({
             : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
         </h1>
         <form method="get" action={listingPath('search', locale)}>
-          <input
-            className="search-bar"
-            type="search"
-            name="q"
-            defaultValue={q}
+          <CatalogSearchField
+            locale={locale}
+            initialValue={q}
+            searchPath={listingPath('search', locale)}
+            productBase={listingPath('games', locale)}
             placeholder={locale === 'es' ? 'Catan, estrategia, 2 jugadores…' : 'Catan, strategy, 2 players…'}
-            aria-label={locale === 'es' ? 'Buscar' : 'Search'}
+            className="search-command"
           />
           <div className="search-layout">
             <SearchFilters
@@ -216,14 +217,14 @@ export default async function ListingPage({
               categories={categories}
               state={state}
               total={total}
-              clearHref={listingPath('search', locale)}
+              clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
             />
             <div>
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'resultados' : 'results'}
               </p>
               {results.length > 0 ? (
-                <div className="grid">
+                <div className="catalog-grid">
                   {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
                 </div>
               ) : (
@@ -288,7 +289,7 @@ export default async function ListingPage({
                 {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
               </p>
               {results.length > 0 ? (
-                <div className="grid">
+                <div className="catalog-grid">
                   {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
                 </div>
               ) : (

@@ -13,6 +13,7 @@ import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
+  CatalogSearch,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -28,9 +29,9 @@ import {
 
 const PRICE_OPTIONS = [
   { label: 'Sin tope', value: undefined },
-  { label: 'Hasta $500', value: 500 },
-  { label: 'Hasta $1,000', value: 1000 },
-  { label: 'Hasta $1,500', value: 1500 },
+  { label: 'Hasta $500', value: 50_000 },
+  { label: 'Hasta $1,000', value: 100_000 },
+  { label: 'Hasta $1,500', value: 150_000 },
 ] as const;
 const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
 
@@ -204,6 +205,7 @@ export default function SearchPage({
                 active={!category}
                 label="Todo el catálogo"
                 description="Todas las tiendas conectadas"
+                count={categoriesData?.reduce((sum, item) => sum + item.count, 0)}
                 onClick={() => onSearch(query, undefined)}
               />
               {categoryOptions.map((option) => (
@@ -212,6 +214,7 @@ export default function SearchPage({
                   active={category === option.value}
                   label={option.label}
                   description={option.description}
+                  count={categoriesData?.find((item) => item.category === option.value)?.count}
                   onClick={() => onSearch(query, option.value)}
                 />
               ))}
@@ -255,17 +258,14 @@ export default function SearchPage({
                 onSearch(draft.trim(), category);
               }}
             >
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--tx-faint]" aria-hidden="true" />
-                <input
-                  type="search"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Refinar búsqueda"
-                  className="h-10 w-full rounded-lg border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm
-                             text-[--tx] placeholder:text-[--tx-faint] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+              <CatalogSearch
+                endpoint={`${API}/api/v1/products/suggestions`}
+                value={draft}
+                onValueChange={setDraft}
+                onSearch={(term) => onSearch(term, category)}
+                onProduct={onProduct}
+                placeholder="Refinar búsqueda"
+              />
               <Button type="submit">
                 <Search className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Buscar</span>
@@ -273,13 +273,22 @@ export default function SearchPage({
             </form>
           </div>
 
-          {(category || inStockOnly) && (
+          {(category || inStockOnly || maxPrice !== undefined || players !== undefined) && (
             <div className="mt-4 flex flex-wrap gap-2">
               {category && (
                 <ActiveChip label={categoryLabel(category)} onClear={() => onSearch(query, undefined)} />
               )}
               {inStockOnly && (
                 <ActiveChip label="Con stock" onClear={() => setInStockOnly(false)} />
+              )}
+              {maxPrice !== undefined && (
+                <ActiveChip
+                  label={PRICE_OPTIONS.find((option) => option.value === maxPrice)?.label ?? 'Presupuesto'}
+                  onClear={() => setMaxPrice(undefined)}
+                />
+              )}
+              {players !== undefined && (
+                <ActiveChip label={`${players === 5 ? '5+' : players} jugadores`} onClear={() => setPlayers(undefined)} />
               )}
             </div>
           )}
@@ -442,7 +451,7 @@ function SearchSkeleton() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-lg border border-[--border] bg-[--bg-raised]">
-          <div className="aspect-[4/3] animate-pulse bg-[--bg-subtle]" />
+          <div className="aspect-square animate-pulse bg-[--bg-subtle]" />
           <div className="space-y-3 p-3.5">
             <div className="h-4 w-3/4 animate-pulse rounded bg-[--bg-subtle]" />
             <div className="h-3 w-1/2 animate-pulse rounded bg-[--bg-subtle]" />

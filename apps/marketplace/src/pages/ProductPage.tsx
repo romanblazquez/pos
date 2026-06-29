@@ -356,9 +356,9 @@ function ComplexityMeter({ weight }: { weight: number }) {
         </span>
       </div>
       <div className="relative h-3 rounded-full"
-           style={{ background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px rgba(43,38,34,.08)' }}>
+           style={{ background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px color-mix(in srgb,var(--tx) 12%,transparent)' }}>
         <div className="absolute top-1/2 rounded-sm"
-             style={{ left: `${pct}%`, width: 3, height: 24, background: '#2B2622', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px #FFFDF8' }} />
+             style={{ left: `${pct}%`, width: 3, height: 24, background: 'var(--tx)', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised)' }} />
       </div>
       <div className="flex justify-between mt-2.5 font-mono text-[10.5px] uppercase">
         <span style={{ color: '#3E7C53', fontWeight: 700 }}>Light</span>

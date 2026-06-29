@@ -140,7 +140,7 @@ export default async function DetailPage({
           {results.length} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
         </p>
         {results.length > 0 ? (
-          <div className="grid" style={{ marginTop: '1.25rem' }}>
+          <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
             {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
           </div>
         ) : (
@@ -164,21 +164,21 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
 
-  const attrs: [string, string | number | undefined][] = [
-    [locale === 'es' ? 'Editorial' : 'Publisher', product.publisher],
-    [locale === 'es' ? 'Diseñador' : 'Designer', product.designer],
-    [locale === 'es' ? 'Año' : 'Year', product.yearPublished],
-    [
-      locale === 'es' ? 'Jugadores' : 'Players',
-      product.minPlayers
+  const attrs: Array<{ label: string; value: string | number | undefined; wide?: boolean }> = [
+    { label: locale === 'es' ? 'Editorial' : 'Publisher', value: product.publisher, wide: true },
+    { label: locale === 'es' ? 'Diseñador' : 'Designer', value: product.designer, wide: true },
+    { label: locale === 'es' ? 'Año' : 'Year', value: product.yearPublished },
+    {
+      label: locale === 'es' ? 'Jugadores' : 'Players',
+      value: product.minPlayers
         ? `${product.minPlayers}${product.maxPlayers && product.maxPlayers !== product.minPlayers ? `–${product.maxPlayers}` : ''}`
         : undefined,
-    ],
-    [locale === 'es' ? 'Edad' : 'Age', product.minAge ? `${product.minAge}+` : undefined],
-    [
-      locale === 'es' ? 'Duración' : 'Play time',
-      product.playTimeMinutes ? `${product.playTimeMinutes} min` : undefined,
-    ],
+    },
+    { label: locale === 'es' ? 'Edad' : 'Age', value: product.minAge ? `${product.minAge}+` : undefined },
+    {
+      label: locale === 'es' ? 'Duración' : 'Play time',
+      value: product.playTimeMinutes ? `${product.playTimeMinutes} min` : undefined,
+    },
   ];
 
   return (
@@ -213,11 +213,11 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
 
           <ul className="attrs">
             {attrs
-              .filter(([, v]) => v !== undefined && v !== '')
-              .map(([k, v]) => (
-                <li key={k}>
-                  <b>{v}</b>
-                  {k}
+              .filter(({ value }) => value !== undefined && value !== '')
+              .map(({ label, value, wide }) => (
+                <li key={label} className={wide ? 'attr-wide' : undefined}>
+                  <b>{value}</b>
+                  {label}
                 </li>
               ))}
           </ul>
@@ -324,8 +324,8 @@ function ComplexityMeter({ weight, locale }: { weight: number; locale: string })
           {weight.toFixed(1)} / 5 · {band}
         </span>
       </div>
-      <div style={{ position: 'relative', height: 12, borderRadius: 8, background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px rgba(43,38,34,.08)' }}>
-        <div style={{ position: 'absolute', left: `${pct}%`, top: '50%', width: 3, height: 24, background: '#2B2622', borderRadius: 3, transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised, #FFFDF8)' }} />
+      <div style={{ position: 'relative', height: 12, borderRadius: 8, background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px color-mix(in srgb,var(--foreground) 12%,transparent)' }}>
+        <div style={{ position: 'absolute', left: `${pct}%`, top: '50%', width: 3, height: 24, background: 'var(--foreground)', borderRadius: 3, transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised, var(--card))' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, textTransform: 'uppercase', color: 'var(--tx-faint, var(--subtle-foreground))' }}>
         <span style={{ color: '#3E7C53', fontWeight: 700 }}>{locale === 'es' ? 'Ligero' : 'Light'}</span>

@@ -5,6 +5,22 @@ import type { CategoryCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
 
+const CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
+  'board-game': { es: 'Juegos de mesa', en: 'Board games' },
+  expansion: { es: 'Expansiones', en: 'Expansions' },
+  Preventas: { es: 'Preventas', en: 'Preorders' },
+};
+
+function categoryLabel(category: string, locale: Locale) {
+  return CATEGORY_LABELS[category]?.[locale] ?? category.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function categoryDescription(category: string, locale: Locale) {
+  if (category === 'board-game') return locale === 'es' ? 'Clásicos modernos, estrategia, familiares y party games.' : 'Modern classics, strategy, family and party games.';
+  if (category === 'expansion') return locale === 'es' ? 'Amplía los juegos que ya están en tu mesa.' : 'Expand games already on your table.';
+  return locale === 'es' ? 'Colección curada del marketplace.' : 'Curated marketplace collection.';
+}
+
 export interface FilterState {
   q: string;
   category?: string;
@@ -143,8 +159,8 @@ export function SearchFilters({
             },
             ...categories.map((c) => ({
               value: c.category,
-              label: c.category,
-              description: locale === 'es' ? 'Colección curada del marketplace.' : 'Curated marketplace collection.',
+              label: categoryLabel(c.category, locale),
+              description: categoryDescription(c.category, locale),
               count: c.count,
               isActive: state.category === c.category,
             })),

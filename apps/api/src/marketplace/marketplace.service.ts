@@ -42,13 +42,31 @@ export class MarketplaceService {
     }
 
     // Prisma fallback — when Typesense is empty or unavailable
+    const listingFilter = {
+      active: true,
+      ...(params.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
+      ...((params.minPrice !== undefined || params.maxPrice !== undefined) ? {
+        priceMinorUnits: {
+          ...(params.minPrice !== undefined ? { gte: params.minPrice } : {}),
+          ...(params.maxPrice !== undefined ? { lte: params.maxPrice } : {}),
+        },
+      } : {}),
+    };
+
     const where = {
       canonicalStatus: 'verified' as const,
       ...(params.category ? { category: params.category } : {}),
+      ...(params.minPlayers ? {
+        minPlayers: { lte: params.minPlayers },
+        maxPlayers: { gte: params.minPlayers },
+      } : {}),
+      listings: { some: listingFilter },
       ...(q ? {
         OR: [
           { name: { contains: q, mode: 'insensitive' as const } },
           { publisher: { contains: q, mode: 'insensitive' as const } },
+          { designer: { contains: q, mode: 'insensitive' as const } },
+          { description: { contains: q, mode: 'insensitive' as const } },
           { tags: { has: q } },
         ],
       } : {}),
@@ -78,9 +96,14 @@ export class MarketplaceService {
         slug: p.slug,
         name: p.name,
         images: p.images,
+        category: p.category,
+        tags: p.tags,
+        description: p.description,
         publisher: p.publisher,
         minPlayers: p.minPlayers,
         maxPlayers: p.maxPlayers,
+        minAge: p.minAge,
+        playTimeMinutes: p.playTimeMinutes,
         bggRating: p.bggRating,
         minPriceMinor: prices.length ? Math.min(...prices) : 0,
         maxPriceMinor: prices.length ? Math.max(...prices) : 0,
@@ -91,6 +114,72 @@ export class MarketplaceService {
     });
 
     return { results, total: totalCount, source: 'db' as const };
+  }
+
+  async getSuggestions(q = '', requestedLimit = 8) {
+    const query = q.trim().slice(0, 80);
+    const limit = Math.min(10, Math.max(1, requestedLimit));
+    const directProducts = await this.prisma.mktProduct.findMany({
+      where: {
+        canonicalStatus: 'verified',
+        ...(query ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' as const } },
+            { publisher: { contains: query, mode: 'insensitive' as const } },
+            { designer: { contains: query, mode: 'insensitive' as const } },
+            { tags: { has: query } },
+          ],
+        } : { listings: { some: { active: true } } }),
+      },
+      include: {
+        listings: {
+          where: { active: true },
+          select: { stockStatus: true },
+        },
+      },
+      orderBy: query ? { name: 'asc' } : [{ bggRank: 'asc' }, { name: 'asc' }],
+      take: query ? 30 : limit,
+    });
+
+    const normalizedQuery = query.toLocaleLowerCase();
+    const suggestionProducts = directProducts
+      .sort((left, right) => {
+        const leftName = left.name.toLocaleLowerCase();
+        const rightName = right.name.toLocaleLowerCase();
+        const leftScore = leftName === normalizedQuery ? 0 : leftName.startsWith(normalizedQuery) ? 1 : 2;
+        const rightScore = rightName === normalizedQuery ? 0 : rightName.startsWith(normalizedQuery) ? 1 : 2;
+        return leftScore - rightScore || leftName.localeCompare(rightName);
+      })
+      .slice(0, limit)
+      .map((product) => ({
+        ...product,
+        inStockListings: product.listings.filter((listing) => listing.stockStatus !== 'out_of_stock').length,
+      }));
+    const products = suggestionProducts.map((product) => ({
+      kind: 'product' as const,
+      slug: product.slug,
+      label: product.name,
+      image: product.images?.[0] ?? null,
+      publisher: product.publisher ?? null,
+      category: product.category ?? null,
+      minPlayers: product.minPlayers ?? null,
+      maxPlayers: product.maxPlayers ?? null,
+      playTimeMinutes: product.playTimeMinutes ?? null,
+      bggRating: product.bggRating ?? null,
+      inStock: product.inStockListings > 0,
+    }));
+
+    const publishers = [...new Set(products.map((product) => product.publisher).filter((value): value is string => Boolean(value)))]
+      .slice(0, 2)
+      .map((label) => ({ kind: 'publisher' as const, label, value: label }));
+    const categories = [...new Set(products.map((product) => product.category).filter((value): value is string => Boolean(value)))]
+      .slice(0, 2)
+      .map((label) => ({ kind: 'category' as const, label, value: label }));
+    const mechanics = [...new Set(suggestionProducts.flatMap((product) => product.tags ?? []))]
+      .slice(0, 2)
+      .map((label) => ({ kind: 'mechanic' as const, label, value: label }));
+
+    return { products, mechanics, publishers, categories };
   }
 
   /** Distinct categories with at least one active listing — backs the marketplace's category-browse tiles. */

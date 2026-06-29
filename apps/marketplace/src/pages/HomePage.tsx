@@ -8,7 +8,6 @@ import {
   Filter,
   PackageCheck,
   RotateCcw,
-  Search,
   ShieldCheck,
   SlidersHorizontal,
   Store,
@@ -16,10 +15,12 @@ import {
   X,
 } from 'lucide-react';
 import { ProductCard, type Product } from '../components/ProductCard.js';
+import { SeoHead } from '../components/SeoHead.js';
 import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
+  CatalogSearch,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -142,6 +143,11 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
 
   return (
     <div>
+      <SeoHead
+        title="Juegospedia — Compara, juega, colecciona"
+        description="Compara precios, disponibilidad y envíos de juegos de mesa en tiendas conectadas."
+        path="/"
+      />
       <section className="market-surface-pattern border-b border-[--border] bg-[--bg]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -167,17 +173,14 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                     onSearch(q.trim(), activeCategory);
                   }}
                 >
-                  <div className="relative min-w-0 flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--tx-faint]" aria-hidden="true" />
-                    <input
-                      type="search"
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
-                      placeholder="Busca Catan, Root, Wingspan..."
-                      className="h-11 w-full rounded-[10px] border border-[--border] bg-[--bg-input] py-2 pl-9 pr-3 text-sm text-[--tx]
-                                 placeholder:text-[--tx-faint] focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
+                  <CatalogSearch
+                    endpoint={`${API}/api/v1/products/suggestions`}
+                    value={q}
+                    onValueChange={setQ}
+                    onSearch={(term) => onSearch(term, activeCategory)}
+                    onProduct={onProduct}
+                    placeholder="Busca Catan, Root, Wingspan..."
+                  />
                   <Button type="submit" className="h-10 shrink-0">
                     Buscar
                     <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -425,7 +428,7 @@ function FeaturedProduct({ product, onProduct }: { product?: Product; onProduct:
   if (!product) {
     return (
       <div className="rounded-lg border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-        <div className="aspect-[4/3] rounded-lg bg-[--bg-subtle]" />
+        <div className="aspect-square rounded-lg bg-[--bg-subtle]" />
       </div>
     );
   }
@@ -435,7 +438,7 @@ function FeaturedProduct({ product, onProduct }: { product?: Product; onProduct:
       onClick={() => onProduct(product.slug)}
       className="group overflow-hidden rounded-lg border border-[--border] bg-[--bg-raised] text-left shadow-sm transition-colors hover:bg-[--bg-hover]"
     >
-      <div className="aspect-[4/3] bg-[--bg-subtle]">
+      <div className="aspect-square bg-[--bg-subtle]">
         {product.images[0] ? (
           <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
         ) : (
@@ -626,7 +629,7 @@ function CatalogSkeleton() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-lg border border-[--border] bg-[--bg-raised]">
-          <div className="aspect-[4/3] animate-pulse bg-[--bg-subtle]" />
+          <div className="aspect-square animate-pulse bg-[--bg-subtle]" />
           <div className="space-y-3 p-3.5">
             <div className="h-4 w-3/4 animate-pulse rounded bg-[--bg-subtle]" />
             <div className="h-3 w-1/2 animate-pulse rounded bg-[--bg-subtle]" />

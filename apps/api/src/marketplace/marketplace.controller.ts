@@ -64,6 +64,14 @@ export class MarketplaceController {
     return this.svc.getCategories();
   }
 
+  @Get('suggestions')
+  @ApiOperation({ summary: 'Autocomplete catalog products, publishers, and categories' })
+  @ApiQuery({ name: 'q', required: false, description: 'Typo-tolerant suggestion query; empty returns trending products' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 8 })
+  getSuggestions(@Query('q') q?: string, @Query('limit') limit?: string) {
+    return this.svc.getSuggestions(q, limit ? parseInt(limit, 10) : 8);
+  }
+
   @Get(':slug')
   @ApiOperation({
     summary: 'Get product by slug',

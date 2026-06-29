@@ -3,12 +3,14 @@ import { Clock3, Users } from 'lucide-react';
 import type { ProductSummary } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { listingPath, type Locale } from '@/lib/segments';
+import { commerceStateLabel, resolveCommerceState } from '@retail-os/ui-react';
 
 // Catalog card for a price-comparison storefront: image, name, lowest price,
 // and how many stores carry it. Crawlable <a> to the product page.
 export function ProductCard({ product, locale }: { product: ProductSummary; locale: Locale }) {
   const href = `${listingPath('games', locale)}/${product.slug}`;
   const inStock = product.inStockListings > 0;
+  const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const hasPrice = product.minPriceMinor > 0;
 
   return (
@@ -20,9 +22,12 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
         ) : (
           <div className="card-noimg" aria-hidden="true">🎲</div>
         )}
-        {!inStock && (
-          <span className="card-flag">{locale === 'es' ? 'Sin stock' : 'Out of stock'}</span>
-        )}
+        <span className={`commerce-badge commerce-badge--${commerceState}`}>
+          <span className="commerce-badge-mark" aria-hidden="true">
+            {commerceState === 'rare' ? '◆' : commerceState === 'top-ranked' ? '★' : commerceState === 'best-price' ? '✓' : ''}
+          </span>
+          {commerceStateLabel(commerceState, locale)}
+        </span>
       </div>
       <div className="card-body">
         <div className="card-category">{product.publisher ?? product.category}</div>
@@ -48,11 +53,13 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
           ) : (
             <span className="card-price card-price--na">{locale === 'es' ? 'Sin oferta' : 'No offer'}</span>
           )}
-          <span className={`stock-pill${inStock ? '' : ' out'}`}>
-            {inStock
-              ? locale === 'es' ? 'En stock' : 'In stock'
-              : locale === 'es' ? 'Agotado' : 'Sold out'}
-          </span>
+          {commerceState !== 'in-stock' && commerceState !== 'out-of-stock' && (
+            <span className={`stock-pill${inStock ? '' : ' out'}`}>
+              {inStock
+                ? locale === 'es' ? 'En stock' : 'In stock'
+                : locale === 'es' ? 'Agotado' : 'Sold out'}
+            </span>
+          )}
         </div>
         {product.totalListings > 0 && (
           <span className="card-stores">

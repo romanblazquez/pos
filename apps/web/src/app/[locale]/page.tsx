@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getCategories, listProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/seo';
 import { ProductCard } from '@/components/ProductCard';
+import { CatalogSearchField } from '@/components/CatalogSearchField';
 import { homePath, isLocale, listingPath, slugify, type Locale } from '@/lib/segments';
 
 export const revalidate = 1800;
@@ -84,8 +85,13 @@ export default async function HomePage({ params }: { params: { locale: string } 
           </h1>
           <p>{t.lead}</p>
           <form className="hero-search" action={listingPath('search', locale)} method="get">
-            <input name="q" type="search" placeholder={t.searchPlaceholder} aria-label={t.searchAction} />
-            <button type="submit">{t.searchAction} →</button>
+            <CatalogSearchField
+              locale={locale}
+              searchPath={listingPath('search', locale)}
+              productBase={listingPath('games', locale)}
+              placeholder={t.searchPlaceholder}
+              className="search-command"
+            />
           </form>
           <div className="value-grid">
             <article><span>01</span><h2>{t.discover}</h2><p>{t.discoverText}</p></article>
@@ -118,7 +124,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
           <>
             <p className="section-kicker home-section-kicker">{locale === 'es' ? 'Marketplace' : 'Marketplace'}</p>
             <h2 className="section-title home-section-title">{t.featured}</h2>
-            <div className="grid">
+            <div className="catalog-grid">
               {featured.map((p) => (
                 <ProductCard key={p.id} product={p} locale={locale} />
               ))}
