@@ -158,6 +158,12 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
   const crumbs: Crumb[] = [
     { name: homeName, path: homePath(locale) },
     { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: listingPath('games', locale) },
+    ...(product.category
+      ? [{
+          name: product.category,
+          path: entityPath('categories', locale, slugify(product.category)),
+        }]
+      : []),
     { name: product.name, path },
   ];
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);

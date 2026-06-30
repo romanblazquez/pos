@@ -35,7 +35,6 @@ function readSharedTheme(): Theme | null {
   const cookie = document.cookie.match(/(?:^|;\s*)jp-theme=(light|dark)(?:;|$)/)?.[1];
   return cookie === 'light' || cookie === 'dark' ? cookie : null;
 }
-
 function persistSharedTheme(theme: Theme) {
   const sharedDomain = location.hostname === 'juegospedia.com' || location.hostname.endsWith('.juegospedia.com');
   const secure = location.protocol === 'https:';
@@ -382,6 +381,10 @@ function Header({
 
   function submitSearch(e: FormEvent) {
     e.preventDefault();
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      e.currentTarget.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
+      return;
+    }
     if (q.trim()) onSearch(q.trim());
   }
 
@@ -431,7 +434,7 @@ function Header({
             placeholder="Busca Catan, Root, Wingspan..."
             globalShortcut
           />
-          <Button type="submit" className="min-w-10 shrink-0 px-3 sm:px-4">
+          <Button type="submit" aria-label="Buscar" className="min-w-10 shrink-0 px-3 sm:px-4">
             <Search className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Buscar</span>
           </Button>

@@ -81,8 +81,20 @@ button, input, select { font: inherit; }
 
 .page-title { margin: .6rem 0 .4rem; font-family: var(--font-display); font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 700; line-height: 1.05; letter-spacing: -.025em; }
 .section-title { margin: 2.8rem 0 1.15rem; font-family: var(--font-display); font-size: 1.65rem; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; }
-.crumbs { padding-top: 1.2rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .02em; }
-.crumbs a:hover { color: var(--primary); }
+.crumbs { padding-top: 1.2rem; }
+.crumbs ol { margin: 0; padding-left: 0; list-style: none; }
+.crumb-trail { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; padding: .62rem .78rem !important; border: 1px solid var(--border); border-radius: 11px; background: var(--card); color: var(--muted-foreground); font-size: .84rem; }
+.crumb-trail li { display: flex; min-width: 0; align-items: center; gap: .55rem; }
+.crumb-home { display: grid; width: 24px; height: 24px; flex: none; place-items: center; border-radius: 7px; background: var(--primary); color: var(--primary-foreground); transition: transform 150ms ease; }
+.crumb-home:hover { color: var(--primary-foreground); transform: scale(1.05); }
+.crumb-link { padding-block: .2rem; white-space: nowrap; transition: color 150ms ease; }
+.crumb-link:hover { color: var(--primary); }
+.crumb-current { max-width: min(22rem, 42vw); overflow: hidden; color: var(--foreground); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.crumb-hex { width: 9px; height: 9px; flex: none; fill: var(--input); }
+.crumb-mobile { display: none; }
+.crumb-back { display: inline-flex; min-height: 40px; max-width: 100%; align-items: center; gap: .45rem; padding: .45rem .75rem; border: 1px solid var(--border); border-radius: 11px; background: var(--card); color: var(--muted-foreground); font-size: .86rem; font-weight: 700; }
+.crumb-back svg { flex: none; color: var(--primary); }
+.crumb-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .taglist { display: flex; flex-wrap: wrap; gap: .55rem; }
 .chip { display: inline-flex; align-items: center; gap: .45rem; padding: .42rem .85rem; border: 1px solid var(--input); border-radius: 999px; background: var(--card); color: var(--foreground); font-size: .83rem; font-weight: 600; transition: 150ms ease; }
@@ -218,6 +230,10 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   .offers-wrap { overflow-x: auto; }
   table.offers { min-width: 660px; }
   .site-footer .nav-spacer { display: block; }
+  .crumb-trail { display: none; }
+  .crumb-mobile { display: flex; min-width: 0; align-items: center; }
+  .crumb-mobile li { min-width: 0; }
+  .crumb-current { max-width: calc(100vw - 3rem); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
