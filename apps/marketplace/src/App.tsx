@@ -10,6 +10,7 @@ import AddressesPage from './pages/AddressesPage.js';
 import { CartProvider, useCart } from './cart/CartContext.js';
 import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
+import { ShelfProvider, useShelf } from './context/ShelfContext.js';
 import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
@@ -121,11 +122,13 @@ export default function App() {
   }, []);
 
   return (
-    <CustomerProvider>
-      <CartProvider>
-        <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
-      </CartProvider>
-    </CustomerProvider>
+    <ShelfProvider>
+      <CustomerProvider>
+        <CartProvider>
+          <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
+        </CartProvider>
+      </CustomerProvider>
+    </ShelfProvider>
   );
 }
 
@@ -144,6 +147,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
   const [authOpen, setAuthOpen] = useState(false);
   const [checkout, setCheckout] = useState<CheckoutState>({ state: 'idle' });
   const { session } = useCustomer();
+  const { awardXP } = useShelf();
 
   useEffect(() => {
     const onPop = () => {
@@ -190,7 +194,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
         if (!res.ok) throw new Error();
         const order = (await res.json()) as { status: string };
         if (cancelled) return;
-        if (order.status === 'confirmed') { setCheckout({ state: 'confirmed', orderId: id }); return; }
+        if (order.status === 'confirmed') { setCheckout({ state: 'confirmed', orderId: id }); awardXP(60, 'Compra completada'); return; }
         if (order.status === 'cancelled') { setCheckout({ state: 'failed', message: 'El pago fue cancelado.' }); return; }
       } catch {
         if (cancelled) return;

@@ -1,6 +1,7 @@
 import { Check, Clock3, Gift, PackageCheck, Star, Users } from 'lucide-react';
 import { commerceStateLabel, resolveCommerceState, type CommerceState } from '@retail-os/ui-react';
 import { categoryLabel, formatMoney } from '../marketplace-meta.js';
+import { useShelf } from '../context/ShelfContext.js';
 
 export interface Product {
   id: string;
@@ -31,6 +32,8 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
   priority?: boolean;
 }) {
   const hasStock = product.inStockListings > 0;
+  const { getShelfStatus, setShelfStatus } = useShelf();
+  const isWishlisted = getShelfStatus(product.slug) === 'wishlist';
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const samePrice = product.minPriceMinor === product.maxPriceMinor;
   const priceLabel = samePrice
@@ -44,9 +47,12 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
     : null;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group flex min-h-[25rem] flex-col overflow-hidden rounded-[14px] border border-[--border]
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
+      className="group flex min-h-[25rem] cursor-pointer flex-col overflow-hidden rounded-[14px] border border-[--border]
                  bg-[--bg-raised] text-left shadow-sm transition-all duration-200
                  hover:-translate-y-1 hover:border-emerald-400 hover:shadow-xl
                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
@@ -78,6 +84,21 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
           </span>
         )}
 
+        {/* Wishlist heart button */}
+        <button
+          aria-label={isWishlisted ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShelfStatus(product.slug, product.name, isWishlisted ? null : 'wishlist');
+          }}
+          className="absolute right-2 bottom-2 flex h-7 w-7 items-center justify-center rounded-full
+                     bg-[--bg-raised]/90 backdrop-blur-sm shadow-sm border border-[--border]
+                     transition-all hover:scale-110 active:scale-95"
+        >
+          <span className="text-base leading-none" style={{ color: isWishlisted ? '#B4502E' : undefined }}>
+            {isWishlisted ? '♥' : '♡'}
+          </span>
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">
@@ -117,7 +138,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
           </span>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 

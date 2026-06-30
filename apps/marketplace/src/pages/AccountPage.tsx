@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet } from '../hooks/useWallet.js';
+import { useShelf } from '../context/ShelfContext.js';
+import { useXPInfo, XP_TIERS } from '../hooks/useXP.js';
+import { XPProgressRing } from '../components/XPProgressRing.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
@@ -12,7 +15,11 @@ function fmt(minor: number, currency = 'MXN') {
 function relDate(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const d = Math.floor(diff / 86_400_000);
-  if (d === 0) return 'Hoy';
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return 'Ahora';
+  if (h < 1) return `Hace ${m} min`;
+  if (d === 0) return `Hace ${h}h`;
   if (d === 1) return 'Ayer';
   if (d < 7) return `Hace ${d} días`;
   return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
@@ -35,6 +42,24 @@ interface Order {
   lines: { quantity: number; listing: { product: { name: string; images: string[] } } }[];
 }
 
+const SHELF_CELLS: { key: 'owned' | 'wishlist' | 'want-to-play' | 'previously-owned' | 'for-trade' | 'preordered'; label: string; icon: string }[] = [
+  { key: 'owned', label: 'Tengo', icon: '📦' },
+  { key: 'wishlist', label: 'Wishlist', icon: '♥' },
+  { key: 'want-to-play', label: 'Quiero jugar', icon: '🎲' },
+  { key: 'previously-owned', label: 'Tuve', icon: '📤' },
+  { key: 'for-trade', label: 'Para canjear', icon: '🔄' },
+  { key: 'preordered', label: 'Reservado', icon: '📅' },
+];
+
+const XP_EARN_ACTIONS = [
+  { icon: '⭐', label: 'Escribir una reseña', desc: 'Comparte tu experiencia con la comunidad', xp: 40 },
+  { icon: '📸', label: 'Subir una foto', desc: 'Foto de tu colección o partida', xp: 25 },
+  { icon: '✅', label: 'Validar datos de juego', desc: 'Confirma info de BGG o corrige errores', xp: 30 },
+  { icon: '🛒', label: 'Completar una compra', desc: 'Cada compra confirmada en el marketplace', xp: 60 },
+  { icon: '📦', label: 'Agregar a colección', desc: 'Marca un juego como tuyo', xp: 10 },
+  { icon: '♥', label: 'Agregar a wishlist', desc: 'Guardá juegos que querés', xp: 5 },
+];
+
 export default function AccountPage({
   onNavigate,
   onLogout,
@@ -45,12 +70,14 @@ export default function AccountPage({
   const { session, logout } = useCustomer();
   if (!session) return null;
 
-  async function handleLogout() {
-    await logout();
+  function handleLogout() {
+    logout();
     onLogout();
   }
 
   const { data: wallet } = useWallet(session.customer.id);
+  const { shelfState, shelfCounts, recentXPEvents } = useShelf();
+  const { tier, tierIndex, nextTier, xpToNext } = useXPInfo(shelfState.xp);
 
   const { data: orders } = useQuery<Order[]>({
     queryKey: ['customer-orders', session.customer.id],
@@ -62,85 +89,253 @@ export default function AccountPage({
     retry: false,
   });
 
-  const { addresses } = useAddresses(session.customer.id);
-
+  useAddresses(session.customer.id);
   const totalCredits = (wallet?.platformCreditsMinor ?? 0) + (wallet?.storeCredits?.reduce((s, c) => s + c.balanceMinor, 0) ?? 0);
+  const firstName = session.customer.name?.split(' ')[0] ?? 'jugador';
+  const initials = (session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase();
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
+    <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-8 animate-fade-in">
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-2xl font-bold text-[--tx]">
-            Hola, {session.customer.name?.split(' ')[0] ?? 'jugador'} 👋
-          </h1>
-          <p className="text-sm text-[--tx-muted]">{session.customer.email}</p>
+      {/* ── Section 1: Profile header card ── */}
+      <div className="rounded-2xl border border-[--border] shadow-md bg-[--bg-raised]">
+        {/* Felt banner — avatar is absolutely anchored to its bottom edge */}
+        <div
+          className="relative h-28 rounded-t-2xl"
+          style={{
+            background: '#1E3A2E',
+            backgroundImage: 'radial-gradient(circle,rgba(255,255,255,.05) 1.2px,transparent 1.5px)',
+            backgroundSize: '18px 18px',
+          }}
+        >
+          {/* Logout — top-right of banner */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="absolute right-3 top-3 text-white/70 hover:text-red-300 hover:bg-white/10"
+          >
+            Cerrar sesión
+          </Button>
+
+          {/* Avatar — overlaps banner bottom by half */}
+          <div className="absolute -bottom-10 left-6 flex items-end gap-3">
+            <div
+              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-[--bg-raised] shadow-lg text-white text-2xl font-bold font-display select-none"
+              style={{ background: '#B4502E' }}
+            >
+              {initials}
+            </div>
+            {/* XP ring sits next to avatar, also half-overlapping */}
+            <div className="mb-0.5">
+              <XPProgressRing xp={shelfState.xp} size={60} />
+            </div>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[--tx-muted] hover:text-red-500 shrink-0">
-          Cerrar sesión
-        </Button>
+
+        {/* Content — pt-12 clears the overflowing avatar */}
+        <div className="px-6 pb-5 pt-12">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-display text-2xl font-extrabold text-[--tx]">{firstName}</h1>
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wide text-white"
+                  style={{ background: tier.color }}
+                >
+                  {tier.name}
+                </span>
+              </div>
+              <p className="text-sm text-[--tx-muted]">{session.customer.email}</p>
+              <p className="font-mono text-xs text-[--tx-faint] mt-0.5">
+                {shelfState.xp} XP
+                {nextTier && xpToNext !== null && (
+                  <> · {xpToNext} XP para {nextTier.name}</>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Credits hero card */}
+      {/* ── Section 2: Stats row ── */}
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {[
+          { icon: '📦', value: shelfCounts.owned, label: 'Juegos', onClick: undefined },
+          { icon: '♥', value: shelfCounts.wishlist, label: 'Wishlist', onClick: undefined },
+          { icon: '🛍️', value: orders?.length ?? '–', label: 'Pedidos', onClick: () => onNavigate('orders') },
+          { icon: '💰', value: fmt(totalCredits), label: 'Créditos', onClick: () => onNavigate('wallet'), small: true },
+          { icon: '⭐', value: shelfState.xp, label: 'XP', onClick: undefined },
+          { icon: '🏪', value: '—', label: 'Rating', onClick: undefined },
+        ].map((s, i) => (
+          <div
+            key={i}
+            role={s.onClick ? 'button' : undefined}
+            onClick={s.onClick}
+            className={`flex flex-col items-center justify-center rounded-xl border border-[--border] bg-[--bg-raised] py-4 px-2 text-center
+              ${s.onClick ? 'cursor-pointer hover:bg-[--bg-hover] transition-colors' : ''}`}
+          >
+            <span className="text-lg mb-1">{s.icon}</span>
+            <span className={`font-display font-bold text-[--tx] leading-tight ${s.small ? 'text-sm' : 'text-xl'}`}>{s.value}</span>
+            <span className="font-mono text-[9px] uppercase tracking-wide text-[--tx-faint] mt-0.5">{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Section 3: El Camino / Tier path ── */}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-base font-bold text-[--tx]">El Camino del Loremaster</h2>
+        <div className="rounded-2xl border border-[--border] bg-[--bg-raised] p-5">
+          <div className="flex items-center justify-between relative">
+            {/* Connecting line */}
+            <div className="absolute left-0 right-0 top-[20px] h-0.5 bg-[--border] mx-8" />
+            {XP_TIERS.map((t, i) => {
+              const done = tierIndex > i;
+              const current = tierIndex === i;
+              return (
+                <div key={t.name} className="relative flex flex-col items-center gap-2 z-10">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all"
+                    style={{
+                      background: done || current ? t.color : 'var(--bg-subtle)',
+                      borderColor: done || current ? t.color : 'var(--border)',
+                      boxShadow: current ? `0 0 0 3px ${t.color}33` : undefined,
+                    }}
+                  >
+                    {done ? (
+                      <span className="text-white text-sm">✓</span>
+                    ) : current ? (
+                      <span className="text-white text-xs font-bold">◉</span>
+                    ) : (
+                      <span className="text-[--tx-faint] text-xs">○</span>
+                    )}
+                  </div>
+                  <span
+                    className="font-mono text-[9px] uppercase tracking-wide text-center leading-tight"
+                    style={{ color: done || current ? t.color : 'var(--tx-faint)', fontWeight: current ? 700 : undefined }}
+                  >
+                    {t.name}
+                  </span>
+                  <span className="font-mono text-[8px] text-[--tx-faint]">{t.min} XP</span>
+                </div>
+              );
+            })}
+          </div>
+          {nextTier && (
+            <p className="mt-4 text-xs text-[--tx-muted] text-center border-t border-[--border] pt-3">
+              Siguiente beneficio: <span className="font-semibold text-[--tx]">{tier.nextPerk}</span> · faltan {xpToNext} XP
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ── Section 4: Collection shelf ── */}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-base font-bold text-[--tx]">Mi Estante</h2>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {SHELF_CELLS.map((cell) => (
+            <div
+              key={cell.key}
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[--border] bg-[--bg-raised] p-4 text-center"
+            >
+              <span className="text-xl">{cell.icon}</span>
+              <span className="font-display text-2xl font-bold text-[--tx]">{shelfCounts[cell.key]}</span>
+              <span className="font-mono text-[9px] uppercase tracking-wide text-[--tx-faint] leading-tight">{cell.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-[--tx-faint] text-center">
+          Agrega juegos desde el catálogo con los botones de estante en cada juego.
+        </p>
+      </section>
+
+      {/* ── Section 5: Ways to earn XP ── */}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-base font-bold text-[--tx]">Cómo ganar XP</h2>
+        <div className="rounded-2xl border border-[--border] bg-[--bg-raised] divide-y divide-[--border] overflow-hidden">
+          {XP_EARN_ACTIONS.map((action) => (
+            <div key={action.label} className="flex items-center gap-3 px-4 py-3">
+              <span className="text-xl shrink-0">{action.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[--tx]">{action.label}</p>
+                <p className="text-xs text-[--tx-muted]">{action.desc}</p>
+              </div>
+              <span
+                className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-xs font-bold"
+                style={{ background: '#E4EFE4', color: '#2C6B43' }}
+              >
+                +{action.xp} XP
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Section 6: Recent XP events ── */}
+      {recentXPEvents.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-base font-bold text-[--tx]">Actividad de XP reciente</h2>
+          <div className="rounded-2xl border border-[--border] bg-[--bg-raised] divide-y divide-[--border] overflow-hidden">
+            {recentXPEvents.map((event, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <span
+                  className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold"
+                  style={{ background: '#E4EFE4', color: '#2C6B43' }}
+                >
+                  +{event.xp}
+                </span>
+                <p className="flex-1 text-sm text-[--tx]">{event.label}</p>
+                <p className="font-mono text-[10px] text-[--tx-faint] shrink-0">{relDate(event.at)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Credits hero card ── */}
       <div
         role="button"
         onClick={() => onNavigate('wallet')}
-        className="relative overflow-hidden rounded-2xl cursor-pointer group
-                   bg-gradient-to-br from-emerald-700 via-emerald-800 to-emerald-950 text-white p-6 shadow-lg"
+        className="relative overflow-hidden rounded-2xl cursor-pointer group p-6 shadow-lg"
+        style={{ background: 'linear-gradient(135deg, #1E3A2E 0%, #2C6B43 100%)' }}
       >
-        <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Créditos disponibles</p>
-        <p className="text-4xl font-bold tracking-tight mb-1">{fmt(totalCredits)}</p>
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: 'radial-gradient(circle,rgba(255,255,255,.05) 1.2px,transparent 1.5px)',
+            backgroundSize: '18px 18px',
+          }}
+        />
+        <div className="relative">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#7FC79A' }}>Créditos disponibles</p>
+          <p className="font-display text-4xl font-bold tracking-tight mb-1 text-white">{fmt(totalCredits)}</p>
 
-        {wallet && wallet.storeCredits?.length > 0 && (
-          <p className="text-emerald-300 text-xs mt-1">
-            {fmt(wallet.platformCreditsMinor)} libres
-            {wallet.storeCredits.map((sc) => (
-              <span key={sc.seller.name}> · {fmt(sc.balanceMinor)} {sc.seller.name}</span>
-            ))}
-          </p>
-        )}
+          {wallet && wallet.storeCredits?.length > 0 && (
+            <p className="text-xs mt-1" style={{ color: '#7FC79A' }}>
+              {fmt(wallet.platformCreditsMinor)} libres
+              {wallet.storeCredits.map((sc) => (
+                <span key={sc.seller.name}> · {fmt(sc.balanceMinor)} {sc.seller.name}</span>
+              ))}
+            </p>
+          )}
 
-        <div className="mt-4 flex items-center gap-1 text-xs text-emerald-300 group-hover:text-white transition-colors">
-          Ver historial de créditos
-          <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          <div className="mt-4 flex items-center gap-1 text-xs transition-colors" style={{ color: '#7FC79A' }}>
+            Ver historial de créditos
+            <svg className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <button onClick={() => onNavigate('orders')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
-            <p className="text-2xl mb-2">🛍️</p>
-            <p className="text-2xl font-bold text-[--tx]">{orders?.length ?? '–'}</p>
-            <p className="text-sm text-[--tx-muted] font-medium">Pedidos</p>
-          </button>
-        </Card>
-        <Card>
-          <button onClick={() => onNavigate('wallet')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
-            <p className="text-2xl mb-2">🎁</p>
-            <p className="text-2xl font-bold text-[--tx]">
-              {wallet?.storeCredits?.filter((s) => s.balanceMinor > 0).length ?? 0}
-            </p>
-            <p className="text-sm text-[--tx-muted] font-medium">Tiendas con crédito</p>
-          </button>
-        </Card>
-        <Card>
-          <button onClick={() => onNavigate('addresses')} className="w-full rounded-xl bg-[--bg-raised] p-5 text-left transition-colors hover:bg-[--bg-hover]">
-            <p className="text-2xl mb-2">📍</p>
-            <p className="text-2xl font-bold text-[--tx]">{addresses.length}</p>
-            <p className="text-sm text-[--tx-muted] font-medium">Direcciones</p>
-          </button>
-        </Card>
-      </div>
-
-      {/* Recent orders */}
+      {/* ── Recent orders ── */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-[--tx]">Pedidos recientes</h2>
-          <button onClick={() => onNavigate('orders')} className="rounded-lg border border-[--border] bg-[--bg-subtle] px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300">
+          <button
+            onClick={() => onNavigate('orders')}
+            className="rounded-lg border border-[--border] bg-[--bg-subtle] px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300"
+          >
             Ver todos →
           </button>
         </div>
@@ -161,9 +356,6 @@ export default function AccountPage({
             {orders.map((order) => {
               const product = order.lines[0]?.listing?.product;
               const creditsApplied = (order.platformCreditsApplied ?? 0) + (order.storeCreditsApplied ?? 0);
-              // Round to whole currency units first, then derive "paid" from the
-              // already-rounded total/credits so the displayed figures always sum
-              // correctly (independent rounding can be off by one unit otherwise).
               const totalUnits = Math.round(order.totalMinorUnits / 100);
               const creditsUnits = Math.round(creditsApplied / 100);
               const paidUnits = totalUnits - creditsUnits;

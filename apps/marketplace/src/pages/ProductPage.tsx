@@ -13,6 +13,8 @@ import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
 import { SellerOfferComparisonTable, type ListingDetail } from '../components/SellerOfferComparisonTable.js';
+import { GameInfoBadges } from '../components/GameInfoBadges.js';
+import { ShelfButtons } from '../components/ShelfButtons.js';
 import { categoryLabel } from '../marketplace-meta.js';
 import { trackEvent } from '../analytics.js';
 
@@ -182,6 +184,15 @@ export default function ProductPage({
         },
         { label: p.name },
       ]} />
+      <GameInfoBadges
+        minPlayers={p.minPlayers}
+        maxPlayers={p.maxPlayers}
+        minAge={p.minAge}
+        playTimeMinutes={p.playTimeMinutes}
+        bggRating={p.bggRating}
+        bggWeight={p.bggWeight}
+        language={p.language}
+      />
       <div className="mb-12 grid gap-8 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:gap-14">
 
         {/* Images */}
@@ -310,6 +321,12 @@ export default function ProductPage({
           onCartOpen();
         }}
       />
+
+      {/* Shelf */}
+      <div className="border-t border-[--border] pt-4 mt-6">
+        <p className="font-mono text-xs uppercase tracking-wide text-[--tx-faint] mb-2">Mi estante</p>
+        <ShelfButtons slug={p.slug} name={p.name} />
+      </div>
 
       {/* Add-to-cart guardrail feedback */}
       {toast && (
