@@ -15,21 +15,25 @@ datasource db {
 
 // ─── Identity ────────────────────────────────────────────────────────────────
 model Tenant {
-  id                  String               @id @default(cuid())
-  name                String
-  legalName           String?
-  country             String               @default("MX")
-  taxIdentifier       String?
-  currency            String               @default("MXN")
-  timezone            String               @default("America/Mexico_City")
-  onboardingCompleted Boolean              @default(false)
-  createdAt           DateTime             @default(now())
-  stores              Store[]
-  products            Product[]
-  users               User[]
-  providerConnections ProviderConnection[]
-  terminalAssignments TerminalAssignment[]
-  onboardingState     OnboardingState?
+  id                    String               @id @default(cuid())
+  name                  String
+  legalName             String?
+  country               String               @default("MX")
+  taxIdentifier         String?
+  currency              String               @default("MXN")
+  timezone              String               @default("America/Mexico_City")
+  onboardingCompleted   Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  stores                Store[]
+  products              Product[]
+  users                 User[]
+  providerConnections   ProviderConnection[]
+  terminalAssignments   TerminalAssignment[]
+  onboardingState       OnboardingState?
+  canonicalIntegrations SellerIntegration[]
+  affiliateAccounts     AffiliateAccount[]
+  seoPages              SeoPage[]
+  canonicalMarkets      TenantMarket[]
 }
 
 model Store {
@@ -363,38 +367,50 @@ model IngestionKey {
 
 // ─── Sellers ──────────────────────────────────────────────────────────────────
 model Seller {
-  id              String                 @id @default(cuid())
-  name            String
-  slug            String                 @unique
-  email           String                 @unique
-  phone           String?
-  country         String                 @default("MX")
-  timezone        String                 @default("America/Mexico_City")
-  logoUrl         String?
-  description     String?
+  id                    String                 @id @default(cuid())
+  name                  String
+  slug                  String                 @unique
+  email                 String                 @unique
+  phone                 String?
+  country               String                 @default("MX")
+  timezone              String                 @default("America/Mexico_City")
+  logoUrl               String?
+  description           String?
   // 'tiendanube' | 'shopify' | 'mercadolibre' | 'woocommerce' | 'odoo' | 'csv' | 'manual' | 'platform'
-  connectorType   String?
-  connectorConfig Json? // encrypted at app layer before persisting
-  tier            String                 @default("starter") // starter | growth | pro | platform
-  status          String                 @default("pending") // pending | active | suspended | churned
-  commissionRate  Decimal                @default(0.03) @db.Decimal(5, 4)
-  passwordHash    String?
-  emailVerified   Boolean                @default(false)
-  verifyToken     String?                @unique
-  authPrincipalId String?                @unique
-  authPrincipal   AuthPrincipal?         @relation(fields: [authPrincipalId], references: [id])
-  onboardingStep  String? // current step if onboarding not complete
-  onboardingData  Json?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  listings        Listing[]
-  orders          MarketplaceOrder[]
-  score           SellerScore?
-  syncLogs        ConnectorSyncLog[]
-  mpConnection    SellerMpConnection?
-  rewardConfig    SellerRewardConfig?
-  storeCredits    StoreCredit[]
-  productMappings SellerProductMapping[]
+  connectorType         String?
+  connectorConfig       Json? // encrypted at app layer before persisting
+  tier                  String                 @default("starter") // starter | growth | pro | platform
+  status                String                 @default("pending") // pending | active | suspended | churned
+  commissionRate        Decimal                @default(0.03) @db.Decimal(5, 4)
+  passwordHash          String?
+  emailVerified         Boolean                @default(false)
+  verifyToken           String?                @unique
+  authPrincipalId       String?                @unique
+  authPrincipal         AuthPrincipal?         @relation(fields: [authPrincipalId], references: [id])
+  onboardingStep        String? // current step if onboarding not complete
+  onboardingData        Json?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  listings              Listing[]
+  orders                MarketplaceOrder[]
+  score                 SellerScore?
+  syncLogs              ConnectorSyncLog[]
+  mpConnection          SellerMpConnection?
+  rewardConfig          SellerRewardConfig?
+  storeCredits          StoreCredit[]
+  productMappings       SellerProductMapping[]
+  canonicalIntegrations SellerIntegration[]
+  sourceProducts        SellerSourceProduct[]
+  canonicalOffers       SellerOfferCurrent[]
+  affiliateAccounts     AffiliateAccount[]
+  taxProfiles           TaxProfile[]
+  returnPolicies        ReturnPolicy[]
+  coupons               Coupon[]
+  cashbackRules         CashbackRule[]
+  sponsoredPlacements   SponsoredPlacement[]
+  affiliateClicks       AffiliateClickEvent[]
+  conversions           ConversionEvent[]
+  canonicalMarkets      SellerMarket[]
 
   @@index([status])
   @@index([connectorType])
@@ -577,22 +593,26 @@ model DeliveryOption {
 
 // ─── Marketplace Customers ────────────────────────────────────────────────────
 model MktCustomer {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  name              String?
-  phone             String?
-  preferredRegion   String?
-  preferredCurrency String             @default("MXN")
-  passwordHash      String?
-  emailVerified     Boolean            @default(false)
-  verifyToken       String?            @unique
-  authPrincipalId   String?            @unique
-  authPrincipal     AuthPrincipal?     @relation(fields: [authPrincipalId], references: [id])
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  orders            MarketplaceOrder[]
-  addresses         MktAddress[]
-  wallet            CustomerWallet?
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String?
+  phone                 String?
+  preferredRegion       String?
+  preferredCurrency     String                 @default("MXN")
+  passwordHash          String?
+  emailVerified         Boolean                @default(false)
+  verifyToken           String?                @unique
+  authPrincipalId       String?                @unique
+  authPrincipal         AuthPrincipal?         @relation(fields: [authPrincipalId], references: [id])
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  orders                MarketplaceOrder[]
+  addresses             MktAddress[]
+  wallet                CustomerWallet?
+  collections           UserCollection[]
+  wishlists             Wishlist[]
+  alerts                UserAlert[]
+  recommendationProfile RecommendationProfile?
 }
 
 model MktAddress {
@@ -753,4 +773,2392 @@ model ConnectorSyncLog {
 
   @@index([sellerId, syncType, startedAt])
   @@index([status, startedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// JUEGOSPEDIA CANONICAL CATALOG V2
+//
+// Additive replacement for MktProduct/Listing. Permanent knowledge is modeled
+// independently from transient seller commerce. Legacy models remain during the
+// backfill + dual-write window and are removed only after consumers cut over.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum CanonicalRecordStatus {
+  DRAFT
+  PUBLISHED
+  MERGED
+  ARCHIVED
+
+  @@map("canonical_record_status")
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_REVIEW
+
+  @@map("moderation_status")
+}
+
+enum CatalogProductType {
+  BOARD_GAME
+  EXPANSION
+  STANDALONE_EXPANSION
+  PROMO
+  ACCESSORY
+  RPG_BOOK
+  SLEEVE
+  ORGANIZER
+  MINIATURE
+  PLAYMAT
+  RULEBOOK
+  MAGAZINE
+  DIGITAL
+  REPLACEMENT_COMPONENT
+  BUNDLE
+  OTHER
+
+  @@map("catalog_product_type")
+}
+
+enum ContributorKind {
+  PERSON
+  ORGANIZATION
+
+  @@map("contributor_kind")
+}
+
+enum GameRelationshipType {
+  BASE_GAME
+  EXPANSION_OF
+  STANDALONE_EXPANSION
+  COMPATIBLE_WITH
+  REQUIRES
+  REIMPLEMENTS
+  REIMPLEMENTED_BY
+  INSPIRED_BY
+  BASED_ON
+  ALTERNATIVE_ART
+  PROMO_FOR
+  SAME_UNIVERSE
+  SAME_SERIES
+  SAME_FRANCHISE
+  DIGITAL_IMPLEMENTATION
+  VIDEO_GAME_ADAPTATION
+  MOVIE_ADAPTATION
+  ACCESSORY_FOR
+  SLEEVE_FOR
+  ORGANIZER_FOR
+  UPGRADE_FOR
+  REPLACEMENT_COMPONENT_FOR
+
+  @@map("game_relationship_type")
+}
+
+enum RelationshipDirection {
+  DIRECTED
+  BIDIRECTIONAL
+
+  @@map("relationship_direction")
+}
+
+enum IdentifierVerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  CONFLICTED
+  REVOKED
+
+  @@map("identifier_verification_status")
+}
+
+enum SourceClaimStatus {
+  OBSERVED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  CONFLICTED
+
+  @@map("source_claim_status")
+}
+
+enum ImportJobStatus {
+  QUEUED
+  RUNNING
+  PARTIAL
+  SUCCEEDED
+  FAILED
+  CANCELLED
+
+  @@map("import_job_status")
+}
+
+enum ImageRole {
+  BOX_FRONT
+  BOX_BACK
+  COMPONENTS
+  LIFESTYLE
+  RULEBOOK
+  PRODUCT
+  THUMBNAIL
+  OPEN_GRAPH
+  LOGO
+  PUBLISHER_LOGO
+  DESIGNER_PHOTO
+  ARTIST_PHOTO
+  OTHER
+
+  @@map("image_role")
+}
+
+enum ImageLicenseStatus {
+  UNKNOWN
+  AUTHORIZED
+  RESTRICTED
+  EXPIRED
+  REJECTED
+
+  @@map("image_license_status")
+}
+
+enum StorageProvider {
+  LOCAL_FILESYSTEM
+  S3
+  CLOUDFLARE_R2
+  GCS
+  AZURE_BLOB
+
+  @@map("storage_provider")
+}
+
+enum SellerIntegrationProvider {
+  AMAZON_AFFILIATE
+  MERCADO_LIBRE
+  SHOPIFY
+  TIENDANUBE
+  WOOCOMMERCE
+  EBAY
+  ETSY
+  WALMART
+  CSV
+  CUSTOM_API
+  ERP
+
+  @@map("seller_integration_provider")
+}
+
+enum IntegrationStatus {
+  PENDING_AUTH
+  ACTIVE
+  DEGRADED
+  PAUSED
+  REVOKED
+
+  @@map("integration_status")
+}
+
+enum OfferStockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  PREORDER
+  BACKORDER
+  DISCONTINUED
+  UNKNOWN
+
+  @@map("offer_stock_status")
+}
+
+enum ProductCondition {
+  NEW
+  LIKE_NEW
+  USED_GOOD
+  USED_ACCEPTABLE
+  DAMAGED
+  COLLECTIBLE
+
+  @@map("product_condition")
+}
+
+enum FulfillmentMethod {
+  SELLER_FULFILLED
+  MARKETPLACE_FULFILLED
+  DROPSHIP
+  DIGITAL
+  LOCAL_PICKUP
+
+  @@map("fulfillment_method")
+}
+
+enum MatchCandidateStatus {
+  PENDING
+  AUTO_APPROVED
+  NEEDS_REVIEW
+  REJECTED
+  CONFIRMED
+
+  @@map("match_candidate_status")
+}
+
+enum MatchConfidenceLevel {
+  EXACT
+  HIGH
+  MEDIUM
+  LOW
+
+  @@map("match_confidence_level")
+}
+
+enum MatchDecisionType {
+  AUTO_APPROVE
+  HUMAN_CONFIRM
+  HUMAN_REJECT
+  REMATCH
+
+  @@map("match_decision_type")
+}
+
+enum CouponDiscountType {
+  FIXED_AMOUNT
+  PERCENTAGE
+  FREE_SHIPPING
+
+  @@map("coupon_discount_type")
+}
+
+enum SponsoredPlacementStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+
+  @@map("sponsored_placement_status")
+}
+
+enum AffiliatePayoutStatus {
+  UNATTRIBUTED
+  ESTIMATED
+  PENDING
+  CONFIRMED
+  PAID
+  REVERSED
+
+  @@map("affiliate_payout_status")
+}
+
+enum AlertType {
+  PRICE
+  AVAILABILITY
+  RESTOCK
+
+  @@map("alert_type")
+}
+
+enum AlertStatus {
+  ACTIVE
+  PAUSED
+  TRIGGERED
+  CANCELLED
+
+  @@map("alert_status")
+}
+
+enum CollectionVisibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+
+  @@map("collection_visibility")
+}
+
+enum SeoPageType {
+  ENTITY
+  COLLECTION
+  COMPARISON
+  BEST_LIST
+  DEALS
+  PRICE_HISTORY
+  STORE
+  COUNTRY
+  ARTICLE
+
+  @@map("seo_page_type")
+}
+
+enum SearchDocumentType {
+  GAME
+  PRODUCT
+  OFFER
+  DESIGNER
+  PUBLISHER
+  MECHANIC
+  CATEGORY
+  COLLECTION
+  SEO_LANDING_PAGE
+
+  @@map("search_document_type")
+}
+
+enum EdgeCreatedBy {
+  HUMAN
+  IMPORT
+  AI
+  SYSTEM
+
+  @@map("edge_created_by")
+}
+
+enum AwardNominationResult {
+  NOMINATED
+  FINALIST
+  WINNER
+  SPECIAL_MENTION
+
+  @@map("award_nomination_result")
+}
+
+model Country {
+  id                String               @id @default(cuid())
+  code              String               @unique @db.Char(2)
+  iso3Code          String               @unique @db.Char(3)
+  name              String
+  defaultCurrency   String?              @db.Char(3)
+  defaultLanguage   String?
+  timezone          String?
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  marketplaces      MarketplaceCountry[]
+  sellerOffers      SellerOfferCurrent[]
+  taxProfiles       TaxProfile[]
+  affiliateAccounts AffiliateAccount[]
+  tenantMarkets     TenantMarket[]
+  sellerMarkets     SellerMarket[]
+
+  @@index([active, code])
+  @@map("country")
+}
+
+model Currency {
+  id          String   @id @default(cuid())
+  code        String   @unique @db.Char(3)
+  numericCode String?  @unique @db.Char(3)
+  name        String
+  symbol      String
+  minorUnits  Int      @default(2)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("currency")
+}
+
+model Language {
+  id            String               @id @default(cuid())
+  code          String               @unique
+  iso6391       String?              @unique @db.Char(2)
+  name          String
+  nativeName    String
+  direction     String               @default("ltr")
+  active        Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  localizations EntityLocalization[]
+  rulebooks     Rulebook[]
+  seoPages      SeoPage[]
+
+  @@map("language")
+}
+
+model Marketplace {
+  id                String                @id @default(cuid())
+  code              String                @unique
+  name              String
+  baseUrl           String?
+  marketplaceType   String
+  active            Boolean               @default(true)
+  metadata          Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  countries         MarketplaceCountry[]
+  integrations      SellerIntegration[]
+  affiliateAccounts AffiliateAccount[]
+  offers            SellerOfferCurrent[]
+  sourceProducts    SellerSourceProduct[]
+
+  @@index([active, marketplaceType])
+  @@map("marketplace")
+}
+
+model MarketplaceCountry {
+  id            String      @id @default(cuid())
+  marketplaceId String
+  countryId     String
+  domain        String?
+  externalCode  String?
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  marketplace   Marketplace @relation(fields: [marketplaceId], references: [id], onDelete: Cascade)
+  country       Country     @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  @@unique([marketplaceId, countryId])
+  @@index([countryId, active])
+  @@map("marketplace_country")
+}
+
+model DataSource {
+  id                 String                @id @default(cuid())
+  code               String                @unique
+  name               String
+  sourceType         String
+  baseUrl            String?
+  trustPriority      Int                   @default(100)
+  defaultConfidence  Decimal               @default(0.5) @db.Decimal(5, 4)
+  termsUrl           String?
+  attributionText    String?
+  imageImportAllowed Boolean               @default(false)
+  active             Boolean               @default(true)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  importJobs         ImportJob[]
+  rawRecords         RawSourceRecord[]
+  claims             SourceClaim[]
+  attributions       SourceAttribution[]
+  identifiers        ExternalIdentifier[]
+  images             LocalImageAsset[]
+  graphEdges         KnowledgeGraphEdge[]
+  sellerProducts     SellerSourceProduct[]
+
+  @@index([sourceType, active])
+  @@map("data_source")
+}
+
+model ImportJob {
+  id               String             @id @default(cuid())
+  sourceId         String
+  tenantId         String?
+  integrationId    String?
+  jobType          String
+  idempotencyKey   String             @unique
+  status           ImportJobStatus    @default(QUEUED)
+  cursor           String?
+  itemsSeen        BigInt             @default(0)
+  itemsSucceeded   BigInt             @default(0)
+  itemsFailed      BigInt             @default(0)
+  retryCount       Int                @default(0)
+  nextRetryAt      DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  sourceUrl        String?
+  sourceConfidence Decimal?           @db.Decimal(5, 4)
+  rawPayload       Json?
+  metadata         Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  source           DataSource         @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  integration      SellerIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  rawRecords       RawSourceRecord[]
+  errors           ImportJobError[]
+
+  @@index([sourceId, status, createdAt])
+  @@index([status, nextRetryAt])
+  @@map("import_job")
+}
+
+model ImportJobError {
+  id          String    @id @default(cuid())
+  importJobId String
+  recordKey   String?
+  errorCode   String
+  message     String
+  retryable   Boolean   @default(false)
+  retryCount  Int       @default(0)
+  details     Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  importJob   ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId, retryable])
+  @@map("import_job_error")
+}
+
+model RawSourceRecord {
+  id               String                @id @default(cuid())
+  sourceId         String
+  importJobId      String?
+  externalKey      String
+  entityHint       String?
+  payloadHash      String
+  rawPayload       Json
+  sourceUrl        String?
+  sourceConfidence Decimal               @default(0.5) @db.Decimal(5, 4)
+  observedAt       DateTime              @default(now())
+  processedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  source           DataSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  importJob        ImportJob?            @relation(fields: [importJobId], references: [id], onDelete: SetNull)
+  claims           SourceClaim[]
+  sellerProducts   SellerSourceProduct[]
+
+  @@unique([sourceId, externalKey, payloadHash])
+  @@index([sourceId, externalKey, observedAt])
+  @@index([processedAt])
+  @@map("raw_source_record")
+}
+
+model SourceClaim {
+  id               String            @id @default(cuid())
+  sourceId         String
+  rawRecordId      String?
+  entityType       String
+  entityId         String
+  fieldPath        String
+  value            Json
+  normalizedValue  String?
+  status           SourceClaimStatus @default(OBSERVED)
+  sourceUrl        String?
+  sourceConfidence Decimal           @default(0.5) @db.Decimal(5, 4)
+  rawPayload       Json?
+  validFrom        DateTime?
+  validUntil       DateTime?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  source           DataSource        @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  rawRecord        RawSourceRecord?  @relation(fields: [rawRecordId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, fieldPath, status])
+  @@index([sourceId, status, createdAt])
+  @@map("source_claim")
+}
+
+model SourceAttribution {
+  id               String     @id @default(cuid())
+  sourceId         String
+  entityType       String
+  entityId         String
+  fieldPath        String?
+  sourceUrl        String?
+  sourceConfidence Decimal?   @db.Decimal(5, 4)
+  attributionText  String?
+  license          String?
+  rawPayload       Json?
+  firstSeenAt      DateTime   @default(now())
+  lastSeenAt       DateTime   @default(now())
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  source           DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceId, entityType, entityId, fieldPath])
+  @@index([entityType, entityId])
+  @@map("source_attribution")
+}
+
+model IdentifierNamespace {
+  id                String               @id @default(cuid())
+  code              String               @unique
+  displayName       String
+  entityScope       String[]
+  caseSensitive     Boolean              @default(false)
+  countryScoped     Boolean              @default(false)
+  validationPattern String?
+  active            Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  identifiers       ExternalIdentifier[]
+
+  @@map("identifier_namespace")
+}
+
+model ExternalIdentifier {
+  id                 String                       @id @default(cuid())
+  namespaceId        String
+  entityType         String
+  entityId           String
+  identifierValue    String
+  normalizedValue    String
+  sourceId           String
+  marketplaceCountry String?                      @db.Char(2)
+  confidenceScore    Decimal                      @default(0.5) @db.Decimal(5, 4)
+  verificationStatus IdentifierVerificationStatus @default(UNVERIFIED)
+  verifiedBy         String?
+  verifiedAt         DateTime?
+  sourceUrl          String?
+  sourceAttribution  String?
+  firstSeenAt        DateTime                     @default(now())
+  lastSeenAt         DateTime                     @default(now())
+  rawPayload         Json?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  namespace          IdentifierNamespace          @relation(fields: [namespaceId], references: [id], onDelete: Restrict)
+  source             DataSource                   @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([namespaceId, entityType, entityId, normalizedValue, sourceId])
+  @@index([namespaceId, normalizedValue, verificationStatus])
+  @@index([entityType, entityId])
+  @@index([sourceId, lastSeenAt])
+  @@map("external_identifier")
+}
+
+model EntityLocalization {
+  id                String           @id @default(cuid())
+  entityType        String
+  entityId          String
+  languageId        String
+  title             String
+  alternateTitles   String[]
+  normalizedTitle   String
+  shortDescription  String?
+  description       String?
+  localizationNotes String?
+  sourceClaimIds    String[]
+  moderationStatus  ModerationStatus @default(PENDING)
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  language          Language         @relation(fields: [languageId], references: [id], onDelete: Restrict)
+
+  @@unique([entityType, entityId, languageId])
+  @@index([languageId, normalizedTitle])
+  @@index([entityType, entityId])
+  @@map("entity_localization")
+}
+
+model MasterGame {
+  id                       String                   @id @default(cuid())
+  canonicalTitle           String
+  originalTitle            String?
+  normalizedTitle          String
+  originalLanguageCode     String?
+  description              String?
+  yearPublished            Int?
+  minPlayers               Int?
+  maxPlayers               Int?
+  recommendedMinPlayers    Int?
+  recommendedMaxPlayers    Int?
+  minPlayTimeMinutes       Int?
+  maxPlayTimeMinutes       Int?
+  minAge                   Int?
+  maxAge                   Int?
+  complexityWeight         Decimal?                 @db.Decimal(3, 2)
+  languageDependencyId     String?
+  officialSiteUrl          String?
+  canonicalStatus          CanonicalRecordStatus    @default(DRAFT)
+  moderationStatus         ModerationStatus         @default(PENDING)
+  mergedIntoId             String?
+  reviewedBy               String?
+  reviewedAt               DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  languageDependency       LanguageDependency?      @relation(fields: [languageDependencyId], references: [id], onDelete: SetNull)
+  mergedInto               MasterGame?              @relation("MasterGameMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom               MasterGame[]             @relation("MasterGameMerge")
+  editions                 GameEdition[]
+  products                 CatalogProduct[]
+  designers                MasterGameDesigner[]
+  artists                  MasterGameArtist[]
+  publishers               MasterGamePublisher[]
+  studios                  MasterGameStudio[]
+  mechanics                MasterGameMechanic[]
+  categories               MasterGameCategory[]
+  themes                   MasterGameTheme[]
+  families                 MasterGameFamily[]
+  series                   MasterGameSeries[]
+  franchises               MasterGameFranchise[]
+  universes                MasterGameUniverse[]
+  awardNominations         AwardNomination[]
+  ageRatings               AgeRating[]
+  rulebooks                Rulebook[]
+  digitalImplementations   DigitalImplementation[]
+  sourceRelationships      GameRelationship[]       @relation("GameRelationshipSource")
+  targetRelationships      GameRelationship[]       @relation("GameRelationshipTarget")
+  accessoryCompatibilities AccessoryCompatibility[]
+  collectionItems          UserCollectionItem[]
+  wishlistItems            WishlistItem[]
+  alerts                   UserAlert[]
+
+  @@index([normalizedTitle])
+  @@index([canonicalStatus, moderationStatus])
+  @@index([yearPublished])
+  @@index([minPlayers, maxPlayers])
+  @@index([complexityWeight])
+  @@map("master_game")
+}
+
+model GameEdition {
+  id                       String                   @id @default(cuid())
+  masterGameId             String
+  editionName              String
+  normalizedEditionName    String
+  editionNumber            String?
+  primaryLanguageCode      String?
+  regionCode               String?
+  publisherId              String?
+  releaseYear              Int?
+  coverStyle               String?
+  componentDifferences     String?
+  ruleChanges              String?
+  localizationNotes        String?
+  compatibilityNotes       String?
+  canonicalStatus          CanonicalRecordStatus    @default(DRAFT)
+  moderationStatus         ModerationStatus         @default(PENDING)
+  reviewedBy               String?
+  reviewedAt               DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  masterGame               MasterGame               @relation(fields: [masterGameId], references: [id], onDelete: Restrict)
+  publisher                Publisher?               @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  printings                GamePrinting[]
+  products                 CatalogProduct[]
+  rulebooks                Rulebook[]
+  accessoryCompatibilities AccessoryCompatibility[]
+
+  @@unique([masterGameId, normalizedEditionName, primaryLanguageCode, regionCode])
+  @@index([masterGameId, canonicalStatus])
+  @@index([publisherId, releaseYear])
+  @@map("game_edition")
+}
+
+model GamePrinting {
+  id                   String                @id @default(cuid())
+  editionId            String
+  publisherId          String?
+  printingYear         Int?
+  printNumber          String?
+  manufacturingCountry String?
+  componentCorrections String?
+  errata               String?
+  boxWidthMm           Decimal?              @db.Decimal(10, 2)
+  boxHeightMm          Decimal?              @db.Decimal(10, 2)
+  boxDepthMm           Decimal?              @db.Decimal(10, 2)
+  weightGrams          Int?
+  productionNotes      String?
+  canonicalStatus      CanonicalRecordStatus @default(DRAFT)
+  moderationStatus     ModerationStatus      @default(PENDING)
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  edition              GameEdition           @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  publisher            Publisher?            @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  products             CatalogProduct[]
+  rulebooks            Rulebook[]
+
+  @@index([editionId, printingYear, printNumber])
+  @@index([publisherId])
+  @@map("game_printing")
+}
+
+model CatalogProduct {
+  id                String                   @id @default(cuid())
+  productType       CatalogProductType
+  masterGameId      String?
+  editionId         String?
+  printingId        String?
+  publisherId       String?
+  canonicalTitle    String
+  normalizedTitle   String
+  description       String?
+  commerceCategory  String?
+  accessoryType     String?
+  boxWidthMm        Decimal?                 @db.Decimal(10, 2)
+  boxHeightMm       Decimal?                 @db.Decimal(10, 2)
+  boxDepthMm        Decimal?                 @db.Decimal(10, 2)
+  weightGrams       Int?
+  canonicalStatus   CanonicalRecordStatus    @default(DRAFT)
+  moderationStatus  ModerationStatus         @default(PENDING)
+  mergedIntoId      String?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  masterGame        MasterGame?              @relation(fields: [masterGameId], references: [id], onDelete: SetNull)
+  edition           GameEdition?             @relation(fields: [editionId], references: [id], onDelete: SetNull)
+  printing          GamePrinting?            @relation(fields: [printingId], references: [id], onDelete: SetNull)
+  publisher         Publisher?               @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  mergedInto        CatalogProduct?          @relation("CatalogProductMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom        CatalogProduct[]         @relation("CatalogProductMerge")
+  variants          ProductVariant[]
+  images            ProductImage[]
+  sourceAccessories AccessoryCompatibility[] @relation("AccessoryProduct")
+  targetAccessories AccessoryCompatibility[] @relation("CompatibleProduct")
+  sourceProducts    SellerSourceProduct[]
+  matchCandidates   ProductMatchCandidate[]
+  offers            SellerOfferCurrent[]
+  collectionItems   UserCollectionItem[]
+  wishlistItems     WishlistItem[]
+  alerts            UserAlert[]
+
+  @@index([normalizedTitle])
+  @@index([productType, canonicalStatus, moderationStatus])
+  @@index([masterGameId, productType])
+  @@index([editionId])
+  @@index([printingId])
+  @@index([publisherId])
+  @@map("catalog_product")
+}
+
+model ProductVariant {
+  id               String                @id @default(cuid())
+  catalogProductId String
+  canonicalTitle   String?
+  normalizedTitle  String?
+  languageCode     String?
+  regionCode       String?
+  attributes       Json?
+  canonicalStatus  CanonicalRecordStatus @default(PUBLISHED)
+  deletedAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  catalogProduct   CatalogProduct        @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+  offers           SellerOfferCurrent[]
+
+  @@index([catalogProductId, canonicalStatus])
+  @@map("product_variant")
+}
+
+model LocalImageAsset {
+  id                 String              @id @default(cuid())
+  sourceId           String?
+  storageProvider    StorageProvider     @default(LOCAL_FILESYSTEM)
+  originalUrl        String?
+  sourceUrl          String?
+  sourceName         String?
+  sourceAttribution  String?
+  storageKey         String              @unique
+  localPath          String?
+  cdnUrl             String?
+  sha256             String              @unique
+  perceptualHash     String?
+  width              Int
+  height             Int
+  fileSizeBytes      BigInt
+  mimeType           String
+  dominantColors     String[]
+  altText            String?
+  titleText          String?
+  licenseStatus      ImageLicenseStatus  @default(UNKNOWN)
+  license            String?
+  licenseExpiresAt   DateTime?
+  moderationStatus   ModerationStatus    @default(PENDING)
+  aiGeneratedAltText Boolean             @default(false)
+  sourceConfidence   Decimal?            @db.Decimal(5, 4)
+  rawPayload         Json?
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  source             DataSource?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  variants           ImageAssetVariant[]
+  attachments        ProductImage[]
+  entityAttachments  EntityImage[]
+
+  @@index([perceptualHash])
+  @@index([licenseStatus, moderationStatus])
+  @@map("local_image_asset")
+}
+
+model ImageAssetVariant {
+  id            String          @id @default(cuid())
+  assetId       String
+  variantName   String
+  storageKey    String          @unique
+  cdnUrl        String?
+  width         Int
+  height        Int
+  fileSizeBytes BigInt
+  mimeType      String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  asset         LocalImageAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, variantName, mimeType])
+  @@map("image_asset_variant")
+}
+
+model ProductImage {
+  id               String          @id @default(cuid())
+  catalogProductId String
+  assetId          String
+  role             ImageRole       @default(PRODUCT)
+  sortOrder        Int             @default(0)
+  isPrimary        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  catalogProduct   CatalogProduct  @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+  asset            LocalImageAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([catalogProductId, assetId, role])
+  @@index([catalogProductId, isPrimary, sortOrder])
+  @@map("product_image")
+}
+
+model EntityImage {
+  id         String          @id @default(cuid())
+  entityType String
+  entityId   String
+  assetId    String
+  role       ImageRole       @default(OTHER)
+  sortOrder  Int             @default(0)
+  isPrimary  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  asset      LocalImageAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([entityType, entityId, assetId, role])
+  @@index([entityType, entityId, isPrimary, sortOrder])
+  @@map("entity_image")
+}
+
+model Designer {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  biography        String?
+  officialSiteUrl  String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameDesigner[]
+
+  @@index([normalizedName])
+  @@map("designer")
+}
+
+model Artist {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  biography        String?
+  officialSiteUrl  String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameArtist[]
+
+  @@index([normalizedName])
+  @@map("artist")
+}
+
+model Publisher {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  description      String?
+  officialSiteUrl  String?
+  countryCode      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGamePublisher[]
+  editions         GameEdition[]
+  printings        GamePrinting[]
+  products         CatalogProduct[]
+
+  @@index([normalizedName])
+  @@map("publisher")
+}
+
+model Studio {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  description      String?
+  officialSiteUrl  String?
+  countryCode      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameStudio[]
+
+  @@index([normalizedName])
+  @@map("studio")
+}
+
+model MasterGameDesigner {
+  id           String     @id @default(cuid())
+  masterGameId String
+  designerId   String
+  role         String     @default("designer")
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  designer     Designer   @relation(fields: [designerId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, designerId, role])
+  @@index([designerId, masterGameId])
+  @@map("master_game_designer")
+}
+
+model MasterGameArtist {
+  id           String     @id @default(cuid())
+  masterGameId String
+  artistId     String
+  role         String     @default("artist")
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  artist       Artist     @relation(fields: [artistId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, artistId, role])
+  @@index([artistId, masterGameId])
+  @@map("master_game_artist")
+}
+
+model MasterGamePublisher {
+  id           String     @id @default(cuid())
+  masterGameId String
+  publisherId  String
+  role         String     @default("original_publisher")
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  publisher    Publisher  @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, publisherId, role])
+  @@index([publisherId, masterGameId])
+  @@map("master_game_publisher")
+}
+
+model MasterGameStudio {
+  id           String     @id @default(cuid())
+  masterGameId String
+  studioId     String
+  role         String     @default("developer")
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  studio       Studio     @relation(fields: [studioId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, studioId, role])
+  @@index([studioId, masterGameId])
+  @@map("master_game_studio")
+}
+
+model Mechanic {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameMechanic[]
+
+  @@map("mechanic")
+}
+
+model Category {
+  id               String                @id @default(cuid())
+  parentId         String?
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  parent           Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Category[]            @relation("CategoryTree")
+  games            MasterGameCategory[]
+
+  @@index([parentId])
+  @@map("category")
+}
+
+model Theme {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameTheme[]
+
+  @@map("theme")
+}
+
+model Family {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameFamily[]
+
+  @@map("family")
+}
+
+model Series {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameSeries[]
+
+  @@map("series")
+}
+
+model Franchise {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  rightsHolder     String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameFranchise[]
+
+  @@map("franchise")
+}
+
+model Universe {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String                @unique
+  description      String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  games            MasterGameUniverse[]
+
+  @@map("universe")
+}
+
+model MasterGameMechanic {
+  id           String     @id @default(cuid())
+  masterGameId String
+  mechanicId   String
+  weight       Decimal?   @db.Decimal(5, 4)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  mechanic     Mechanic   @relation(fields: [mechanicId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, mechanicId])
+  @@index([mechanicId, masterGameId])
+  @@map("master_game_mechanic")
+}
+
+model MasterGameCategory {
+  id           String     @id @default(cuid())
+  masterGameId String
+  categoryId   String
+  isPrimary    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, categoryId])
+  @@index([categoryId, masterGameId])
+  @@map("master_game_category")
+}
+
+model MasterGameTheme {
+  id           String     @id @default(cuid())
+  masterGameId String
+  themeId      String
+  weight       Decimal?   @db.Decimal(5, 4)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  theme        Theme      @relation(fields: [themeId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, themeId])
+  @@index([themeId, masterGameId])
+  @@map("master_game_theme")
+}
+
+model MasterGameFamily {
+  id           String     @id @default(cuid())
+  masterGameId String
+  familyId     String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  family       Family     @relation(fields: [familyId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, familyId])
+  @@index([familyId, masterGameId])
+  @@map("master_game_family")
+}
+
+model MasterGameSeries {
+  id           String     @id @default(cuid())
+  masterGameId String
+  seriesId     String
+  sequence     Decimal?   @db.Decimal(10, 3)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  series       Series     @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, seriesId])
+  @@index([seriesId, sequence])
+  @@map("master_game_series")
+}
+
+model MasterGameFranchise {
+  id           String     @id @default(cuid())
+  masterGameId String
+  franchiseId  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  franchise    Franchise  @relation(fields: [franchiseId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, franchiseId])
+  @@index([franchiseId, masterGameId])
+  @@map("master_game_franchise")
+}
+
+model MasterGameUniverse {
+  id           String     @id @default(cuid())
+  masterGameId String
+  universeId   String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  masterGame   MasterGame @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  universe     Universe   @relation(fields: [universeId], references: [id], onDelete: Restrict)
+
+  @@unique([masterGameId, universeId])
+  @@index([universeId, masterGameId])
+  @@map("master_game_universe")
+}
+
+model Award {
+  id               String                @id @default(cuid())
+  canonicalName    String
+  normalizedName   String
+  organizationName String?
+  countryCode      String?
+  description      String?
+  officialSiteUrl  String?
+  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
+  moderationStatus ModerationStatus      @default(PENDING)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  nominations      AwardNomination[]
+
+  @@unique([normalizedName, organizationName])
+  @@map("award")
+}
+
+model AwardNomination {
+  id               String                @id @default(cuid())
+  awardId          String
+  masterGameId     String
+  year             Int
+  categoryName     String?
+  result           AwardNominationResult @default(NOMINATED)
+  sourceClaimIds   String[]
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  award            Award                 @relation(fields: [awardId], references: [id], onDelete: Restrict)
+  masterGame       MasterGame            @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+
+  @@unique([awardId, masterGameId, year, categoryName])
+  @@index([masterGameId, year])
+  @@index([awardId, year, result])
+  @@map("award_nomination")
+}
+
+model LanguageDependency {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  rank        Int          @unique
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  games       MasterGame[]
+
+  @@map("language_dependency")
+}
+
+model AgeRating {
+  id               String           @id @default(cuid())
+  masterGameId     String
+  authority        String
+  countryCode      String?
+  ratingCode       String
+  minimumAge       Int?
+  contentNotes     String?
+  sourceClaimIds   String[]
+  moderationStatus ModerationStatus @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  masterGame       MasterGame       @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+
+  @@unique([masterGameId, authority, countryCode])
+  @@index([countryCode, ratingCode])
+  @@map("age_rating")
+}
+
+model Rulebook {
+  id               String           @id @default(cuid())
+  masterGameId     String?
+  editionId        String?
+  printingId       String?
+  languageId       String
+  title            String
+  version          String?
+  effectiveDate    DateTime?
+  assetId          String?
+  officialUrl      String?
+  pageCount        Int?
+  checksum         String?
+  moderationStatus ModerationStatus @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  masterGame       MasterGame?      @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  edition          GameEdition?     @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  printing         GamePrinting?    @relation(fields: [printingId], references: [id], onDelete: Cascade)
+  language         Language         @relation(fields: [languageId], references: [id], onDelete: Restrict)
+
+  @@index([masterGameId, languageId])
+  @@index([editionId, languageId])
+  @@map("rulebook")
+}
+
+model DigitalImplementation {
+  id               String           @id @default(cuid())
+  masterGameId     String
+  platform         String
+  name             String
+  url              String
+  appStoreId       String?
+  supportsOnline   Boolean          @default(false)
+  supportsSolo     Boolean          @default(false)
+  official         Boolean          @default(false)
+  moderationStatus ModerationStatus @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  masterGame       MasterGame       @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+
+  @@unique([masterGameId, platform, url])
+  @@map("digital_implementation")
+}
+
+model AccessoryCompatibility {
+  id                     String           @id @default(cuid())
+  accessoryProductId     String
+  compatibleMasterGameId String?
+  compatibleEditionId    String?
+  compatibleProductId    String?
+  compatibilityType      String
+  fitNotes               String?
+  minQuantity            Int?
+  maxQuantity            Int?
+  confidenceScore        Decimal          @default(0.5) @db.Decimal(5, 4)
+  sourceClaimIds         String[]
+  moderationStatus       ModerationStatus @default(PENDING)
+  reviewedBy             String?
+  reviewedAt             DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  accessoryProduct       CatalogProduct   @relation("AccessoryProduct", fields: [accessoryProductId], references: [id], onDelete: Cascade)
+  compatibleMasterGame   MasterGame?      @relation(fields: [compatibleMasterGameId], references: [id], onDelete: Cascade)
+  compatibleEdition      GameEdition?     @relation(fields: [compatibleEditionId], references: [id], onDelete: Cascade)
+  compatibleProduct      CatalogProduct?  @relation("CompatibleProduct", fields: [compatibleProductId], references: [id], onDelete: Cascade)
+
+  @@index([compatibleMasterGameId, compatibilityType])
+  @@index([compatibleEditionId])
+  @@index([compatibleProductId])
+  @@map("accessory_compatibility")
+}
+
+model GameRelationship {
+  id               String                @id @default(cuid())
+  sourceGameId     String
+  targetGameId     String
+  relationshipType GameRelationshipType
+  direction        RelationshipDirection @default(DIRECTED)
+  confidenceScore  Decimal               @default(0.5) @db.Decimal(5, 4)
+  sourceClaimIds   String[]
+  sourceUrl        String?
+  createdBy        EdgeCreatedBy
+  moderationStatus ModerationStatus      @default(PENDING)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  metadata         Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  sourceGame       MasterGame            @relation("GameRelationshipSource", fields: [sourceGameId], references: [id], onDelete: Cascade)
+  targetGame       MasterGame            @relation("GameRelationshipTarget", fields: [targetGameId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceGameId, targetGameId, relationshipType])
+  @@index([targetGameId, relationshipType])
+  @@index([sourceGameId, relationshipType, moderationStatus])
+  @@map("game_relationship")
+}
+
+model SellerIntegration {
+  id                   String                    @id @default(cuid())
+  sellerId             String
+  tenantId             String?
+  marketplaceId        String?
+  provider             SellerIntegrationProvider
+  status               IntegrationStatus         @default(PENDING_AUTH)
+  externalAccountId    String?
+  shopDomain           String?
+  encryptedCredentials Json?
+  scopes               String[]
+  webhookSecretHash    String?
+  syncCatalog          Boolean                   @default(true)
+  syncInventory        Boolean                   @default(true)
+  syncPrices           Boolean                   @default(true)
+  syncOrders           Boolean                   @default(false)
+  lastSuccessfulSyncAt DateTime?
+  lastFailureAt        DateTime?
+  failureCount         Int                       @default(0)
+  metadata             Json?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  seller               Seller                    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  tenant               Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  marketplace          Marketplace?              @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  importJobs           ImportJob[]
+  sourceProducts       SellerSourceProduct[]
+  offers               SellerOfferCurrent[]
+
+  @@unique([sellerId, provider, externalAccountId])
+  @@index([tenantId, status])
+  @@index([provider, status])
+  @@map("seller_integration")
+}
+
+model TenantMarket {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  countryId           String
+  currencyCode        String   @db.Char(3)
+  defaultLanguageCode String
+  timezone            String
+  taxConfiguration    Json?
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  country             Country  @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, countryId, currencyCode, defaultLanguageCode])
+  @@index([countryId, active])
+  @@map("tenant_market")
+}
+
+model SellerMarket {
+  id                     String   @id @default(cuid())
+  sellerId               String
+  countryId              String
+  settlementCurrencyCode String   @db.Char(3)
+  languageCodes          String[]
+  shipsFromCountryCode   String?  @db.Char(2)
+  shippingCountries      String[]
+  localPickup            Boolean  @default(false)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  seller                 Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  country                Country  @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  @@unique([sellerId, countryId, settlementCurrencyCode])
+  @@index([countryId, active])
+  @@map("seller_market")
+}
+
+model AffiliateAccount {
+  id                   String                @id @default(cuid())
+  sellerId             String?
+  tenantId             String?
+  marketplaceId        String
+  countryId            String
+  currencyCode         String                @db.Char(3)
+  languageCode         String?
+  campaign             String?
+  channel              String?
+  trackingId           String
+  encryptedCredentials Json?
+  urlTemplate          String?
+  status               IntegrationStatus     @default(ACTIVE)
+  metadata             Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  seller               Seller?               @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  tenant               Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  marketplace          Marketplace           @relation(fields: [marketplaceId], references: [id], onDelete: Restrict)
+  country              Country               @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  clicks               AffiliateClickEvent[]
+  conversions          ConversionEvent[]
+
+  @@unique([marketplaceId, countryId, trackingId, campaign, channel])
+  @@index([tenantId, countryId, status])
+  @@index([sellerId, status])
+  @@map("affiliate_account")
+}
+
+model SellerSourceProduct {
+  id                      String                  @id @default(cuid())
+  sellerId                String
+  integrationId           String
+  marketplaceId           String?
+  sourceId                String
+  rawRecordId             String?
+  externalProductId       String
+  externalVariantId       String?
+  parentExternalProductId String?
+  sellerSku               String?
+  title                   String
+  normalizedTitle         String
+  subtitle                String?
+  description             String?
+  brand                   String?
+  publisher               String?
+  languageCode            String?
+  editionText             String?
+  printingYear            Int?
+  categoryText            String?
+  imageUrls               String[]
+  dimensions              Json?
+  weightGrams             Int?
+  matchedCatalogProductId String?
+  active                  Boolean                 @default(true)
+  lastSeenAt              DateTime                @default(now())
+  sourceUrl               String?
+  sourceConfidence        Decimal                 @default(0.5) @db.Decimal(5, 4)
+  rawPayload              Json
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  seller                  Seller                  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  integration             SellerIntegration       @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  marketplace             Marketplace?            @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  source                  DataSource              @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  rawRecord               RawSourceRecord?        @relation(fields: [rawRecordId], references: [id], onDelete: SetNull)
+  matchedCatalogProduct   CatalogProduct?         @relation(fields: [matchedCatalogProductId], references: [id], onDelete: SetNull)
+  matchCandidates         ProductMatchCandidate[]
+  offers                  SellerOfferCurrent[]
+
+  @@unique([sellerId, integrationId, externalProductId, externalVariantId])
+  @@index([sellerId, active, lastSeenAt])
+  @@index([integrationId, lastSeenAt])
+  @@index([matchedCatalogProductId])
+  @@index([normalizedTitle])
+  @@map("seller_source_product")
+}
+
+model ProductMatchCandidate {
+  id                 String                 @id @default(cuid())
+  sourceProductId    String
+  candidateProductId String
+  score              Decimal                @db.Decimal(6, 5)
+  confidenceLevel    MatchConfidenceLevel
+  matchReasons       Json
+  conflictingSignals Json?
+  aiExplanation      String?
+  algorithmVersion   String
+  status             MatchCandidateStatus   @default(PENDING)
+  reviewer           String?
+  reviewedAt         DateTime?
+  sourceUrl          String?
+  sourceConfidence   Decimal?               @db.Decimal(5, 4)
+  rawPayload         Json
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  sourceProduct      SellerSourceProduct    @relation(fields: [sourceProductId], references: [id], onDelete: Cascade)
+  candidateProduct   CatalogProduct         @relation(fields: [candidateProductId], references: [id], onDelete: Cascade)
+  decisions          ProductMatchDecision[]
+
+  @@unique([sourceProductId, candidateProductId, algorithmVersion])
+  @@index([status, score, createdAt])
+  @@index([candidateProductId, status])
+  @@map("product_match_candidate")
+}
+
+model ProductMatchDecision {
+  id             String                @id @default(cuid())
+  candidateId    String
+  decision       MatchDecisionType
+  previousStatus MatchCandidateStatus?
+  newStatus      MatchCandidateStatus
+  reason         String?
+  decidedBy      String
+  evidence       Json?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  candidate      ProductMatchCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
+  @@index([decidedBy, createdAt])
+  @@map("product_match_decision")
+}
+
+model SellerOfferCurrent {
+  id                      String                        @id @default(cuid())
+  sellerId                String
+  integrationId           String?
+  marketplaceId           String?
+  sourceProductId         String?
+  catalogProductId        String
+  productVariantId        String?
+  countryId               String
+  currencyCode            String                        @db.Char(3)
+  sourceOfferKey          String
+  sellerSku               String?
+  priceMinor              BigInt
+  compareAtPriceMinor     BigInt?
+  shippingPriceMinor      BigInt?
+  taxIncluded             Boolean                       @default(false)
+  taxProfileId            String?
+  returnPolicyId          String?
+  stockStatus             OfferStockStatus              @default(UNKNOWN)
+  quantityAvailable       Int?
+  condition               ProductCondition              @default(NEW)
+  fulfillmentMethod       FulfillmentMethod             @default(SELLER_FULFILLED)
+  deliveryMinDays         Int?
+  deliveryMaxDays         Int?
+  affiliateUrl            String?
+  directCheckoutUrl       String?
+  marketplaceUrl          String?
+  sourceUrl               String?
+  validFrom               DateTime?
+  validUntil              DateTime?
+  firstSeenAt             DateTime                      @default(now())
+  lastSeenAt              DateTime                      @default(now())
+  lastPriceChangeAt       DateTime?
+  lastInventoryChangeAt   DateTime?
+  active                  Boolean                       @default(true)
+  rankScore               Decimal                       @default(0) @db.Decimal(12, 6)
+  rankingAlgorithmVersion String?
+  metadata                Json?
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  seller                  Seller                        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  integration             SellerIntegration?            @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  marketplace             Marketplace?                  @relation(fields: [marketplaceId], references: [id], onDelete: SetNull)
+  sourceProduct           SellerSourceProduct?          @relation(fields: [sourceProductId], references: [id], onDelete: SetNull)
+  catalogProduct          CatalogProduct                @relation(fields: [catalogProductId], references: [id], onDelete: Restrict)
+  productVariant          ProductVariant?               @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  country                 Country                       @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  taxProfile              TaxProfile?                   @relation(fields: [taxProfileId], references: [id], onDelete: SetNull)
+  returnPolicy            ReturnPolicy?                 @relation(fields: [returnPolicyId], references: [id], onDelete: SetNull)
+  priceHistory            SellerOfferPriceHistory[]
+  inventoryHistory        SellerOfferInventoryHistory[]
+  shippingOptions         OfferShippingOption[]
+  coupons                 Coupon[]
+  cashbackRules           CashbackRule[]
+  sponsoredPlacements     SponsoredPlacement[]
+  affiliateClicks         AffiliateClickEvent[]
+  conversions             ConversionEvent[]
+
+  @@unique([sellerId, sourceOfferKey])
+  @@index([catalogProductId, countryId, currencyCode, active, priceMinor])
+  @@index([sellerId, active, lastSeenAt])
+  @@index([countryId, stockStatus, active])
+  @@index([marketplaceId, countryId, active])
+  @@index([lastSeenAt, active])
+  @@map("seller_offer_current")
+}
+
+/// Append-only and RANGE-partitioned by observedAt in SQL migrations.
+model SellerOfferPriceHistory {
+  id                  BigInt             @default(autoincrement())
+  observedAt          DateTime           @default(now())
+  offerId             String
+  priceMinor          BigInt
+  compareAtPriceMinor BigInt?
+  shippingPriceMinor  BigInt?
+  currencyCode        String             @db.Char(3)
+  taxIncluded         Boolean
+  changeReason        String?
+  sourceConfidence    Decimal?           @db.Decimal(5, 4)
+  rawPayload          Json?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now())
+  offer               SellerOfferCurrent @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@id([observedAt, id])
+  @@index([offerId, observedAt(sort: Desc)])
+  @@index([currencyCode, observedAt])
+  @@map("seller_offer_price_history")
+}
+
+/// Append-only and RANGE-partitioned by observedAt in SQL migrations.
+model SellerOfferInventoryHistory {
+  id                BigInt             @default(autoincrement())
+  observedAt        DateTime           @default(now())
+  offerId           String
+  stockStatus       OfferStockStatus
+  quantityAvailable Int?
+  sourceConfidence  Decimal?           @db.Decimal(5, 4)
+  rawPayload        Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now())
+  offer             SellerOfferCurrent @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@id([observedAt, id])
+  @@index([offerId, observedAt(sort: Desc)])
+  @@index([stockStatus, observedAt])
+  @@map("seller_offer_inventory_history")
+}
+
+model OfferShippingOption {
+  id                  String             @id @default(cuid())
+  offerId             String
+  shippingCountryCode String             @db.Char(2)
+  regionCodes         String[]
+  carrier             String?
+  serviceLevel        String
+  priceMinor          BigInt
+  currencyCode        String             @db.Char(3)
+  freeThresholdMinor  BigInt?
+  estimatedMinDays    Int?
+  estimatedMaxDays    Int?
+  localPickup         Boolean            @default(false)
+  validFrom           DateTime?
+  validUntil          DateTime?
+  active              Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  offer               SellerOfferCurrent @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId, shippingCountryCode, active])
+  @@map("offer_shipping_option")
+}
+
+model TaxProfile {
+  id             String               @id @default(cuid())
+  sellerId       String
+  countryId      String
+  name           String
+  taxIncluded    Boolean              @default(false)
+  defaultRate    Decimal?             @db.Decimal(7, 4)
+  registrationId String?
+  rules          Json
+  effectiveFrom  DateTime?
+  effectiveUntil DateTime?
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  seller         Seller               @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  country        Country              @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  offers         SellerOfferCurrent[]
+
+  @@unique([sellerId, countryId, name])
+  @@index([countryId, active])
+  @@map("tax_profile")
+}
+
+model ReturnPolicy {
+  id               String               @id @default(cuid())
+  sellerId         String
+  countryCode      String?              @db.Char(2)
+  name             String
+  returnWindowDays Int?
+  returnFeesMinor  BigInt?
+  currencyCode     String?              @db.Char(3)
+  acceptsReturns   Boolean              @default(true)
+  returnMethod     String?
+  returnPolicyUrl  String?
+  conditions       Json?
+  active           Boolean              @default(true)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  seller           Seller               @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  offers           SellerOfferCurrent[]
+
+  @@index([sellerId, countryCode, active])
+  @@map("return_policy")
+}
+
+model Coupon {
+  id                 String              @id @default(cuid())
+  sellerId           String
+  offerId            String?
+  code               String
+  discountType       CouponDiscountType
+  discountValueMinor BigInt?
+  discountPercentage Decimal?            @db.Decimal(7, 4)
+  currencyCode       String?             @db.Char(3)
+  minimumSpendMinor  BigInt?
+  maxRedemptions     Int?
+  startsAt           DateTime?
+  endsAt             DateTime?
+  active             Boolean             @default(true)
+  metadata           Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  seller             Seller              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  offer              SellerOfferCurrent? @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@unique([sellerId, code])
+  @@index([offerId, active, startsAt, endsAt])
+  @@map("coupon")
+}
+
+model CashbackRule {
+  id               String              @id @default(cuid())
+  sellerId         String
+  offerId          String?
+  countryCode      String?             @db.Char(2)
+  percentage       Decimal?            @db.Decimal(7, 4)
+  fixedAmountMinor BigInt?
+  currencyCode     String?             @db.Char(3)
+  maxAmountMinor   BigInt?
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean             @default(true)
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  seller           Seller              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  offer            SellerOfferCurrent? @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, countryCode, active])
+  @@index([offerId, active])
+  @@map("cashback_rule")
+}
+
+model SponsoredPlacement {
+  id               String                   @id @default(cuid())
+  sellerId         String
+  offerId          String?
+  catalogProductId String?
+  countryCode      String?
+  locale           String?
+  pageType         String
+  placement        String
+  bidMinor         BigInt?
+  currencyCode     String?                  @db.Char(3)
+  budgetMinor      BigInt?
+  status           SponsoredPlacementStatus @default(DRAFT)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  disclosureLabel  String                   @default("Sponsored")
+  impressions      BigInt                   @default(0)
+  clicks           BigInt                   @default(0)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  seller           Seller                   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  offer            SellerOfferCurrent?      @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([pageType, placement, countryCode, locale, status, startsAt, endsAt])
+  @@index([sellerId, status])
+  @@map("sponsored_placement")
+}
+
+/// Append-only click stream; partitioned monthly by occurredAt in SQL.
+model AffiliateClickEvent {
+  id                      BigInt              @default(autoincrement())
+  occurredAt              DateTime            @default(now())
+  eventId                 String
+  affiliateAccountId      String?
+  anonymousVisitorIdHash  String?
+  sessionIdHash           String?
+  customerId              String?
+  catalogProductId        String?
+  offerId                 String?
+  sellerId                String?
+  marketplaceCode         String?
+  countryCode             String?             @db.Char(2)
+  currencyCode            String?             @db.Char(3)
+  pageType                String?
+  position                Int?
+  rankingAlgorithmVersion String?
+  utm                     Json?
+  referrerHost            String?
+  deviceType              String?
+  userAgentHash           String?
+  ipPrefix                String?
+  metadata                Json?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @default(now())
+  affiliateAccount        AffiliateAccount?   @relation(fields: [affiliateAccountId], references: [id], onDelete: SetNull)
+  offer                   SellerOfferCurrent? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  seller                  Seller?             @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@id([occurredAt, id])
+  @@index([offerId, occurredAt])
+  @@index([sellerId, occurredAt])
+  @@index([anonymousVisitorIdHash, occurredAt])
+  @@index([affiliateAccountId, occurredAt])
+  @@index([eventId])
+  @@map("affiliate_click_event")
+}
+
+model AffiliateEventDeduplication {
+  id         String   @id @default(cuid())
+  eventId    String   @unique
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([occurredAt])
+  @@map("affiliate_event_deduplication")
+}
+
+model ConversionEvent {
+  id                       String                @id @default(cuid())
+  externalEventId          String?
+  affiliateAccountId       String?
+  clickEventId             String?
+  offerId                  String?
+  sellerId                 String?
+  orderReference           String?
+  countryCode              String?               @db.Char(2)
+  currencyCode             String                @db.Char(3)
+  grossRevenueMinor        BigInt?
+  estimatedCommissionMinor BigInt?
+  confirmedCommissionMinor BigInt?
+  payoutStatus             AffiliatePayoutStatus @default(UNATTRIBUTED)
+  convertedAt              DateTime
+  confirmedAt              DateTime?
+  rawPayload               Json?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  affiliateAccount         AffiliateAccount?     @relation(fields: [affiliateAccountId], references: [id], onDelete: SetNull)
+  offer                    SellerOfferCurrent?   @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  seller                   Seller?               @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@unique([affiliateAccountId, externalEventId])
+  @@index([sellerId, convertedAt])
+  @@index([payoutStatus, convertedAt])
+  @@index([clickEventId])
+  @@map("conversion_event")
+}
+
+model ModerationQueueItem {
+  id               String           @id @default(cuid())
+  queueType        String
+  entityType       String
+  entityId         String
+  priority         Int              @default(100)
+  moderationStatus ModerationStatus @default(PENDING)
+  assignedTo       String?
+  reasonCodes      String[]
+  context          Json?
+  dueAt            DateTime?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  resolutionNotes  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([queueType, entityType, entityId, moderationStatus])
+  @@index([moderationStatus, priority, createdAt])
+  @@index([assignedTo, moderationStatus])
+  @@map("moderation_queue_item")
+}
+
+model CanonicalAuditLog {
+  id             String   @id @default(cuid())
+  entityType     String
+  entityId       String
+  action         String
+  actorType      String
+  actorId        String?
+  correlationId  String?
+  before         Json?
+  after          Json?
+  sourceClaimIds String[]
+  reason         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([correlationId])
+  @@map("canonical_audit_log")
+}
+
+model AiEnrichmentProposal {
+  id               String           @id @default(cuid())
+  entityType       String
+  entityId         String
+  fieldPath        String
+  proposedValue    Json
+  confidenceScore  Decimal          @db.Decimal(5, 4)
+  sourceReferences Json
+  generatedBy      String
+  modelName        String
+  promptVersion    String?
+  generatedAt      DateTime         @default(now())
+  moderationStatus ModerationStatus @default(PENDING)
+  accepted         Boolean?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([entityType, entityId, fieldPath, moderationStatus])
+  @@index([modelName, generatedAt])
+  @@map("ai_enrichment_proposal")
+}
+
+model UserCollection {
+  id          String               @id @default(cuid())
+  customerId  String
+  name        String
+  description String?
+  slug        String?
+  visibility  CollectionVisibility @default(PRIVATE)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  customer    MktCustomer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items       UserCollectionItem[]
+
+  @@unique([customerId, name])
+  @@unique([customerId, slug])
+  @@index([visibility, updatedAt])
+  @@map("user_collection")
+}
+
+model UserCollectionItem {
+  id                    String            @id @default(cuid())
+  collectionId          String
+  masterGameId          String?
+  catalogProductId      String?
+  status                String            @default("owned")
+  quantity              Int               @default(1)
+  condition             ProductCondition?
+  acquiredAt            DateTime?
+  acquisitionPriceMinor BigInt?
+  currencyCode          String?           @db.Char(3)
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  collection            UserCollection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  masterGame            MasterGame?       @relation(fields: [masterGameId], references: [id], onDelete: SetNull)
+  catalogProduct        CatalogProduct?   @relation(fields: [catalogProductId], references: [id], onDelete: SetNull)
+
+  @@unique([collectionId, masterGameId, catalogProductId])
+  @@index([masterGameId])
+  @@index([catalogProductId])
+  @@map("user_collection_item")
+}
+
+model Wishlist {
+  id          String               @id @default(cuid())
+  customerId  String
+  name        String
+  description String?
+  slug        String?
+  visibility  CollectionVisibility @default(PRIVATE)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  customer    MktCustomer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items       WishlistItem[]
+
+  @@unique([customerId, name])
+  @@unique([customerId, slug])
+  @@map("wishlist")
+}
+
+model WishlistItem {
+  id               String          @id @default(cuid())
+  wishlistId       String
+  masterGameId     String?
+  catalogProductId String?
+  priority         Int             @default(0)
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  wishlist         Wishlist        @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  masterGame       MasterGame?     @relation(fields: [masterGameId], references: [id], onDelete: SetNull)
+  catalogProduct   CatalogProduct? @relation(fields: [catalogProductId], references: [id], onDelete: SetNull)
+
+  @@unique([wishlistId, masterGameId, catalogProductId])
+  @@index([masterGameId])
+  @@index([catalogProductId])
+  @@map("wishlist_item")
+}
+
+model UserAlert {
+  id                 String          @id @default(cuid())
+  customerId         String
+  alertType          AlertType
+  status             AlertStatus     @default(ACTIVE)
+  masterGameId       String?
+  catalogProductId   String?
+  countryCode        String?         @db.Char(2)
+  currencyCode       String?         @db.Char(3)
+  targetPriceMinor   BigInt?
+  sellerIds          String[]
+  channelPreferences Json?
+  lastEvaluatedAt    DateTime?
+  lastTriggeredAt    DateTime?
+  nextEvaluationAt   DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  customer           MktCustomer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  masterGame         MasterGame?     @relation(fields: [masterGameId], references: [id], onDelete: Cascade)
+  catalogProduct     CatalogProduct? @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextEvaluationAt])
+  @@index([customerId, alertType, status])
+  @@index([catalogProductId, countryCode, status])
+  @@map("user_alert")
+}
+
+model RecommendationProfile {
+  id                     String      @id @default(cuid())
+  customerId             String      @unique
+  preferredPlayerCounts  Int[]
+  preferredPlayTimes     Int[]
+  preferredComplexityMin Decimal?    @db.Decimal(3, 2)
+  preferredComplexityMax Decimal?    @db.Decimal(3, 2)
+  preferredMechanicIds   String[]
+  preferredCategoryIds   String[]
+  preferredThemeIds      String[]
+  dislikedGameIds        String[]
+  embedding              Float[]
+  consentedAt            DateTime?
+  lastCalculatedAt       DateTime?
+  modelVersion           String?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  customer               MktCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("recommendation_profile")
+}
+
+model SeoPage {
+  id                String                @id @default(cuid())
+  tenantId          String?
+  languageId        String
+  pageType          SeoPageType
+  entityType        String?
+  entityId          String?
+  slug              String
+  locale            String
+  countryCode       String?
+  canonicalUrl      String
+  title             String
+  metaDescription   String
+  h1                String?
+  intro             String?
+  body              Json?
+  faq               Json?
+  indexable         Boolean               @default(false)
+  qualityScore      Decimal               @default(0) @db.Decimal(5, 4)
+  minimumDataMet    Boolean               @default(false)
+  structuredData    Json
+  publishedAt       DateTime?
+  lastGeneratedAt   DateTime?
+  generationVersion String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  tenant            Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  language          Language              @relation(fields: [languageId], references: [id], onDelete: Restrict)
+  slugs             SeoSlug[]
+  structuredCaches  StructuredDataCache[]
+
+  @@unique([locale, countryCode, slug])
+  @@index([entityType, entityId, locale])
+  @@index([pageType, locale, indexable])
+  @@index([indexable, qualityScore])
+  @@map("seo_page")
+}
+
+model SeoSlug {
+  id           String    @id @default(cuid())
+  seoPageId    String
+  locale       String
+  slug         String
+  canonicalUrl String
+  isCurrent    Boolean   @default(true)
+  validFrom    DateTime  @default(now())
+  validUntil   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  seoPage      SeoPage   @relation(fields: [seoPageId], references: [id], onDelete: Cascade)
+
+  @@unique([locale, slug])
+  @@index([seoPageId, isCurrent])
+  @@map("seo_slug")
+}
+
+model SeoRedirect {
+  id             String    @id @default(cuid())
+  sourcePath     String
+  locale         String?
+  destinationUrl String
+  statusCode     Int       @default(301)
+  reason         String?
+  active         Boolean   @default(true)
+  hitCount       BigInt    @default(0)
+  lastHitAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([sourcePath, locale])
+  @@index([active, expiresAt])
+  @@map("seo_redirect")
+}
+
+model StructuredDataCache {
+  id               String    @id @default(cuid())
+  seoPageId        String
+  schemaType       String
+  locale           String
+  countryCode      String?
+  structuredData   Json
+  inputHash        String
+  generatedAt      DateTime  @default(now())
+  expiresAt        DateTime?
+  validationState  String?
+  validationErrors Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  seoPage          SeoPage   @relation(fields: [seoPageId], references: [id], onDelete: Cascade)
+
+  @@unique([seoPageId, schemaType, locale, countryCode])
+  @@index([expiresAt])
+  @@map("structured_data_cache")
+}
+
+model SearchDocument {
+  id                    String                   @id @default(cuid())
+  documentType          SearchDocumentType
+  canonicalId           String
+  entityType            String
+  locale                String
+  title                 String
+  alternateTitles       String[]
+  normalizedTitle       String
+  slug                  String
+  localizedSlugs        Json
+  summary               String?
+  imageUrl              String?
+  popularityScore       Decimal                  @default(0) @db.Decimal(12, 6)
+  seoScore              Decimal                  @default(0) @db.Decimal(12, 6)
+  availabilityScore     Decimal                  @default(0) @db.Decimal(12, 6)
+  conversionScore       Decimal                  @default(0) @db.Decimal(12, 6)
+  affiliateRevenueScore Decimal                  @default(0) @db.Decimal(12, 6)
+  minPriceMinor         BigInt?
+  maxPriceMinor         BigInt?
+  countriesAvailable    String[]
+  currenciesAvailable   String[]
+  structuredFacets      Json
+  searchableText        String
+  searchVector          Unsupported("tsvector")?
+  embedding             Float[]
+  sourceVersion         BigInt                   @default(0)
+  lastIndexedAt         DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  @@unique([documentType, canonicalId, locale])
+  @@index([documentType, locale, popularityScore(sort: Desc)])
+  @@index([slug, locale])
+  @@index([lastIndexedAt])
+  @@map("search_document")
+}
+
+model KnowledgeGraphEdge {
+  id               String                @id @default(cuid())
+  sourceEntityType String
+  sourceEntityId   String
+  targetEntityType String
+  targetEntityId   String
+  relationshipType String
+  direction        RelationshipDirection @default(DIRECTED)
+  confidenceScore  Decimal               @default(0.5) @db.Decimal(5, 4)
+  sourceId         String?
+  sourceUrl        String?
+  createdBy        EdgeCreatedBy
+  moderationStatus ModerationStatus      @default(PENDING)
+  metadata         Json?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  source           DataSource?           @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, relationshipType])
+  @@index([sourceEntityType, sourceEntityId, relationshipType, moderationStatus])
+  @@index([targetEntityType, targetEntityId, relationshipType, moderationStatus])
+  @@index([sourceId, createdAt])
+  @@map("knowledge_graph_edge")
+}
+
+/// Generic high-volume analytics stream; partitioned monthly by occurredAt.
+model AnalyticsEvent {
+  id                     BigInt   @default(autoincrement())
+  occurredAt             DateTime @default(now())
+  eventId                String
+  eventType              String
+  anonymousVisitorIdHash String?
+  sessionIdHash          String?
+  customerId             String?
+  entityType             String?
+  entityId               String?
+  sellerId               String?
+  offerId                String?
+  countryCode            String?  @db.Char(2)
+  locale                 String?
+  pageType               String?
+  position               Int?
+  experiment             Json?
+  metrics                Json?
+  metadata               Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @default(now())
+
+  @@id([occurredAt, id])
+  @@index([eventType, occurredAt])
+  @@index([entityType, entityId, occurredAt])
+  @@index([sellerId, occurredAt])
+  @@index([eventId])
+  @@map("analytics_event")
 }
