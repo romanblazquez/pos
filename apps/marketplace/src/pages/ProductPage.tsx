@@ -186,9 +186,9 @@ export default function ProductPage({
 
         {/* Images */}
         <div className="flex flex-col gap-3">
-          <div className="aspect-[3/4] overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm">
+          <div className="aspect-square overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm">
             {p.images[selectedImage] ? (
-              <img src={p.images[selectedImage]} alt={p.name} className="h-full w-full object-contain p-5" />
+              <img src={p.images[selectedImage]} alt={p.name} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[--tx-faint]">
                 <PackageCheck className="h-16 w-16" aria-hidden="true" />

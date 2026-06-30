@@ -1,80 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
-    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1.6" fill="#2B2622" opacity=".055"/>
+    <pattern id="dots" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.7" fill="#F0E8D8" opacity=".035"/>
     </pattern>
-    <pattern id="hexes" width="58" height="50" patternUnits="userSpaceOnUse">
-      <path d="M29 2 52 14.5v21L29 48 6 35.5v-21Z" fill="none" stroke="#FBF6EC" stroke-width="1.4" opacity=".17"/>
+    <pattern id="hexes" width="72" height="62" patternUnits="userSpaceOnUse">
+      <path d="M36 2 66 18v27L36 61 6 45V18Z" fill="none" stroke="#D7A654" stroke-width="1.4" opacity=".08"/>
     </pattern>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#2B2622" flood-opacity=".18"/>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#000000" flood-opacity=".32"/>
     </filter>
-    <linearGradient id="box" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#C96542"/>
-      <stop offset="1" stop-color="#923A22"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1000 90) rotate(130) scale(470 380)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#D7A654" stop-opacity=".28"/>
+    <radialGradient id="clayGlow" cx="0" cy="0" r="1" gradientTransform="translate(1110 45) rotate(132) scale(350 300)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B4502E" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#B4502E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="goldGlow" cx="0" cy="0" r="1" gradientTransform="translate(140 590) rotate(-38) scale(390 260)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7A654" stop-opacity=".13"/>
       <stop offset="1" stop-color="#D7A654" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <rect width="1200" height="630" fill="#F5EFE3"/>
+  <rect width="1200" height="630" fill="#16130D"/>
   <rect width="1200" height="630" fill="url(#dots)"/>
-  <rect width="1200" height="630" fill="url(#glow)"/>
-  <circle cx="1110" cy="-15" r="215" fill="#B4502E" opacity=".07"/>
-  <circle cx="-30" cy="620" r="175" fill="#3E7C53" opacity=".08"/>
+  <rect x="760" width="440" height="630" fill="url(#hexes)"/>
+  <rect width="1200" height="630" fill="url(#clayGlow)"/>
+  <rect width="1200" height="630" fill="url(#goldGlow)"/>
+  <circle cx="1160" cy="20" r="185" fill="#D7A654" opacity=".045"/>
 
-  <g transform="translate(72 58)">
-    <rect width="76" height="76" rx="21" fill="#B4502E"/>
-    <g transform="translate(6 6) scale(2.66)" fill="#FBF6EC">
+  <g filter="url(#shadow)">
+    <rect x="155" y="167" width="156" height="156" rx="40" fill="#C87552"/>
+    <g transform="translate(207 219) scale(2.16)" fill="#16130D">
       <path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/>
     </g>
   </g>
-  <text x="170" y="108" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" letter-spacing="-1.5" fill="#2B2622">Juegos<tspan fill="#B4502E">pedia</tspan></text>
 
-  <text x="76" y="212" font-family="Courier New, monospace" font-size="16" font-weight="700" letter-spacing="3" fill="#B4502E">COMPARA · JUEGA · COLECCIONA</text>
-  <text x="72" y="284" font-family="Arial, Helvetica, sans-serif" font-size="60" font-weight="800" letter-spacing="-2.6" fill="#2B2622">
-    <tspan x="72" dy="0">El mejor juego.</tspan>
-    <tspan x="72" dy="67">Al mejor precio.</tspan>
-  </text>
-  <text x="76" y="402" font-family="Arial, Helvetica, sans-serif" font-size="23" fill="#6F6557">Precios, stock real y créditos en tiendas verificadas.</text>
+  <text x="352" y="251" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="800" letter-spacing="-4" fill="#F0E8D8">Juegos<tspan fill="#C87552">pedia</tspan></text>
+  <text x="359" y="303" font-family="Courier New, monospace" font-size="19" font-weight="700" letter-spacing="8" fill="#D7A654">PLAY · COMPARE · COLLECT</text>
 
-  <g transform="translate(76 460)" font-family="Courier New, monospace" font-size="14" font-weight="700" letter-spacing=".8">
-    <g>
-      <rect width="118" height="38" rx="10" fill="#E4EFE4" stroke="#CBE0CD"/>
-      <circle cx="19" cy="19" r="5" fill="#3E7C53"/>
-      <text x="33" y="24" fill="#2C6B43">STOCK REAL</text>
-    </g>
-    <g transform="translate(132)">
-      <rect width="150" height="38" rx="10" fill="#F6EBD2" stroke="#E7D3A6"/>
-      <path d="m19 10 2.7 5.5 6.1.9-4.4 4.2 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.2 6.1-.9Z" fill="#B5852F"/>
-      <text x="36" y="24" fill="#8A5A12">MEJOR PRECIO</text>
-    </g>
-    <g transform="translate(296)">
-      <rect width="126" height="38" rx="10" fill="#F6E4DA" stroke="#EBCDBE"/>
-      <text x="16" y="24" fill="#9C4324">CRÉDITOS</text>
-    </g>
+  <line x1="155" y1="385" x2="1045" y2="385" stroke="#F0E8D8" stroke-opacity=".11"/>
+  <text x="155" y="445" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.2" fill="#F0E8D8">El mejor juego. <tspan fill="#C87552">Al mejor precio.</tspan></text>
+  <text x="157" y="489" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#B6AB94">Precios, stock real y créditos en tiendas verificadas.</text>
+
+  <g transform="translate(157 535)" font-family="Courier New, monospace" font-size="13" font-weight="700" letter-spacing="1.4">
+    <circle cx="6" cy="-4" r="6" fill="#5CA877"/>
+    <text x="24" y="1" fill="#9DB0A0">STOCK REAL</text>
+    <circle cx="167" cy="-4" r="6" fill="#D7A654"/>
+    <text x="185" y="1" fill="#C9BCA3">MEJOR PRECIO</text>
+    <circle cx="366" cy="-4" r="6" fill="#C87552"/>
+    <text x="384" y="1" fill="#C9BCA3">CRÉDITOS</text>
   </g>
 
-  <g transform="translate(760 72)" filter="url(#shadow)">
-    <g transform="translate(54 28) rotate(7 170 230)">
-      <rect width="340" height="460" rx="30" fill="#FFFDF8" stroke="#E6DBC4" stroke-width="3"/>
-    </g>
-    <g transform="rotate(-3 180 240)">
-      <rect width="360" height="480" rx="30" fill="url(#box)"/>
-      <rect width="360" height="480" rx="30" fill="url(#hexes)"/>
-      <rect x="28" y="28" width="110" height="30" rx="9" fill="#F4E9CF"/>
-      <text x="45" y="49" font-family="Courier New, monospace" font-size="12" font-weight="700" letter-spacing="1.3" fill="#8A6312">TOP 100</text>
-      <circle cx="180" cy="206" r="94" fill="#FBF6EC" opacity=".11"/>
-      <g transform="translate(132 136) scale(4)" fill="#FBF6EC">
-        <path d="M12 3.1a3.15 3.15 0 0 0-3.15 3.15c0 1.18.65 2.2 1.6 2.75-2.06.69-3.6 2.16-3.6 4.12 0 .86.67 1.45 1.55 1.45h.62l-.46 4.06c-.07.62.4 1.16 1.03 1.16h1.13l.78-3.8h.46l.78 3.8h1.13c.62 0 1.1-.54 1.03-1.16l-.46-4.06h.62c.88 0 1.55-.59 1.55-1.45 0-1.96-1.54-3.43-3.6-4.12.95-.55 1.6-1.57 1.6-2.75A3.15 3.15 0 0 0 12 3.1Z"/>
-      </g>
-      <text x="32" y="352" font-family="Courier New, monospace" font-size="13" font-weight="700" letter-spacing="2" fill="#F1D6C8">ESTRATEGIA · 2–4</text>
-      <text x="30" y="398" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" letter-spacing="-1.2" fill="#FFFDF8">Tu próxima</text>
-      <text x="30" y="435" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" letter-spacing="-1.2" fill="#FFFDF8">noche de juego</text>
-    </g>
-  </g>
-
-  <text x="76" y="576" font-family="Courier New, monospace" font-size="15" letter-spacing="1.5" fill="#9A8E79">JUEGOSPEDIA.COM</text>
+  <text x="1045" y="570" text-anchor="end" font-family="Courier New, monospace" font-size="14" letter-spacing="2" fill="#8C8270">JUEGOSPEDIA.COM</text>
 </svg>

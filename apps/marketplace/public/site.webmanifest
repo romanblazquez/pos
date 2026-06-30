@@ -3,7 +3,7 @@
   "short_name": "Juegospedia",
   "description": "Compara precios, stock y créditos de juegos de mesa.",
   "lang": "es-MX",
-  "start_url": "/es",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F5EFE3",

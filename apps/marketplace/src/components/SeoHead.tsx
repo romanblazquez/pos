@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
 const SITE_URL = 'https://juegospedia.com';
-const DEFAULT_IMAGE = `${SITE_URL}/og-default.jpg`;
+const DEFAULT_IMAGE = `${SITE_URL}/og-default.png`;
+const DEFAULT_TWITTER_IMAGE = `${SITE_URL}/twitter-card.png`;
 const SEO_INDEXING_ENABLED = import.meta.env.VITE_SEO_INDEXING_ENABLED === 'true';
 const GOOGLE_SITE_VERIFICATION = import.meta.env.VITE_GOOGLE_SITE_VERIFICATION?.trim();
 
@@ -27,20 +28,38 @@ export function SeoHead({
   useEffect(() => {
     const shouldNoindex = noindex || !SEO_INDEXING_ENABLED;
     const canonicalUrl = new URL(path, SITE_URL).toString();
+    const resolvedImage = new URL(image, SITE_URL).toString();
+    const defaultImage = resolvedImage === DEFAULT_IMAGE;
     document.title = title;
     setMeta('name', 'description', description);
-    setMeta('name', 'robots', shouldNoindex ? 'noindex,nofollow,noarchive' : 'index,follow,max-image-preview:large');
+    setMeta(
+      'name',
+      'robots',
+      shouldNoindex ? 'noindex,nofollow,noarchive' : 'index,follow,max-image-preview:large',
+    );
     setMeta('property', 'og:title', title);
     setMeta('property', 'og:description', description);
     setMeta('property', 'og:type', type);
     setMeta('property', 'og:url', canonicalUrl);
-    setMeta('property', 'og:image', image);
+    setMeta('property', 'og:image', resolvedImage);
+    setMeta('property', 'og:image:secure_url', resolvedImage);
+    setMeta('property', 'og:image:alt', title);
+    if (defaultImage) {
+      setMeta('property', 'og:image:type', 'image/png');
+      setMeta('property', 'og:image:width', '1200');
+      setMeta('property', 'og:image:height', '630');
+    } else {
+      removeMeta('property', 'og:image:type');
+      removeMeta('property', 'og:image:width');
+      removeMeta('property', 'og:image:height');
+    }
     setMeta('property', 'og:locale', 'es_MX');
     setMeta('property', 'og:site_name', 'Juegospedia');
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
-    setMeta('name', 'twitter:image', image);
+    setMeta('name', 'twitter:image', defaultImage ? DEFAULT_TWITTER_IMAGE : resolvedImage);
+    setMeta('name', 'twitter:image:alt', title);
     if (GOOGLE_SITE_VERIFICATION) {
       setMeta('name', 'google-site-verification', GOOGLE_SITE_VERIFICATION);
     }
@@ -69,6 +88,10 @@ function setMeta(attribute: 'name' | 'property', key: string, content: string) {
     document.head.appendChild(element);
   }
   element.content = content;
+}
+
+function removeMeta(attribute: 'name' | 'property', key: string) {
+  document.head.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`)?.remove();
 }
 
 function setLink(rel: string, href: string) {

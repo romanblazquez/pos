@@ -33,6 +33,9 @@ export interface SeoInput {
 }
 
 const OG_LOCALE: Record<Locale, string> = { es: 'es_MX', en: 'en_US' };
+const DEFAULT_OG_IMAGE = absoluteUrl('/og-default.png');
+const DEFAULT_TWITTER_IMAGE = absoluteUrl('/twitter-card.png');
+const DEFAULT_SOCIAL_ALT = 'Juegospedia — El mejor juego al mejor precio';
 
 export function buildMetadata(input: SeoInput): Metadata {
   const canonical = absoluteUrl(input.path);
@@ -49,7 +52,21 @@ export function buildMetadata(input: SeoInput): Metadata {
     if (xDefault) languages['x-default'] = absoluteUrl(xDefault);
   }
 
-  const images = (input.images ?? []).filter(Boolean).slice(0, 4);
+  const suppliedImages = (input.images ?? []).filter(Boolean).map(absoluteUrl).slice(0, 4);
+  const openGraphImages = suppliedImages.length
+    ? suppliedImages
+    : [
+        {
+          url: DEFAULT_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: DEFAULT_SOCIAL_ALT,
+          type: 'image/png',
+        },
+      ];
+  const twitterImages = suppliedImages.length
+    ? suppliedImages.slice(0, 1)
+    : [{ url: DEFAULT_TWITTER_IMAGE, alt: DEFAULT_SOCIAL_ALT }];
 
   return {
     title: input.title,
@@ -59,7 +76,17 @@ export function buildMetadata(input: SeoInput): Metadata {
       ...(Object.keys(languages).length ? { languages } : {}),
     },
     robots: indexable
-      ? { index: true, follow: true }
+      ? {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+          },
+        }
       : { index: false, follow: true },
     openGraph: {
       type: input.type === 'article' ? 'article' : 'website',
@@ -68,22 +95,19 @@ export function buildMetadata(input: SeoInput): Metadata {
       url: canonical,
       title: input.title,
       description: input.description,
-      ...(images.length ? { images } : {}),
+      images: openGraphImages,
     },
     twitter: {
-      card: images.length ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title: input.title,
       description: input.description,
-      ...(images.length ? { images } : {}),
+      images: twitterImages,
     },
   };
 }
 
 /** Convenience: localized alternates for an entity across all locales. */
-export function entityAlternates(
-  kind: EntityKind,
-  slug: string,
-): Partial<Record<Locale, string>> {
+export function entityAlternates(kind: EntityKind, slug: string): Partial<Record<Locale, string>> {
   return {
     es: `/es/${segmentFor(kind, 'es')}/${slug}`,
     en: `/en/${segmentFor(kind, 'en')}/${slug}`,

@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
 @source "../../../libs/shared/ui-react/src/components/catalog-search.tsx";
+@source "../../../libs/shared/ui-react/src/components/breadcrumbs.tsx";
 
 @theme {
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
@@ -52,6 +53,8 @@
     --brand-tile:      #b4502e;
     --brand-mark:      #fbf6ec;
     --brand-word:      #b4502e;
+    --primary:         var(--accent);
+    --primary-foreground: var(--brand-mark);
 
     /* Radius scale */
     --radius: 0.875rem;

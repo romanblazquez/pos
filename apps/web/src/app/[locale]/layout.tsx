@@ -26,10 +26,54 @@ const mono = Space_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  icons: { icon: [{ url: '/favicon.svg?v=2', type: 'image/svg+xml' }] },
+  applicationName: SITE_NAME,
+  manifest: '/site.webmanifest',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+    ],
+    shortcut: ['/favicon.ico'],
+    apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'default',
+  },
+  formatDetection: { telephone: false },
   title: {
     default: `${SITE_NAME} — Compara precios de juegos de mesa`,
     template: `%s · ${SITE_NAME}`,
+  },
+  description: 'Compara precios, stock real y créditos de juegos de mesa en tiendas verificadas.',
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: 'es_MX',
+    url: SITE_URL,
+    title: `${SITE_NAME} — Compara, juega, colecciona`,
+    description: 'Compara precios, stock real y créditos de juegos de mesa en tiendas verificadas.',
+    images: [{
+      url: '/og-default.png',
+      width: 1200,
+      height: 630,
+      alt: 'Juegospedia — El mejor juego al mejor precio',
+      type: 'image/png',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — Compara, juega, colecciona`,
+    description: 'Compara precios, stock real y créditos de juegos de mesa en tiendas verificadas.',
+    images: ['/twitter-card.png'],
+  },
+  other: {
+    'msapplication-TileColor': '#B4502E',
+    'msapplication-config': '/browserconfig.xml',
+    'mobile-web-app-capable': 'yes',
   },
 };
 
@@ -52,8 +96,13 @@ export default function LocaleLayout({
       : { games: 'Games', cats: 'Categories', search: 'Search', tagline: 'The board-game encyclopedia with the best price.' };
 
   return (
-    <html lang={locale} className={`${hanken.variable} ${bricolage.variable} ${mono.variable}`}>
+    <html
+      lang={locale}
+      className={`${hanken.variable} ${bricolage.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#B4502E" />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var match = document.cookie.match(/(?:^|;\\s*)jp-theme=(light|dark)(?:;|$)/);

@@ -95,7 +95,15 @@ export async function generateMetadata({
 // Reverse-map a URL slug to the real DB category string (never fabricate one).
 async function resolveCategory(slug: string): Promise<string | null> {
   const categories = await getCategories();
-  return categories.find((c) => slugify(c.category) === slug)?.category ?? null;
+  const listedCategory = categories.find((c) => slugify(c.category) === slug)?.category;
+  if (listedCategory) return listedCategory;
+
+  // The category endpoint only includes verified products with active DB
+  // listings, while the public search index can contain additional catalog
+  // products. Validate those category URLs against the same search source used
+  // to render this page so a product breadcrumb never leads to a false 404.
+  const { results } = await listProducts({ category: slug, limit: 1 });
+  return results.find((product) => slugify(product.category) === slug)?.category ?? null;
 }
 
 export default async function DetailPage({
