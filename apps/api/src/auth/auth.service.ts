@@ -1,7 +1,7 @@
 import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '@retail-os/db-postgres';
-import type { SessionIdentity } from './session.service.js';
+import { publicSeller, publicCustomer, type SessionIdentity } from './session.service.js';
 import type { Prisma } from '@prisma/client';
 
 export interface RegisterSellerDto {
@@ -71,7 +71,7 @@ export class AuthService {
       email: seller.email,
       name: seller.name,
       role: 'seller',
-      seller: this.publicSeller(seller),
+      seller: publicSeller(seller),
     };
   }
 
@@ -92,7 +92,7 @@ export class AuthService {
       email: seller.email,
       name: seller.name,
       role: 'seller',
-      seller: this.publicSeller(seller),
+      seller: publicSeller(seller),
     };
   }
 
@@ -113,7 +113,7 @@ export class AuthService {
       email: customer.email,
       name: customer.name,
       role: 'customer',
-      customer: { id: customer.id, email: customer.email, name: customer.name },
+      customer: publicCustomer(customer),
     };
   }
 
@@ -134,7 +134,7 @@ export class AuthService {
       email: customer.email,
       name: customer.name,
       role: 'customer',
-      customer: { id: customer.id, email: customer.email, name: customer.name },
+      customer: publicCustomer(customer),
     };
   }
 
@@ -143,7 +143,7 @@ export class AuthService {
       where: { id: sellerId },
       include: { score: true },
     });
-    return this.publicSeller(seller);
+    return publicSeller(seller);
   }
 
   async getCustomerProfile(customerId: string) {
@@ -180,24 +180,6 @@ export class AuthService {
     });
 
     return { step: updated.onboardingStep, status: updated.status };
-  }
-
-  private publicSeller(s: {
-    id: string; name: string; slug: string; email: string;
-    status: string; tier: string; connectorType: string | null;
-    onboardingStep: string | null; emailVerified: boolean;
-  }) {
-    return {
-      id: s.id,
-      name: s.name,
-      slug: s.slug,
-      email: s.email,
-      status: s.status,
-      tier: s.tier,
-      connectorType: s.connectorType,
-      onboardingStep: s.onboardingStep,
-      emailVerified: s.emailVerified,
-    };
   }
 
   private ensurePrincipal(email: string, displayName?: string | null) {

@@ -9,13 +9,41 @@ const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 class ConcurrentRefreshReuseError extends Error {}
 
+// Only these fields are ever safe to send to the browser as part of a
+// session — never the raw Prisma row (which includes passwordHash,
+// connectorConfig, verifyToken, etc.). Both the login/register path
+// (auth.service.ts) and the refresh path (identityFromSession below) must
+// go through these, so a session can never leak more than this shape
+// regardless of which path produced it.
+export interface PublicSeller {
+  id: string; name: string; slug: string; email: string; status: string; tier: string;
+  connectorType: string | null; onboardingStep: string | null; emailVerified: boolean;
+}
+export interface PublicCustomer {
+  id: string; email: string; name?: string | null;
+}
+
+export function publicSeller(s: {
+  id: string; name: string; slug: string; email: string; status: string; tier: string;
+  connectorType: string | null; onboardingStep: string | null; emailVerified: boolean;
+}): PublicSeller {
+  return {
+    id: s.id, name: s.name, slug: s.slug, email: s.email, status: s.status, tier: s.tier,
+    connectorType: s.connectorType, onboardingStep: s.onboardingStep, emailVerified: s.emailVerified,
+  };
+}
+
+export function publicCustomer(c: { id: string; email: string; name?: string | null }): PublicCustomer {
+  return { id: c.id, email: c.email, name: c.name };
+}
+
 export interface SessionIdentity {
   principalId: string;
   email: string;
   name?: string | null;
   role: TokenRole;
-  customer?: { id: string; email: string; name?: string | null };
-  seller?: Record<string, unknown> & { id: string };
+  customer?: PublicCustomer;
+  seller?: PublicSeller;
 }
 
 export interface SessionMetadata {
@@ -176,7 +204,10 @@ export class SessionService {
       email: string;
       displayName: string | null;
       customer: { id: string; email: string; name: string | null } | null;
-      seller: { id: string; name: string; email: string } | null;
+      seller: {
+        id: string; name: string; slug: string; email: string; status: string; tier: string;
+        connectorType: string | null; onboardingStep: string | null; emailVerified: boolean;
+      } | null;
     };
   }): SessionIdentity {
     const role = current.role as TokenRole;
@@ -185,8 +216,8 @@ export class SessionService {
       email: current.principal.email,
       name: current.principal.displayName,
       role,
-      ...(current.principal.customer ? { customer: current.principal.customer } : {}),
-      ...(current.principal.seller ? { seller: current.principal.seller } : {}),
+      ...(current.principal.customer ? { customer: publicCustomer(current.principal.customer) } : {}),
+      ...(current.principal.seller ? { seller: publicSeller(current.principal.seller) } : {}),
     };
   }
 
