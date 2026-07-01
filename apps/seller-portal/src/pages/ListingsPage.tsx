@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Switch } from '../components/ui/switch.js';
 import type { SellerSession } from '../App.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const MARKETPLACE = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
@@ -143,13 +144,11 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
   }, [q]);
 
   const fetchStats = useCallback(() => {
-    return fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-    })
+    return sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`)
       .then((r) => r.ok ? r.json() : null)
       .then((s) => setStats(s as Stats | null))
       .catch(() => setStats(null));
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -243,9 +242,9 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
       } else {
         body.ids = Array.from(selectedIds);
       }
-      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/bulk`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/bulk`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (res.ok) {
@@ -491,7 +490,6 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         <EditModal
           listing={editListing}
           sellerId={session.seller.id}
-          token={session.token}
           onClose={() => setEditListing(null)}
           onSaved={(updated) => {
             setListings((prev) => prev.map((l) => l.id === updated.id ? { ...l, ...updated } : l));
@@ -856,11 +854,10 @@ function ListingRow({
 // ─── Edit modal ───────────────────────────────────────────────────────────────
 
 function EditModal({
-  listing, sellerId, token, onClose, onSaved, onPromosFetched,
+  listing, sellerId, onClose, onSaved, onPromosFetched,
 }: {
   listing: Listing;
   sellerId: string;
-  token: string;
   onClose: () => void;
   onSaved: (updated: Partial<Listing> & { id: string }) => void;
   onPromosFetched: (listingId: string, promos: ListingPromo[]) => void;
@@ -902,9 +899,7 @@ function EditModal({
   const [togglingPromoId, setTogglingPromoId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`)
       .then((r) => r.ok ? r.json() : [])
       .then((data: ListingPromo[]) => {
         const list = Array.isArray(data) ? data : [];
@@ -914,16 +909,14 @@ function EditModal({
       .catch(() => setPromos([]))
       .finally(() => setLoadingPromos(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sellerId, listing.id, token]);
+  }, [sellerId, listing.id]);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sellers/${sellerId}/ai-usage`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/ai-usage`)
       .then((r) => r.ok ? r.json() : null)
       .then((d: AiUsage | null) => setAiUsage(d))
       .catch(() => setAiUsage(null));
-  }, [sellerId, token]);
+  }, [sellerId]);
 
   function updatePromos(updated: ListingPromo[]) {
     setPromos(updated);
@@ -936,9 +929,8 @@ function EditModal({
     relinkTimer.current = setTimeout(async () => {
       setRelinkSearching(true);
       try {
-        const res = await fetch(
+        const res = await sellerApi.fetch(
           `${API}/api/v1/sellers/${sellerId}/product-mappings/search?q=${encodeURIComponent(relinkQuery)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
         );
         setRelinkResults(res.ok ? (await res.json()) as RelinkSearchResult[] : []);
       } finally {
@@ -946,15 +938,15 @@ function EditModal({
       }
     }, 300);
     return () => { if (relinkTimer.current) clearTimeout(relinkTimer.current); };
-  }, [relinkQuery, sellerId, token]);
+  }, [relinkQuery, sellerId]);
 
   async function handleConfirmRelink() {
     if (!relinkSelected) return;
     setRelinking(true);
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/relink`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/relink`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: relinkSelected.id }),
       });
       if (res.ok) {
@@ -974,9 +966,9 @@ function EditModal({
   async function handleCreatePromo() {
     setSavingPromo(true);
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bonusCashbackPct: newBonusPct / 100,
           ...(newLabel ? { label: newLabel } : {}),
@@ -1001,9 +993,9 @@ function EditModal({
   async function handleTogglePromo(promo: ListingPromo) {
     setTogglingPromoId(promo.id);
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promo.id}`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promo.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !promo.active }),
       });
       if (res.ok) {
@@ -1017,9 +1009,8 @@ function EditModal({
   async function handleDeletePromo(promoId: string) {
     setDeletingPromoId(promoId);
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promoId}`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/promos/${promoId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         updatePromos(promos.filter((p) => p.id !== promoId));
@@ -1477,9 +1468,9 @@ function EditModal({
                     setAiResult(null);
                     setAiError('');
                     try {
-                      const res = await fetch(
+                      const res = await sellerApi.fetch(
                         `${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/ai-enhance`,
-                        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+                        { method: 'POST' }
                       );
                       const body = await res.json() as { suggested?: AiEnhanceResult; usage?: AiUsage; message?: string };
                       if (res.ok && body.suggested) {
@@ -1557,11 +1548,11 @@ function EditModal({
                     onClick={async () => {
                       setAiApplying(true);
                       try {
-                        const res = await fetch(
+                        const res = await sellerApi.fetch(
                           `${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/product`,
                           {
                             method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                               name: aiResult.name,
                               description: aiResult.description,

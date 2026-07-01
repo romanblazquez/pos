@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SellerSession } from '../App.js';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '../components/ui/index.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -28,10 +29,8 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const authHeaders = { Authorization: `Bearer ${session.token}` };
-
   function refresh() {
-    fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`, { headers: authHeaders })
+    sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`)
       .then((r) => r.ok ? r.json() : [])
       .then((d: SellerMarket[]) => setMarkets(Array.isArray(d) ? d : []))
       .catch(() => setMarkets([]));
@@ -51,9 +50,9 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   }) {
     setError('');
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -70,9 +69,9 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   async function toggleActive(m: SellerMarket) {
     setBusyId(m.id);
     try {
-      await fetch(`${API}/api/v1/sellers/${session.seller.id}/markets/${m.id}`, {
+      await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets/${m.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !m.active }),
       });
       refresh();
@@ -84,9 +83,8 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   async function removeMarket(id: string) {
     setBusyId(id);
     try {
-      await fetch(`${API}/api/v1/sellers/${session.seller.id}/markets/${id}`, {
+      await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets/${id}`, {
         method: 'DELETE',
-        headers: authHeaders,
       });
       refresh();
     } finally {

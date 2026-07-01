@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SellerSession } from '../App.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -23,12 +24,9 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/profile`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/profile`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), phone: phone.trim() || undefined, timezone }),
       });
       if (!res.ok) {
@@ -221,9 +219,9 @@ function RewardsCard({ session }: { session: SellerSession }) {
   async function saveRewards() {
     setRewardSaving(true);
     try {
-      await fetch(`${API}/api/v1/sellers/${session.seller.id}/rewards`, {
+      await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/rewards`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeCashbackPct: storeCashback / 100 }),
       });
       setRewardSaved(true);
