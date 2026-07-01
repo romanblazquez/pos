@@ -95,8 +95,8 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   }
 
   return (
-    <div className="p-8 max-w-3xl space-y-6 page-enter">
-      <div className="space-y-1 mb-8 flex items-start justify-between">
+    <div className="max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8 page-enter">
+      <div className="mb-6 flex flex-col items-start gap-4 lg:mb-8 min-[520px]:flex-row min-[520px]:justify-between">
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Configuración</p>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Mercados</h1>
@@ -105,7 +105,7 @@ export function MarketsPage({ session }: { session: SellerSession }) {
           </p>
         </div>
         {!showNew && (
-          <Button variant="primary" onClick={() => setShowNew(true)}>+ Agregar mercado</Button>
+          <Button className="w-full min-[520px]:w-auto" variant="primary" onClick={() => setShowNew(true)}>+ Agregar mercado</Button>
         )}
       </div>
 
@@ -134,9 +134,9 @@ export function MarketsPage({ session }: { session: SellerSession }) {
           ) : (
             <div className="divide-y divide-slate-100">
               {markets.map((m) => (
-                <div key={m.id} className="py-3.5 flex items-start justify-between gap-4">
+                <div key={m.id} className="flex flex-col gap-3 py-4 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-slate-900">{m.countryName} ({m.countryCode})</p>
                       <Badge variant={m.active ? 'success' : 'secondary'}>{m.active ? 'Activo' : 'Inactivo'}</Badge>
                     </div>
@@ -148,7 +148,7 @@ export function MarketsPage({ session }: { session: SellerSession }) {
                       Envíos a: {m.shippingCountries.length > 0 ? m.shippingCountries.join(', ') : '—'}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs">
+                  <div className="flex shrink-0 items-center gap-4 text-xs min-[480px]:flex-col min-[480px]:items-end min-[480px]:gap-1.5">
                     <button
                       onClick={() => toggleActive(m)}
                       disabled={busyId === m.id}
@@ -279,7 +279,7 @@ function SellerMarketForm({
           Ofrezco retiro en tienda para este mercado
         </label>
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex flex-col gap-2 pt-1 min-[420px]:flex-row">
           <Button variant="primary" onClick={submit} disabled={!valid || saving}>
             {saving ? 'Guardando…' : 'Guardar mercado'}
           </Button>

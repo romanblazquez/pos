@@ -134,12 +134,12 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-8 max-w-5xl space-y-8">
+      <div className="max-w-5xl space-y-6 p-4 sm:p-6 lg:space-y-8 lg:p-8">
         <div className="space-y-1">
           <div className="h-3 w-20 rounded-full bg-slate-200 animate-pulse" />
           <div className="h-7 w-44 rounded-lg bg-slate-200 animate-pulse mt-2" />
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} />)}
         </div>
         <SkeletonChart />
@@ -148,7 +148,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
   }
 
   return (
-    <div className="page-enter p-6 lg:p-8 max-w-5xl space-y-8">
+    <div className="page-enter max-w-5xl space-y-6 p-4 sm:p-6 lg:space-y-8 lg:p-8">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div className="space-y-0.5">
@@ -166,7 +166,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       <Separator />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           label="Ingresos totales"
           value={fmtPrice(revenue, currency)}
@@ -202,7 +202,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       {/* Revenue chart */}
       <Card className="overflow-visible">
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>Ingresos — últimos 7 días</CardTitle>
             {revenue > 0 && (
               <div className="flex items-center gap-1 text-emerald-600 text-xs font-semibold">
@@ -263,7 +263,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       </Card>
 
       {/* Orders by status + Top products */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Order status breakdown */}
         <Card>
           <CardHeader className="pb-3">
@@ -392,7 +392,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
             </div>
           </CardHeader>
           <CardContent className="pt-2">
-            <div className="flex items-center gap-8">
+            <div className="flex flex-col items-center gap-5 min-[460px]:flex-row min-[460px]:items-center min-[460px]:gap-8">
               {/* Donut */}
               <div className="relative shrink-0">
                 <div
@@ -416,7 +416,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
               </div>
 
               {/* Legend */}
-              <div className="flex-1 grid grid-cols-2 gap-x-8 gap-y-3">
+              <div className="grid w-full flex-1 grid-cols-2 gap-x-4 gap-y-3 min-[460px]:gap-x-8">
                 {[
                   { label: 'Total listings',   value: listingStats.total,       color: 'bg-slate-200', text: 'text-slate-700' },
                   { label: 'Activos',          value: listingStats.active,      color: 'bg-emerald-500', text: 'text-emerald-700' },
@@ -468,15 +468,15 @@ function KpiCard({ label, value, note, icon, accent, progress }: {
   }[accent];
 
   return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardContent className="pt-5 pb-4 px-5 space-y-3">
+    <Card className="transition-shadow duration-200 hover:shadow-md">
+      <CardContent className="space-y-2 px-3 pb-3 pt-4 sm:space-y-3 sm:px-5 sm:pb-4 sm:pt-5">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${iconBg}`}>
             {icon}
           </div>
         </div>
-        <p className={`text-2xl font-bold tabular tracking-tight ${valueColor}`}>{value}</p>
+        <p className={`break-words text-xl font-bold tabular tracking-tight sm:text-2xl ${valueColor}`}>{value}</p>
         {progress !== undefined && (
           <Progress
             value={progress}

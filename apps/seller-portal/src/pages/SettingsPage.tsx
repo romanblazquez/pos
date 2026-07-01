@@ -61,9 +61,9 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
   ];
 
   return (
-    <div className="p-8 max-w-2xl space-y-6 page-enter">
+    <div className="max-w-2xl space-y-6 p-4 sm:p-6 lg:p-8 page-enter">
       {/* Page header */}
-      <div className="space-y-1 mb-8">
+      <div className="mb-6 space-y-1 lg:mb-8">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Configuración</p>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Perfil de la tienda</h1>
         <p className="text-sm text-slate-400">Información pública y programa de recompensas.</p>
@@ -151,19 +151,19 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-2 text-sm text-slate-600">
-            <div className="flex justify-between py-1.5 border-b border-slate-100">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 py-2">
               <span className="text-slate-500">ID de vendedor</span>
-              <span className="font-mono text-xs text-slate-700">{session.seller.id}</span>
+              <span className="min-w-0 break-all text-right font-mono text-xs text-slate-700">{session.seller.id}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-slate-100">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 py-2">
               <span className="text-slate-500">Email</span>
-              <span>{session.seller.email}</span>
+              <span className="min-w-0 break-all text-right">{session.seller.email}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-slate-100">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 py-2">
               <span className="text-slate-500">País</span>
               <span>{session.seller.country ?? 'MX'}</span>
             </div>
-            <div className="flex justify-between py-1.5">
+            <div className="flex items-start justify-between gap-3 py-2">
               <span className="text-slate-500">Conector</span>
               <span>{session.seller.connectorType ?? 'Ninguno'}</span>
             </div>
@@ -257,7 +257,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
         ) : (
           <>
             {/* Credit types explained */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
               <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1">
                 <p className="font-semibold text-slate-700">Créditos de plataforma</p>
                 <p className="text-slate-400 leading-relaxed">
@@ -300,7 +300,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
 
             {/* Commission & cashback breakdown */}
             {preview && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 space-y-0.5">
                   <p className="text-xs text-slate-500">Tu comisión efectiva</p>
                   <p className="text-2xl font-semibold text-slate-900">
@@ -332,13 +332,13 @@ function RewardsCard({ session }: { session: SellerSession }) {
                 Ejemplo — venta de {fmt(exampleTotal)}
               </p>
               <div className="space-y-1.5 text-sm">
-                <div className="flex justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <span className="text-slate-600">Precio de venta</span>
                   <span className="font-medium">{fmt(exampleTotal)}</span>
                 </div>
 
                 {/* Total deduction = commission + store cashback */}
-                <div className="flex justify-between font-medium text-slate-700">
+                <div className="flex items-start justify-between gap-3 font-medium text-slate-700">
                   <span>
                     Total deducido ({Math.round(preview.effectiveCommissionPct * 100) + storeCashback}%)
                   </span>
@@ -347,30 +347,30 @@ function RewardsCard({ session }: { session: SellerSession }) {
 
                 {/* Commission sub-line */}
                 <div className="pl-4 space-y-0.5">
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex items-start justify-between gap-3 text-xs text-slate-500">
                     <span>└ comisión plataforma ({Math.round(preview.effectiveCommissionPct * 100)}%)</span>
                     <span>−{fmt(commissionAmt)}</span>
                   </div>
                   <div className="pl-4 space-y-0.5">
-                    <div className="flex justify-between text-xs text-slate-400">
+                    <div className="flex items-start justify-between gap-3 text-xs text-slate-400">
                       <span>└ ingreso neto plataforma ({Math.round((preview.effectiveCommissionPct - platformCashbackPct) * 100)}%)</span>
                       <span>{fmt(commissionAmt - platformCbAmt)}</span>
                     </div>
-                    <div className="flex justify-between text-xs text-emerald-500">
+                    <div className="flex items-start justify-between gap-3 text-xs text-emerald-500">
                       <span>└ créditos libres al comprador ({Math.round(platformCashbackPct * 100)}%)</span>
                       <span>+{fmt(platformCbAmt)}</span>
                     </div>
                   </div>
 
                   {storeCbAmt > 0 && (
-                    <div className="flex justify-between text-xs text-emerald-600">
+                    <div className="flex items-start justify-between gap-3 text-xs text-emerald-600">
                       <span>└ cashback de tu tienda ({storeCashback}%) — solo en tus productos</span>
                       <span>−{fmt(storeCbAmt)}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-between font-semibold border-t border-slate-100 pt-2 mt-1">
+                <div className="mt-1 flex items-start justify-between gap-3 border-t border-slate-100 pt-2 font-semibold">
                   <span>Tu cobro neto</span>
                   <span className="text-slate-900">{fmt(payoutAmt)}</span>
                 </div>
@@ -378,12 +378,12 @@ function RewardsCard({ session }: { session: SellerSession }) {
 
               {/* Credits summary */}
               <div className="border-t border-dashed border-slate-200 pt-2.5 space-y-1.5">
-                <div className="flex justify-between text-xs text-slate-500">
+                <div className="flex items-start justify-between gap-3 text-xs text-slate-500">
                   <span>Créditos libres que gana (marketplace)</span>
                   <span className="text-emerald-600 font-medium">+{fmt(platformCbAmt)} — cualquier tienda</span>
                 </div>
                 {storeCbAmt > 0 && (
-                  <div className="flex justify-between text-xs text-slate-500">
+                  <div className="flex items-start justify-between gap-3 text-xs text-slate-500">
                     <span>Créditos exclusivos que gana (tu tienda)</span>
                     <span className="text-emerald-600 font-medium">+{fmt(storeCbAmt)} — solo en tus productos</span>
                   </div>
@@ -392,7 +392,7 @@ function RewardsCard({ session }: { session: SellerSession }) {
             </div>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:items-center">
               <button
                 onClick={saveRewards}
                 disabled={saving}

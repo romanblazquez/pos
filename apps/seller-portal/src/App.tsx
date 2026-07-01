@@ -107,12 +107,12 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {oauthBanner && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium
+        <div className={`fixed left-4 right-4 top-4 z-50 flex items-start justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-lg sm:left-1/2 sm:right-auto sm:w-max sm:max-w-lg sm:-translate-x-1/2 sm:px-5
           ${oauthBanner.type === 'success'
             ? 'bg-emerald-600 text-white'
             : 'bg-red-600 text-white'}`}>
           {oauthBanner.msg}
-          <button onClick={() => setOauthBanner(null)} className="ml-4 opacity-70 hover:opacity-100">✕</button>
+          <button onClick={() => setOauthBanner(null)} className="shrink-0 opacity-70 hover:opacity-100">✕</button>
         </div>
       )}
       {needsOnboarding ? (

@@ -127,8 +127,8 @@ export default function ProductMappingPage({ session }: { session: SellerSession
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-8 py-5">
+    <div className="flex min-h-full flex-col bg-slate-50">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Vincular productos</h1>
@@ -141,7 +141,7 @@ export default function ProductMappingPage({ session }: { session: SellerSession
           <button
             onClick={fetchMappings}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300
+            className="min-h-10 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 sm:px-4
                        rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Actualizando…' : 'Actualizar'}
@@ -149,7 +149,7 @@ export default function ProductMappingPage({ session }: { session: SellerSession
         </div>
       </div>
 
-      <div className="flex-1 px-8 py-6 overflow-auto">
+      <div className="flex-1 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         {loading && mappings.length === 0 && (
           <div className="py-20 text-center text-slate-400 text-sm">Cargando…</div>
         )}
@@ -162,7 +162,7 @@ export default function ProductMappingPage({ session }: { session: SellerSession
           </div>
         )}
 
-        <div className="grid gap-4 max-w-3xl">
+        <div className="grid max-w-3xl gap-4">
           {mappings.map((m) => (
             <MappingCard
               key={m.id}
@@ -240,7 +240,7 @@ function MappingCard({
       busy && 'opacity-50 pointer-events-none',
     )}>
       {/* Side-by-side comparison: your product vs the selected proposal */}
-      <div className="grid sm:grid-cols-2 gap-3 p-5 pb-0">
+      <div className="grid gap-3 p-4 pb-0 sm:grid-cols-2 sm:p-5 sm:pb-0">
         <div className="rounded-lg border border-slate-200 p-3">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Tu producto</p>
           <div className="flex gap-3">
@@ -284,7 +284,7 @@ function MappingCard({
       </div>
 
       {selected && (
-        <div className="flex gap-2 px-5 pt-3">
+        <div className="flex flex-col gap-2 px-4 pt-3 min-[420px]:flex-row sm:px-5">
           <button
             onClick={handleConfirm}
             disabled={busy}
@@ -301,7 +301,7 @@ function MappingCard({
         </div>
       )}
 
-      <div className="px-5 pb-5 pt-3 space-y-3">
+      <div className="space-y-3 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
         {candidates.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
@@ -370,7 +370,7 @@ function MappingCard({
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+        <div className="flex flex-col items-stretch gap-3 border-t border-slate-100 pt-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
           {!showEscalate ? (
             <button
               onClick={() => setShowEscalate(true)}
@@ -379,7 +379,7 @@ function MappingCard({
               No lo encuentro, pedir nuevo producto
             </button>
           ) : (
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex flex-1 flex-col gap-2 min-[520px]:flex-row min-[520px]:items-center">
               <input
                 type="text"
                 value={note}
@@ -400,7 +400,7 @@ function MappingCard({
           <button
             onClick={onDismiss}
             disabled={busy}
-            className="text-xs text-slate-400 hover:text-red-500 transition-colors ml-3 shrink-0"
+            className="min-h-9 shrink-0 self-start text-xs text-slate-400 transition-colors hover:text-red-500 min-[520px]:ml-3 min-[520px]:self-auto"
             title="Descartar — no listar este producto"
           >
             Descartar

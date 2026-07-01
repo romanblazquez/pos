@@ -6,3 +6,4 @@ export { Progress } from './progress.js';
 export { Separator } from './separator.js';
 export { ToastProvider, useToast } from './toast.js';
 export { Switch } from './switch.js';
+export { Sheet, SheetTrigger, SheetClose, SheetContent, SheetTitle, SheetDescription } from './sheet.js';

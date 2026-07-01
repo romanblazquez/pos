@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SellerSession } from '../App.js';
-import { Card, CardContent, CardHeader, CardTitle, Badge } from '../components/ui/index.js';
+import { Badge } from '../components/ui/index.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 20;
@@ -97,8 +97,8 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 px-8 py-5">
+    <div className="flex min-h-full flex-col bg-slate-50">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Pedidos</h1>
@@ -109,7 +109,7 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
           <button
             onClick={fetchOrders}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300
+            className="min-h-10 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 sm:px-4
                        rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Actualizando…' : 'Actualizar'}
@@ -117,15 +117,15 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
         </div>
       </div>
 
-      <div className="flex-1 px-8 py-6 space-y-5">
+      <div className="flex-1 space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         {/* Filter pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               onClick={() => { setStatusFilter(f.id); setPage(1); }}
               className={cn(
-                'px-3 py-1.5 text-xs font-medium rounded-full border transition-colors',
+                'min-h-9 shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors',
                 statusFilter === f.id
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400',
@@ -167,7 +167,7 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col gap-3 pt-2 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
             <p className="text-xs text-slate-500">
               {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} de {total.toLocaleString('es-AR')}
             </p>
@@ -213,9 +213,9 @@ function OrderCard({ order, expanded, onToggle }: {
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full text-left px-5 py-4 hover:bg-slate-50/60 transition-colors"
+        className="w-full px-4 py-4 text-left transition-colors hover:bg-slate-50/60 sm:px-5"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           {/* Thumbnail */}
           <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0">
             {firstProduct?.images[0] ? (
@@ -239,24 +239,24 @@ function OrderCard({ order, expanded, onToggle }: {
           </div>
 
           {/* Status + total */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <Badge variant={STATUS_VARIANT[order.status] ?? 'secondary'}>
               {STATUS_LABELS[order.status] ?? order.status}
             </Badge>
-            <span className="text-sm font-semibold text-slate-900 tabular w-24 text-right">
+            <span className="text-sm font-semibold text-slate-900 tabular sm:w-24 sm:text-right">
               {fmtPrice(order.totalMinorUnits, order.currency)}
             </span>
-            <span className="text-slate-400 text-xs">{expanded ? '▲' : '▼'}</span>
+            <span className="hidden text-xs text-slate-400 sm:inline">{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-slate-100 px-5 py-4 space-y-4">
+        <div className="space-y-4 border-t border-slate-100 px-4 py-4 sm:px-5">
           {/* Lines */}
           <div className="space-y-3">
             {order.lines.map((line) => (
-              <div key={line.id} className="flex items-center gap-3 text-sm">
+              <div key={line.id} className="flex items-center gap-2 text-sm sm:gap-3">
                 <div className="w-8 h-8 rounded-md bg-slate-100 overflow-hidden shrink-0">
                   {line.listing.product.images[0] ? (
                     <img src={line.listing.product.images[0]} alt="" className="w-full h-full object-cover" />
@@ -266,7 +266,7 @@ function OrderCard({ order, expanded, onToggle }: {
                 </div>
                 <span className="flex-1 text-slate-700 truncate">{line.listing.product.name}</span>
                 <span className="text-slate-500 text-xs">×{line.quantity}</span>
-                <span className="tabular text-slate-900 font-medium w-20 text-right">
+                <span className="shrink-0 tabular text-slate-900 font-medium sm:w-20 sm:text-right">
                   {fmtPrice(line.lineTotalMinor, order.currency)}
                 </span>
               </div>
@@ -311,7 +311,7 @@ function OrderCard({ order, expanded, onToggle }: {
           </div>
 
           {/* Meta */}
-          <div className="flex items-center gap-4 text-xs text-slate-400 pt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-slate-400">
             <span>ID: <span className="font-mono">{order.id.slice(-8)}</span></span>
             {order.paymentProvider && <span>Pago: {order.paymentProvider}</span>}
           </div>
