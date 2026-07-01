@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIntl } from 'react-intl';
 import { useCart } from './CartContext.js';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
@@ -16,6 +17,7 @@ type Step = 'cart' | 'form' | 'processing' | 'success' | 'error';
 export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => void; onRequireAuth: () => void }) {
   const { items, remove, clear, total } = useCart();
   const { session } = useCustomer();
+  const intl = useIntl();
   const { addresses, create: createAddress } = useAddresses(session?.customer.id);
   const { data: wallet } = useWallet(session?.customer.id);
   const [step, setStep] = useState<Step>('cart');
@@ -87,18 +89,18 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
         }),
       });
       const data = await res.json() as { orderId?: string; checkoutUrl?: string; message?: string };
-      if (!res.ok) { setError(data.message ?? 'Error al iniciar el pago.'); setStep('error'); return; }
+      if (!res.ok) { setError(data.message ?? intl.formatMessage({ id: 'cart.startCheckoutError' })); setStep('error'); return; }
       setOrderId(data.orderId ?? '');
       clear();
       if (data.checkoutUrl?.includes('dev_mode=1')) setStep('success');
       else window.location.href = data.checkoutUrl!;
     } catch {
-      setError('No se pudo conectar con el servidor.');
+      setError(intl.formatMessage({ id: 'cart.connectionError' }));
       setStep('error');
     }
   }
 
-  const stepTitle = step === 'cart' ? 'Tu carrito' : step === 'form' ? 'Datos de envío' : '';
+  const stepTitle = step === 'cart' ? intl.formatMessage({ id: 'cart.titleCart' }) : step === 'form' ? intl.formatMessage({ id: 'cart.titleForm' }) : '';
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -123,14 +125,14 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
 
           {step === 'form' && (
             <form id="checkout-form" onSubmit={submitCheckout} className="p-5 flex flex-col gap-4">
-              <Field label="Nombre completo">
-                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Juan García" className={inputCls} />
+              <Field label={intl.formatMessage({ id: 'cart.fullName' })}>
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.fullNamePlaceholder' })} className={inputCls} />
               </Field>
-              <Field label="Email">
-                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@ejemplo.com" className={inputCls} />
+              <Field label={intl.formatMessage({ id: 'cart.email' })}>
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.emailPlaceholder' })} className={inputCls} />
               </Field>
               <hr className="border-[--border]" />
-              <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wide">Dirección de envío</p>
+              <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wide">{intl.formatMessage({ id: 'cart.shippingAddress' })}</p>
 
               {addresses.length > 0 && (
                 <div className="flex flex-col gap-2">
@@ -151,7 +153,7 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
                         className="mt-1 accent-emerald-600"
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-[--tx]">{addr.label || 'Dirección'}</p>
+                        <p className="text-sm font-medium text-[--tx]">{addr.label || intl.formatMessage({ id: 'cart.fallbackAddressLabel' })}</p>
                         <p className="text-xs text-[--tx-muted]">{addr.street}, {addr.city}, {addr.state} {addr.postalCode}</p>
                       </div>
                     </label>
@@ -170,26 +172,26 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
                       onChange={() => setSelectedAddressId('new')}
                       className="accent-emerald-600"
                     />
-                    <span className="text-sm font-medium text-[--tx]">+ Usar una dirección nueva</span>
+                    <span className="text-sm font-medium text-[--tx]">{intl.formatMessage({ id: 'cart.useNewAddress' })}</span>
                   </label>
                 </div>
               )}
 
               {usingNewAddress && (
                 <div className="flex flex-col gap-4">
-                  <Field label="Calle y número">
-                    <input required value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Av. Insurgentes 1234" className={inputCls} />
+                  <Field label={intl.formatMessage({ id: 'addressForm.streetPlaceholder' })}>
+                    <input required value={street} onChange={(e) => setStreet(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.streetPlaceholder' })} className={inputCls} />
                   </Field>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Ciudad">
-                      <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder="CDMX" className={inputCls} />
+                    <Field label={intl.formatMessage({ id: 'cart.city' })}>
+                      <input required value={city} onChange={(e) => setCity(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.cityPlaceholder' })} className={inputCls} />
                     </Field>
-                    <Field label="Estado">
-                      <input required value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder="Ciudad de México" className={inputCls} />
+                    <Field label={intl.formatMessage({ id: 'cart.state' })}>
+                      <input required value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.statePlaceholder' })} className={inputCls} />
                     </Field>
                   </div>
-                  <Field label="Código postal">
-                    <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="06600" className={inputCls} />
+                  <Field label={intl.formatMessage({ id: 'cart.postalCode' })}>
+                    <input required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder={intl.formatMessage({ id: 'cart.postalCodePlaceholder' })} className={inputCls} />
                   </Field>
                   {session && (
                     <label className="flex items-center gap-2.5 text-sm text-[--tx-muted] cursor-pointer">
@@ -199,7 +201,7 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
                         onChange={(e) => setSaveAddress(e.target.checked)}
                         className="w-4 h-4 accent-emerald-600"
                       />
-                      Guardar esta dirección para la próxima vez
+                      {intl.formatMessage({ id: 'cart.saveAddress' })}
                     </label>
                   )}
                 </div>
@@ -216,10 +218,10 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
                       className="mt-0.5 w-4 h-4 accent-emerald-600"
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[--tx]">Usar mis créditos</p>
+                      <p className="text-sm font-medium text-[--tx]">{intl.formatMessage({ id: 'cart.useCredits' })}</p>
                       <p className="text-xs text-[--tx-muted] mt-0.5">
-                        Tenés {fmtExact(creditsAvailable, items[0]?.currency)} disponibles
-                        {storeCreditsAvailable > 0 && platformCreditsAvailable > 0 ? ' (saldo general + crédito de esta tienda)' : ''}.
+                        {intl.formatMessage({ id: 'cart.creditsAvailable' }, { amount: fmtExact(creditsAvailable, items[0]?.currency) })}
+                        {storeCreditsAvailable > 0 && platformCreditsAvailable > 0 ? intl.formatMessage({ id: 'cart.creditsAvailableHint' }) : ''}.
                       </p>
                     </div>
                   </label>
@@ -231,18 +233,18 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
           {step === 'processing' && (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
               <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-[--tx-muted] text-sm">Iniciando pago seguro…</p>
+              <p className="text-[--tx-muted] text-sm">{intl.formatMessage({ id: 'cart.processing' })}</p>
             </div>
           )}
 
           {step === 'success' && (
             <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
               <p className="text-5xl">✅</p>
-              <p className="font-bold text-[--tx] text-lg">¡Pedido recibido!</p>
+              <p className="font-bold text-[--tx] text-lg">{intl.formatMessage({ id: 'cart.orderReceived' })}</p>
               <p className="text-sm text-[--tx-muted]">
-                Pedido <code className="bg-[--bg-subtle] px-1.5 py-0.5 rounded text-xs font-mono">{orderId.slice(-10)}</code> confirmado.
+                {intl.formatMessage({ id: 'cart.orderConfirmed' }, { orderId: orderId.slice(-10) })}
               </p>
-              <Button onClick={onClose}>Cerrar</Button>
+              <Button onClick={onClose}>{intl.formatMessage({ id: 'cart.close' })}</Button>
             </div>
           )}
 
@@ -251,7 +253,7 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
               <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-200">
                 {error}
               </div>
-              <Button variant="outline" onClick={() => setStep('form')}>← Volver e intentar de nuevo</Button>
+              <Button variant="outline" onClick={() => setStep('form')}>{intl.formatMessage({ id: 'cart.backAndRetry' })}</Button>
             </div>
           )}
         </div>
@@ -260,14 +262,14 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
         {step === 'cart' && items.length > 0 && (
           <div className="px-5 py-4 border-t border-[--border] flex flex-col gap-3 shrink-0">
             <div className="flex justify-between text-sm font-semibold text-[--tx]">
-              <span>Total</span>
+              <span>{intl.formatMessage({ id: 'cart.total' })}</span>
               <span>{fmt(total, items[0]?.currency)}</span>
             </div>
             <Button className="w-full justify-center py-3" onClick={() => {
               if (!session) { onClose(); onRequireAuth(); return; }
               setStep('form');
             }}>
-              Continuar con el pago →
+              {intl.formatMessage({ id: 'cart.continueToPayment' })}
             </Button>
           </div>
         )}
@@ -277,24 +279,24 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
             {creditsToApply > 0 && (
               <>
                 <div className="flex justify-between text-sm text-[--tx-muted]">
-                  <span>Subtotal</span>
+                  <span>{intl.formatMessage({ id: 'cart.subtotal' })}</span>
                   <span className="tabular">{fmtExact(total, items[0]?.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-emerald-600">
-                  <span>Créditos aplicados</span>
+                  <span>{intl.formatMessage({ id: 'cart.creditsApplied' })}</span>
                   <span className="tabular">−{fmtExact(creditsToApply, items[0]?.currency)}</span>
                 </div>
               </>
             )}
             <div className="flex justify-between text-sm font-semibold text-[--tx]">
-              <span>Total a pagar</span>
+              <span>{intl.formatMessage({ id: 'cart.totalToPay' })}</span>
               <span className="tabular">{fmtExact(amountDue, items[0]?.currency)}</span>
             </div>
             <Button type="submit" form="checkout-form" className="w-full justify-center py-3">
-              {amountDue <= 0 ? 'Confirmar pedido' : 'Pagar con Mercado Pago 🔒'}
+              {amountDue <= 0 ? intl.formatMessage({ id: 'cart.confirmOrder' }) : intl.formatMessage({ id: 'cart.payWithMercadoPago' })}
             </Button>
             <Button variant="ghost" onClick={() => setStep('cart')} className="w-full justify-center text-[--tx-muted]">
-              ← Volver al carrito
+              {intl.formatMessage({ id: 'cart.backToCart' })}
             </Button>
           </div>
         )}
@@ -304,11 +306,12 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
 }
 
 function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['items']; onRemove: (id: string) => void }) {
+  const intl = useIntl();
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3 text-[--tx-faint]">
         <p className="text-4xl">🛒</p>
-        <p className="text-sm">Tu carrito está vacío</p>
+        <p className="text-sm">{intl.formatMessage({ id: 'cart.empty' })}</p>
       </div>
     );
   }

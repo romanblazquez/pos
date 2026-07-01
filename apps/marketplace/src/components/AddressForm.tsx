@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useIntl } from 'react-intl';
 import { inputCls } from './ui/index.js';
 import type { AddressInput } from '../hooks/useAddresses.js';
 
@@ -15,6 +16,7 @@ export function AddressForm({
   busy?: boolean;
 }) {
   const [form, setForm] = useState<AddressInput>({ ...EMPTY, ...initial });
+  const intl = useIntl();
 
   function set<K extends keyof AddressInput>(key: K, value: AddressInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -27,13 +29,13 @@ export function AddressForm({
       <input
         value={form.label ?? ''}
         onChange={(e) => set('label', e.target.value)}
-        placeholder="Etiqueta (ej. Casa, Oficina) — opcional"
+        placeholder={intl.formatMessage({ id: 'addressForm.labelPlaceholder' })}
         className={inputCls}
       />
       <input
         value={form.street}
         onChange={(e) => set('street', e.target.value)}
-        placeholder="Calle y número"
+        placeholder={intl.formatMessage({ id: 'addressForm.streetPlaceholder' })}
         required
         className={inputCls}
       />
@@ -41,14 +43,14 @@ export function AddressForm({
         <input
           value={form.city}
           onChange={(e) => set('city', e.target.value)}
-          placeholder="Ciudad"
+          placeholder={intl.formatMessage({ id: 'addressForm.cityPlaceholder' })}
           required
           className={inputCls}
         />
         <input
           value={form.state}
           onChange={(e) => set('state', e.target.value)}
-          placeholder="Estado"
+          placeholder={intl.formatMessage({ id: 'addressForm.statePlaceholder' })}
           required
           className={inputCls}
         />
@@ -56,7 +58,7 @@ export function AddressForm({
       <input
         value={form.postalCode}
         onChange={(e) => set('postalCode', e.target.value)}
-        placeholder="Código postal"
+        placeholder={intl.formatMessage({ id: 'addressForm.postalCodePlaceholder' })}
         required
         className={inputCls}
       />
@@ -67,7 +69,7 @@ export function AddressForm({
           disabled={!valid || busy}
           className="flex-1 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
-          {busy ? 'Guardando…' : submitLabel}
+          {busy ? intl.formatMessage({ id: 'addressForm.saving' }) : submitLabel}
         </button>
         {onCancel && (
           <button
@@ -75,7 +77,7 @@ export function AddressForm({
             onClick={onCancel}
             className="px-4 py-2 text-sm text-[--tx-muted] hover:text-[--tx] transition-colors"
           >
-            Cancelar
+            {intl.formatMessage({ id: 'addressForm.cancel' })}
           </button>
         )}
       </div>

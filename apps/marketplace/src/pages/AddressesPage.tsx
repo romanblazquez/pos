@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useIntl } from 'react-intl';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses, type Address, type AddressInput } from '../hooks/useAddresses.js';
 import { AddressForm } from '../components/AddressForm.js';
@@ -9,15 +10,16 @@ export default function AddressesPage() {
   const { addresses, isLoading, create, update, remove } = useAddresses(session?.customer.id);
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const intl = useIntl();
 
   if (!session) return null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[--tx]">Mis direcciones</h1>
+        <h1 className="text-2xl font-bold text-[--tx]">{intl.formatMessage({ id: 'addresses.title' })}</h1>
         {!showNew && (
-          <Button size="sm" onClick={() => setShowNew(true)}>+ Agregar dirección</Button>
+          <Button size="sm" onClick={() => setShowNew(true)}>{intl.formatMessage({ id: 'addresses.add' })}</Button>
         )}
       </div>
 
@@ -25,7 +27,7 @@ export default function AddressesPage() {
         <Card>
           <CardContent className="pt-5">
             <AddressForm
-              submitLabel="Guardar dirección"
+              submitLabel={intl.formatMessage({ id: 'addresses.saveNew' })}
               busy={create.isPending}
               onCancel={() => setShowNew(false)}
               onSubmit={(input) => create.mutate(input, { onSuccess: () => setShowNew(false) })}
@@ -42,7 +44,7 @@ export default function AddressesPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
             <span className="text-3xl">📍</span>
-            <p className="text-sm text-[--tx-muted]">Todavía no guardaste ninguna dirección.</p>
+            <p className="text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'addresses.empty' })}</p>
           </CardContent>
         </Card>
       ) : (
@@ -78,13 +80,15 @@ function AddressCard({
   onSetDefault: () => void;
   busy: boolean;
 }) {
+  const intl = useIntl();
+
   if (editing) {
     return (
       <Card>
         <CardContent className="pt-5">
           <AddressForm
             initial={{ ...address, label: address.label ?? undefined }}
-            submitLabel="Guardar cambios"
+            submitLabel={intl.formatMessage({ id: 'addresses.saveChanges' })}
             onCancel={onCancelEdit}
             onSubmit={onSave}
           />
@@ -98,20 +102,20 @@ function AddressCard({
       <CardContent className="flex items-start justify-between gap-4 py-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <p className="text-sm font-semibold text-[--tx]">{address.label || 'Dirección'}</p>
-            {address.isDefault && <Badge variant="success">Predeterminada</Badge>}
+            <p className="text-sm font-semibold text-[--tx]">{address.label || intl.formatMessage({ id: 'addresses.fallbackLabel' })}</p>
+            {address.isDefault && <Badge variant="success">{intl.formatMessage({ id: 'addresses.default' })}</Badge>}
           </div>
           <p className="text-sm text-[--tx-muted]">{address.street}</p>
           <p className="text-sm text-[--tx-muted]">{address.city}, {address.state} {address.postalCode}</p>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs">
-          <button onClick={onEdit} className="text-emerald-600 hover:text-emerald-800 font-medium">Editar</button>
+          <button onClick={onEdit} className="text-emerald-600 hover:text-emerald-800 font-medium">{intl.formatMessage({ id: 'addresses.edit' })}</button>
           {!address.isDefault && (
             <button onClick={onSetDefault} disabled={busy} className="text-[--tx-muted] hover:text-[--tx]">
-              Predeterminar
+              {intl.formatMessage({ id: 'addresses.setDefault' })}
             </button>
           )}
-          <button onClick={onDelete} disabled={busy} className="text-red-500 hover:text-red-700">Eliminar</button>
+          <button onClick={onDelete} disabled={busy} className="text-red-500 hover:text-red-700">{intl.formatMessage({ id: 'addresses.delete' })}</button>
         </div>
       </CardContent>
     </Card>

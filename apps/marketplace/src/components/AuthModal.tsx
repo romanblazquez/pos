@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { useIntl } from 'react-intl';
 import { useCustomer } from '../context/CustomerContext.js';
 import { Button } from './ui/index.js';
 import { BrandMark } from './BrandMark.js';
@@ -21,6 +22,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
   const [loading, setLoading] = useState(false);
   const { login, register, loginWithGoogle } = useCustomer();
   const googleClientId = import.meta.env.VITE_GOOGLE_MARKETPLACE_CLIENT_ID;
+  const intl = useIntl();
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -65,7 +67,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
     e.preventDefault();
     setError('');
     if (tab === 'register' && !name.trim()) {
-      setError('Ingresá tu nombre');
+      setError(intl.formatMessage({ id: 'auth.nameRequired' }));
       return;
     }
     setLoading(true);
@@ -74,7 +76,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
       else await register(email, password, name);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      setError(err instanceof Error ? err.message : intl.formatMessage({ id: 'auth.unknownError' }));
     } finally {
       setLoading(false);
     }
@@ -101,17 +103,17 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
             </span>
             <div>
               <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-[var(--accent)]">
-                Juegospedia
+                {intl.formatMessage({ id: 'auth.brand' })}
               </p>
               <p className="font-display text-[17px] font-bold leading-tight text-[--tx]">
-                Tu cuenta de juego
+                {intl.formatMessage({ id: 'auth.subtitleMobile' })}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={intl.formatMessage({ id: 'auth.close' })}
             className="grid h-11 w-11 place-items-center rounded-xl border border-[--border] bg-[--bg-subtle] text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx] active:scale-[.97] sm:h-9 sm:w-9 sm:rounded-lg"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -131,7 +133,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
                     : 'bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'
                 }`}
             >
-              {t === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+              {t === 'login' ? intl.formatMessage({ id: 'auth.tabLogin' }) : intl.formatMessage({ id: 'auth.tabRegister' })}
             </button>
           ))}
         </div>
@@ -149,24 +151,24 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
               id="auth-modal-title"
               className="font-display text-xl font-bold tracking-[-.025em] text-[--tx]"
             >
-              {tab === 'login' ? 'Bienvenido de vuelta' : 'Únete al marketplace'}
+              {tab === 'login' ? intl.formatMessage({ id: 'auth.headingLogin' }) : intl.formatMessage({ id: 'auth.headingRegister' })}
             </h2>
             <p className="mt-1 text-sm leading-5 text-[--tx-muted]">
               {tab === 'login'
-                ? 'Accedé a tu wallet y tus pedidos'
-                : 'Empezá a ganar cashback en cada compra'}
+                ? intl.formatMessage({ id: 'auth.subtitleLogin' })
+                : intl.formatMessage({ id: 'auth.subtitleRegister' })}
             </p>
           </div>
 
           {/* Fields */}
           {tab === 'register' && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-[--tx-muted]">Nombre</label>
+              <label className="text-xs font-medium text-[--tx-muted]">{intl.formatMessage({ id: 'auth.nameLabel' })}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Tu nombre"
+                placeholder={intl.formatMessage({ id: 'auth.namePlaceholder' })}
                 autoFocus
                 className="min-h-12 rounded-xl border border-[--border] bg-[--bg-input] px-3.5 py-3 text-base text-[--tx] placeholder:text-[--tx-faint]
                            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -175,12 +177,12 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
           )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[--tx-muted]">Email</label>
+            <label className="text-xs font-medium text-[--tx-muted]">{intl.formatMessage({ id: 'auth.emailLabel' })}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
+              placeholder={intl.formatMessage({ id: 'auth.emailPlaceholder' })}
               required
               autoFocus={tab === 'login'}
               className="min-h-12 rounded-xl border border-[--border] bg-[--bg-input] px-3.5 py-3 text-base text-[--tx] placeholder:text-[--tx-faint]
@@ -189,7 +191,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[--tx-muted]">Contraseña</label>
+            <label className="text-xs font-medium text-[--tx-muted]">{intl.formatMessage({ id: 'auth.passwordLabel' })}</label>
             <input
               type="password"
               value={password}
@@ -216,13 +218,13 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
             disabled={loading}
             className="min-h-12 w-full justify-center rounded-xl"
           >
-            {loading ? '…' : tab === 'login' ? 'Entrar' : 'Crear cuenta'}
+            {loading ? '…' : tab === 'login' ? intl.formatMessage({ id: 'auth.submitLogin' }) : intl.formatMessage({ id: 'auth.submitRegister' })}
           </Button>
 
           {googleClientId && (
             <>
               <div className="flex items-center gap-3 text-xs text-[--tx-faint]">
-                <span className="h-px flex-1 bg-[--border]" /> o{' '}
+                <span className="h-px flex-1 bg-[--border]" /> {intl.formatMessage({ id: 'auth.or' })}{' '}
                 <span className="h-px flex-1 bg-[--border]" />
               </div>
               <GoogleSignInButton
@@ -240,7 +242,7 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
                     setError(
                       googleError instanceof Error
                         ? googleError.message
-                        : 'Google no pudo verificar la cuenta',
+                        : intl.formatMessage({ id: 'auth.googleError' }),
                     );
                   } finally {
                     setLoading(false);
@@ -251,13 +253,13 @@ export default function AuthModal({ onClose, defaultTab = 'login' }: AuthModalPr
           )}
 
           <p className="mt-auto pt-1 text-center text-xs text-[--tx-muted]">
-            {tab === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
+            {tab === 'login' ? intl.formatMessage({ id: 'auth.noAccount' }) : intl.formatMessage({ id: 'auth.hasAccount' })}{' '}
             <button
               type="button"
               onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
               className="rounded-md bg-[--bg-subtle] px-2 py-1 font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300"
             >
-              {tab === 'login' ? 'Registrate' : 'Iniciá sesión'}
+              {tab === 'login' ? intl.formatMessage({ id: 'auth.goToRegister' }) : intl.formatMessage({ id: 'auth.goToLogin' })}
             </button>
           </p>
         </form>

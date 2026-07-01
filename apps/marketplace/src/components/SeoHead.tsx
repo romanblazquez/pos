@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useMarket } from '../context/MarketContext.js';
 
 const SITE_URL = 'https://juegospedia.com';
 const DEFAULT_IMAGE = `${SITE_URL}/og-default.png`;
@@ -25,6 +26,7 @@ export function SeoHead({
   jsonLd,
   noindex = false,
 }: SeoHeadProps) {
+  const { uiLocale } = useMarket();
   useEffect(() => {
     const shouldNoindex = noindex || !SEO_INDEXING_ENABLED;
     const canonicalUrl = new URL(path, SITE_URL).toString();
@@ -53,7 +55,7 @@ export function SeoHead({
       removeMeta('property', 'og:image:width');
       removeMeta('property', 'og:image:height');
     }
-    setMeta('property', 'og:locale', 'es_MX');
+    setMeta('property', 'og:locale', uiLocale === 'en' ? 'en_US' : 'es_MX');
     setMeta('property', 'og:site_name', 'Juegospedia');
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', title);
@@ -75,7 +77,7 @@ export function SeoHead({
       document.head.appendChild(script);
     }
     return () => document.getElementById(id)?.remove();
-  }, [description, image, jsonLd, noindex, path, title, type]);
+  }, [description, image, jsonLd, noindex, path, title, type, uiLocale]);
 
   return null;
 }

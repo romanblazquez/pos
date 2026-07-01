@@ -1,7 +1,9 @@
 import { Check, Clock3, Gift, PackageCheck, Star, Users } from 'lucide-react';
+import { useIntl } from 'react-intl';
 import { commerceStateLabel, resolveCommerceState, type CommerceState } from '@retail-os/ui-react';
 import { categoryLabel, formatMoney } from '../marketplace-meta.js';
 import { useShelf } from '../context/ShelfContext.js';
+import { useMarket } from '../context/MarketContext.js';
 
 export interface Product {
   id: string;
@@ -33,6 +35,8 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
 }) {
   const hasStock = product.inStockListings > 0;
   const { getShelfStatus, setShelfStatus } = useShelf();
+  const { uiLocale } = useMarket();
+  const intl = useIntl();
   const isWishlisted = getShelfStatus(product.slug) === 'wishlist';
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const samePrice = product.minPriceMinor === product.maxPriceMinor;
@@ -42,8 +46,8 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
 
   const players = product.minPlayers && product.maxPlayers
     ? product.minPlayers === product.maxPlayers
-      ? `${product.minPlayers} jug.`
-      : `${product.minPlayers}–${product.maxPlayers} jug.`
+      ? intl.formatMessage({ id: 'productCard.players' }, { count: product.minPlayers })
+      : `${product.minPlayers}–${intl.formatMessage({ id: 'productCard.players' }, { count: product.maxPlayers })}`
     : null;
 
   return (
@@ -86,7 +90,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
 
         {/* Wishlist heart button */}
         <button
-          aria-label={isWishlisted ? 'Quitar de wishlist' : 'Agregar a wishlist'}
+          aria-label={intl.formatMessage({ id: isWishlisted ? 'productCard.removeFromWishlist' : 'productCard.addToWishlist' })}
           onClick={(e) => {
             e.stopPropagation();
             setShelfStatus(product.slug, product.name, isWishlisted ? null : 'wishlist');
@@ -103,7 +107,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">
         <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[--tx-faint]">
-          {product.publisher ?? categoryLabel(product.category)}
+          {product.publisher ?? categoryLabel(product.category, uiLocale)}
         </p>
         <h3 className="line-clamp-2 font-display text-[17px] font-bold leading-tight text-[--tx] transition-colors group-hover:text-emerald-600">
           {product.name}
@@ -116,7 +120,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
               {players}
             </span>
           )}
-          {product.minAge ? <span>+{product.minAge} años</span> : null}
+          {product.minAge ? <span>{intl.formatMessage({ id: 'productCard.minAge' }, { age: product.minAge })}</span> : null}
           {product.playTimeMinutes ? (
             <span className="inline-flex items-center gap-1">
               <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -134,7 +138,7 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
         <div className="mt-auto flex items-end justify-between gap-2 border-t border-[--border] pt-3">
           <span className="font-display text-xl font-extrabold leading-tight text-[--tx]">{priceLabel}</span>
           <span className={`shrink-0 rounded-md px-2 py-1 font-mono text-[10px] font-bold uppercase ${hasStock ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200' : 'bg-[--bg-subtle] text-[--tx-faint]'}`}>
-            {hasStock ? `${product.inStockListings} tienda${product.inStockListings > 1 ? 's' : ''}` : 'Sin stock'}
+            {hasStock ? intl.formatMessage({ id: 'productCard.inStores' }, { count: product.inStockListings }) : intl.formatMessage({ id: 'productCard.outOfStock' })}
           </span>
         </div>
       </div>
