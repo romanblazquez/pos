@@ -105,14 +105,14 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
     const sid = session.seller.id;
 
     Promise.all([
-      fetch(`${API}/api/v1/sellers/${sid}/orders/stats`, { headers }).then((r) => r.json()),
-      fetch(`${API}/api/v1/sellers/${sid}/listings/stats`, { headers }).then((r) => r.json()),
-      fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5`, { headers }).then((r) => r.json()),
+      fetch(`${API}/api/v1/sellers/${sid}/orders/stats`, { headers }).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/api/v1/sellers/${sid}/listings/stats`, { headers }).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5`, { headers }).then((r) => r.ok ? r.json() : []),
     ])
       .then(([os, ls, tp]) => {
-        setOrderStats(os as OrderStats);
-        setListingStats(ls as ListingStats);
-        setTopProducts(tp as TopProduct[]);
+        setOrderStats(os as OrderStats | null);
+        setListingStats(ls as ListingStats | null);
+        setTopProducts(Array.isArray(tp) ? tp as TopProduct[] : []);
       })
       .catch(() => null)
       .finally(() => setLoading(false));
@@ -120,7 +120,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
 
   const currency = 'ARS';
   const revenue = orderStats?.revenueMinorUnits ?? 0;
-  const maxDaily = Math.max(...(orderStats?.daily.map((d) => d.revenueMinor) ?? [1]), 1);
+  const maxDaily = Math.max(...(orderStats?.daily?.map((d) => d.revenueMinor) ?? [1]), 1);
 
   const fulfillmentRate =
     orderStats && orderStats.total > 0

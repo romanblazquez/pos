@@ -146,9 +146,9 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
     return fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
       headers: { Authorization: `Bearer ${session.token}` },
     })
-      .then((r) => r.json())
-      .then((s) => setStats(s as Stats))
-      .catch(() => null);
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => setStats(s as Stats | null))
+      .catch(() => setStats(null));
   }, [session.seller.id, session.token]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);

@@ -66,7 +66,7 @@ export default function ProductMappingPage({ session }: { session: SellerSession
         `${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=50`,
         { headers: { Authorization: `Bearer ${session.token}` } },
       );
-      const data = (await res.json()) as { data?: Mapping[]; total?: number };
+      const data = res.ok ? (await res.json()) as { data?: Mapping[]; total?: number } : { data: [], total: 0 };
       setMappings(data.data ?? []);
       setTotal(data.total ?? 0);
     } finally {

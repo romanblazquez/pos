@@ -32,16 +32,16 @@ export function MarketsPage({ session }: { session: SellerSession }) {
 
   function refresh() {
     fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`, { headers: authHeaders })
-      .then((r) => r.json())
-      .then((d: SellerMarket[]) => setMarkets(d))
+      .then((r) => r.ok ? r.json() : [])
+      .then((d: SellerMarket[]) => setMarkets(Array.isArray(d) ? d : []))
       .catch(() => setMarkets([]));
   }
 
   useEffect(() => {
     refresh();
-    fetch(`${API}/api/v1/markets/countries`).then((r) => r.json()).then(setCountries).catch(() => null);
-    fetch(`${API}/api/v1/markets/currencies`).then((r) => r.json()).then(setCurrencies).catch(() => null);
-    fetch(`${API}/api/v1/markets/languages`).then((r) => r.json()).then(setLanguages).catch(() => null);
+    fetch(`${API}/api/v1/markets/countries`).then((r) => r.ok ? r.json() : []).then((d) => setCountries(Array.isArray(d) ? d : [])).catch(() => null);
+    fetch(`${API}/api/v1/markets/currencies`).then((r) => r.ok ? r.json() : []).then((d) => setCurrencies(Array.isArray(d) ? d : [])).catch(() => null);
+    fetch(`${API}/api/v1/markets/languages`).then((r) => r.ok ? r.json() : []).then((d) => setLanguages(Array.isArray(d) ? d : [])).catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.seller.id]);
 

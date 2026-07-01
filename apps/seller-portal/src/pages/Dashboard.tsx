@@ -76,7 +76,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
     fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=1`, {
       headers: { Authorization: `Bearer ${session.token}` },
     })
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : { total: 0 })
       .then((d: { total?: number }) => setPendingMappings(d.total ?? 0))
       .catch(() => null);
   }, [session.seller.id, session.token]);
@@ -193,8 +193,8 @@ function DashboardHome({ session }: { session: SellerSession }) {
     fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
       headers: { Authorization: `Bearer ${session.token}` },
     })
-      .then((r) => r.json())
-      .then((s) => setStats(s as ListingStats))
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => setStats(s as ListingStats | null))
       .catch(() => setStats(null))
       .finally(() => setLoadingStats(false));
   }, [session.seller.id, session.token]);
@@ -401,8 +401,8 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
     fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
       headers: { Authorization: `Bearer ${session.token}` },
     })
-      .then((r) => r.json())
-      .then((d) => setSyncStatus(d as SyncStatusRow[]))
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => setSyncStatus(Array.isArray(d) ? d as SyncStatusRow[] : []))
       .catch(() => null);
   }, [session.seller.id, session.token]);
 
@@ -426,8 +426,8 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
       fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
         headers: { Authorization: `Bearer ${session.token}` },
       })
-        .then((r) => r.json())
-        .then((d) => setSyncStatus(d as SyncStatusRow[]))
+        .then((r) => r.ok ? r.json() : [])
+        .then((d) => setSyncStatus(Array.isArray(d) ? d as SyncStatusRow[] : []))
         .catch(() => null);
     } catch {
       setRunResults((r) => ({ ...r, [type]: { items: 0, ok: false } }));
@@ -664,7 +664,7 @@ function MpConnectCard({
 
   useEffect(() => {
     fetch(`${API}/api/v1/sellers/${session.seller.id}/payments/mp/status`)
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : { connected: false })
       .then((s) => setStatus(s as { connected: boolean; merchantId?: string }))
       .catch(() => setStatus({ connected: false }));
   }, [session.seller.id]);
