@@ -53,11 +53,14 @@ interface CatalogFilters {
   inStockOnly: boolean;
   maxPrice?: number;
   players?: number;
+  mechanics: string[];
+  complexity?: string;
   sortBy: SortOption;
 }
 
 const DEFAULT_FILTERS: CatalogFilters = {
   inStockOnly: false,
+  mechanics: [],
   sortBy: 'rank_score',
 };
 
@@ -68,6 +71,17 @@ const PRICE_OPTIONS = [
 ] as const;
 
 const PLAYER_OPTIONS = [1, 2, 3, 4, 5] as const;
+
+// Same bggWeight bands as ProductPage.tsx's ComplexityMeter and the API's
+// complexity-bands.ts — keeps the filter and the product-page display
+// (and the two backends, Typesense + Prisma fallback) all in agreement.
+const COMPLEXITY_OPTIONS = [
+  { value: 'light', labelId: 'product.complexityLight' },
+  { value: 'medium-light', labelId: 'product.complexityMediumLight' },
+  { value: 'medium', labelId: 'product.complexityMedium' },
+  { value: 'heavy', labelId: 'product.complexityHeavy' },
+  { value: 'expert', labelId: 'product.complexityExpert' },
+] as const;
 
 async function fetchProducts(page: number, category: string | undefined, filters: CatalogFilters, locale: string): Promise<ProductsResponse> {
   const offset = (page - 1) * PAGE_SIZE;
@@ -81,6 +95,8 @@ async function fetchProducts(page: number, category: string | undefined, filters
   if (filters.inStockOnly) params.set('inStock', 'true');
   if (filters.maxPrice) params.set('maxPrice', String(filters.maxPrice));
   if (filters.players) params.set('minPlayers', String(filters.players));
+  if (filters.complexity) params.set('complexity', filters.complexity);
+  for (const mechanic of filters.mechanics) params.append('mechanics', mechanic);
 
   const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
   if (!res.ok) throw new Error('fetch failed');
@@ -91,6 +107,12 @@ async function fetchCategories(): Promise<{ category: string; count: number }[]>
   const res = await fetch(`${API}/api/v1/products/categories`);
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ category: string; count: number }[]>;
+}
+
+async function fetchMechanics(): Promise<{ mechanic: string; count: number }[]> {
+  const res = await fetch(`${API}/api/v1/products/mechanics`);
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ mechanic: string; count: number }[]>;
 }
 
 interface HomePageProps {
@@ -119,6 +141,11 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
     queryFn: fetchCategories,
   });
 
+  const { data: mechanicsData } = useQuery({
+    queryKey: ['marketplace-mechanics'],
+    queryFn: fetchMechanics,
+  });
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 0;
   const featuredProduct = data?.results.find((product) => product.images[0]);
   const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category), intl.locale as 'es' | 'en');
@@ -127,6 +154,8 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
     Number(filters.inStockOnly) +
     Number(Boolean(filters.maxPrice)) +
     Number(Boolean(filters.players)) +
+    Number(filters.mechanics.length > 0) +
+    Number(Boolean(filters.complexity)) +
     Number(filters.sortBy !== DEFAULT_FILTERS.sortBy);
   const minPrice = data?.results.reduce<number | null>((lowest, product) => {
     if (product.minPriceMinor <= 0) return lowest;
@@ -232,6 +261,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
             activeFilterCount={activeFilterCount}
             categories={categoryOptions}
             categoryCounts={categoryCounts}
+            mechanics={mechanicsData ?? []}
             filters={filters}
             total={data?.total}
             onCategory={selectCategory}
@@ -300,6 +330,19 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               {filters.players && (
                 <FilterChip label={intl.formatMessage({ id: 'home.filterPlayers' }, { count: filters.players })} onClear={() => updateFilters({ players: undefined })} />
               )}
+              {filters.complexity && (
+                <FilterChip
+                  label={intl.formatMessage({ id: COMPLEXITY_OPTIONS.find((o) => o.value === filters.complexity)?.labelId ?? 'product.complexity' })}
+                  onClear={() => updateFilters({ complexity: undefined })}
+                />
+              )}
+              {filters.mechanics.map((mechanic) => (
+                <FilterChip
+                  key={mechanic}
+                  label={mechanic}
+                  onClear={() => updateFilters({ mechanics: filters.mechanics.filter((m) => m !== mechanic) })}
+                />
+              ))}
             </div>
           )}
 
@@ -405,6 +448,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               activeFilterCount={activeFilterCount}
               categories={categoryOptions}
               categoryCounts={categoryCounts}
+              mechanics={mechanicsData ?? []}
               filters={filters}
               total={data?.total}
               mobile
@@ -505,6 +549,7 @@ function MarketplaceCatalogFilters({
   activeFilterCount,
   categories,
   categoryCounts,
+  mechanics,
   filters,
   total,
   mobile = false,
@@ -516,6 +561,7 @@ function MarketplaceCatalogFilters({
   activeFilterCount: number;
   categories: ReturnType<typeof getCategoryOptions>;
   categoryCounts: Map<string, number>;
+  mechanics: { mechanic: string; count: number }[];
   filters: CatalogFilters;
   total?: number;
   mobile?: boolean;
@@ -587,6 +633,53 @@ function MarketplaceCatalogFilters({
           ))}
         </div>
       </CatalogFilterSection>
+
+      <CatalogFilterSection title={intl.formatMessage({ id: 'product.complexity' })}>
+        <div className="flex flex-wrap gap-1.5">
+          {COMPLEXITY_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onFilters({ complexity: filters.complexity === option.value ? undefined : option.value })}
+              className={cn(
+                'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+                filters.complexity === option.value
+                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                  : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+              )}
+            >
+              {intl.formatMessage({ id: option.labelId })}
+            </button>
+          ))}
+        </div>
+      </CatalogFilterSection>
+
+      {mechanics.length > 0 && (
+        <CatalogFilterSection title={intl.formatMessage({ id: 'home.mechanics' })}>
+          <div className="flex flex-wrap gap-1.5">
+            {mechanics.slice(0, 15).map(({ mechanic }) => {
+              const active = filters.mechanics.includes(mechanic);
+              return (
+                <button
+                  key={mechanic}
+                  onClick={() => onFilters({
+                    mechanics: active
+                      ? filters.mechanics.filter((m) => m !== mechanic)
+                      : [...filters.mechanics, mechanic],
+                  })}
+                  className={cn(
+                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+                    active
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+                  )}
+                >
+                  {mechanic}
+                </button>
+              );
+            })}
+          </div>
+        </CatalogFilterSection>
+      )}
 
       <CatalogFilterSection title={intl.formatMessage({ id: 'home.categories' })}>
         <div className="space-y-1">

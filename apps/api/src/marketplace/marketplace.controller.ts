@@ -30,6 +30,8 @@ export class MarketplaceController {
   @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Zero-based offset for pagination', example: 0 })
   @ApiQuery({ name: 'sortBy', required: false, description: 'Sort order for results', example: 'rank_score', enum: ['rank_score', 'price_asc', 'price_desc', 'name'] })
   @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
+  @ApiQuery({ name: 'mechanics', required: false, description: 'Filter by one or more game mechanics (repeat the param for multiple)', example: 'Deck Building' })
+  @ApiQuery({ name: 'complexity', required: false, description: 'Filter by BGG-weight complexity band', example: 'heavy', enum: ['light', 'medium-light', 'medium', 'heavy', 'expert'] })
   @ApiResponse({ status: 200, description: 'Returns { results: Product[], total: number, found: number }' })
   search(
     @Query('q')           q?: string,
@@ -42,6 +44,8 @@ export class MarketplaceController {
     @Query('offset')      offset?: string,
     @Query('sortBy')      sortBy?: string,
     @Query('locale')      locale?: string,
+    @Query('mechanics')   mechanics?: string | string[],
+    @Query('complexity')  complexity?: string,
   ) {
     return this.svc.searchProducts({
       q,
@@ -50,6 +54,8 @@ export class MarketplaceController {
       minPrice: minPrice ? parseInt(minPrice, 10) : undefined,
       maxPrice: maxPrice ? parseInt(maxPrice, 10) : undefined,
       inStockOnly: inStock === 'true',
+      mechanics: mechanics ? (Array.isArray(mechanics) ? mechanics : [mechanics]) : undefined,
+      complexity,
       limit: limit ? parseInt(limit, 10) : 24,
       offset: offset ? parseInt(offset, 10) : 0,
       sortBy,
@@ -64,6 +70,16 @@ export class MarketplaceController {
   @ApiResponse({ status: 200, description: 'Array of { category, count }' })
   getCategories() {
     return this.svc.getCategories();
+  }
+
+  @Get('mechanics')
+  @ApiOperation({
+    summary: 'List distinct game mechanics with active listings',
+    description: 'Backs the marketplace\'s mechanics filter chips — only returns mechanics currently present on at least one published, active listing, ordered by popularity.',
+  })
+  @ApiResponse({ status: 200, description: 'Array of { mechanic, count }' })
+  getMechanics() {
+    return this.svc.getMechanics();
   }
 
   @Get('suggestions')

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Typesense, { Client } from 'typesense';
+import { COMPLEXITY_BAND_RANGES, isComplexityBand } from '../marketplace/complexity-bands.js';
 
 // Shape indexed in Typesense — flat document optimised for search + faceting
 export interface ProductDocument {
@@ -121,13 +122,16 @@ export class TypesenseService implements OnModuleInit {
     maxPrice?: number;
     minPlayers?: number;
     inStockOnly?: boolean;
+    mechanics?: string[];
+    complexity?: string;
     limit?: number;
     offset?: number;
     sortBy?: string;
   }): Promise<{ hits: ProductDocument[]; total: number }> {
     const {
       q, category, minPrice, maxPrice, minPlayers,
-      inStockOnly, limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
+      inStockOnly, mechanics, complexity,
+      limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
     } = params;
 
     const filterParts: string[] = [];
@@ -136,6 +140,11 @@ export class TypesenseService implements OnModuleInit {
     if (minPrice)    filterParts.push(`minPriceMinor:>=${minPrice}`);
     if (maxPrice)    filterParts.push(`minPriceMinor:<=${maxPrice}`);
     if (inStockOnly) filterParts.push(`inStockListings:>0`);
+    if (mechanics && mechanics.length > 0) filterParts.push(`tags:=[${mechanics.join(',')}]`);
+    if (complexity && isComplexityBand(complexity)) {
+      const { min, max } = COMPLEXITY_BAND_RANGES[complexity];
+      filterParts.push(max === null ? `bggWeight:>=${min}` : `bggWeight:>=${min} && bggWeight:<${max}`);
+    }
 
     try {
       const result = await this.client.collections(COLLECTION).documents().search({

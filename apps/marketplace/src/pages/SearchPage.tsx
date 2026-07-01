@@ -36,6 +36,17 @@ const PRICE_OPTIONS = [
 ] as const;
 const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
 
+// Same bggWeight bands as ProductPage.tsx's ComplexityMeter and the API's
+// complexity-bands.ts — keeps the filter and the product-page display
+// (and both backends, Typesense + Prisma fallback) all in agreement.
+const COMPLEXITY_OPTIONS = [
+  { value: 'light', labelId: 'product.complexityLight' },
+  { value: 'medium-light', labelId: 'product.complexityMediumLight' },
+  { value: 'medium', labelId: 'product.complexityMedium' },
+  { value: 'heavy', labelId: 'product.complexityHeavy' },
+  { value: 'expert', labelId: 'product.complexityExpert' },
+] as const;
+
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 /** react-intl's `locale` is bare ('es'/'en'); Intl.NumberFormat wants a full BCP47 tag. */
@@ -52,6 +63,8 @@ async function searchProducts(
   inStockOnly?: boolean,
   maxPrice?: number,
   players?: number,
+  mechanics: string[] = [],
+  complexity?: string,
 ): Promise<{ results: Product[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -63,6 +76,8 @@ async function searchProducts(
   if (inStockOnly) params.set('inStock', 'true');
   if (maxPrice) params.set('maxPrice', String(maxPrice));
   if (players) params.set('minPlayers', String(players));
+  if (complexity) params.set('complexity', complexity);
+  for (const mechanic of mechanics) params.append('mechanics', mechanic);
 
   const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
   if (!res.ok) throw new Error('Search failed');
@@ -73,6 +88,12 @@ async function fetchCategories(): Promise<{ category: string; count: number }[]>
   const res = await fetch(`${API}/api/v1/products/categories`);
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<{ category: string; count: number }[]>;
+}
+
+async function fetchMechanics(): Promise<{ mechanic: string; count: number }[]> {
+  const res = await fetch(`${API}/api/v1/products/mechanics`);
+  if (!res.ok) throw new Error('fetch failed');
+  return res.json() as Promise<{ mechanic: string; count: number }[]>;
 }
 
 export default function SearchPage({
@@ -93,22 +114,29 @@ export default function SearchPage({
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [players, setPlayers] = useState<number | undefined>(undefined);
+  const [mechanics, setMechanics] = useState<string[]>([]);
+  const [complexity, setComplexity] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   useEffect(() => setDraft(query), [query]);
-  useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players]);
+  useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players, mechanics, complexity]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['search', query, category, inStockOnly, maxPrice, players, page, intl.locale],
-    queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players),
+    queryKey: ['search', query, category, inStockOnly, maxPrice, players, mechanics, complexity, page, intl.locale],
+    queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players, mechanics, complexity),
     placeholderData: (previous) => previous,
   });
 
   const { data: categoriesData } = useQuery({
     queryKey: ['marketplace-categories'],
     queryFn: fetchCategories,
+  });
+
+  const { data: mechanicsData } = useQuery({
+    queryKey: ['marketplace-mechanics'],
+    queryFn: fetchMechanics,
   });
 
   const results = data?.results ?? [];
@@ -148,10 +176,17 @@ export default function SearchPage({
           title={intl.formatMessage({ id: 'home.explore' })}
           subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
           icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
-          action={(inStockOnly || maxPrice !== undefined || players !== undefined || category) ? (
+          action={(inStockOnly || maxPrice !== undefined || players !== undefined || mechanics.length > 0 || complexity !== undefined || category) ? (
             <button
               type="button"
-              onClick={() => { setInStockOnly(false); setMaxPrice(undefined); setPlayers(undefined); onSearch(query, undefined); }}
+              onClick={() => {
+                setInStockOnly(false);
+                setMaxPrice(undefined);
+                setPlayers(undefined);
+                setMechanics([]);
+                setComplexity(undefined);
+                onSearch(query, undefined);
+              }}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]"
             >
               <RotateCcw className="h-3 w-3" />
@@ -207,6 +242,53 @@ export default function SearchPage({
               ))}
             </div>
           </CatalogFilterSection>
+
+          <CatalogFilterSection title={intl.formatMessage({ id: 'product.complexity' })}>
+            <div className="flex flex-wrap gap-1.5">
+              {COMPLEXITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setComplexity(complexity === option.value ? undefined : option.value)}
+                  className={cn(
+                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+                    complexity === option.value
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+                  )}
+                >
+                  {intl.formatMessage({ id: option.labelId })}
+                </button>
+              ))}
+            </div>
+          </CatalogFilterSection>
+
+          {mechanicsData && mechanicsData.length > 0 && (
+            <CatalogFilterSection title={intl.formatMessage({ id: 'home.mechanics' })}>
+              <div className="flex flex-wrap gap-1.5">
+                {mechanicsData.slice(0, 15).map(({ mechanic }) => {
+                  const active = mechanics.includes(mechanic);
+                  return (
+                    <button
+                      key={mechanic}
+                      type="button"
+                      onClick={() => setMechanics((current) => (
+                        active ? current.filter((m) => m !== mechanic) : [...current, mechanic]
+                      ))}
+                      className={cn(
+                        'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+                        active
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                          : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
+                      )}
+                    >
+                      {mechanic}
+                    </button>
+                  );
+                })}
+              </div>
+            </CatalogFilterSection>
+          )}
 
           <CatalogFilterSection title={intl.formatMessage({ id: 'home.categories' })}>
             <div className="space-y-1">
@@ -282,7 +364,7 @@ export default function SearchPage({
             </form>
           </div>
 
-          {(category || inStockOnly || maxPrice !== undefined || players !== undefined) && (
+          {(category || inStockOnly || maxPrice !== undefined || players !== undefined || mechanics.length > 0 || complexity !== undefined) && (
             <div className="mt-4 flex flex-wrap gap-2">
               {category && (
                 <ActiveChip label={categoryLabel(category, intl.locale as 'es' | 'en')} onClear={() => onSearch(query, undefined)} />
@@ -299,6 +381,19 @@ export default function SearchPage({
               {players !== undefined && (
                 <ActiveChip label={intl.formatMessage({ id: 'search.players' }, { count: players === 5 ? '5+' : players })} onClear={() => setPlayers(undefined)} />
               )}
+              {complexity !== undefined && (
+                <ActiveChip
+                  label={intl.formatMessage({ id: COMPLEXITY_OPTIONS.find((o) => o.value === complexity)?.labelId ?? 'product.complexity' })}
+                  onClear={() => setComplexity(undefined)}
+                />
+              )}
+              {mechanics.map((mechanic) => (
+                <ActiveChip
+                  key={mechanic}
+                  label={mechanic}
+                  onClear={() => setMechanics((current) => current.filter((m) => m !== mechanic))}
+                />
+              ))}
             </div>
           )}
         </section>

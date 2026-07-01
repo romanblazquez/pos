@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
+import { COMPLEXITY_BAND_RANGES, isComplexityBand } from './complexity-bands.js';
 
 export interface ProductSearchParams {
   q?: string;
@@ -10,6 +11,8 @@ export interface ProductSearchParams {
   minPrice?: number;
   maxPrice?: number;
   inStockOnly?: boolean;
+  mechanics?: string[];
+  complexity?: string;
   limit?: number;
   offset?: number;
   sortBy?: string;
@@ -71,6 +74,8 @@ export class MarketplaceService {
       maxPrice: params.maxPrice,
       minPlayers: params.minPlayers,
       inStockOnly: params.inStockOnly,
+      mechanics: params.mechanics,
+      complexity: params.complexity,
       sortBy: normalizeSort(params.sortBy),
       limit,
       offset,
@@ -92,12 +97,23 @@ export class MarketplaceService {
       } : {}),
     };
 
+    const complexityRange = params.complexity && isComplexityBand(params.complexity)
+      ? COMPLEXITY_BAND_RANGES[params.complexity]
+      : undefined;
+
     const where = {
       canonicalStatus: 'verified' as const,
       ...(params.category ? { category: params.category } : {}),
       ...(params.minPlayers ? {
         minPlayers: { lte: params.minPlayers },
         maxPlayers: { gte: params.minPlayers },
+      } : {}),
+      ...(params.mechanics && params.mechanics.length > 0 ? { tags: { hasSome: params.mechanics } } : {}),
+      ...(complexityRange ? {
+        bggWeight: {
+          gte: complexityRange.min,
+          ...(complexityRange.max !== null ? { lt: complexityRange.max } : {}),
+        },
       } : {}),
       listings: { some: listingFilter },
       ...(q ? {
@@ -238,6 +254,28 @@ export class MarketplaceService {
       orderBy: { _count: { category: 'desc' } },
     });
     return rows.map((r) => ({ category: r.category, count: r._count.category }));
+  }
+
+  /**
+   * Distinct game mechanics (stored as MktProduct.tags) with active listings,
+   * ordered by popularity — backs the mechanics filter chips. `tags` is a
+   * string[] column so this needs JS-side aggregation rather than groupBy,
+   * same reasoning as CatalogSearch's suggestion facets.
+   */
+  async getMechanics(): Promise<{ mechanic: string; count: number }[]> {
+    const products = await this.prisma.mktProduct.findMany({
+      where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
+      select: { tags: true },
+    });
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      for (const tag of product.tags) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .map(([mechanic, count]) => ({ mechanic, count }))
+      .sort((a, b) => b.count - a.count);
   }
 
   async getProduct(slug: string, locale?: string) {
