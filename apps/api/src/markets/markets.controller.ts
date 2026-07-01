@@ -1,7 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { MarketsService } from './markets.service.js';
-import { MarketDto } from './markets.dto.js';
+import { MarketDto, CountryRefDto, CurrencyRefDto, LanguageRefDto } from './markets.dto.js';
 import { Public } from '../auth/auth.guard.js';
 
 @ApiTags('markets')
@@ -22,5 +22,29 @@ export class MarketsController {
   @ApiOkResponse({ type: MarketDto })
   getDefault(): Promise<MarketDto> {
     return this.svc.getDefault();
+  }
+
+  // Raw reference-data lists, for the tenant/seller market CRUD form pickers —
+  // distinct from list() above, which bundles each country with its single
+  // default currency/language rather than every option.
+  @Get('countries')
+  @ApiOperation({ summary: 'Raw list of active countries, for market-form pickers' })
+  @ApiOkResponse({ type: CountryRefDto, isArray: true })
+  listCountries(): Promise<CountryRefDto[]> {
+    return this.svc.listCountries();
+  }
+
+  @Get('currencies')
+  @ApiOperation({ summary: 'Raw list of active currencies, for market-form pickers' })
+  @ApiOkResponse({ type: CurrencyRefDto, isArray: true })
+  listCurrencies(): Promise<CurrencyRefDto[]> {
+    return this.svc.listCurrencies();
+  }
+
+  @Get('languages')
+  @ApiOperation({ summary: 'Raw list of active languages, for market-form pickers' })
+  @ApiOkResponse({ type: LanguageRefDto, isArray: true })
+  listLanguages(): Promise<LanguageRefDto[]> {
+    return this.svc.listLanguages();
   }
 }

@@ -7,6 +7,7 @@ import ProductMappingPage from './ProductMappingPage.js';
 import OrdersPage from './OrdersPage.js';
 import AnalyticsPage from './AnalyticsPage.js';
 import { SettingsPage } from './SettingsPage.js';
+import { MarketsPage } from './MarketsPage.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
 import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { label: 'Pedidos',            id: 'orders'    },
   { label: 'Sincronización',     id: 'sync'      },
   { label: 'Analíticas',         id: 'analytics' },
+  { label: 'Mercados',           id: 'markets'   },
   { label: 'Configuración',      id: 'settings'  },
 ] as const;
 
@@ -158,6 +160,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
         {activeNav === 'orders'     && <OrdersPage session={session} />}
         {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
         {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={navigate} />}
+        {activeNav === 'markets'    && <MarketsPage session={session} />}
         {activeNav === 'settings'   && (
           <div className="space-y-0">
             <SettingsPage session={session} onSessionUpdate={onSessionUpdate} />
@@ -167,7 +170,7 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
           </div>
         )}
         {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'mapping' && activeNav !== 'orders' &&
-         activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && (
+         activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && activeNav !== 'markets' && (
           <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
         )}
       </main>

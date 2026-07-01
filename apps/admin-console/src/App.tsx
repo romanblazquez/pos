@@ -6,7 +6,7 @@ import { useAdminAuth } from './auth/AdminAuth.js';
 const API = API_BASE;
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
-type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking';
+type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets';
 
 const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'sellers',  icon: '🏪', label: 'Vendedores' },
@@ -15,9 +15,10 @@ const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'orders',   icon: '📋', label: 'Pedidos' },
   { id: 'bgg',      icon: '🎲', label: 'BGG Import' },
   { id: 'ranking',  icon: '⭐', label: 'Ranking' },
+  { id: 'markets',  icon: '🌎', label: 'Mercados' },
 ];
 
-const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking']);
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets']);
 
 function parseView(): AdminView {
   const segment = window.location.pathname.replace(/^\//, '') as AdminView;
@@ -85,6 +86,7 @@ export default function App() {
         {view === 'orders'   && <OrdersView />}
         {view === 'bgg'      && <BggImportView />}
         {view === 'ranking'  && <RankingView />}
+        {view === 'markets'  && <TenantMarketsView />}
       </main>
     </div>
   );
@@ -148,6 +150,213 @@ function SellersView() {
             </tbody>
           </table>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tenant markets ───────────────────────────────────────────────────────────
+
+interface CountryRef { id: string; code: string; name: string }
+interface CurrencyRef { id: string; code: string; name: string; symbol: string }
+interface LanguageRef { id: string; code: string; name: string; nativeName: string }
+interface TenantMarket {
+  id: string; countryCode: string; countryName: string; currencyCode: string;
+  defaultLanguageCode: string; timezone: string; active: boolean;
+}
+
+function TenantMarketsView() {
+  const qc = useQueryClient();
+  const [showNew, setShowNew] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  const { data: markets, isLoading } = useQuery({
+    queryKey: ['admin-tenant-markets'],
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/tenant-markets`);
+      return res.json() as Promise<TenantMarket[]>;
+    },
+  });
+
+  const countriesQuery = useQuery({
+    queryKey: ['admin-ref-countries'],
+    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/countries`)).json() as Promise<CountryRef[]>,
+  });
+  const currenciesQuery = useQuery({
+    queryKey: ['admin-ref-currencies'],
+    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/currencies`)).json() as Promise<CurrencyRef[]>,
+  });
+  const languagesQuery = useQuery({
+    queryKey: ['admin-ref-languages'],
+    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/languages`)).json() as Promise<LanguageRef[]>,
+  });
+
+  const createMut = useMutation({
+    mutationFn: async (body: { countryCode: string; currencyCode: string; defaultLanguageCode: string; timezone: string }) => {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/tenant-markets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { message?: string }).message ?? 'Error al crear el mercado');
+      return res.json() as Promise<TenantMarket>;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-tenant-markets'] }); setShowNew(false); setFormError(''); },
+    onError: (e: Error) => setFormError(e.message),
+  });
+
+  const toggleActiveMut = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      await adminApi.fetch(`${API}/api/v1/admin/tenant-markets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active }),
+      });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-tenant-markets'] }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      await adminApi.fetch(`${API}/api/v1/admin/tenant-markets/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-tenant-markets'] }),
+  });
+
+  const rows = markets ?? [];
+
+  return (
+    <div className="p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-900">Mercados</h1>
+        {!showNew && (
+          <button
+            onClick={() => setShowNew(true)}
+            className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+          >
+            + Agregar mercado
+          </button>
+        )}
+      </div>
+
+      {showNew && (
+        <TenantMarketForm
+          countries={countriesQuery.data ?? []}
+          currencies={currenciesQuery.data ?? []}
+          languages={languagesQuery.data ?? []}
+          error={formError}
+          saving={createMut.isPending}
+          onCancel={() => { setShowNew(false); setFormError(''); }}
+          onSubmit={(body) => createMut.mutate(body)}
+        />
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {isLoading ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <Empty icon="🌎" msg="No hay mercados configurados aún." />
+        ) : (
+          <table className="w-full text-sm">
+            <Thead cols={['País', 'Moneda', 'Idioma', 'Zona horaria', 'Estado', '']} />
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">{m.countryName} ({m.countryCode})</td>
+                  <td className="px-4 py-3 text-slate-500">{m.currencyCode}</td>
+                  <td className="px-4 py-3 text-slate-500">{m.defaultLanguageCode}</td>
+                  <td className="px-4 py-3 text-slate-500">{m.timezone}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => toggleActiveMut.mutate({ id: m.id, active: !m.active })}
+                      disabled={toggleActiveMut.isPending}
+                    >
+                      <StatusBadge status={m.active ? 'active' : 'suspended'} />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => deleteMut.mutate(m.id)}
+                      disabled={deleteMut.isPending}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TenantMarketForm({
+  countries, currencies, languages, error, saving, onCancel, onSubmit,
+}: {
+  countries: CountryRef[];
+  currencies: CurrencyRef[];
+  languages: LanguageRef[];
+  error: string;
+  saving: boolean;
+  onCancel: () => void;
+  onSubmit: (body: { countryCode: string; currencyCode: string; defaultLanguageCode: string; timezone: string }) => void;
+}) {
+  const [countryCode, setCountryCode] = useState('');
+  const [currencyCode, setCurrencyCode] = useState('');
+  const [defaultLanguageCode, setDefaultLanguageCode] = useState('');
+  const [timezone, setTimezone] = useState('');
+
+  const valid = countryCode && currencyCode && defaultLanguageCode && timezone.trim();
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+      {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-xs text-slate-500 space-y-1">
+          <span>País</span>
+          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-sm text-slate-900">
+            <option value="">Selecciona…</option>
+            {countries.map((c) => <option key={c.id} value={c.code}>{c.name} ({c.code})</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-500 space-y-1">
+          <span>Moneda</span>
+          <select value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-sm text-slate-900">
+            <option value="">Selecciona…</option>
+            {currencies.map((c) => <option key={c.id} value={c.code}>{c.name} ({c.code})</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-500 space-y-1">
+          <span>Idioma predeterminado</span>
+          <select value={defaultLanguageCode} onChange={(e) => setDefaultLanguageCode(e.target.value)} className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-sm text-slate-900">
+            <option value="">Selecciona…</option>
+            {languages.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-500 space-y-1">
+          <span>Zona horaria (IANA)</span>
+          <input
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            placeholder="America/Mexico_City"
+            className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-sm text-slate-900"
+          />
+        </label>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={() => valid && onSubmit({ countryCode, currencyCode, defaultLanguageCode, timezone: timezone.trim() })}
+          disabled={!valid || saving}
+          className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {saving ? 'Guardando…' : 'Guardar'}
+        </button>
+        <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-lg text-slate-500 hover:text-slate-800">
+          Cancelar
+        </button>
       </div>
     </div>
   );
