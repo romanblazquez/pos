@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SellerSession } from '../App.js';
 import { Badge } from '../components/ui/index.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 20;
@@ -72,16 +73,14 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      const res = await fetch(`${API}/api/v1/sellers/${session.seller.id}/orders?${params}`, {
-        headers: { Authorization: `Bearer ${session.token}` },
-      });
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/orders?${params}`);
       const data = res.ok ? await res.json() as { data: Order[]; total: number } : { data: [], total: 0 };
       setOrders(data.data ?? []);
       setTotal(data.total ?? 0);
     } finally {
       setLoading(false);
     }
-  }, [session.seller.id, session.token, page, statusFilter]);
+  }, [session.seller.id, page, statusFilter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 

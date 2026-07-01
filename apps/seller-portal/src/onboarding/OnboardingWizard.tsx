@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { SellerSession } from '../App.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -132,12 +133,9 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
     setIsSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`${API}/api/v1/auth/seller/onboarding`, {
+      const res = await sellerApi.fetch(`${API}/api/v1/auth/seller/onboarding`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           step: 'complete',
           data: {
@@ -443,12 +441,9 @@ function Step3Catalog({
   async function triggerImport() {
     setImporting(true);
     try {
-      const res = await fetch(
+      const res = await sellerApi.fetch(
         `${API}/api/v1/sellers/${session.seller.id}/connector/sync/catalog`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.token}` },
-        },
+        { method: 'POST' },
       );
       const body = await res.json().catch(() => ({}));
       setResult({ synced: (body as { itemsSynced?: number }).itemsSynced ?? 0 });

@@ -1,10 +1,10 @@
 import { useState } from 'react';
+import type { BrowserSession } from '@retail-os/api-client';
 import type { SellerSession } from '../App.js';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { sellerApi, API_BASE as API } from './api-client.js';
 
 interface Props {
-  onAuth: (session: SellerSession) => void;
+  onAuth: (seller: SellerSession['seller']) => void;
 }
 
 type Mode = 'login' | 'register';
@@ -33,6 +33,7 @@ export default function AuthGate({ onAuth }: Props) {
 
       const res = await fetch(url, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
@@ -43,7 +44,8 @@ export default function AuthGate({ onAuth }: Props) {
         return;
       }
 
-      onAuth(data as SellerSession);
+      const session = sellerApi.acceptSession(data as BrowserSession);
+      onAuth(session.seller as SellerSession['seller']);
     } catch {
       setError('No se pudo conectar con el servidor. ¿Está corriendo la API?');
     } finally {

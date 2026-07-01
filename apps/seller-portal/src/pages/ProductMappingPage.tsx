@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '../components/ui/index.js';
 import { useToast } from '../components/ui/index.js';
 import type { SellerSession } from '../App.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -62,9 +63,8 @@ export default function ProductMappingPage({ session }: { session: SellerSession
   const fetchMappings = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(
+      const res = await sellerApi.fetch(
         `${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=50`,
-        { headers: { Authorization: `Bearer ${session.token}` } },
       );
       const data = res.ok ? (await res.json()) as { data?: Mapping[]; total?: number } : { data: [], total: 0 };
       setMappings(data.data ?? []);
@@ -72,7 +72,7 @@ export default function ProductMappingPage({ session }: { session: SellerSession
     } finally {
       setLoading(false);
     }
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   useEffect(() => { fetchMappings(); }, [fetchMappings]);
 
@@ -94,9 +94,9 @@ export default function ProductMappingPage({ session }: { session: SellerSession
   function linkMapping(mappingId: string, productId: string) {
     return resolveAndRemove(
       mappingId,
-      () => fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}/link`, {
+      () => sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}/link`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),
       }),
       'Vinculado — publicalo desde Productos cuando estés listo',
@@ -106,9 +106,9 @@ export default function ProductMappingPage({ session }: { session: SellerSession
   function escalateMapping(mappingId: string, note: string) {
     return resolveAndRemove(
       mappingId,
-      () => fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}/escalate`, {
+      () => sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}/escalate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note }),
       }),
       'Enviado al equipo de catálogo para revisión',
@@ -118,9 +118,8 @@ export default function ProductMappingPage({ session }: { session: SellerSession
   function dismissMapping(mappingId: string) {
     return resolveAndRemove(
       mappingId,
-      () => fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}`, {
+      () => sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings/${mappingId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.token}` },
       }),
       'Descartado',
     );
@@ -168,7 +167,6 @@ export default function ProductMappingPage({ session }: { session: SellerSession
               key={m.id}
               mapping={m}
               sellerId={session.seller.id}
-              token={session.token}
               onLink={(productId) => linkMapping(m.id, productId)}
               onEscalate={(note) => escalateMapping(m.id, note)}
               onDismiss={() => dismissMapping(m.id)}
@@ -181,11 +179,10 @@ export default function ProductMappingPage({ session }: { session: SellerSession
 }
 
 function MappingCard({
-  mapping, sellerId, token, onLink, onEscalate, onDismiss,
+  mapping, sellerId, onLink, onEscalate, onDismiss,
 }: {
   mapping: Mapping;
   sellerId: string;
-  token: string;
   onLink: (productId: string) => Promise<void>;
   onEscalate: (note: string) => Promise<void>;
   onDismiss: () => Promise<void>;
@@ -206,9 +203,8 @@ function MappingCard({
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(
+        const res = await sellerApi.fetch(
           `${API}/api/v1/sellers/${sellerId}/product-mappings/search?q=${encodeURIComponent(q)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
         );
         setSearchResults(res.ok ? (await res.json()) as SearchResult[] : []);
       } finally {
@@ -216,7 +212,7 @@ function MappingCard({
       }
     }, 300);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, [q, sellerId, token]);
+  }, [q, sellerId]);
 
   async function handleConfirm() {
     if (!selected) return;

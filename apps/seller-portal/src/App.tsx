@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
+import type { BrowserSession } from '@retail-os/api-client';
 import OnboardingWizard from './onboarding/OnboardingWizard.js';
 import Dashboard from './pages/Dashboard.js';
 import AuthGate from './auth/AuthGate.js';
-
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { sellerApi, API_BASE } from './auth/api-client.js';
 
 export type SellerSession = {
-  token: string;
   seller: {
     id: string;
     name: string;
@@ -23,18 +22,35 @@ export type SellerSession = {
   };
 };
 
-function getStoredSession(): SellerSession | null {
-  try {
-    const raw = localStorage.getItem('seller-portal.session');
-    return raw ? (JSON.parse(raw) as SellerSession) : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function App() {
-  const [session, setSession] = useState<SellerSession | null>(getStoredSession);
+  const [session, setSession] = useState<SellerSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [oauthBanner, setOauthBanner] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  function accept(next: BrowserSession | null): void {
+    if (next?.seller) {
+      sellerApi.acceptSession(next);
+      setSession({ seller: next.seller as SellerSession['seller'] });
+    } else {
+      sellerApi.clear();
+      setSession(null);
+    }
+  }
+
+  // Silently hydrate a session from the refresh cookie on mount — replaces
+  // the old localStorage-persisted access token, which never refreshed and
+  // died 10 minutes after login (see apps/api/src/auth/jwt.ts's expiresInSeconds).
+  useEffect(() => {
+    let active = true;
+    sellerApi.setUnauthenticatedHandler(() => setSession(null));
+    sellerApi.refresh()
+      .then((next) => { if (active) accept(next); })
+      .finally(() => { if (active) setIsLoading(false); });
+    return () => {
+      active = false;
+      sellerApi.setUnauthenticatedHandler(undefined);
+    };
+  }, []);
 
   // Handle OAuth redirect return (?oauth=success|error)
   useEffect(() => {
@@ -59,17 +75,11 @@ export default function App() {
     }
 
     if (oauthStatus === 'success') {
-      const stored = getStoredSession();
-      if (!stored) return;
       // Refresh seller profile so connectorType is up to date
-      fetch(`${API}/api/v1/auth/me`, {
-        headers: { Authorization: `Bearer ${stored.token}` },
-      })
+      sellerApi.fetch(`${API_BASE}/api/v1/auth/me`)
         .then((r) => r.json())
         .then((seller: SellerSession['seller']) => {
-          const next: SellerSession = { ...stored, seller };
-          localStorage.setItem('seller-portal.session', JSON.stringify(next));
-          setSession(next);
+          setSession((prev) => prev ? { ...prev, seller } : prev);
           setOauthBanner({ type: 'success', msg: '¡Tienda conectada exitosamente!' });
         })
         .catch(() => {
@@ -81,21 +91,22 @@ export default function App() {
     }
   }, []);
 
-  function handleAuth(s: SellerSession) {
-    localStorage.setItem('seller-portal.session', JSON.stringify(s));
-    setSession(s);
+  function handleAuth(seller: SellerSession['seller']) {
+    setSession({ seller });
   }
 
-  function handleLogout() {
-    localStorage.removeItem('seller-portal.session');
+  async function handleLogout() {
+    await sellerApi.logout();
     setSession(null);
   }
 
   function updateSession(updates: Partial<SellerSession['seller']>) {
     if (!session) return;
-    const next = { ...session, seller: { ...session.seller, ...updates } };
-    localStorage.setItem('seller-portal.session', JSON.stringify(next));
-    setSession(next);
+    setSession({ ...session, seller: { ...session.seller, ...updates } });
+  }
+
+  if (isLoading) {
+    return <div className="grid min-h-dvh place-items-center bg-slate-50 text-sm text-slate-400">Verificando sesión…</div>;
   }
 
   if (!session) {

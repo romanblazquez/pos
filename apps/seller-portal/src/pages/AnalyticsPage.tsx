@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SellerSession } from '../App.js';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Progress, Separator } from '../components/ui/index.js';
+import { sellerApi } from '../auth/api-client.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -101,13 +102,12 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const headers = { Authorization: `Bearer ${session.token}` };
     const sid = session.seller.id;
 
     Promise.all([
-      fetch(`${API}/api/v1/sellers/${sid}/orders/stats`, { headers }).then((r) => r.ok ? r.json() : null),
-      fetch(`${API}/api/v1/sellers/${sid}/listings/stats`, { headers }).then((r) => r.ok ? r.json() : null),
-      fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5`, { headers }).then((r) => r.ok ? r.json() : []),
+      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/orders/stats`).then((r) => r.ok ? r.json() : null),
+      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/listings/stats`).then((r) => r.ok ? r.json() : null),
+      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5`).then((r) => r.ok ? r.json() : []),
     ])
       .then(([os, ls, tp]) => {
         setOrderStats(os as OrderStats | null);
@@ -116,7 +116,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   const currency = 'ARS';
   const revenue = orderStats?.revenueMinorUnits ?? 0;

@@ -8,6 +8,7 @@ import OrdersPage from './OrdersPage.js';
 import AnalyticsPage from './AnalyticsPage.js';
 import { SettingsPage } from './SettingsPage.js';
 import { MarketsPage } from './MarketsPage.js';
+import { sellerApi } from '../auth/api-client.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
 import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
@@ -86,13 +87,11 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
   }, []);
 
   const refreshPendingMappings = useCallback(() => {
-    fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=1`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-    })
+    sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/product-mappings?status=pending_review&limit=1`)
       .then((r) => r.ok ? r.json() : { total: 0 })
       .then((d: { total?: number }) => setPendingMappings(d.total ?? 0))
       .catch(() => null);
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   useEffect(() => { refreshPendingMappings(); }, [refreshPendingMappings, activeNav]);
 
@@ -285,14 +284,12 @@ function DashboardHome({ session }: { session: SellerSession }) {
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-    })
+    sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/listings/stats`)
       .then((r) => r.ok ? r.json() : null)
       .then((s) => setStats(s as ListingStats | null))
       .catch(() => setStats(null))
       .finally(() => setLoadingStats(false));
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   const activeRate = stats && stats.total > 0
     ? Math.round((stats.active / stats.total) * 100)
@@ -493,22 +490,17 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
   const hasConnector = !!session.seller.connectorType;
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
-      headers: { Authorization: `Bearer ${session.token}` },
-    })
+    sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`)
       .then((r) => r.ok ? r.json() : [])
       .then((d) => setSyncStatus(Array.isArray(d) ? d as SyncStatusRow[] : []))
       .catch(() => null);
-  }, [session.seller.id, session.token]);
+  }, [session.seller.id]);
 
   async function triggerSync(type: 'catalog' | 'inventory' | 'prices', force = false) {
     setSyncing(type);
     try {
       const url = `${API}/api/v1/sellers/${session.seller.id}/connector/sync/${type}${force ? '?force=true' : ''}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.token}` },
-      });
+      const res = await sellerApi.fetch(url, { method: 'POST' });
       const body = await res.json().catch(() => ({})) as { itemsSynced?: number };
       const ok = res.ok;
       setRunResults((r) => ({ ...r, [type]: { items: body.itemsSynced ?? 0, ok } }));
@@ -518,9 +510,7 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
         toast(`Error al sincronizar ${type}`, 'error');
       }
       // refresh status after sync
-      fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`, {
-        headers: { Authorization: `Bearer ${session.token}` },
-      })
+      sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/connector/sync/status`)
         .then((r) => r.ok ? r.json() : [])
         .then((d) => setSyncStatus(Array.isArray(d) ? d as SyncStatusRow[] : []))
         .catch(() => null);
@@ -737,7 +727,6 @@ function ConnectorSettings({
             <SaveManualConnector
               sellerId={session.seller.id}
               connectorType={selected}
-              token={session.token}
               onSaved={() => onSessionUpdate({ connectorType: selected })}
             />
           )}
@@ -841,9 +830,9 @@ function WebhookRegisterCard({ session }: { session: SellerSession }) {
     setRegistering(true);
     setResult(null);
     try {
-      const res = await fetch(
+      const res = await sellerApi.fetch(
         `${API}/api/v1/sellers/${session.seller.id}/connector/webhook/register`,
-        { method: 'POST', headers: { Authorization: `Bearer ${session.token}` } },
+        { method: 'POST' },
       );
       const body = await res.json() as { ok: boolean; message?: string; webhookId?: string };
       setResult(body);
@@ -888,17 +877,17 @@ function WebhookRegisterCard({ session }: { session: SellerSession }) {
 }
 
 function SaveManualConnector({
-  sellerId, connectorType, token, onSaved,
-}: { sellerId: string; connectorType: string; token: string; onSaved: () => void }) {
+  sellerId, connectorType, onSaved,
+}: { sellerId: string; connectorType: string; onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
   async function save() {
     setSaving(true);
     try {
-      await fetch(`${API}/api/v1/sellers/${sellerId}/connector/credentials`, {
+      await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/connector/credentials`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ connectorType }),
       });
       setDone(true);
