@@ -142,13 +142,13 @@ export default function App() {
   return (
     <MarketProvider>
       <AppIntlProvider>
-        <ShelfProvider>
-          <CustomerProvider>
+        <CustomerProvider>
+          <ShelfProvider>
             <CartProvider>
               <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
             </CartProvider>
-          </CustomerProvider>
-        </ShelfProvider>
+          </ShelfProvider>
+        </CustomerProvider>
       </AppIntlProvider>
     </MarketProvider>
   );

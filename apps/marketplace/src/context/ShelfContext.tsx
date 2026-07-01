@@ -1,4 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCustomer } from './CustomerContext.js';
+import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
 export type ShelfStatus = 'owned' | 'wishlist' | 'want-to-play' | 'previously-owned' | 'for-trade' | 'preordered' | null;
 
@@ -40,6 +43,10 @@ interface ShelfContextValue {
 }
 
 const STORAGE_KEY = 'jp-shelf-v1';
+// Marks that a given customerId's guest shelf has already been merged into
+// their account, so a returning guest session never re-imports (and never
+// re-awards XP for) items the account already has.
+const MIGRATED_KEY = 'jp-shelf-migrated-v1';
 
 const XP_TIERS_SIMPLE = [
   { name: 'Pawn', min: 0 },
@@ -57,7 +64,7 @@ function getTierName(xp: number): string {
   return tier;
 }
 
-function loadState(): ShelfState {
+function loadGuestState(): ShelfState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as ShelfState;
@@ -67,7 +74,7 @@ function loadState(): ShelfState {
   return { items: {}, xp: 0, recentXPEvents: [] };
 }
 
-function saveState(state: ShelfState) {
+function saveGuestState(state: ShelfState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
@@ -75,17 +82,131 @@ function saveState(state: ShelfState) {
   }
 }
 
+// ── Server-backed shelf (logged-in customers) ────────────────────────────
+// Mirrors apps/api/src/shelf/shelf.service.ts's response shape exactly.
+interface ServerShelfItem {
+  status: string;
+  addedAt: string;
+  product: { slug: string; name: string };
+}
+interface ServerShelfResponse {
+  items: ServerShelfItem[];
+  totalXp: number;
+  recentEvents: { label: string; amount: number; createdAt: string }[];
+}
+
+function serverToShelfState(data: ServerShelfResponse): ShelfState {
+  const items: Record<string, ShelfEntry> = {};
+  for (const item of data.items) {
+    items[item.product.slug] = {
+      slug: item.product.slug,
+      name: item.product.name,
+      status: item.status as ShelfStatus,
+      addedAt: item.addedAt,
+    };
+  }
+  return {
+    items,
+    xp: data.totalXp,
+    recentXPEvents: data.recentEvents.map((e) => ({ label: e.label, xp: e.amount, at: e.createdAt })),
+  };
+}
+
+async function fetchServerShelf(customerId: string): Promise<ServerShelfResponse> {
+  const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/shelf`);
+  if (!res.ok) throw new Error(`shelf fetch failed: ${res.status}`);
+  return res.json() as Promise<ServerShelfResponse>;
+}
+
+async function putShelfStatus(customerId: string, slug: string, status: ShelfStatus): Promise<ServerShelfResponse> {
+  const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/shelf/${encodeURIComponent(slug)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`shelf update failed: ${res.status}`);
+  return res.json() as Promise<ServerShelfResponse>;
+}
+
+// The only registered generic XP event today — see apps/api/src/shelf/shelf.dto.ts's
+// XP_EVENT_TYPES. eventType is a fixed server-side lookup, not a client-supplied
+// amount, so awardXP's `amount`/`label` args are display-only for the guest path.
+async function postAwardXp(customerId: string): Promise<ServerShelfResponse> {
+  const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/shelf/xp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventType: 'purchase_confirmed' }),
+  });
+  if (!res.ok) throw new Error(`xp award failed: ${res.status}`);
+  return res.json() as Promise<ServerShelfResponse>;
+}
+
+async function importGuestShelf(customerId: string, items: ShelfEntry[]): Promise<ServerShelfResponse> {
+  const res = await marketplaceApi.fetch(`${API_BASE}/api/v1/customers/${customerId}/shelf/import-guest`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: items.map((i) => ({ slug: i.slug, status: i.status })) }),
+  });
+  if (!res.ok) throw new Error(`shelf import failed: ${res.status}`);
+  return res.json() as Promise<ServerShelfResponse>;
+}
+
 const ShelfContext = createContext<ShelfContextValue | null>(null);
 
 export function ShelfProvider({ children }: { children: ReactNode }) {
-  const [shelfState, setShelfState] = useState<ShelfState>(loadState);
+  const { session } = useCustomer();
+  const customerId = session?.customer.id;
+  const queryClient = useQueryClient();
+
+  // Guest (logged-out) state — unchanged localStorage behavior, no regression
+  // for ShelfButtons/ProductCard rendered on public product pages.
+  const [guestState, setGuestState] = useState<ShelfState>(loadGuestState);
+
+  const { data: serverData } = useQuery({
+    queryKey: ['shelf', customerId],
+    queryFn: () => fetchServerShelf(customerId!),
+    enabled: !!customerId,
+    retry: false,
+  });
+
+  // One-time guest→account migration on login (standard guest-cart-merges-
+  // on-login pattern) — only runs if the account doesn't already have shelf
+  // data, and only once per customerId, so it can never overwrite or
+  // duplicate-award XP for real account state.
+  useEffect(() => {
+    if (!customerId || !serverData) return;
+    if (localStorage.getItem(MIGRATED_KEY) === customerId) return;
+    if (serverData.items.length > 0) {
+      localStorage.setItem(MIGRATED_KEY, customerId);
+      return;
+    }
+    const guestItems = Object.values(loadGuestState().items);
+    if (guestItems.length === 0) {
+      localStorage.setItem(MIGRATED_KEY, customerId);
+      return;
+    }
+    importGuestShelf(customerId, guestItems)
+      .then((updated) => {
+        queryClient.setQueryData(['shelf', customerId], updated);
+        localStorage.setItem(MIGRATED_KEY, customerId);
+      })
+      .catch(() => {
+        // Leave unmigrated — retried on next mount/login.
+      });
+  }, [customerId, serverData, queryClient]);
+
+  const shelfState: ShelfState = customerId && serverData ? serverToShelfState(serverData) : guestState;
+
+  // Persist guest state on change (server state is already persisted server-side).
+  useEffect(() => {
+    if (!customerId) saveGuestState(guestState);
+  }, [guestState, customerId]);
+
+  // Tier-up toast — cosmetic only, driven by whichever xp value is active.
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const prevTierRef = useRef<string>(getTierName(shelfState.xp));
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Persist on change and show tier-up toast
   useEffect(() => {
-    saveState(shelfState);
     const newTier = getTierName(shelfState.xp);
     if (newTier !== prevTierRef.current) {
       prevTierRef.current = newTier;
@@ -93,10 +214,18 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setToastMsg(null), 4000);
     }
-  }, [shelfState]);
+  }, [shelfState.xp]);
 
   const awardXP = useCallback((amount: number, label: string) => {
-    setShelfState((prev) => {
+    if (customerId) {
+      postAwardXp(customerId)
+        .then((updated) => queryClient.setQueryData(['shelf', customerId], updated))
+        .catch(() => {
+          // Non-fatal — XP is cosmetic; next shelf refetch will reconcile.
+        });
+      return;
+    }
+    setGuestState((prev) => {
       const event: XPEvent = { label, xp: amount, at: new Date().toISOString() };
       return {
         ...prev,
@@ -104,10 +233,19 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
         recentXPEvents: [event, ...prev.recentXPEvents].slice(0, 10),
       };
     });
-  }, []);
+  }, [customerId, queryClient]);
 
   const setShelfStatus = useCallback((slug: string, name: string, status: ShelfStatus) => {
-    setShelfState((prev) => {
+    if (customerId) {
+      putShelfStatus(customerId, slug, status)
+        .then((updated) => queryClient.setQueryData(['shelf', customerId], updated))
+        .catch(() => {
+          // Non-fatal — next shelf refetch will reconcile the real state.
+        });
+      return;
+    }
+
+    setGuestState((prev) => {
       const current = prev.items[slug]?.status ?? null;
       if (current === status) return prev;
 
@@ -136,7 +274,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
         recentXPEvents: newEvents,
       };
     });
-  }, []);
+  }, [customerId, queryClient]);
 
   const getShelfStatus = useCallback((slug: string): ShelfStatus => {
     return shelfState.items[slug]?.status ?? null;

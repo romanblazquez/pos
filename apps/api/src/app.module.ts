@@ -20,6 +20,7 @@ import { RankingsModule } from './rankings/rankings.module.js';
 import { LoyaltyModule } from './loyalty/loyalty.module.js';
 import { CustomersModule } from './customers/customers.module.js';
 import { MarketsModule } from './markets/markets.module.js';
+import { ShelfModule } from './shelf/shelf.module.js';
 import { RedisThrottlerStorage } from './common/redis-throttler.storage.js';
 
 const throttlers = [{ ttl: 60_000, limit: 120, blockDuration: 60_000 }];
@@ -50,6 +51,7 @@ const throttlerConfig = {
     LoyaltyModule,
     CustomersModule,
     MarketsModule,
+    ShelfModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [

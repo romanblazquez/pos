@@ -476,6 +476,7 @@ model MktProduct {
   updatedAt       DateTime               @updatedAt
   listings        Listing[]
   sellerMappings  SellerProductMapping[]
+  shelfItems      ShelfItem[]
 
   @@index([category])
   @@index([canonicalStatus])
@@ -613,6 +614,8 @@ model MktCustomer {
   wishlists             Wishlist[]
   alerts                UserAlert[]
   recommendationProfile RecommendationProfile?
+  shelfItems            ShelfItem[]
+  xp                    CustomerXp?
 }
 
 model MktAddress {
@@ -752,6 +755,49 @@ model WalletTransaction {
 
   @@index([walletId, createdAt])
   @@index([orderId])
+}
+
+/// One shelf entry per customer×product — owned/wishlist/want-to-play/
+/// previously-owned/for-trade/preordered. References MktProduct (the live
+/// legacy catalog model apps/marketplace actually reads today), not the v2
+/// CatalogProduct chain UserCollectionItem/WishlistItem point to, which is
+/// unused by any API code as of this migration.
+model ShelfItem {
+  id         String      @id @default(cuid())
+  customerId String
+  customer   MktCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    MktProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status     String
+  addedAt    DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([customerId, productId])
+  @@index([customerId, status])
+}
+
+/// One XP total per customer. Events are the append-only audit trail;
+/// totalXp is the denormalized running sum for fast reads (same pattern as
+/// CustomerWallet.platformCreditsMinor next to WalletTransaction).
+model CustomerXp {
+  id         String      @id @default(cuid())
+  customerId String      @unique
+  customer   MktCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  totalXp    Int         @default(0)
+  updatedAt  DateTime    @updatedAt
+  events     XpEvent[]
+}
+
+/// Append-only XP ledger — mirrors WalletTransaction's role for credits.
+model XpEvent {
+  id           String     @id @default(cuid())
+  customerXpId String
+  customerXp   CustomerXp @relation(fields: [customerXpId], references: [id], onDelete: Cascade)
+  label        String
+  amount       Int
+  createdAt    DateTime   @default(now())
+
+  @@index([customerXpId, createdAt])
 }
 
 // ─── Connector sync health ────────────────────────────────────────────────────
