@@ -203,9 +203,10 @@ function ListingRow({
 
   return (
     <div
-      className={`relative flex items-center gap-4 px-[18px] py-[15px] transition-colors
+      className={`relative flex flex-col gap-3 px-[18px] py-[15px] transition-colors
+        sm:flex-row sm:items-center sm:gap-4
         ${!isFirst ? 'border-t border-[--border]' : ''}
-        ${isBest ? 'border-l-4 border-l-emerald-500 bg-emerald-50' : ''}
+        ${isBest ? 'border-l-4 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : ''}
         ${isOutOfStock ? 'opacity-70 select-none cursor-pointer [-webkit-touch-callout:none]' : ''}
       `}
       {...peekHandlers}
@@ -277,11 +278,11 @@ function ListingRow({
         )}
       </div>
 
-      {/* Price + CTA */}
+      {/* Price + CTA — full-width row on mobile, inline shrink-0 block from sm: up */}
       {!isOutOfStock && (
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="text-right">
-            <div className="flex items-baseline gap-[1px] justify-end select-none">
+        <div className="flex items-center justify-between gap-3 w-full sm:w-auto sm:shrink-0">
+          <div>
+            <div className="flex items-baseline gap-[1px] select-none">
               <span className="text-[13px] text-[--tx-muted]">{price.prefix}</span>
               <span
                 className={`font-display font-extrabold text-[23px] tabular-nums transition-[filter] duration-300
@@ -294,7 +295,7 @@ function ListingRow({
                 <span className="text-[13px] text-[--tx-muted]">{price.suffix}</span>
               )}
             </div>
-            <p className="font-mono text-[10px] text-[--tx-faint] text-right">
+            <p className="font-mono text-[10px] text-[--tx-faint]">
               {showGlass ? intl.formatMessage({ id: 'offers.total' }, { amount: '···' }) : intl.formatMessage({ id: 'offers.total' }, { amount: fmtTotal(totalMinor, l.currency) })}
             </p>
           </div>

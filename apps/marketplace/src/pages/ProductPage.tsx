@@ -370,8 +370,8 @@ function ComplexityMeter({ weight }: { weight: number }) {
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.complexity' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
-              style={{ color: '#8A5A12', background: '#F6EBD2', borderColor: '#E7D3A6' }}>
+        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
+                         border-[#E7D3A6] bg-[#F6EBD2] text-[#8A5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]">
           {weight.toFixed(1)} / 5 · {band}
         </span>
       </div>
@@ -381,7 +381,7 @@ function ComplexityMeter({ weight }: { weight: number }) {
              style={{ left: `${pct}%`, width: 3, height: 24, background: 'var(--tx)', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised)' }} />
       </div>
       <div className="flex justify-between mt-2.5 font-mono text-[10.5px] uppercase">
-        <span style={{ color: '#3E7C53', fontWeight: 700 }}>{intl.formatMessage({ id: 'product.complexityLight' })}</span>
+        <span className="font-bold text-[#3E7C53] dark:text-[#7FC79A]">{intl.formatMessage({ id: 'product.complexityLight' })}</span>
         <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityMedium' })}</span>
         <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityHeavy' })}</span>
         <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityExpert' })}</span>
@@ -397,19 +397,42 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
     ? intl.formatMessage({ id: 'product.playersCount' }, { count: minPlayers })
     : intl.formatMessage({ id: 'product.playersBadge' }, { range: `${minPlayers}–${maxPlayers}` });
 
-  function slotStyle(n: number): { bg: string; border?: string; color: string; label: string; labelColor: string; strikethrough?: boolean; bold?: boolean } {
-    if (n < minPlayers) return { bg: '#EDE4D2', border: '1px dashed #D8CCB3', color: '#B6A98C', label: 'No', labelColor: '#B6A98C', strikethrough: true };
-    if (n === minPlayers && minPlayers < maxPlayers) return { bg: '#F6EBD2', border: '1px solid #E7D3A6', color: '#8A5A12', label: 'OK', labelColor: '#8A5A12' };
-    if (n <= maxPlayers) return { bg: '#3E7C53', color: '#EAF3EC', label: 'Best', labelColor: '#2C6B43', bold: true };
-    return { bg: '#EDE4D2', border: '1px solid #E0D4BC', color: '#9A8E79', label: 'Ext', labelColor: '#9A8E79' };
+  function slotStyle(n: number): { cellClass: string; labelClass: string; label: string; strikethrough?: boolean } {
+    if (n < minPlayers) {
+      return {
+        cellClass: 'bg-[#EDE4D2] border border-dashed border-[#D8CCB3] text-[#B6A98C] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#8A7E68]',
+        labelClass: 'text-[#B6A98C] dark:text-[#8A7E68]',
+        label: 'No',
+        strikethrough: true,
+      };
+    }
+    if (n === minPlayers && minPlayers < maxPlayers) {
+      return {
+        cellClass: 'bg-[#F6EBD2] border border-[#E7D3A6] text-[#8A5A12] dark:bg-[#D7A654]/15 dark:border-[#D7A654]/30 dark:text-[#E0BC72]',
+        labelClass: 'text-[#8A5A12] dark:text-[#E0BC72]',
+        label: 'OK',
+      };
+    }
+    if (n <= maxPlayers) {
+      return {
+        cellClass: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950',
+        labelClass: 'font-bold text-[#2C6B43] dark:text-[#7FC79A]',
+        label: 'Best',
+      };
+    }
+    return {
+      cellClass: 'bg-[#EDE4D2] border border-[#E0D4BC] text-[#9A8E79] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#9A8E79]',
+      labelClass: 'text-[#9A8E79]',
+      label: 'Ext',
+    };
   }
 
   return (
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
-              style={{ color: '#2C6B43', background: '#E4EFE4', borderColor: '#CBE0CD' }}>
+        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
+                         border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]">
           {badge}
         </span>
       </div>
@@ -418,12 +441,10 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
           const s = slotStyle(n);
           return (
             <div key={n} className="flex-1 text-center">
-              <div className="h-[38px] rounded-[9px] grid place-items-center font-mono font-bold text-[14px]"
-                   style={{ background: s.bg, border: s.border, color: s.color, textDecoration: s.strikethrough ? 'line-through' : undefined }}>
+              <div className={`h-[38px] rounded-[9px] grid place-items-center font-mono font-bold text-[14px] ${s.cellClass} ${s.strikethrough ? 'line-through' : ''}`}>
                 {n}
               </div>
-              <div className="font-mono text-[9px] uppercase mt-[5px]"
-                   style={{ color: s.labelColor, fontWeight: s.bold ? 700 : undefined }}>
+              <div className={`font-mono text-[9px] uppercase mt-[5px] ${s.labelClass}`}>
                 {s.label}
               </div>
             </div>
