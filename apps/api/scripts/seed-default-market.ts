@@ -1,8 +1,9 @@
 /**
- * Seeds the MX/MXN/es default market reference rows (Country, Currency,
- * Language, TenantMarket) so apps/api/src/markets/markets.service.ts has
- * real data instead of only its hardcoded fallback. Idempotent — safe to
- * run multiple times.
+ * Seeds the TenantMarket row linking the demo tenant to MX/MXN/es-MX, using
+ * the Country/Currency/Language reference rows already inserted by the
+ * canonical reference seed migration (20260630012000_canonical_reference_seed)
+ * — this script only adds the tenant-scoped join, not the reference data
+ * itself. Idempotent — safe to run multiple times.
  *
  * Usage: DATABASE_URL=... npx tsx apps/api/scripts/seed-default-market.ts
  */
@@ -13,35 +14,23 @@ const prisma = new PrismaClient();
 const DEFAULT_TENANT_ID = 'tenant-demo';
 
 async function main() {
-  const currency = await prisma.currency.upsert({
-    where: { code: 'MXN' },
-    create: { code: 'MXN', numericCode: '484', name: 'Peso mexicano', symbol: '$', minorUnits: 2 },
-    update: {},
-  });
+  const currency = await prisma.currency.findUnique({ where: { code: 'MXN' } });
+  const country = await prisma.country.findUnique({ where: { code: 'MX' } });
+  // Language.code is the full locale tag ('es-MX'); iso6391 is the
+  // canonical 2-letter lookup for the primary regional variant.
+  const language = await prisma.language.findFirst({ where: { iso6391: 'es' } });
 
-  const language = await prisma.language.upsert({
-    where: { code: 'es' },
-    create: { code: 'es', iso6391: 'es', name: 'Spanish', nativeName: 'Español', direction: 'ltr' },
-    update: {},
-  });
-
-  const country = await prisma.country.upsert({
-    where: { code: 'MX' },
-    create: {
-      code: 'MX',
-      iso3Code: 'MEX',
-      name: 'México',
-      defaultCurrency: currency.code,
-      defaultLanguage: language.code,
-      timezone: 'America/Mexico_City',
-    },
-    update: { defaultCurrency: currency.code, defaultLanguage: language.code },
-  });
+  if (!currency || !country || !language) {
+    throw new Error(
+      'MXN/MX/es reference rows not found. Run `prisma migrate deploy` first '
+      + '(20260630012000_canonical_reference_seed creates them).',
+    );
+  }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: DEFAULT_TENANT_ID } });
   if (!tenant) {
     console.log(`Tenant "${DEFAULT_TENANT_ID}" not found — skipping TenantMarket row. ` +
-      'Country/Currency/Language reference rows are seeded; markets.service.ts default fallback still works.');
+      'Country/Currency/Language reference rows already exist; markets.service.ts default fallback still works.');
   } else {
     await prisma.tenantMarket.upsert({
       where: {
@@ -64,7 +53,7 @@ async function main() {
     console.log(`Seeded TenantMarket for tenant "${DEFAULT_TENANT_ID}".`);
   }
 
-  console.log('Seeded default market: MX / MXN / es.');
+  console.log(`Confirmed default market reference rows: ${country.code} / ${currency.code} / ${language.code}.`);
 }
 
 main()

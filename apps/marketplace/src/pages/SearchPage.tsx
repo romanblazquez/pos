@@ -47,6 +47,7 @@ const PAGE_SIZE = 24;
 async function searchProducts(
   q: string,
   page: number,
+  locale: string,
   category?: string,
   inStockOnly?: boolean,
   maxPrice?: number,
@@ -55,6 +56,7 @@ async function searchProducts(
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
     offset: String((page - 1) * PAGE_SIZE),
+    locale,
   });
   if (q) params.set('q', q);
   if (category) params.set('category', category);
@@ -99,8 +101,8 @@ export default function SearchPage({
   useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['search', query, category, inStockOnly, maxPrice, players, page],
-    queryFn: () => searchProducts(query, page, category, inStockOnly, maxPrice, players),
+    queryKey: ['search', query, category, inStockOnly, maxPrice, players, page, intl.locale],
+    queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players),
     placeholderData: (previous) => previous,
   });
 

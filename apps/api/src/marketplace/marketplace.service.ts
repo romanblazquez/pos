@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
@@ -15,14 +15,52 @@ export interface ProductSearchParams {
   sortBy?: string;
 }
 
+// entityType tag used on EntityLocalization rows for MktProduct — the schema
+// is polymorphic (entityType/entityId), so wiring localization onto a model
+// never needs a migration, just a consistent literal for that model.
+const PRODUCT_ENTITY_TYPE = 'mkt_product';
+
 @Injectable()
 export class MarketplaceService {
+  private readonly logger = new Logger(MarketplaceService.name);
+
   constructor(
     @Inject(PrismaService)    private readonly prisma: PrismaService,
     @Inject(TypesenseService) private readonly search: TypesenseService,
   ) {}
 
-  async searchProducts(params: ProductSearchParams) {
+  /**
+   * Approved title/description overrides for the given product ids, keyed by
+   * entityId. Returns an empty map for the default locale, or if the
+   * Language/EntityLocalization tables aren't migrated/seeded yet in this
+   * environment — callers fall back to the base Spanish fields either way.
+   */
+  private async getProductLocalizations(
+    productIds: string[],
+    locale?: string,
+  ): Promise<Map<string, { title: string; description: string | null }>> {
+    if (locale !== 'en' || productIds.length === 0) return new Map();
+    try {
+      // Language.code is the full locale tag (e.g. 'en-US'); iso6391 is the
+      // canonical 2-letter lookup for the primary regional variant.
+      const language = await this.prisma.language.findFirst({ where: { iso6391: 'en' } });
+      if (!language) return new Map();
+      const rows = await this.prisma.entityLocalization.findMany({
+        where: {
+          entityType: PRODUCT_ENTITY_TYPE,
+          entityId: { in: productIds },
+          languageId: language.id,
+          moderationStatus: 'APPROVED',
+        },
+      });
+      return new Map(rows.map((row) => [row.entityId, { title: row.title, description: row.description }]));
+    } catch (err) {
+      this.logger.warn(`Skipping product localization (table likely unmigrated): ${String(err)}`);
+      return new Map();
+    }
+  }
+
+  async searchProducts(params: ProductSearchParams, locale?: string) {
     const { q = '', limit = 24, offset = 0 } = params;
 
     // Typesense path — fast, ranked
@@ -89,17 +127,25 @@ export class MarketplaceService {
       this.prisma.mktProduct.count({ where }),
     ]);
 
+    // Only the Prisma fallback path is localized today — the Typesense hit
+    // path above returns pre-indexed search documents, which would need a
+    // per-locale reindex to localize (future work, see the markets roadmap's
+    // search-projection phase). Fine for now: this fallback only runs when
+    // Typesense is empty/unavailable.
+    const localizations = await this.getProductLocalizations(products.map((p) => p.id), locale);
+
     const results = products.map((p) => {
       const active = p.listings.filter((l) => l.stockStatus !== 'out_of_stock');
       const prices = p.listings.map((l) => l.priceMinorUnits);
+      const localized = localizations.get(p.id);
       return {
         id: p.id,
         slug: p.slug,
-        name: p.name,
+        name: localized?.title ?? p.name,
         images: p.images,
         category: p.category,
         tags: p.tags,
-        description: p.description,
+        description: localized?.description ?? p.description,
         publisher: p.publisher,
         minPlayers: p.minPlayers,
         maxPlayers: p.maxPlayers,
@@ -194,7 +240,7 @@ export class MarketplaceService {
     return rows.map((r) => ({ category: r.category, count: r._count.category }));
   }
 
-  async getProduct(slug: string) {
+  async getProduct(slug: string, locale?: string) {
     const product = await this.prisma.mktProduct.findUnique({
       where: { slug },
       include: {
@@ -224,12 +270,14 @@ export class MarketplaceService {
 
     if (!product) return null;
 
+    const localized = (await this.getProductLocalizations([product.id], locale)).get(product.id);
+
     return {
       id: product.id,
       slug: product.slug,
-      name: product.name,
+      name: localized?.title ?? product.name,
       category: product.category,
-      description: product.description,
+      description: localized?.description ?? product.description,
       images: product.images,
       publisher: product.publisher,
       designer: product.designer,

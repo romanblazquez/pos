@@ -47,8 +47,8 @@ interface ProductDetail {
   listings: ListingDetail[];
 }
 
-async function fetchProduct(slug: string): Promise<ProductDetail> {
-  const res = await fetch(`${API}/api/v1/products/${slug}`);
+async function fetchProduct(slug: string, locale: string): Promise<ProductDetail> {
+  const res = await fetch(`${API}/api/v1/products/${slug}?locale=${locale}`);
   if (!res.ok) throw new Error('Product not found');
   return res.json() as Promise<ProductDetail>;
 }
@@ -69,8 +69,8 @@ export default function ProductPage({
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['product', slug],
-    queryFn: () => fetchProduct(slug),
+    queryKey: ['product', slug, intl.locale],
+    queryFn: () => fetchProduct(slug, intl.locale),
   });
 
   const [selectedImage, setSelectedImage] = useState(0);

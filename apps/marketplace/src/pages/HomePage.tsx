@@ -69,12 +69,13 @@ const PRICE_OPTIONS = [
 
 const PLAYER_OPTIONS = [1, 2, 3, 4, 5] as const;
 
-async function fetchProducts(page: number, category: string | undefined, filters: CatalogFilters): Promise<ProductsResponse> {
+async function fetchProducts(page: number, category: string | undefined, filters: CatalogFilters, locale: string): Promise<ProductsResponse> {
   const offset = (page - 1) * PAGE_SIZE;
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
     offset: String(offset),
     sortBy: filters.sortBy,
+    locale,
   });
   if (category) params.set('category', category);
   if (filters.inStockOnly) params.set('inStock', 'true');
@@ -108,8 +109,8 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['catalog', page, activeCategory, filters],
-    queryFn: () => fetchProducts(page, activeCategory, filters),
+    queryKey: ['catalog', page, activeCategory, filters, intl.locale],
+    queryFn: () => fetchProducts(page, activeCategory, filters, intl.locale),
     placeholderData: (prev) => prev,
   });
 

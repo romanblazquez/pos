@@ -29,6 +29,7 @@ export class MarketplaceController {
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of results to return per page', example: 24 })
   @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Zero-based offset for pagination', example: 0 })
   @ApiQuery({ name: 'sortBy', required: false, description: 'Sort order for results', example: 'rank_score', enum: ['rank_score', 'price_asc', 'price_desc', 'name'] })
+  @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
   @ApiResponse({ status: 200, description: 'Returns { results: Product[], total: number, found: number }' })
   search(
     @Query('q')           q?: string,
@@ -40,6 +41,7 @@ export class MarketplaceController {
     @Query('limit')       limit?: string,
     @Query('offset')      offset?: string,
     @Query('sortBy')      sortBy?: string,
+    @Query('locale')      locale?: string,
   ) {
     return this.svc.searchProducts({
       q,
@@ -51,7 +53,7 @@ export class MarketplaceController {
       limit: limit ? parseInt(limit, 10) : 24,
       offset: offset ? parseInt(offset, 10) : 0,
       sortBy,
-    });
+    }, locale);
   }
 
   @Get('categories')
@@ -78,10 +80,11 @@ export class MarketplaceController {
     description: 'Fetches a single product by its URL-friendly slug, including all active seller listings ordered by rank score.',
   })
   @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
+  @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
   @ApiResponse({ status: 200, description: 'Product object with a listings array containing all active seller offers.' })
   @ApiResponse({ status: 404, description: 'No product found with this slug.' })
-  async getProduct(@Param('slug') slug: string) {
-    const product = await this.svc.getProduct(slug);
+  async getProduct(@Param('slug') slug: string, @Query('locale') locale?: string) {
+    const product = await this.svc.getProduct(slug, locale);
     if (!product) throw new NotFoundException(`Product "${slug}" not found`);
     return product;
   }
