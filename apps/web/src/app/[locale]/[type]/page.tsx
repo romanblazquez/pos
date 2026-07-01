@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCategories, listProducts } from '@/lib/api';
+import { getCategories, getMechanics, listProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/seo';
 import { breadcrumbLd, itemListLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
@@ -28,6 +28,13 @@ function pageOf(searchParams: { page?: string }): number {
   return Number.isFinite(n) && n > 1 ? n : 1;
 }
 
+// Next.js parses a repeated query param as string[] only when there are 2+
+// values — a single checked checkbox arrives as a bare string.
+function toMechanicsArray(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
 export async function generateMetadata({
   params,
   searchParams,
@@ -40,6 +47,8 @@ export async function generateMetadata({
     sort?: string;
     max?: string;
     players?: string;
+    mechanics?: string | string[];
+    complexity?: string;
   };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
@@ -65,7 +74,8 @@ export async function generateMetadata({
   // Faceted/filtered or deeper-page URLs are navigational — keep them out of the
   // index so only the clean base listing competes (spec §9).
   const filtered = Boolean(
-    searchParams.category || searchParams.inStock || searchParams.sort || searchParams.max || searchParams.players,
+    searchParams.category || searchParams.inStock || searchParams.sort || searchParams.max || searchParams.players
+    || searchParams.complexity || toMechanicsArray(searchParams.mechanics).length > 0,
   );
   const navigational = page > 1 || filtered;
 
@@ -96,11 +106,12 @@ export async function generateMetadata({
 }
 
 // Serialize active filters (everything except page) so pagination preserves them.
-function filterQuery(sp: Record<string, string | undefined>): string {
+function filterQuery(sp: Record<string, string | string[] | undefined>): string {
   const p = new URLSearchParams();
-  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players'] as const) {
+  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players', 'complexity'] as const) {
     if (sp[k]) p.set(k, sp[k] as string);
   }
+  for (const mechanic of toMechanicsArray(sp.mechanics)) p.append('mechanics', mechanic);
   return p.toString();
 }
 
@@ -161,6 +172,8 @@ export default async function ListingPage({
     sort?: string;
     max?: string;
     players?: string;
+    mechanics?: string | string[];
+    complexity?: string;
   };
 }) {
   if (!isLocale(params.locale)) notFound();
@@ -172,7 +185,7 @@ export default async function ListingPage({
   // ── Search (faceted) ───────────────────────────────────────────────────────
   if (kind === 'search') {
     const q = (searchParams.q ?? '').trim();
-    const categories = await getCategories();
+    const [categories, mechanics] = await Promise.all([getCategories(), getMechanics()]);
     const state: FilterState = {
       q,
       category: categoryFromParam(searchParams.category, categories),
@@ -180,6 +193,8 @@ export default async function ListingPage({
       sort: (searchParams.sort as FilterState['sort']) || undefined,
       max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
       players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
+      mechanics: toMechanicsArray(searchParams.mechanics),
+      complexity: searchParams.complexity || undefined,
     };
     const { results, total } = await listProducts({
       q,
@@ -188,6 +203,8 @@ export default async function ListingPage({
       sortBy: state.sort,
       maxPriceMinor: state.max != null ? state.max * 100 : undefined,
       minPlayers: state.players,
+      mechanics: state.mechanics,
+      complexity: state.complexity,
       limit: 48,
     });
     const crumbs: Crumb[] = [
@@ -215,6 +232,7 @@ export default async function ListingPage({
             <SearchFilters
               locale={locale}
               categories={categories}
+              mechanics={mechanics}
               state={state}
               total={total}
               clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
@@ -240,7 +258,7 @@ export default async function ListingPage({
   // ── Games catalog (faceted sidebar + paginated over the full catalogue) ─────
   if (kind === 'games') {
     const base = listingPath('games', locale);
-    const categories = await getCategories();
+    const [categories, mechanics] = await Promise.all([getCategories(), getMechanics()]);
     const state: FilterState = {
       q: '',
       category: categoryFromParam(searchParams.category, categories),
@@ -248,14 +266,21 @@ export default async function ListingPage({
       sort: (searchParams.sort as FilterState['sort']) || undefined,
       max: searchParams.max ? Math.max(0, parseInt(searchParams.max, 10)) || undefined : undefined,
       players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
+      mechanics: toMechanicsArray(searchParams.mechanics),
+      complexity: searchParams.complexity || undefined,
     };
-    const filtered = Boolean(state.category || state.inStock || state.sort || state.max || state.players);
+    const filtered = Boolean(
+      state.category || state.inStock || state.sort || state.max || state.players
+      || state.complexity || state.mechanics.length > 0,
+    );
     const { results, total } = await listProducts({
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
       maxPriceMinor: state.max != null ? state.max * 100 : undefined,
       minPlayers: state.players,
+      mechanics: state.mechanics,
+      complexity: state.complexity,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     });
@@ -280,6 +305,7 @@ export default async function ListingPage({
             <SearchFilters
               locale={locale}
               categories={categories}
+              mechanics={mechanics}
               state={state}
               total={total}
               clearHref={base}

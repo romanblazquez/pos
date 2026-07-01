@@ -76,6 +76,11 @@ export interface CategoryCount {
   count: number;
 }
 
+export interface MechanicCount {
+  mechanic: string;
+  count: number;
+}
+
 async function api<T>(path: string, revalidate: number): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -106,6 +111,8 @@ export async function listProducts(opts: {
   /** Price bounds in MINOR units (centavos), matching the API contract. */
   minPriceMinor?: number;
   maxPriceMinor?: number;
+  mechanics?: string[];
+  complexity?: string;
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
@@ -118,6 +125,8 @@ export async function listProducts(opts: {
   if (opts.sortBy) params.set('sortBy', opts.sortBy);
   if (opts.minPriceMinor) params.set('minPrice', String(opts.minPriceMinor));
   if (opts.maxPriceMinor) params.set('maxPrice', String(opts.maxPriceMinor));
+  if (opts.complexity) params.set('complexity', opts.complexity);
+  for (const mechanic of opts.mechanics ?? []) params.append('mechanics', mechanic);
   const data = await api<{ results: ProductSummary[]; total: number }>(
     `/api/v1/products?${params}`,
     REVALIDATE.listing,
@@ -127,6 +136,10 @@ export async function listProducts(opts: {
 
 export async function getCategories(): Promise<CategoryCount[]> {
   return (await api<CategoryCount[]>(`/api/v1/products/categories`, REVALIDATE.category)) ?? [];
+}
+
+export async function getMechanics(): Promise<MechanicCount[]> {
+  return (await api<MechanicCount[]>(`/api/v1/products/mechanics`, REVALIDATE.category)) ?? [];
 }
 
 // Best (lowest) in-stock price across listings, else lowest overall.

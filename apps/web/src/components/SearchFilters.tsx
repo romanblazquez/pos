@@ -1,9 +1,20 @@
 import Link from 'next/link';
 import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button, CatalogFilterPanel, CatalogFilterSection } from '@retail-os/ui-react';
-import type { CategoryCount, SortBy } from '@/lib/api';
+import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
+
+// Same bggWeight bands as apps/marketplace/src/pages/ProductPage.tsx's
+// ComplexityMeter and the API's complexity-bands.ts — keeps the filter and
+// the product-page display (and both frontends) all in agreement.
+const COMPLEXITY_OPTIONS = [
+  { value: 'light', es: 'Ligero', en: 'Light' },
+  { value: 'medium-light', es: 'Medio-ligero', en: 'Medium-light' },
+  { value: 'medium', es: 'Medio', en: 'Medium' },
+  { value: 'heavy', es: 'Pesado', en: 'Heavy' },
+  { value: 'expert', es: 'Experto', en: 'Expert' },
+] as const;
 
 const CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
   'board-game': { es: 'Juegos de mesa', en: 'Board games' },
@@ -28,6 +39,8 @@ export interface FilterState {
   sort?: SortBy;
   max?: number;
   players?: number;
+  mechanics: string[];
+  complexity?: string;
 }
 
 // Server-rendered faceted filters (no client JS): the whole search view is one
@@ -36,20 +49,22 @@ export interface FilterState {
 export function SearchFilters({
   locale,
   categories,
+  mechanics,
   state,
   total,
   clearHref,
 }: {
   locale: Locale;
   categories: CategoryCount[];
+  mechanics: MechanicCount[];
   state: FilterState;
   total: number;
   clearHref: string;
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas' }
-      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores' };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas' }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics' };
 
   const budgetOpts = [
     { label: locale === 'es' ? 'Sin tope' : 'No limit', value: '' },
@@ -66,7 +81,7 @@ export function SearchFilters({
     { label: '5+', value: '5' },
   ];
 
-  const active = Boolean(state.category || state.inStock || state.max || state.players);
+  const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
 
   return (
     <CatalogFilterPanel
@@ -145,6 +160,50 @@ export function SearchFilters({
           })}
         </div>
       </CatalogFilterSection>
+
+      {/* Complexity — matches apps/marketplace's complexity band chips */}
+      <CatalogFilterSection title={t.complexity}>
+        <div className="flex flex-wrap gap-1.5">
+          {COMPLEXITY_OPTIONS.map((o) => {
+            const isActive = state.complexity === o.value;
+            return (
+              <label
+                key={o.value}
+                className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
+                  ${isActive
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                    : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
+              >
+                <input type="radio" name="complexity" value={o.value} defaultChecked={isActive} className="sr-only" />
+                {o[locale]}
+              </label>
+            );
+          })}
+        </div>
+      </CatalogFilterSection>
+
+      {/* Mechanics — checkboxes, natively submit multiple values in a GET form */}
+      {mechanics.length > 0 && (
+        <CatalogFilterSection title={t.mechanics}>
+          <div className="flex flex-wrap gap-1.5">
+            {mechanics.slice(0, 15).map((m) => {
+              const isActive = state.mechanics.includes(m.mechanic);
+              return (
+                <label
+                  key={m.mechanic}
+                  className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
+                    ${isActive
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
+                >
+                  <input type="checkbox" name="mechanics" value={m.mechanic} defaultChecked={isActive} className="sr-only" />
+                  {m.mechanic}
+                </label>
+              );
+            })}
+          </div>
+        </CatalogFilterSection>
+      )}
 
       {/* Categories — matches CategorySideButton in marketplace */}
       <CatalogFilterSection title={t.cat}>
