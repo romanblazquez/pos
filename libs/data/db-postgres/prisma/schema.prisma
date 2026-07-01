@@ -477,6 +477,7 @@ model MktProduct {
   listings        Listing[]
   sellerMappings  SellerProductMapping[]
   shelfItems      ShelfItem[]
+  bggEnrichment   BggEnrichmentState?
 
   @@index([category])
   @@index([canonicalStatus])
@@ -485,6 +486,28 @@ model MktProduct {
 }
 
 // ─── Listings (seller × product × price × stock) ─────────────────────────────
+// Durable checkpoint for the long-running BGG enrichment worker. Keeping this
+// separate from MktProduct prevents transient scraper failures from becoming
+// catalog data and lets a restarted worker resume without re-scraping successes.
+model BggEnrichmentState {
+  productId         String     @id
+  bggId             String     @unique
+  status            String     @default("pending") // pending | running | retry | succeeded | skipped | failed
+  attempts          Int        @default(0)
+  lastError         String?
+  nextRetryAt       DateTime?
+  scrapedAt         DateTime?
+  imageDownloadedAt DateTime?
+  translatedAt      DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  product           MktProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@map("bgg_enrichment_state")
+}
+
 model Listing {
   id              String                 @id @default(cuid())
   sellerId        String

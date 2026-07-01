@@ -1,0 +1,17 @@
+{
+  "name": "bgg-enricher",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/bgg-enricher/src",
+  "projectType": "application",
+  "tags": ["type:app", "scope:bgg-enricher"],
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsc --noEmit -p tsconfig.json", "cwd": "apps/bgg-enricher" }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": { "command": "tsx --tsconfig apps/bgg-enricher/tsconfig.json apps/bgg-enricher/src/main.ts" }
+    }
+  }
+}

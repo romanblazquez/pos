@@ -103,10 +103,72 @@ services:
       dockerfile: apps/bgg-scraper/Dockerfile
     container_name: retail-os-bgg-scraper
     restart: unless-stopped
+    init: true
     environment:
       PORT: 3001
+      BGG_IMAGE_DIR: /data/bgg-images
+      BGG_IMAGE_PUBLIC_BASE_URL: ${BGG_IMAGE_PUBLIC_BASE_URL:-http://localhost:3001/images}
+      BGG_DOWNLOAD_IMAGES: ${BGG_DOWNLOAD_IMAGES:-true}
     ports:
       - '${BGG_SCRAPER_PORT:-3001}:3001'
+    volumes:
+      - ../data/bgg-images:/data/bgg-images
+    shm_size: '512mb'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3001/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Continuous cron-style enrichment worker. It claims 50 durable DB records,
+  # processes them serially, waits a random 20-40 seconds, and repeats. When the
+  # catalog is caught up it remains alive and polls for newly imported products.
+  # A BGG/Google rejection opens a persistent circuit and stops outbound work.
+  bgg-enricher:
+    build:
+      context: ..
+      dockerfile: apps/bgg-enricher/Dockerfile
+    container_name: retail-os-bgg-enricher
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      bgg-scraper:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-retail}:${POSTGRES_PASSWORD:-retail}@postgres:5432/${POSTGRES_DB:-retail_os}?schema=public
+      BGG_SCRAPER_URL: http://bgg-scraper:3001
+      BGG_ENRICHER_STATE_DIR: /var/lib/bgg-enricher
+      BGG_ENRICHER_HEALTH_PORT: 3002
+      BGG_ENRICH_BATCH_SIZE: ${BGG_ENRICH_BATCH_SIZE:-50}
+      BGG_BATCH_DELAY_MIN_SECONDS: ${BGG_BATCH_DELAY_MIN_SECONDS:-20}
+      BGG_BATCH_DELAY_MAX_SECONDS: ${BGG_BATCH_DELAY_MAX_SECONDS:-40}
+      BGG_ITEM_DELAY_MS: ${BGG_ITEM_DELAY_MS:-1500}
+      BGG_EMPTY_POLL_SECONDS: ${BGG_EMPTY_POLL_SECONDS:-300}
+      BGG_MAX_CONSECUTIVE_FAILURES: ${BGG_MAX_CONSECUTIVE_FAILURES:-5}
+      BGG_MAX_PRODUCT_ATTEMPTS: ${BGG_MAX_PRODUCT_ATTEMPTS:-3}
+      BGG_RETRY_DELAY_SECONDS: ${BGG_RETRY_DELAY_SECONDS:-21600}
+      GOOGLE_TRANSLATE_ENABLED: ${GOOGLE_TRANSLATE_ENABLED:-true}
+      GOOGLE_TRANSLATE_TARGET_ISO: ${GOOGLE_TRANSLATE_TARGET_ISO:-es}
+      GOOGLE_TRANSLATE_TARGET_LOCALE: ${GOOGLE_TRANSLATE_TARGET_LOCALE:-es-MX}
+      GOOGLE_TRANSLATE_MIN_DELAY_MS: ${GOOGLE_TRANSLATE_MIN_DELAY_MS:-3000}
+      GOOGLE_TRANSLATE_JITTER_MS: ${GOOGLE_TRANSLATE_JITTER_MS:-1000}
+      TRANSLATION_MODERATION_STATUS: ${TRANSLATION_MODERATION_STATUS:-NEEDS_REVIEW}
+      TYPESENSE_HOST: typesense
+      TYPESENSE_PORT: 8108
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:-dev-typesense-key}
+    ports:
+      - '${BGG_ENRICHER_HOST_PORT:-3003}:3002'
+    volumes:
+      - ../data/bgg-enricher:/var/lib/bgg-enricher
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3002/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   retail_pg:

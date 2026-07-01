@@ -34,7 +34,7 @@ export class MarketplaceService {
 
   /**
    * Approved title/description overrides for the given product ids, keyed by
-   * entityId. Returns an empty map for the default locale, or if the
+   * entityId. Returns an empty map when no locale is requested, or if the
    * Language/EntityLocalization tables aren't migrated/seeded yet in this
    * environment — callers fall back to the base Spanish fields either way.
    */
@@ -42,11 +42,14 @@ export class MarketplaceService {
     productIds: string[],
     locale?: string,
   ): Promise<Map<string, { title: string; description: string | null }>> {
-    if (locale !== 'en' || productIds.length === 0) return new Map();
+    if (!locale || productIds.length === 0) return new Map();
     try {
       // Language.code is the full locale tag (e.g. 'en-US'); iso6391 is the
       // canonical 2-letter lookup for the primary regional variant.
-      const language = await this.prisma.language.findFirst({ where: { iso6391: 'en' } });
+      const iso6391 = locale.toLowerCase().split('-')[0];
+      const language = await this.prisma.language.findFirst({
+        where: { OR: [{ code: locale }, { iso6391 }] },
+      });
       if (!language) return new Map();
       const rows = await this.prisma.entityLocalization.findMany({
         where: {
@@ -82,7 +85,16 @@ export class MarketplaceService {
     });
 
     if (hits.length > 0) {
-      return { results: hits, total, source: 'search' as const };
+      const localizations = await this.getProductLocalizations(hits.map((hit) => hit.id), locale);
+      const localizedHits = hits.map((hit) => {
+        const localized = localizations.get(hit.id);
+        return localized ? {
+          ...hit,
+          name: localized.title,
+          description: localized.description ?? hit.description,
+        } : hit;
+      });
+      return { results: localizedHits, total, source: 'search' as const };
     }
 
     // Prisma fallback — when Typesense is empty or unavailable
@@ -143,11 +155,6 @@ export class MarketplaceService {
       this.prisma.mktProduct.count({ where }),
     ]);
 
-    // Only the Prisma fallback path is localized today — the Typesense hit
-    // path above returns pre-indexed search documents, which would need a
-    // per-locale reindex to localize (future work, see the markets roadmap's
-    // search-projection phase). Fine for now: this fallback only runs when
-    // Typesense is empty/unavailable.
     const localizations = await this.getProductLocalizations(products.map((p) => p.id), locale);
 
     const results = products.map((p) => {

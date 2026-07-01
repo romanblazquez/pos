@@ -4,6 +4,8 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import type { Browser, BrowserContext, Page } from 'playwright-core';
 import AdmZip from 'adm-zip';
 import { parse as parseCsv } from 'csv-parse/sync';
+import { access, mkdir, rename, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 // BGG sits behind Cloudflare's managed JS challenge. The stealth plugin patches
 // the automation tells (navigator.webdriver, etc.) that the challenge checks for —
@@ -14,6 +16,14 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const IMAGE_DIR = process.env.BGG_IMAGE_DIR ?? './data/bgg-images';
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+
+app.use('/images', express.static(IMAGE_DIR, {
+  immutable: true,
+  maxAge: '30d',
+  fallthrough: false,
+}));
 
 interface ScrapedGame {
   bgg_id: number | null;
@@ -248,12 +258,95 @@ interface GeekitemData {
   };
 }
 
+interface LocalImage {
+  url: string;
+  path: string;
+}
+
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+function publicImageUrl(req: Request, filename: string): string {
+  const configured = process.env.BGG_IMAGE_PUBLIC_BASE_URL?.replace(/\/$/, '');
+  const base = configured ?? `${req.protocol}://${req.get('host')}/images`;
+  return `${base}/${encodeURIComponent(filename)}`;
+}
+
+function validateImageSource(raw: string): URL {
+  const url = new URL(raw);
+  const trusted = url.protocol === 'https:'
+    && (url.hostname === 'geekdo-images.com' || url.hostname.endsWith('.geekdo-images.com'));
+  if (!trusted) throw new Error(`Refusing image URL from untrusted host ${url.hostname}`);
+  return url;
+}
+
+async function existingLocalImage(req: Request, bggId: string): Promise<LocalImage | null> {
+  for (const extension of Object.values(IMAGE_EXTENSIONS)) {
+    const filename = `${bggId}${extension}`;
+    const path = join(IMAGE_DIR, filename);
+    try {
+      await access(path);
+      return { path, url: publicImageUrl(req, filename) };
+    } catch {
+      // Try the next supported format.
+    }
+  }
+  return null;
+}
+
+async function downloadImage(req: Request, bggId: string, source: string): Promise<LocalImage> {
+  const existing = await existingLocalImage(req, bggId);
+  if (existing) return existing;
+
+  const sourceUrl = validateImageSource(source);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  let response: globalThis.Response;
+  try {
+    response = await fetch(sourceUrl, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'RetailOS-Catalog-Enricher/1.0 (+local catalog image cache)' },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) throw new Error(`image host returned HTTP ${response.status}`);
+
+  const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '';
+  const extension = IMAGE_EXTENSIONS[contentType];
+  if (!extension) throw new Error(`unsupported image content type ${contentType || '(missing)'}`);
+  const declaredLength = Number(response.headers.get('content-length') ?? 0);
+  if (declaredLength > MAX_IMAGE_BYTES) throw new Error(`image is larger than ${MAX_IMAGE_BYTES} bytes`);
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) {
+    throw new Error(`invalid image size ${bytes.length} bytes`);
+  }
+
+  await mkdir(IMAGE_DIR, { recursive: true });
+  const filename = `${bggId}${extension}`;
+  const path = join(IMAGE_DIR, filename);
+  const temporary = `${path}.${process.pid}.tmp`;
+  await writeFile(temporary, bytes);
+  await rename(temporary, path);
+  return { path, url: publicImageUrl(req, filename) };
+}
+
 // BGG's game detail pages (plain HTML, no registration gate unlike /thing) embed a
 // full structured data blob at window.GEEK.geekitemPreload — that's a far richer and
 // more reliable source for description/image/designer/publisher than scraping rendered
 // DOM text would be.
 app.get('/game/:id', async (req: Request, res: Response) => {
   const id = req.params.id;
+
+  if (!/^\d+$/.test(id)) {
+    res.status(400).json({ error: 'BGG id must be numeric' });
+    return;
+  }
 
   let context: BrowserContext | undefined;
   try {
@@ -268,15 +361,44 @@ app.get('/game/:id', async (req: Request, res: Response) => {
       res.status(404).json({ error: `BGG game ${id} not found` });
       return;
     }
+    if ([401, 403, 429].includes(response.status())) {
+      res.status(response.status()).json({
+        error: `BGG rejected game request with HTTP ${response.status()}`,
+        blocked: true,
+      });
+      return;
+    }
+    if (response.status() >= 500) {
+      res.status(502).json({ error: `BGG returned HTTP ${response.status()}` });
+      return;
+    }
 
     const data = await page.evaluate(() => (window as unknown as { GEEK?: { geekitemPreload?: GeekitemData } }).GEEK?.geekitemPreload);
     const item = data?.item;
     if (!item) {
-      res.status(502).json({ error: 'geekitemPreload not found on page — BGG layout may have changed' });
+      const snippet = (await page.locator('body').innerText().catch(() => '')).slice(0, 500);
+      const blocked = /cloudflare|captcha|challenge|access denied|too many requests/i.test(snippet);
+      res.status(blocked ? 403 : 502).json({
+        error: blocked
+          ? 'BGG returned a bot challenge instead of a game page'
+          : 'geekitemPreload not found on page — BGG layout may have changed',
+        blocked,
+        snippet,
+      });
       return;
     }
 
     const linkNames = (type: string) => (item.links?.[type] ?? []).map((l) => l.name);
+    const sourceImageUrl = item.imageurl ?? null;
+    let localImage: LocalImage | null = null;
+    let imageError: string | null = null;
+    if (sourceImageUrl && process.env.BGG_DOWNLOAD_IMAGES !== 'false') {
+      try {
+        localImage = await downloadImage(req, id, sourceImageUrl);
+      } catch (error) {
+        imageError = (error as Error).message;
+      }
+    }
 
     res.json({
       success: true,
@@ -289,7 +411,11 @@ app.get('/game/:id', async (req: Request, res: Response) => {
         max_players: num(item.maxplayers),
         min_age: num(item.minage),
         play_time_minutes: num(item.maxplaytime) ?? num(item.minplaytime),
-        image_url: item.imageurl ?? null,
+        image_url: localImage?.url ?? (process.env.BGG_DOWNLOAD_IMAGES === 'false' ? sourceImageUrl : null),
+        source_image_url: sourceImageUrl,
+        local_image_path: localImage?.path ?? null,
+        image_downloaded: localImage !== null,
+        image_error: imageError,
         rating: num(item.stats?.average),
         weight: num(item.stats?.avgweight),
         designer: linkNames('boardgamedesigner')[0] ?? null,

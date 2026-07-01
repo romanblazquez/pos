@@ -19,6 +19,8 @@ build
 *.sqlite-journal
 *.db
 data/local
+data/bgg-images/
+data/bgg-enricher/
 
 # env / secrets
 .env

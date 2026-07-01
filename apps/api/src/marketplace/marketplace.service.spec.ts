@@ -24,6 +24,8 @@ function setup() {
       findMany: vi.fn().mockResolvedValue([product]),
       count: vi.fn().mockResolvedValue(1),
     },
+    language: { findFirst: vi.fn() },
+    entityLocalization: { findMany: vi.fn() },
   };
   const search = { search: vi.fn().mockResolvedValue({ hits: [], total: 0 }) };
   const service = new MarketplaceService(prisma as never, search as never);
@@ -72,5 +74,29 @@ describe('MarketplaceService search filters', () => {
     expect(result.publishers).toEqual([{ kind: 'publisher', label: 'KOSMOS', value: 'KOSMOS' }]);
     expect(result.categories).toEqual([{ kind: 'category', label: 'board-game', value: 'board-game' }]);
     expect(result.mechanics).toEqual([{ kind: 'mechanic', label: 'trading', value: 'trading' }]);
+  });
+
+  it('overlays an approved localization on Typesense hits', async () => {
+    const { service, prisma, search } = setup();
+    prisma.language.findFirst.mockResolvedValue({ id: 'language_es_mx' });
+    prisma.entityLocalization.findMany.mockResolvedValue([{
+      entityId: 'p1',
+      title: 'Catán',
+      description: 'Comercia y construye.',
+    }]);
+    search.search.mockResolvedValue({
+      total: 1,
+      hits: [{ ...product, language: 'en', bggWeight: 2.3, totalListings: 1, inStockListings: 1 }],
+    });
+
+    const result = await service.searchProducts({}, 'es');
+
+    expect(result.results[0]).toMatchObject({
+      name: 'Catán',
+      description: 'Comercia y construye.',
+    });
+    expect(prisma.language.findFirst).toHaveBeenCalledWith({
+      where: { OR: [{ code: 'es' }, { iso6391: 'es' }] },
+    });
   });
 });
