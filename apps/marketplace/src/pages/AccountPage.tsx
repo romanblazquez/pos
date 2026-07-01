@@ -3,6 +3,7 @@ import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet } from '../hooks/useWallet.js';
 import { useShelf } from '../context/ShelfContext.js';
+import { SHELF_STATUS_META, SHELF_STATUS_ORDER } from '../shelf-meta.js';
 import { useXPInfo, XP_TIERS } from '../hooks/useXP.js';
 import { XPProgressRing } from '../components/XPProgressRing.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
@@ -43,15 +44,6 @@ interface Order {
   seller: { name: string };
   lines: { quantity: number; listing: { product: { name: string; images: string[] } } }[];
 }
-
-const SHELF_CELLS: { key: 'owned' | 'wishlist' | 'want-to-play' | 'previously-owned' | 'for-trade' | 'preordered'; label: string; icon: string }[] = [
-  { key: 'owned', label: 'Tengo', icon: '📦' },
-  { key: 'wishlist', label: 'Wishlist', icon: '♥' },
-  { key: 'want-to-play', label: 'Quiero jugar', icon: '🎲' },
-  { key: 'previously-owned', label: 'Tuve', icon: '📤' },
-  { key: 'for-trade', label: 'Para canjear', icon: '🔄' },
-  { key: 'preordered', label: 'Reservado', icon: '📅' },
-];
 
 const XP_EARN_ACTIONS = [
   { icon: '⭐', label: 'Escribir una reseña', desc: 'Comparte tu experiencia con la comunidad', xp: 40 },
@@ -235,17 +227,22 @@ export default function AccountPage({
       {/* ── Section 4: Collection shelf ── */}
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-base font-bold text-[--tx]">{intl.formatMessage({ id: 'account.myShelf' })}</h2>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-          {SHELF_CELLS.map((cell) => (
-            <div
-              key={cell.key}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[--border] bg-[--bg-raised] p-4 text-center"
-            >
-              <span className="text-xl">{cell.icon}</span>
-              <span className="font-display text-2xl font-bold text-[--tx]">{shelfCounts[cell.key]}</span>
-              <span className="font-mono text-[9px] uppercase tracking-wide text-[--tx-faint] leading-tight">{cell.label}</span>
-            </div>
-          ))}
+        <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
+          {SHELF_STATUS_ORDER.map((key) => {
+            const meta = SHELF_STATUS_META[key];
+            return (
+              <div
+                key={key}
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[--border] bg-[--bg-raised] p-4 text-center"
+              >
+                <span className="text-xl">{meta.icon}</span>
+                <span className="font-display text-2xl font-bold text-[--tx]">{shelfCounts[key]}</span>
+                <span className="font-mono text-[9px] uppercase tracking-wide text-[--tx-faint] leading-tight">
+                  {intl.formatMessage({ id: meta.labelKey })}
+                </span>
+              </div>
+            );
+          })}
         </div>
         <p className="text-xs text-[--tx-faint] text-center">
           Agrega juegos desde el catálogo con los botones de estante en cada juego.

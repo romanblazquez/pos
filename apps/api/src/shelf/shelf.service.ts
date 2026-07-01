@@ -2,12 +2,19 @@ import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 
 // Same point values as the "Ways to earn XP" list on AccountPage.tsx
-// (XP_EARN_ACTIONS) — only the two shelf-driven actions award XP here;
-// other statuses (want-to-play, previously-owned, for-trade, preordered)
+// (XP_EARN_ACTIONS) — only forward-looking collection actions award XP;
+// other statuses (previously-owned, for-trade, preordered, spare-parts)
 // aren't in that list, so they don't award XP.
+//
+// want-to-play and played match the +5 the guest (logged-out) localStorage
+// path in ShelfContext.tsx already awards for the same statuses — this used
+// to be inconsistent (guests got XP for want-to-play, logged-in customers
+// didn't).
 const SHELF_XP_AWARDS: Record<string, { amount: number; label: string }> = {
   owned: { amount: 10, label: 'Agregar a colección' },
   wishlist: { amount: 5, label: 'Agregar a wishlist' },
+  'want-to-play': { amount: 5, label: 'Marcar como quiero jugar' },
+  played: { amount: 5, label: 'Marcar como jugado' },
 };
 
 // Fixed award for generic (non-shelf-status) XP events — keyed by

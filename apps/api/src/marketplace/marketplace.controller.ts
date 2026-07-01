@@ -104,4 +104,26 @@ export class MarketplaceController {
     if (!product) throw new NotFoundException(`Product "${slug}" not found`);
     return product;
   }
+
+  @Get(':slug/similar')
+  @ApiOperation({
+    summary: 'Similar products (same category, comparable complexity)',
+    description: 'Ranked by the same stock/rating signal as default search sorting. Falls back to Prisma when Typesense is empty/unavailable.',
+  })
+  @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
+  @ApiResponse({ status: 200, description: 'Array of up to 8 similar products.' })
+  getSimilar(@Param('slug') slug: string) {
+    return this.svc.getSimilarProducts(slug);
+  }
+
+  @Get(':slug/sales-by-year')
+  @ApiOperation({
+    summary: 'Live per-product sales count grouped by year',
+    description: 'Counts confirmed/shipped/delivered orders only (excludes pending/reserved/cancelled/refunded). Computed on demand, not cached.',
+  })
+  @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
+  @ApiResponse({ status: 200, description: 'Array of { year, count }, ascending by year.' })
+  getSalesByYear(@Param('slug') slug: string) {
+    return this.svc.getSalesByYear(slug);
+  }
 }

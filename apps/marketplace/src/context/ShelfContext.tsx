@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCustomer } from './CustomerContext.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 
-export type ShelfStatus = 'owned' | 'wishlist' | 'want-to-play' | 'previously-owned' | 'for-trade' | 'preordered' | null;
+export type ShelfStatus = 'owned' | 'wishlist' | 'want-to-play' | 'played' | 'previously-owned' | 'for-trade' | 'preordered' | 'spare-parts' | null;
 
 export interface ShelfEntry {
   slug: string;
@@ -28,9 +28,11 @@ export interface ShelfCounts {
   owned: number;
   wishlist: number;
   'want-to-play': number;
+  played: number;
   'previously-owned': number;
   'for-trade': number;
   preordered: number;
+  'spare-parts': number;
 }
 
 interface ShelfContextValue {
@@ -260,6 +262,7 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
         if (status === 'owned') { xpDelta = 10; xpLabel = 'Juego agregado a colección'; }
         else if (status === 'wishlist') { xpDelta = 5; xpLabel = 'Juego agregado a wishlist'; }
         else if (status === 'want-to-play') { xpDelta = 5; xpLabel = 'Juego marcado como quiero jugar'; }
+        else if (status === 'played') { xpDelta = 5; xpLabel = 'Juego marcado como jugado'; }
       }
 
       const events = prev.recentXPEvents;
@@ -284,9 +287,11 @@ export function ShelfProvider({ children }: { children: ReactNode }) {
     owned: 0,
     wishlist: 0,
     'want-to-play': 0,
+    played: 0,
     'previously-owned': 0,
     'for-trade': 0,
     preordered: 0,
+    'spare-parts': 0,
   };
   for (const entry of Object.values(shelfState.items)) {
     if (entry.status && entry.status in shelfCounts) {
