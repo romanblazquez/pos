@@ -1,27 +1,11 @@
+import { useIntl } from 'react-intl';
 import { useShelf, type ShelfStatus } from '../context/ShelfContext.js';
+import { SHELF_STATUS_META, SHELF_STATUS_ORDER } from '../shelf-meta.js';
 
-interface ShelfAction {
-  status: ShelfStatus;
-  label: string;
-  icon: string;
-  activeClass: string;
-}
-
-const ACTIONS: ShelfAction[] = [
-  { status: 'wishlist', label: 'Wishlist', icon: '♡', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-600' },
-  { status: 'owned', label: 'Tengo', icon: '📦', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-600' },
-  { status: 'want-to-play', label: 'Jugado', icon: '🎲', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-600' },
-  { status: 'for-trade', label: 'Trade', icon: '🔄', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-600' },
-];
-
-const ACTIVE_ICONS: Partial<Record<ShelfStatus & string, string>> = {
-  wishlist: '♥',
-  owned: '📦',
-  'want-to-play': '🎲',
-  'for-trade': '🔄',
-};
+const ACTIVE_CLASS = 'bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-900 dark:text-emerald-100 dark:border-emerald-600';
 
 export function ShelfButtons({ slug, name }: { slug: string; name: string }) {
+  const intl = useIntl();
   const { getShelfStatus, setShelfStatus } = useShelf();
   const currentStatus = getShelfStatus(slug);
 
@@ -35,22 +19,24 @@ export function ShelfButtons({ slug, name }: { slug: string; name: string }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {ACTIONS.map((action) => {
-        const isActive = currentStatus === action.status;
-        const icon = isActive && action.status ? (ACTIVE_ICONS[action.status] ?? action.icon) : action.icon;
+      {SHELF_STATUS_ORDER.map((status) => {
+        const meta = SHELF_STATUS_META[status];
+        const isActive = currentStatus === status;
+        const icon = isActive ? (meta.activeIcon ?? meta.icon) : meta.icon;
+        const label = intl.formatMessage({ id: meta.labelKey });
         return (
           <button
-            key={action.status}
-            onClick={() => handleToggle(action.status)}
-            title={isActive ? `Quitar de ${action.label}` : `Agregar a ${action.label}`}
+            key={status}
+            onClick={() => handleToggle(status)}
+            title={isActive ? intl.formatMessage({ id: 'shelf.remove' }, { label }) : intl.formatMessage({ id: 'shelf.add' }, { label })}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all
               ${isActive
-                ? action.activeClass
+                ? ACTIVE_CLASS
                 : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'
               }`}
           >
             <span>{icon}</span>
-            <span className="font-mono text-xs">{action.label}</span>
+            <span className="font-mono text-xs">{label}</span>
           </button>
         );
       })}

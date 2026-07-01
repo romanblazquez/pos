@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
-const SHELF_STATUSES = ['owned', 'wishlist', 'want-to-play', 'previously-owned', 'for-trade', 'preordered'] as const;
+const SHELF_STATUSES = ['owned', 'wishlist', 'want-to-play', 'played', 'previously-owned', 'for-trade', 'preordered', 'spare-parts'] as const;
 
 export class SetShelfStatusDto {
   @ApiPropertyOptional({

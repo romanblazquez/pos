@@ -17,6 +17,17 @@
   "account.recentXpActivity": "Recent XP activity",
   "account.recentOrders": "Recent orders",
 
+  "shelf.owned": "I have it",
+  "shelf.wishlist": "Wishlist",
+  "shelf.wantToPlay": "Want to play",
+  "shelf.played": "Already played",
+  "shelf.previouslyOwned": "Previously owned",
+  "shelf.forTrade": "For trade",
+  "shelf.preordered": "Preordered",
+  "shelf.spareParts": "Spare parts",
+  "shelf.add": "Add to {label}",
+  "shelf.remove": "Remove from {label}",
+
   "home.verifiedBadge": "Verified marketplace",
   "home.heroTitle": "Find games with real stock, the best price, and credits.",
   "home.heroSubtitle": "Search once and compare connected stores, availability, shipping, and cashback without opening ten tabs.",

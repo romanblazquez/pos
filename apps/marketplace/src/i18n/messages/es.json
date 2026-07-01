@@ -17,6 +17,17 @@
   "account.recentXpActivity": "Actividad de XP reciente",
   "account.recentOrders": "Pedidos recientes",
 
+  "shelf.owned": "Tengo",
+  "shelf.wishlist": "Wishlist",
+  "shelf.wantToPlay": "Quiero jugar",
+  "shelf.played": "Ya jugué",
+  "shelf.previouslyOwned": "Tuve",
+  "shelf.forTrade": "Para canjear",
+  "shelf.preordered": "Reservado",
+  "shelf.spareParts": "Piezas sueltas",
+  "shelf.add": "Agregar a {label}",
+  "shelf.remove": "Quitar de {label}",
+
   "home.verifiedBadge": "Marketplace verificado",
   "home.heroTitle": "Encuentra juegos con stock real, mejor precio y créditos.",
   "home.heroSubtitle": "Busca una vez y compara tiendas conectadas, disponibilidad, envío y cashback sin abrir diez pestañas.",
