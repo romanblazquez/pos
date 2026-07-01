@@ -120,7 +120,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 0;
   const featuredProduct = data?.results.find((product) => product.images[0]);
-  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
+  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category), intl.locale as 'es' | 'en');
   const categoryCounts = new Map(categoriesData?.map((item) => [item.category, item.count]) ?? []);
   const activeFilterCount =
     Number(filters.inStockOnly) +
@@ -260,7 +260,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
           <div className="mb-5 flex flex-col justify-between gap-3 rounded-lg border border-[--border] bg-[--bg-raised] p-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                {activeCategory ? categoryLabel(activeCategory) : intl.formatMessage({ id: 'home.catalog' })}
+                {activeCategory ? categoryLabel(activeCategory, intl.locale as 'es' | 'en') : intl.formatMessage({ id: 'home.catalog' })}
               </p>
               <h2 className="mt-1 text-xl font-bold text-[--tx]">{intl.formatMessage({ id: 'home.offersAvailable' })}</h2>
               <p className="mt-1 text-sm text-[--tx-muted]">
@@ -268,7 +268,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                   ? (minPrice
                       ? intl.formatMessage({ id: 'home.resultsSince' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), price: formatMoney(minPrice) })
                       : intl.formatMessage({ id: 'home.resultsCount' }, { count: data.total.toLocaleString(numberLocale(intl.locale)) }))
-                  : categoryDescription(activeCategory)}
+                  : categoryDescription(activeCategory, intl.locale as 'es' | 'en')}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
           {(activeCategory || activeFilterCount > 0) && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {activeCategory && (
-                <FilterChip label={categoryLabel(activeCategory)} onClear={() => selectCategory(undefined)} />
+                <FilterChip label={categoryLabel(activeCategory, intl.locale as 'es' | 'en')} onClear={() => selectCategory(undefined)} />
               )}
               {filters.inStockOnly && <FilterChip label={intl.formatMessage({ id: 'home.filterInStock' })} onClear={() => updateFilters({ inStockOnly: false })} />}
               {filters.maxPrice && (

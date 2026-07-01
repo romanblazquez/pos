@@ -127,7 +127,7 @@ export default function ProductPage({
           {
             '@type': 'ListItem',
             position: 2,
-            name: categoryLabel(p.category),
+            name: categoryLabel(p.category, intl.locale as 'es' | 'en'),
             item: `https://juegospedia.com/search?category=${encodeURIComponent(p.category)}`,
           },
           { '@type': 'ListItem', position: 3, name: p.name, item: canonicalUrl },
@@ -139,7 +139,7 @@ export default function ProductPage({
         description,
         image: p.images,
         url: canonicalUrl,
-        category: categoryLabel(p.category),
+        category: categoryLabel(p.category, intl.locale as 'es' | 'en'),
         ...(p.publisher ? { brand: { '@type': 'Brand', name: p.publisher } } : {}),
         ...(p.bggId ? { sku: `BGG-${p.bggId}` } : {}),
         ...(p.bggRating && p.bggRating > 0 && p.listings.length > 0
@@ -180,7 +180,7 @@ export default function ProductPage({
       <Breadcrumbs items={[
         { label: intl.formatMessage({ id: 'product.home' }), href: '/', onClick: onHome },
         {
-          label: categoryLabel(p.category),
+          label: categoryLabel(p.category, intl.locale as 'es' | 'en'),
           href: `/search?category=${encodeURIComponent(p.category)}`,
           onClick: () => onCategory(p.category),
         },

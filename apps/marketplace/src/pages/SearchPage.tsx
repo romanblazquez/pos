@@ -111,11 +111,11 @@ export default function SearchPage({
 
   const results = data?.results ?? [];
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
+  const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category), intl.locale as 'es' | 'en');
   const title = query
     ? intl.formatMessage({ id: 'search.resultsFor' }, { query })
     : category
-    ? categoryLabel(category)
+    ? categoryLabel(category, intl.locale as 'es' | 'en')
     : intl.formatMessage({ id: 'search.title' });
 
   function goToPage(nextPage: number) {
@@ -128,7 +128,7 @@ export default function SearchPage({
       <SeoHead
         title={`${title} | Juegospedia`}
         description={category
-          ? `${categoryDescription(category)} Compara precio, stock y envío en tiendas de México.`
+          ? `${categoryDescription(category, intl.locale as 'es' | 'en')} Compara precio, stock y envío en tiendas de México.`
           : `Busca ${query || 'juegos de mesa'} y compara disponibilidad, precios y tiendas en Juegospedia.`}
         path={`/search?${new URLSearchParams({
           ...(query ? { q: query } : {}),
@@ -136,9 +136,9 @@ export default function SearchPage({
         }).toString()}`}
         noindex={Boolean(query)}
         jsonLd={category ? breadcrumbJsonLd([
-          ['Inicio', 'https://juegospedia.com/'],
-          ['Categorías', 'https://juegospedia.com/search'],
-          [categoryLabel(category), `https://juegospedia.com/search?category=${encodeURIComponent(category)}`],
+          [intl.formatMessage({ id: 'search.home' }), 'https://juegospedia.com/'],
+          [intl.formatMessage({ id: 'search.categoriesCrumb' }), 'https://juegospedia.com/search'],
+          [categoryLabel(category, intl.locale as 'es' | 'en'), `https://juegospedia.com/search?category=${encodeURIComponent(category)}`],
         ]) : undefined}
       />
       <aside className="order-2 lg:order-1">
@@ -236,7 +236,7 @@ export default function SearchPage({
           ...(category
             ? [
                 { label: intl.formatMessage({ id: 'search.categoriesCrumb' }), href: '/search', onClick: () => onSearch('', undefined) },
-                { label: categoryLabel(category) },
+                { label: categoryLabel(category, intl.locale as 'es' | 'en') },
               ]
             : [{ label: query ? intl.formatMessage({ id: 'search.searchCrumb' }, { query }) : intl.formatMessage({ id: 'home.catalog' }) }]),
         ]} />
@@ -244,13 +244,13 @@ export default function SearchPage({
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                {category ? categoryLabel(category) : intl.formatMessage({ id: 'search.marketplace' })}
+                {category ? categoryLabel(category, intl.locale as 'es' | 'en') : intl.formatMessage({ id: 'search.marketplace' })}
               </p>
               <h1 className="mt-1 text-2xl font-bold text-[--tx]">{title}</h1>
               <p className="mt-1 text-sm text-[--tx-muted]">
                 {data
                   ? intl.formatMessage({ id: 'search.resultsSummary' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), page, totalPages })
-                  : categoryDescription(category)}
+                  : categoryDescription(category, intl.locale as 'es' | 'en')}
               </p>
             </div>
 
@@ -283,7 +283,7 @@ export default function SearchPage({
           {(category || inStockOnly || maxPrice !== undefined || players !== undefined) && (
             <div className="mt-4 flex flex-wrap gap-2">
               {category && (
-                <ActiveChip label={categoryLabel(category)} onClear={() => onSearch(query, undefined)} />
+                <ActiveChip label={categoryLabel(category, intl.locale as 'es' | 'en')} onClear={() => onSearch(query, undefined)} />
               )}
               {inStockOnly && (
                 <ActiveChip label={intl.formatMessage({ id: 'search.inStock' })} onClear={() => setInStockOnly(false)} />

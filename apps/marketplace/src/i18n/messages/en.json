@@ -119,5 +119,24 @@
   "product.notFound": "Game not found",
   "product.home": "Home",
 
-  "offers.stockSummary": "{inStock, plural, one {# in stock} other {# in stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# out of stock} other {# out of stock}}}}"
+  "offers.stockSummary": "{inStock, plural, one {# in stock} other {# in stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# out of stock} other {# out of stock}}}}",
+  "offers.compareStores": "Compare stores",
+  "offers.sortHint": "Sorted by the best combination of price, seller trust, and delivery — check the price if all you care about is paying less.",
+  "offers.noStores": "This game isn't available at any connected store right now.",
+  "offers.outOfStockForNow": "Out of stock for now",
+  "offers.notAvailableHint": "Not available · press and hold to view",
+  "offers.bestOffer": "Best offer",
+  "offers.lowestPrice": "Lowest price",
+  "offers.stockInStock": "In stock",
+  "offers.stockLow": "Low stock",
+  "offers.stockNone": "Out of stock",
+  "offers.freeShipping": "Free shipping · {min}-{max}d",
+  "offers.shippingCost": "+{price} shipping · {min}-{max}d",
+  "offers.creditsPct": "+{pct}% credits",
+  "offers.hideRanking": "Hide ranking",
+  "offers.whyRanking": "Why this ranking",
+  "offers.total": "total {amount}",
+  "offers.maxStockTitle": "You've already added all available stock",
+  "offers.max": "Max",
+  "offers.add": "Add"
 }

@@ -119,5 +119,24 @@
   "product.notFound": "Juego no encontrado",
   "product.home": "Inicio",
 
-  "offers.stockSummary": "{inStock, plural, one {# con stock} other {# con stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# agotada} other {# agotadas}}}}"
+  "offers.stockSummary": "{inStock, plural, one {# con stock} other {# con stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# agotada} other {# agotadas}}}}",
+  "offers.compareStores": "Comparar tiendas",
+  "offers.sortHint": "Ordenado por mejor combinación de precio, confianza del vendedor y entrega — fijate en el precio si solo te importa pagar menos.",
+  "offers.noStores": "Este juego no está disponible en ninguna tienda conectada por ahora.",
+  "offers.outOfStockForNow": "Agotado por ahora",
+  "offers.notAvailableHint": "No disponible · mantené presionado para ver",
+  "offers.bestOffer": "Mejor oferta",
+  "offers.lowestPrice": "Precio más bajo",
+  "offers.stockInStock": "En stock",
+  "offers.stockLow": "Poco stock",
+  "offers.stockNone": "Sin stock",
+  "offers.freeShipping": "Envío gratis · {min}-{max}d",
+  "offers.shippingCost": "+{price} envío · {min}-{max}d",
+  "offers.creditsPct": "+{pct}% créditos",
+  "offers.hideRanking": "Ocultar ranking",
+  "offers.whyRanking": "Por qué este ranking",
+  "offers.total": "total {amount}",
+  "offers.maxStockTitle": "Ya agregaste todo el stock disponible",
+  "offers.max": "Máximo",
+  "offers.add": "Agregar"
 }

@@ -79,7 +79,7 @@ export function SellerOfferComparisonTable({
   return (
     <section>
       <div className="flex items-baseline justify-between mb-1">
-        <h2 className="font-display text-2xl font-bold tracking-tight text-[--tx]">Comparar tiendas</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight text-[--tx]">{intl.formatMessage({ id: 'offers.compareStores' })}</h2>
         {inStockListings.length > 0 && (
           <span className="text-xs text-[--tx-faint]">
             {intl.formatMessage(
@@ -90,13 +90,12 @@ export function SellerOfferComparisonTable({
         )}
       </div>
       <p className="text-xs text-[--tx-faint] mb-4">
-        Ordenado por mejor combinación de precio, confianza del vendedor y entrega — fijate en
-        el precio si solo te importa pagar menos.
+        {intl.formatMessage({ id: 'offers.sortHint' })}
       </p>
 
       {allListings.length === 0 ? (
         <p className="text-[--tx-muted] text-sm">
-          Este juego no está disponible en ninguna tienda conectada por ahora.
+          {intl.formatMessage({ id: 'offers.noStores' })}
         </p>
       ) : (
         <>
@@ -120,7 +119,7 @@ export function SellerOfferComparisonTable({
           {/* Out-of-stock section */}
           {outOfStockListings.length > 0 && (
             <div className="mt-4 pt-4 border-t border-dashed border-[--border]">
-              <p className="text-xs font-medium text-[--tx-faint] mb-2">Agotado por ahora</p>
+              <p className="text-xs font-medium text-[--tx-faint] mb-2">{intl.formatMessage({ id: 'offers.outOfStockForNow' })}</p>
               <div className="rounded-[14px] border border-[--border] overflow-hidden shadow-sm bg-[--bg-raised]">
                 {outOfStockListings.map((listing, idx) => (
                   <ListingRow
@@ -162,6 +161,7 @@ function ListingRow({
   isFirst: boolean;
   onAddToCart: () => void;
 }) {
+  const intl = useIntl();
   const [showScore, setShowScore] = useState(false);
   const [peeking, setPeeking] = useState(false);
   const isOutOfStock = l.stockStatus === 'out_of_stock' || l.stock <= 0;
@@ -180,14 +180,14 @@ function ListingRow({
   const totalCashback = platformCashbackPct + l.storeCashbackPct + l.promoBonus;
 
   const stockLabel =
-    isOutOfStock ? 'Sin stock'
-    : l.stockStatus === 'low_stock' ? 'Poco stock'
-    : 'En stock';
+    isOutOfStock ? intl.formatMessage({ id: 'offers.stockNone' })
+    : l.stockStatus === 'low_stock' ? intl.formatMessage({ id: 'offers.stockLow' })
+    : intl.formatMessage({ id: 'offers.stockInStock' });
 
   const deliveryLabel = bestDelivery
     ? bestDelivery.priceMinorUnits === 0
-      ? `Envío gratis · ${bestDelivery.estimatedDaysMin}-${bestDelivery.estimatedDaysMax}d`
-      : `+${fmtTotal(bestDelivery.priceMinorUnits, l.currency)} envío · ${bestDelivery.estimatedDaysMin}-${bestDelivery.estimatedDaysMax}d`
+      ? intl.formatMessage({ id: 'offers.freeShipping' }, { min: bestDelivery.estimatedDaysMin, max: bestDelivery.estimatedDaysMax })
+      : intl.formatMessage({ id: 'offers.shippingCost' }, { price: fmtTotal(bestDelivery.priceMinorUnits, l.currency), min: bestDelivery.estimatedDaysMin, max: bestDelivery.estimatedDaysMax })
     : null;
 
   const peekHandlers = isOutOfStock
@@ -214,7 +214,7 @@ function ListingRow({
         <div className="absolute inset-0 backdrop-blur-[2px] bg-white/40 dark:bg-black/30
                         grayscale flex items-center justify-center pointer-events-none select-none z-10">
           <span className="px-3 py-1 rounded-full bg-[--bg-raised]/90 border border-[--border] text-xs font-medium text-[--tx-muted] shadow-sm">
-            No disponible · mantené presionado para ver
+            {intl.formatMessage({ id: 'offers.notAvailableHint' })}
           </span>
         </div>
       )}
@@ -229,12 +229,12 @@ function ListingRow({
           {isBest && (
             <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-              Mejor oferta
+              {intl.formatMessage({ id: 'offers.bestOffer' })}
             </span>
           )}
           {isBestPrice && !isBest && (
             <span className="inline-flex items-center bg-emerald-100 text-emerald-700 font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
-              Precio más bajo
+              {intl.formatMessage({ id: 'offers.lowestPrice' })}
             </span>
           )}
         </div>
@@ -242,7 +242,7 @@ function ListingRow({
           ★ {(l.sellerScore * 5).toFixed(1)}
           {' · '}{stockLabel}
           {deliveryLabel && ` · ${deliveryLabel}`}
-          {totalCashback > 0 && ` · +${Math.round(totalCashback * 100)}% créditos`}
+          {totalCashback > 0 && ` · ${intl.formatMessage({ id: 'offers.creditsPct' }, { pct: Math.round(totalCashback * 100) })}`}
           {l.promoLabel && ` · ${l.promoLabel}`}
         </p>
 
@@ -256,7 +256,7 @@ function ListingRow({
               {showScore
                 ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
                 : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
-              {showScore ? 'Ocultar ranking' : 'Por qué este ranking'}
+              {showScore ? intl.formatMessage({ id: 'offers.hideRanking' }) : intl.formatMessage({ id: 'offers.whyRanking' })}
             </button>
             {showScore && (
               <div className="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -295,14 +295,14 @@ function ListingRow({
               )}
             </div>
             <p className="font-mono text-[10px] text-[--tx-faint] text-right">
-              total {showGlass ? '···' : fmtTotal(totalMinor, l.currency)}
+              {showGlass ? intl.formatMessage({ id: 'offers.total' }, { amount: '···' }) : intl.formatMessage({ id: 'offers.total' }, { amount: fmtTotal(totalMinor, l.currency) })}
             </p>
           </div>
 
           <button
             onClick={onAddToCart}
             disabled={atStockLimit}
-            title={atStockLimit ? 'Ya agregaste todo el stock disponible' : undefined}
+            title={atStockLimit ? intl.formatMessage({ id: 'offers.maxStockTitle' }) : undefined}
             className={`flex-none inline-flex items-center gap-2 font-bold text-[13.5px] px-4 py-[10px] rounded-[9px]
               cursor-pointer border-0 transition-colors disabled:opacity-50 disabled:pointer-events-none
               ${isBest
@@ -311,7 +311,7 @@ function ListingRow({
               }`}
           >
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-            {atStockLimit ? 'Máximo' : 'Agregar'}
+            {atStockLimit ? intl.formatMessage({ id: 'offers.max' }) : intl.formatMessage({ id: 'offers.add' })}
           </button>
         </div>
       )}
