@@ -130,6 +130,11 @@
   "product.differentSellerToast": "Tu carrito tiene productos de otra tienda. Vaciá el carrito para comprar en \"{sellerName}\".",
   "product.notFound": "Juego no encontrado",
   "product.home": "Inicio",
+  "product.bggRank": "BGG #{rank}",
+  "product.bggUsersRated": "{count, plural, one {# calificación} other {# calificaciones}}",
+  "product.isExpansion": "Expansión",
+  "product.salesByYear": "Ventas por año",
+  "product.similarProducts": "Juegos similares",
 
   "offers.stockSummary": "{inStock, plural, one {# con stock} other {# con stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# agotada} other {# agotadas}}}}",
   "offers.compareStores": "Comparar tiendas",

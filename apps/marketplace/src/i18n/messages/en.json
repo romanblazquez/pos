@@ -130,6 +130,11 @@
   "product.differentSellerToast": "Your cart has products from another store. Empty your cart to buy from \"{sellerName}\".",
   "product.notFound": "Game not found",
   "product.home": "Home",
+  "product.bggRank": "BGG #{rank}",
+  "product.bggUsersRated": "{count, plural, one {# rating} other {# ratings}}",
+  "product.isExpansion": "Expansion",
+  "product.salesByYear": "Sales by year",
+  "product.similarProducts": "Similar games",
 
   "offers.stockSummary": "{inStock, plural, one {# in stock} other {# in stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# out of stock} other {# out of stock}}}}",
   "offers.compareStores": "Compare stores",

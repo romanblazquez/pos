@@ -1,14 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import {
-  AlertTriangle,
-  Clock3,
-  Gift,
-  PackageCheck,
-  ShieldCheck,
-  Star,
-} from 'lucide-react';
+import { AlertTriangle, Gift, PackageCheck } from 'lucide-react';
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
@@ -16,6 +9,8 @@ import { SeoHead } from '../components/SeoHead.js';
 import { SellerOfferComparisonTable, type ListingDetail } from '../components/SellerOfferComparisonTable.js';
 import { GameInfoBadges } from '../components/GameInfoBadges.js';
 import { ShelfButtons } from '../components/ShelfButtons.js';
+import { ProductStatsPanel } from '../components/ProductStatsPanel.js';
+import { SimilarProducts } from '../components/SimilarProducts.js';
 import { categoryLabel } from '../marketplace-meta.js';
 import { trackEvent } from '../analytics.js';
 
@@ -43,6 +38,9 @@ interface ProductDetail {
   bggId?: string;
   bggRating?: number;
   bggWeight?: number;
+  bggRank?: number | null;
+  bggUsersRated?: number | null;
+  isExpansion?: boolean;
   tags: string[];
   listings: ListingDetail[];
 }
@@ -58,11 +56,13 @@ export default function ProductPage({
   onCartOpen,
   onHome,
   onCategory,
+  onProduct,
 }: {
   slug: string;
   onCartOpen: () => void;
   onHome: () => void;
   onCategory: (category: string) => void;
+  onProduct: (slug: string) => void;
 }) {
   const intl = useIntl();
   const { data: platformCfg } = usePlatformConfig();
@@ -229,20 +229,18 @@ export default function ProductPage({
           {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-700">{p.publisher}</p>}
           <h1 className="max-w-[18ch] font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
 
-          {/* Metadata chips — GameStatPills design */}
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {p.minAge && <Chip icon={<ShieldCheck className="h-5 w-5" />} value={`${p.minAge}+`} label={intl.formatMessage({ id: 'product.minAge' })} />}
-            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-5 w-5" />} value={`${p.playTimeMinutes}m`} label={intl.formatMessage({ id: 'product.duration' })} />}
-            {p.bggRating && <Chip icon={<Star className="h-5 w-5 fill-current" />} value={p.bggRating.toFixed(1)} label={intl.formatMessage({ id: 'product.bggRating' })} />}
-          </div>
-
-          {p.minPlayers && p.maxPlayers && (
-            <PlayerCountFit minPlayers={p.minPlayers} maxPlayers={p.maxPlayers} />
-          )}
-
-          {p.bggWeight && (
-            <ComplexityMeter weight={p.bggWeight} />
-          )}
+          <ProductStatsPanel
+            slug={p.slug}
+            minAge={p.minAge}
+            playTimeMinutes={p.playTimeMinutes}
+            bggRating={p.bggRating}
+            bggWeight={p.bggWeight}
+            minPlayers={p.minPlayers}
+            maxPlayers={p.maxPlayers}
+            bggRank={p.bggRank}
+            bggUsersRated={p.bggUsersRated}
+            isExpansion={p.isExpansion}
+          />
 
           {p.description && (
             <div
@@ -330,6 +328,8 @@ export default function ProductPage({
         <ShelfButtons slug={p.slug} name={p.name} />
       </div>
 
+      <SimilarProducts slug={p.slug} onSelect={onProduct} />
+
       {/* Add-to-cart guardrail feedback */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2
@@ -348,112 +348,6 @@ function plainText(html?: string) {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function Chip({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
-  return (
-    <span className="flex flex-1 min-w-[110px] flex-col items-center gap-1.5 rounded-[13px] border border-[--border] bg-[--bg-raised] px-3 py-[15px] text-center shadow-sm">
-      <span className="text-[--accent]">{icon}</span>
-      <span className="font-display text-[21px] font-extrabold leading-tight tracking-[-0.02em] text-[--tx]">{value}</span>
-      <span className="font-mono text-[10px] uppercase tracking-[1px] text-[--tx-faint]">{label}</span>
-    </span>
-  );
-}
-
-function ComplexityMeter({ weight }: { weight: number }) {
-  const intl = useIntl();
-  const pct = (weight / 5) * 100;
-  const band =
-    weight < 2 ? intl.formatMessage({ id: 'product.complexityLight' }) :
-    weight < 2.5 ? intl.formatMessage({ id: 'product.complexityMediumLight' }) :
-    weight < 3.5 ? intl.formatMessage({ id: 'product.complexityMedium' }) :
-    weight < 4.5 ? intl.formatMessage({ id: 'product.complexityHeavy' }) : intl.formatMessage({ id: 'product.complexityExpert' });
-  return (
-    <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.complexity' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
-                         border-[#E7D3A6] bg-[#F6EBD2] text-[#8A5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]">
-          {weight.toFixed(1)} / 5 · {band}
-        </span>
-      </div>
-      <div className="relative h-3 rounded-full"
-           style={{ background: 'linear-gradient(90deg,#3E7C53 0%,#C0852F 42%,#B4502E 72%,#7E2A20 100%)', boxShadow: 'inset 0 0 0 1px color-mix(in srgb,var(--tx) 12%,transparent)' }}>
-        <div className="absolute top-1/2 rounded-sm"
-             style={{ left: `${pct}%`, width: 3, height: 24, background: 'var(--tx)', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised)' }} />
-      </div>
-      <div className="flex justify-between mt-2.5 font-mono text-[10.5px] uppercase">
-        <span className="font-bold text-[#3E7C53] dark:text-[#7FC79A]">{intl.formatMessage({ id: 'product.complexityLight' })}</span>
-        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityMedium' })}</span>
-        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityHeavy' })}</span>
-        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityExpert' })}</span>
-      </div>
-    </div>
-  );
-}
-
-function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPlayers: number }) {
-  const intl = useIntl();
-  const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
-  const badge = minPlayers === maxPlayers
-    ? intl.formatMessage({ id: 'product.playersCount' }, { count: minPlayers })
-    : intl.formatMessage({ id: 'product.playersBadge' }, { range: `${minPlayers}–${maxPlayers}` });
-
-  function slotStyle(n: number): { cellClass: string; labelClass: string; label: string; strikethrough?: boolean } {
-    if (n < minPlayers) {
-      return {
-        cellClass: 'bg-[#EDE4D2] border border-dashed border-[#D8CCB3] text-[#B6A98C] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#8A7E68]',
-        labelClass: 'text-[#B6A98C] dark:text-[#8A7E68]',
-        label: 'No',
-        strikethrough: true,
-      };
-    }
-    if (n === minPlayers && minPlayers < maxPlayers) {
-      return {
-        cellClass: 'bg-[#F6EBD2] border border-[#E7D3A6] text-[#8A5A12] dark:bg-[#D7A654]/15 dark:border-[#D7A654]/30 dark:text-[#E0BC72]',
-        labelClass: 'text-[#8A5A12] dark:text-[#E0BC72]',
-        label: 'OK',
-      };
-    }
-    if (n <= maxPlayers) {
-      return {
-        cellClass: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950',
-        labelClass: 'font-bold text-[#2C6B43] dark:text-[#7FC79A]',
-        label: 'Best',
-      };
-    }
-    return {
-      cellClass: 'bg-[#EDE4D2] border border-[#E0D4BC] text-[#9A8E79] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#9A8E79]',
-      labelClass: 'text-[#9A8E79]',
-      label: 'Ext',
-    };
-  }
-
-  return (
-    <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
-                         border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]">
-          {badge}
-        </span>
-      </div>
-      <div className="flex gap-2">
-        {counts.map((n) => {
-          const s = slotStyle(n);
-          return (
-            <div key={n} className="flex-1 text-center">
-              <div className={`h-[38px] rounded-[9px] grid place-items-center font-mono font-bold text-[14px] ${s.cellClass} ${s.strikethrough ? 'line-through' : ''}`}>
-                {n}
-              </div>
-              <div className={`font-mono text-[9px] uppercase mt-[5px] ${s.labelClass}`}>
-                {s.label}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function ProductSkeleton() {
   return (

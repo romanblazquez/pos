@@ -357,6 +357,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
             onCartOpen={() => setCartOpen(true)}
             onHome={() => navigate({ page: 'home' })}
             onCategory={(category) => navigate({ page: 'search', q: '', category })}
+            onProduct={(slug) => navigate({ page: 'product', slug })}
           />
         )}
         {route.page === 'account' && session && (

@@ -15,3 +15,11 @@ export const COMPLEXITY_BAND_RANGES: Record<ComplexityBand, { min: number; max: 
 export function isComplexityBand(value: string): value is ComplexityBand {
   return value in COMPLEXITY_BAND_RANGES;
 }
+
+export function bandForWeight(weight: number): ComplexityBand {
+  if (weight < 2) return 'light';
+  if (weight < 2.5) return 'medium-light';
+  if (weight < 3.5) return 'medium';
+  if (weight < 4.5) return 'heavy';
+  return 'expert';
+}

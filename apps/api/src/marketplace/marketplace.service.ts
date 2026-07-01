@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
-import { COMPLEXITY_BAND_RANGES, isComplexityBand } from './complexity-bands.js';
+import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './complexity-bands.js';
 
 export interface ProductSearchParams {
   q?: string;
@@ -335,6 +335,9 @@ export class MarketplaceService {
       bggId: product.bggId,
       bggRating: product.bggRating,
       bggWeight: product.bggWeight,
+      bggRank: product.bggRank,
+      bggUsersRated: product.bggUsersRated,
+      isExpansion: product.isExpansion,
       tags: product.tags,
       listings: product.listings.map((l) => ({
         id: l.id,
@@ -366,6 +369,82 @@ export class MarketplaceService {
         promoLabel: l.promos[0]?.label ?? null,
       })),
     };
+  }
+
+  /**
+   * Same-category, similar-complexity products — reuses the existing
+   * category/complexity-band Typesense filters from searchProducts() rather
+   * than a bespoke scoring query. Over-fetches by one and filters the source
+   * product out client-side instead of adding an "exclude id" filter to
+   * TypesenseService, since this is the only caller that needs it.
+   */
+  async getSimilarProducts(slug: string, limit = 8) {
+    const source = await this.prisma.mktProduct.findUnique({ where: { slug } });
+    if (!source) return [];
+
+    const complexity = source.bggWeight ? bandForWeight(source.bggWeight) : undefined;
+
+    const { hits } = await this.search.search({
+      q: '',
+      category: source.category,
+      complexity,
+      sortBy: 'inStockListings:desc,bggRating:desc',
+      limit: limit + 1,
+    });
+
+    const filtered = hits.filter((h) => h.id !== source.id);
+    if (filtered.length > 0) return filtered.slice(0, limit);
+
+    // Prisma fallback — mirrors searchProducts()'s fallback for an empty/unavailable index.
+    const products = await this.prisma.mktProduct.findMany({
+      where: { category: source.category, id: { not: source.id }, canonicalStatus: 'verified' },
+      orderBy: { bggRating: 'desc' },
+      take: limit,
+    });
+    return products.map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      images: p.images,
+      category: p.category,
+      tags: p.tags,
+      publisher: p.publisher,
+      minPlayers: p.minPlayers,
+      maxPlayers: p.maxPlayers,
+      minAge: p.minAge,
+      playTimeMinutes: p.playTimeMinutes,
+      bggRating: p.bggRating,
+      bggWeight: p.bggWeight,
+      language: p.language,
+      minPriceMinor: 0,
+      maxPriceMinor: 0,
+      totalListings: 0,
+      inStockListings: 0,
+    }));
+  }
+
+  /**
+   * Live per-product sales-by-year breakdown — cheap at this catalog's order
+   * volume, so computed on demand rather than cached/pre-aggregated. Only
+   * counts orders that represent a real completed sale (confirmed onward),
+   * not abandoned/cancelled/refunded ones.
+   */
+  async getSalesByYear(slug: string): Promise<{ year: number; count: number }[]> {
+    const product = await this.prisma.mktProduct.findUnique({ where: { slug }, select: { id: true } });
+    if (!product) return [];
+
+    const rows = await this.prisma.$queryRaw<{ year: number; count: bigint }[]>`
+      SELECT EXTRACT(YEAR FROM mo."createdAt")::int AS year, COUNT(*)::bigint AS count
+      FROM "MarketplaceOrderLine" mol
+      JOIN "Listing" l ON l.id = mol."listingId"
+      JOIN "MarketplaceOrder" mo ON mo.id = mol."orderId"
+      WHERE l."productId" = ${product.id}
+        AND mo.status IN ('confirmed', 'shipped', 'delivered')
+      GROUP BY 1
+      ORDER BY 1 ASC
+    `;
+
+    return rows.map((r) => ({ year: r.year, count: Number(r.count) }));
   }
 }
 
