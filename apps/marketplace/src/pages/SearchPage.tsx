@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useIntl } from 'react-intl';
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,14 +29,19 @@ import {
 } from '../marketplace-meta.js';
 
 const PRICE_OPTIONS = [
-  { label: 'Sin tope', value: undefined },
-  { label: 'Hasta $500', value: 50_000 },
-  { label: 'Hasta $1,000', value: 100_000 },
-  { label: 'Hasta $1,500', value: 150_000 },
+  { labelId: 'search.noLimit', value: undefined },
+  { labelId: 'home.priceUpTo500', value: 50_000 },
+  { labelId: 'home.priceUpTo1000', value: 100_000 },
+  { labelId: 'home.priceUpTo1500', value: 150_000 },
 ] as const;
 const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+/** react-intl's `locale` is bare ('es'/'en'); Intl.NumberFormat wants a full BCP47 tag. */
+function numberLocale(locale: string): string {
+  return locale === 'en' ? 'en-US' : 'es-MX';
+}
 const PAGE_SIZE = 24;
 
 async function searchProducts(
@@ -80,6 +86,7 @@ export default function SearchPage({
   onProduct: (slug: string) => void;
   onHome: () => void;
 }) {
+  const intl = useIntl();
   const [draft, setDraft] = useState(query);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
@@ -106,10 +113,10 @@ export default function SearchPage({
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category));
   const title = query
-    ? `Resultados para "${query}"`
+    ? intl.formatMessage({ id: 'search.resultsFor' }, { query })
     : category
     ? categoryLabel(category)
-    : 'Buscar juegos';
+    : intl.formatMessage({ id: 'search.title' });
 
   function goToPage(nextPage: number) {
     setPage(Math.min(totalPages, Math.max(1, nextPage)));
@@ -136,8 +143,8 @@ export default function SearchPage({
       />
       <aside className="order-2 lg:order-1">
         <CatalogFilterPanel
-          title="Explorar"
-          subtitle={`${data?.total.toLocaleString('es-MX') ?? '—'} resultados`}
+          title={intl.formatMessage({ id: 'home.explore' })}
+          subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
           icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
           action={(inStockOnly || maxPrice !== undefined || players !== undefined || category) ? (
             <button
@@ -146,20 +153,20 @@ export default function SearchPage({
               className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]"
             >
               <RotateCcw className="h-3 w-3" />
-              Limpiar
+              {intl.formatMessage({ id: 'home.clear' })}
             </button>
           ) : undefined}
         >
-          <CatalogFilterSection title="Disponibilidad">
+          <CatalogFilterSection title={intl.formatMessage({ id: 'home.availability' })}>
             <FilterToggle
               checked={inStockOnly}
-              label="Solo con stock"
-              description="Oculta productos agotados"
+              label={intl.formatMessage({ id: 'home.inStockOnly' })}
+              description={intl.formatMessage({ id: 'home.inStockOnlyHint' })}
               onClick={() => setInStockOnly((v) => !v)}
             />
           </CatalogFilterSection>
 
-          <CatalogFilterSection title="Presupuesto">
+          <CatalogFilterSection title={intl.formatMessage({ id: 'home.budget' })}>
             <div className="grid grid-cols-2 gap-1.5">
               {PRICE_OPTIONS.map((option) => (
                 <button
@@ -173,13 +180,13 @@ export default function SearchPage({
                       : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
                   )}
                 >
-                  {option.label}
+                  {intl.formatMessage({ id: option.labelId })}
                 </button>
               ))}
             </div>
           </CatalogFilterSection>
 
-          <CatalogFilterSection title="Jugadores">
+          <CatalogFilterSection title={intl.formatMessage({ id: 'home.players' })}>
             <div className="flex flex-wrap gap-1.5">
               {PLAYER_OPTIONS.map((p) => (
                 <button
@@ -193,18 +200,18 @@ export default function SearchPage({
                       : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
                   )}
                 >
-                  {p === undefined ? 'Todos' : p === 5 ? '5+' : p}
+                  {p === undefined ? intl.formatMessage({ id: 'search.playersAny' }) : p === 5 ? '5+' : p}
                 </button>
               ))}
             </div>
           </CatalogFilterSection>
 
-          <CatalogFilterSection title="Categorías">
+          <CatalogFilterSection title={intl.formatMessage({ id: 'home.categories' })}>
             <div className="space-y-1">
               <FilterCategoryButton
                 active={!category}
-                label="Todo el catálogo"
-                description="Todas las tiendas conectadas"
+                label={intl.formatMessage({ id: 'home.allCatalog' })}
+                description={intl.formatMessage({ id: 'home.allStoresConnected' })}
                 count={categoriesData?.reduce((sum, item) => sum + item.count, 0)}
                 onClick={() => onSearch(query, undefined)}
               />
@@ -225,24 +232,24 @@ export default function SearchPage({
 
       <main className="order-1 min-w-0 lg:order-2">
         <Breadcrumbs items={[
-          { label: 'Inicio', href: '/', onClick: onHome },
+          { label: intl.formatMessage({ id: 'search.home' }), href: '/', onClick: onHome },
           ...(category
             ? [
-                { label: 'Categorías', href: '/search', onClick: () => onSearch('', undefined) },
+                { label: intl.formatMessage({ id: 'search.categoriesCrumb' }), href: '/search', onClick: () => onSearch('', undefined) },
                 { label: categoryLabel(category) },
               ]
-            : [{ label: query ? `Búsqueda: ${query}` : 'Catálogo' }]),
+            : [{ label: query ? intl.formatMessage({ id: 'search.searchCrumb' }, { query }) : intl.formatMessage({ id: 'home.catalog' }) }]),
         ]} />
         <section className="mb-6 rounded-lg border border-[--border] bg-[--bg-raised] p-4 sm:p-5">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                {category ? categoryLabel(category) : 'Marketplace'}
+                {category ? categoryLabel(category) : intl.formatMessage({ id: 'search.marketplace' })}
               </p>
               <h1 className="mt-1 text-2xl font-bold text-[--tx]">{title}</h1>
               <p className="mt-1 text-sm text-[--tx-muted]">
                 {data
-                  ? `${data.total.toLocaleString('es-MX')} juegos encontrados · página ${page} de ${totalPages}`
+                  ? intl.formatMessage({ id: 'search.resultsSummary' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), page, totalPages })
                   : categoryDescription(category)}
               </p>
             </div>
@@ -264,11 +271,11 @@ export default function SearchPage({
                 onValueChange={setDraft}
                 onSearch={(term) => onSearch(term, category)}
                 onProduct={onProduct}
-                placeholder="Refinar búsqueda"
+                placeholder={intl.formatMessage({ id: 'search.refine' })}
               />
               <Button type="submit">
                 <Search className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Buscar</span>
+                <span className="hidden sm:inline">{intl.formatMessage({ id: 'search.search' })}</span>
               </Button>
             </form>
           </div>
@@ -279,16 +286,16 @@ export default function SearchPage({
                 <ActiveChip label={categoryLabel(category)} onClear={() => onSearch(query, undefined)} />
               )}
               {inStockOnly && (
-                <ActiveChip label="Con stock" onClear={() => setInStockOnly(false)} />
+                <ActiveChip label={intl.formatMessage({ id: 'search.inStock' })} onClear={() => setInStockOnly(false)} />
               )}
               {maxPrice !== undefined && (
                 <ActiveChip
-                  label={PRICE_OPTIONS.find((option) => option.value === maxPrice)?.label ?? 'Presupuesto'}
+                  label={intl.formatMessage({ id: PRICE_OPTIONS.find((option) => option.value === maxPrice)?.labelId ?? 'search.budget' })}
                   onClear={() => setMaxPrice(undefined)}
                 />
               )}
               {players !== undefined && (
-                <ActiveChip label={`${players === 5 ? '5+' : players} jugadores`} onClear={() => setPlayers(undefined)} />
+                <ActiveChip label={intl.formatMessage({ id: 'search.players' }, { count: players === 5 ? '5+' : players })} onClear={() => setPlayers(undefined)} />
               )}
             </div>
           )}
@@ -299,24 +306,24 @@ export default function SearchPage({
         {isError && (
           <EmptyState
             icon={<SearchX className="h-9 w-9" aria-hidden="true" />}
-            title="Hubo un error al buscar"
-            body="Revisa la conexión con el API e intenta nuevamente."
+            title={intl.formatMessage({ id: 'search.errorTitle' })}
+            body={intl.formatMessage({ id: 'search.errorBody' })}
           />
         )}
 
         {!isLoading && !isError && !data && (
           <EmptyState
             icon={<Search className="h-9 w-9" aria-hidden="true" />}
-            title="Encuentra tu próximo juego"
-            body="Busca por nombre, editorial o elige una categoría para empezar."
+            title={intl.formatMessage({ id: 'search.startTitle' })}
+            body={intl.formatMessage({ id: 'search.startBody' })}
           />
         )}
 
         {data && results.length === 0 && (
           <EmptyState
             icon={<SearchX className="h-9 w-9" aria-hidden="true" />}
-            title="No encontramos resultados"
-            body="Prueba otro nombre o limpia los filtros activos."
+            title={intl.formatMessage({ id: 'search.noResultsTitle' })}
+            body={intl.formatMessage({ id: 'search.noResultsBody' })}
           />
         )}
 
@@ -336,7 +343,7 @@ export default function SearchPage({
 
             {totalPages > 1 && (
               <nav
-                aria-label="Paginación del catálogo"
+                aria-label={intl.formatMessage({ id: 'search.paginationLabel' })}
                 className="mt-8 flex flex-wrap items-center justify-center gap-2"
               >
                 <Button
@@ -345,7 +352,7 @@ export default function SearchPage({
                   onClick={() => goToPage(page - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  Anterior
+                  {intl.formatMessage({ id: 'search.previous' })}
                 </Button>
 
                 <div className="flex items-center gap-1">
@@ -363,7 +370,7 @@ export default function SearchPage({
                         key={item}
                         type="button"
                         onClick={() => goToPage(item)}
-                        aria-label={`Ir a la página ${item}`}
+                        aria-label={intl.formatMessage({ id: 'search.goToPage' }, { page: item })}
                         aria-current={item === page ? 'page' : undefined}
                         className={cn(
                           'h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition-colors',
@@ -383,7 +390,7 @@ export default function SearchPage({
                   disabled={page === totalPages || isLoading}
                   onClick={() => goToPage(page + 1)}
                 >
-                  Siguiente
+                  {intl.formatMessage({ id: 'search.next' })}
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </nav>

@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent } from '../components/ui/index.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
+import { useIntl } from 'react-intl';
 
 function fmt(minor: number, currency = 'MXN') {
   return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
@@ -20,6 +21,7 @@ interface Transaction { id: string; type: string; amountMinor: number; descripti
 
 export default function WalletPage() {
   const { session } = useCustomer();
+  const intl = useIntl();
   if (!session) return null;
 
   const { data: wallet, isLoading: wl } = useWallet(session.customer.id);
@@ -39,7 +41,7 @@ export default function WalletPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6 animate-fade-in">
-      <h1 className="text-2xl font-bold text-[--tx]">Mi Wallet</h1>
+      <h1 className="text-2xl font-bold text-[--tx]">{intl.formatMessage({ id: 'wallet.title' })}</h1>
 
       {/* Balance card */}
       {wl ? (
@@ -49,9 +51,9 @@ export default function WalletPage() {
           {/* Platform credits */}
           <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 text-white p-5 flex items-center justify-between gap-4">
             <div className="flex flex-col gap-0.5">
-              <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">Créditos libres</p>
+              <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">{intl.formatMessage({ id: 'wallet.freeCredits' })}</p>
               <p className="text-3xl font-bold">{fmt(wallet?.platformCreditsMinor ?? 0)}</p>
-              <p className="text-emerald-300 text-xs">Usables en cualquier tienda</p>
+              <p className="text-emerald-300 text-xs">{intl.formatMessage({ id: 'wallet.freeCreditsHint' })}</p>
             </div>
             <div className="w-12 h-12 rounded-full bg-emerald-950 flex items-center justify-center text-2xl shrink-0">🎁</div>
           </div>
@@ -59,7 +61,7 @@ export default function WalletPage() {
           {/* Store credits */}
           {activeStores.length > 0 && (
             <CardContent className="pt-4">
-              <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wider mb-3">Créditos por tienda</p>
+              <p className="text-xs font-semibold text-[--tx-muted] uppercase tracking-wider mb-3">{intl.formatMessage({ id: 'wallet.storeCredits' })}</p>
               <div className="flex flex-col gap-2">
                 {activeStores.map((sc) => (
                   <div key={sc.seller.id} className="flex items-center justify-between text-sm">
@@ -72,7 +74,7 @@ export default function WalletPage() {
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-[--border] flex items-center justify-between text-sm">
-                <span className="text-[--tx-muted]">Total créditos de tienda</span>
+                <span className="text-[--tx-muted]">{intl.formatMessage({ id: 'wallet.totalStoreCredits' })}</span>
                 <span className="font-bold text-[--tx]">{fmt(totalStore)}</span>
               </div>
             </CardContent>

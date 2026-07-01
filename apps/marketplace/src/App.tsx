@@ -12,6 +12,9 @@ import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
 import { ShelfProvider, useShelf } from './context/ShelfContext.js';
 import { MarketProvider, useMarket } from './context/MarketContext.js';
+import { IntlProvider, useIntl } from 'react-intl';
+import esMessages from './i18n/messages/es.json';
+import enMessages from './i18n/messages/en.json';
 import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
@@ -20,6 +23,18 @@ import { CatalogSearch, LocaleSwitcher } from '@retail-os/ui-react';
 import { formatMoney } from './marketplace-meta.js';
 import { trackPageView } from './analytics.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
+
+const MESSAGES: Record<'es' | 'en', Record<string, string>> = { es: esMessages, en: enMessages };
+
+/** Sits inside MarketProvider (needs uiLocale) and outside every useIntl() consumer. */
+function AppIntlProvider({ children }: { children: ReactNode }) {
+  const { uiLocale } = useMarket();
+  return (
+    <IntlProvider locale={uiLocale} messages={MESSAGES[uiLocale]} defaultLocale="es">
+      {children}
+    </IntlProvider>
+  );
+}
 
 
 type Route =
@@ -126,13 +141,15 @@ export default function App() {
 
   return (
     <MarketProvider>
-      <ShelfProvider>
-        <CustomerProvider>
-          <CartProvider>
-            <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
-          </CartProvider>
-        </CustomerProvider>
-      </ShelfProvider>
+      <AppIntlProvider>
+        <ShelfProvider>
+          <CustomerProvider>
+            <CartProvider>
+              <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
+            </CartProvider>
+          </CustomerProvider>
+        </ShelfProvider>
+      </AppIntlProvider>
     </MarketProvider>
   );
 }
@@ -384,6 +401,7 @@ function Header({
   const { session, isLoading } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
   const { uiLocale, setUiLocale } = useMarket();
+  const intl = useIntl();
 
   const walletTotal = walletSummary
     ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
@@ -430,7 +448,7 @@ function Header({
             <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
               {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
             </HeaderIconButton>
-            <HeaderIconButton label={session ? 'Mi cuenta' : 'Iniciar sesión'} onClick={session ? onAccountClick : onAuthClick}>
+            <HeaderIconButton label={session ? intl.formatMessage({ id: 'header.myAccount' }) : intl.formatMessage({ id: 'header.login' })} onClick={session ? onAccountClick : onAuthClick}>
               <User className="h-4 w-4" aria-hidden="true" />
             </HeaderIconButton>
             <CartButton count={count} onClick={onCartOpen} compact />
@@ -447,12 +465,12 @@ function Header({
             onValueChange={setQ}
             onSearch={onSearch}
             onProduct={onProduct}
-            placeholder="Busca Catan, Root, Wingspan..."
+            placeholder={intl.formatMessage({ id: 'header.searchPlaceholder' })}
             globalShortcut
           />
-          <Button type="submit" aria-label="Buscar" className="min-w-10 shrink-0 px-3 sm:px-4">
+          <Button type="submit" aria-label={intl.formatMessage({ id: 'header.search' })} className="min-w-10 shrink-0 px-3 sm:px-4">
             <Search className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Buscar</span>
+            <span className="hidden sm:inline">{intl.formatMessage({ id: 'header.search' })}</span>
           </Button>
         </form>
 
@@ -475,7 +493,7 @@ function Header({
                        transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
           >
             <Store className="h-4 w-4" aria-hidden="true" />
-            Soy vendedor
+            {intl.formatMessage({ id: 'header.imASeller' })}
           </a>
 
           <LocaleSwitcher
@@ -500,13 +518,13 @@ function Header({
                   {(session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase()}
                 </div>
                 <span className="max-w-[8rem] truncate text-sm font-medium text-[--tx]">
-                  {session.customer.name?.split(' ')[0] ?? 'Mi cuenta'}
+                  {session.customer.name?.split(' ')[0] ?? intl.formatMessage({ id: 'header.myAccount' })}
                 </span>
               </button>
             ) : (
               <Button variant="outline" size="sm" onClick={onAuthClick}>
                 <User className="h-4 w-4" aria-hidden="true" />
-                Iniciar sesión
+                {intl.formatMessage({ id: 'header.login' })}
               </Button>
             )
           )}

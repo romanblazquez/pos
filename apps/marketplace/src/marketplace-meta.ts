@@ -53,8 +53,8 @@ export function getCategoryOptions(categories: Array<string | null | undefined> 
   }));
 }
 
-export function formatMoney(minor: number, currency = 'MXN') {
-  return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
+export function formatMoney(minor: number, currency = 'MXN', locale?: string) {
+  return sharedFormatMoney({ minorUnits: minor, currency }, locale, 0);
 }
 
 function humanizeCategory(category: string) {

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useIntl } from 'react-intl';
 import {
   AlertTriangle,
   Clock3,
@@ -63,6 +64,7 @@ export default function ProductPage({
   onHome: () => void;
   onCategory: (category: string) => void;
 }) {
+  const intl = useIntl();
   const { data: platformCfg } = usePlatformConfig();
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
@@ -176,7 +178,7 @@ export default function ProductPage({
         jsonLd={productJsonLd}
       />
       <Breadcrumbs items={[
-        { label: 'Inicio', href: '/', onClick: onHome },
+        { label: intl.formatMessage({ id: 'product.home' }), href: '/', onClick: onHome },
         {
           label: categoryLabel(p.category),
           href: `/search?category=${encodeURIComponent(p.category)}`,
@@ -229,9 +231,9 @@ export default function ProductPage({
 
           {/* Metadata chips — GameStatPills design */}
           <div className="flex flex-wrap gap-2 sm:gap-3">
-            {p.minAge && <Chip icon={<ShieldCheck className="h-5 w-5" />} value={`${p.minAge}+`} label="Edad mínima" />}
-            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-5 w-5" />} value={`${p.playTimeMinutes}m`} label="Duración" />}
-            {p.bggRating && <Chip icon={<Star className="h-5 w-5 fill-current" />} value={p.bggRating.toFixed(1)} label="BGG Rating" />}
+            {p.minAge && <Chip icon={<ShieldCheck className="h-5 w-5" />} value={`${p.minAge}+`} label={intl.formatMessage({ id: 'product.minAge' })} />}
+            {p.playTimeMinutes && <Chip icon={<Clock3 className="h-5 w-5" />} value={`${p.playTimeMinutes}m`} label={intl.formatMessage({ id: 'product.duration' })} />}
+            {p.bggRating && <Chip icon={<Star className="h-5 w-5 fill-current" />} value={p.bggRating.toFixed(1)} label={intl.formatMessage({ id: 'product.bggRating' })} />}
           </div>
 
           {p.minPlayers && p.maxPlayers && (
@@ -257,9 +259,9 @@ export default function ProductPage({
             return (
               <div className="flex flex-col gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
                 <div className="flex items-baseline justify-between">
-                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Desde</p>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">{intl.formatMessage({ id: 'product.from' })}</p>
                   <p className="text-xs text-emerald-600 dark:text-emerald-500">
-                    {activeListings.length} tienda{activeListings.length > 1 ? 's' : ''} con stock
+                    {intl.formatMessage({ id: 'product.storesWithStock' }, { count: activeListings.length })}
                   </p>
                 </div>
                 <p className="font-display text-4xl font-extrabold tracking-tight text-emerald-900 dark:text-emerald-200">
@@ -270,11 +272,11 @@ export default function ProductPage({
                     <Gift className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
                     <div>
                       <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                        Hasta {Math.round(bestCashback * 100)}% en créditos
+                        {intl.formatMessage({ id: 'product.upToCashback' }, { pct: Math.round(bestCashback * 100) })}
                       </p>
                       <p className="text-xs text-emerald-600 dark:text-emerald-500">
-                        {Math.round(platformCashback * 100)}% libres en todo el marketplace
-                        {bestCashback > platformCashback && ` + hasta ${Math.round((bestCashback - platformCashback) * 100)}% exclusivos de tienda`}
+                        {intl.formatMessage({ id: 'product.freeCashback' }, { pct: Math.round(platformCashback * 100) })}
+                        {bestCashback > platformCashback && intl.formatMessage({ id: 'product.extraStoreCashback' }, { pct: Math.round((bestCashback - platformCashback) * 100) })}
                       </p>
                     </div>
                   </div>
@@ -295,12 +297,12 @@ export default function ProductPage({
         cartItems={cartItems}
         onAddToCart={(listing) => {
           if (listing.stock <= 0) {
-            setToast(`"${listing.sellerName}" está agotado en este momento.`);
+            setToast(intl.formatMessage({ id: 'product.outOfStockToast' }, { sellerName: listing.sellerName }));
             return;
           }
           const inCart = cartItems.find((i) => i.listingId === listing.id)?.quantity ?? 0;
           if (inCart >= listing.stock) {
-            setToast(`"${listing.sellerName}" ya no tiene más stock disponible para agregar.`);
+            setToast(intl.formatMessage({ id: 'product.stockLimitToast' }, { sellerName: listing.sellerName }));
             return;
           }
           const result = add({
@@ -315,7 +317,7 @@ export default function ProductPage({
             imageUrl: p.images[0],
           });
           if (result === 'different_seller') {
-            setToast(`Tu carrito tiene productos de otra tienda. Vaciá el carrito para comprar en "${listing.sellerName}".`);
+            setToast(intl.formatMessage({ id: 'product.differentSellerToast' }, { sellerName: listing.sellerName }));
             return;
           }
           onCartOpen();
@@ -324,7 +326,7 @@ export default function ProductPage({
 
       {/* Shelf */}
       <div className="border-t border-[--border] pt-4 mt-6">
-        <p className="font-mono text-xs uppercase tracking-wide text-[--tx-faint] mb-2">Mi estante</p>
+        <p className="font-mono text-xs uppercase tracking-wide text-[--tx-faint] mb-2">{intl.formatMessage({ id: 'product.myShelf' })}</p>
         <ShelfButtons slug={p.slug} name={p.name} />
       </div>
 
@@ -357,16 +359,17 @@ function Chip({ icon, value, label }: { icon: ReactNode; value: string; label: s
 }
 
 function ComplexityMeter({ weight }: { weight: number }) {
+  const intl = useIntl();
   const pct = (weight / 5) * 100;
   const band =
-    weight < 2 ? 'Light' :
-    weight < 2.5 ? 'Medium-light' :
-    weight < 3.5 ? 'Medium' :
-    weight < 4.5 ? 'Heavy' : 'Expert';
+    weight < 2 ? intl.formatMessage({ id: 'product.complexityLight' }) :
+    weight < 2.5 ? intl.formatMessage({ id: 'product.complexityMediumLight' }) :
+    weight < 3.5 ? intl.formatMessage({ id: 'product.complexityMedium' }) :
+    weight < 4.5 ? intl.formatMessage({ id: 'product.complexityHeavy' }) : intl.formatMessage({ id: 'product.complexityExpert' });
   return (
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <span className="font-display font-bold text-[15px] text-[--tx]">Complejidad</span>
+        <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.complexity' })}</span>
         <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
               style={{ color: '#8A5A12', background: '#F6EBD2', borderColor: '#E7D3A6' }}>
           {weight.toFixed(1)} / 5 · {band}
@@ -378,18 +381,21 @@ function ComplexityMeter({ weight }: { weight: number }) {
              style={{ left: `${pct}%`, width: 3, height: 24, background: 'var(--tx)', transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised)' }} />
       </div>
       <div className="flex justify-between mt-2.5 font-mono text-[10.5px] uppercase">
-        <span style={{ color: '#3E7C53', fontWeight: 700 }}>Light</span>
-        <span className="text-[--tx-faint]">Medium</span>
-        <span className="text-[--tx-faint]">Heavy</span>
-        <span className="text-[--tx-faint]">Expert</span>
+        <span style={{ color: '#3E7C53', fontWeight: 700 }}>{intl.formatMessage({ id: 'product.complexityLight' })}</span>
+        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityMedium' })}</span>
+        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityHeavy' })}</span>
+        <span className="text-[--tx-faint]">{intl.formatMessage({ id: 'product.complexityExpert' })}</span>
       </div>
     </div>
   );
 }
 
 function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPlayers: number }) {
+  const intl = useIntl();
   const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
-  const badge = `${minPlayers === maxPlayers ? minPlayers : `${minPlayers}–${maxPlayers}`} jugadores`;
+  const badge = minPlayers === maxPlayers
+    ? intl.formatMessage({ id: 'product.playersCount' }, { count: minPlayers })
+    : intl.formatMessage({ id: 'product.playersBadge' }, { range: `${minPlayers}–${maxPlayers}` });
 
   function slotStyle(n: number): { bg: string; border?: string; color: string; label: string; labelColor: string; strikethrough?: boolean; bold?: boolean } {
     if (n < minPlayers) return { bg: '#EDE4D2', border: '1px dashed #D8CCB3', color: '#B6A98C', label: 'No', labelColor: '#B6A98C', strikethrough: true };
@@ -401,7 +407,7 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
   return (
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <span className="font-display font-bold text-[15px] text-[--tx]">Jugadores</span>
+        <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
         <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5"
               style={{ color: '#2C6B43', background: '#E4EFE4', borderColor: '#CBE0CD' }}>
           {badge}
@@ -445,10 +451,11 @@ function ProductSkeleton() {
 }
 
 function NotFound() {
+  const intl = useIntl();
   return (
     <div className="text-center py-24 text-[--tx-muted]">
       <PackageCheck className="mx-auto mb-4 h-12 w-12" aria-hidden="true" />
-      <p className="text-lg font-medium text-[--tx]">Juego no encontrado</p>
+      <p className="text-lg font-medium text-[--tx]">{intl.formatMessage({ id: 'product.notFound' })}</p>
     </div>
   );
 }

@@ -16,6 +16,6 @@ export const inputCls =
  * real minor-unit value with zero rounding drift (unlike product-price display,
  * which intentionally shows whole currency units for browsing).
  */
-export function fmtExact(minor: number, currency = 'MXN') {
-  return sharedFormatMoney({ minorUnits: minor, currency });
+export function fmtExact(minor: number, currency = 'MXN', locale?: string) {
+  return sharedFormatMoney({ minorUnits: minor, currency }, locale);
 }

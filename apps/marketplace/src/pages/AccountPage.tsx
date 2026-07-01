@@ -8,6 +8,7 @@ import { XPProgressRing } from '../components/XPProgressRing.js';
 import { Card, CardContent, Badge, Button } from '../components/ui/index.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
 import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
+import { useIntl } from 'react-intl';
 
 function fmt(minor: number, currency = 'MXN') {
   return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
@@ -69,6 +70,7 @@ export default function AccountPage({
   onLogout: () => void;
 }) {
   const { session, logout } = useCustomer();
+  const intl = useIntl();
   if (!session) return null;
 
   function handleLogout() {
@@ -185,22 +187,22 @@ export default function AccountPage({
 
       {/* ── Section 3: El Camino / Tier path ── */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-display text-base font-bold text-[--tx]">El Camino del Loremaster</h2>
+        <h2 className="font-display text-base font-bold text-[--tx]">{intl.formatMessage({ id: 'account.loremasterPath' })}</h2>
         <div className="rounded-2xl border border-[--border] bg-[--bg-raised] p-5">
           <div className="flex items-center justify-between relative">
             {/* Connecting line */}
             <div className="absolute left-0 right-0 top-[20px] h-0.5 bg-[--border] mx-8" />
-            {XP_TIERS.map((t, i) => {
+            {XP_TIERS.map((tier, i) => {
               const done = tierIndex > i;
               const current = tierIndex === i;
               return (
-                <div key={t.name} className="relative flex flex-col items-center gap-2 z-10">
+                <div key={tier.name} className="relative flex flex-col items-center gap-2 z-10">
                   <div
                     className="flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all"
                     style={{
-                      background: done || current ? t.color : 'var(--bg-subtle)',
-                      borderColor: done || current ? t.color : 'var(--border)',
-                      boxShadow: current ? `0 0 0 3px ${t.color}33` : undefined,
+                      background: done || current ? tier.color : 'var(--bg-subtle)',
+                      borderColor: done || current ? tier.color : 'var(--border)',
+                      boxShadow: current ? `0 0 0 3px ${tier.color}33` : undefined,
                     }}
                   >
                     {done ? (
@@ -213,11 +215,11 @@ export default function AccountPage({
                   </div>
                   <span
                     className="font-mono text-[9px] uppercase tracking-wide text-center leading-tight"
-                    style={{ color: done || current ? t.color : 'var(--tx-faint)', fontWeight: current ? 700 : undefined }}
+                    style={{ color: done || current ? tier.color : 'var(--tx-faint)', fontWeight: current ? 700 : undefined }}
                   >
-                    {t.name}
+                    {tier.name}
                   </span>
-                  <span className="font-mono text-[8px] text-[--tx-faint]">{t.min} XP</span>
+                  <span className="font-mono text-[8px] text-[--tx-faint]">{tier.min} XP</span>
                 </div>
               );
             })}
@@ -232,7 +234,7 @@ export default function AccountPage({
 
       {/* ── Section 4: Collection shelf ── */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-display text-base font-bold text-[--tx]">Mi Estante</h2>
+        <h2 className="font-display text-base font-bold text-[--tx]">{intl.formatMessage({ id: 'account.myShelf' })}</h2>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {SHELF_CELLS.map((cell) => (
             <div
@@ -252,7 +254,7 @@ export default function AccountPage({
 
       {/* ── Section 5: Ways to earn XP ── */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-display text-base font-bold text-[--tx]">Cómo ganar XP</h2>
+        <h2 className="font-display text-base font-bold text-[--tx]">{intl.formatMessage({ id: 'account.waysToEarnXp' })}</h2>
         <div className="rounded-2xl border border-[--border] bg-[--bg-raised] divide-y divide-[--border] overflow-hidden">
           {XP_EARN_ACTIONS.map((action) => (
             <div key={action.label} className="flex items-center gap-3 px-4 py-3">
@@ -275,7 +277,7 @@ export default function AccountPage({
       {/* ── Section 6: Recent XP events ── */}
       {recentXPEvents.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-display text-base font-bold text-[--tx]">Actividad de XP reciente</h2>
+          <h2 className="font-display text-base font-bold text-[--tx]">{intl.formatMessage({ id: 'account.recentXpActivity' })}</h2>
           <div className="rounded-2xl border border-[--border] bg-[--bg-raised] divide-y divide-[--border] overflow-hidden">
             {recentXPEvents.map((event, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
@@ -332,7 +334,7 @@ export default function AccountPage({
       {/* ── Recent orders ── */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[--tx]">Pedidos recientes</h2>
+          <h2 className="text-base font-semibold text-[--tx]">{intl.formatMessage({ id: 'account.recentOrders' })}</h2>
           <button
             onClick={() => onNavigate('orders')}
             className="rounded-lg border border-[--border] bg-[--bg-subtle] px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-[--bg-hover] dark:text-emerald-300"

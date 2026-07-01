@@ -26,10 +26,10 @@ const FALLBACK_MARKET: Market = {
 
 // Shared cross-app language preference cookie — same pattern as jp-theme in
 // App.tsx's readSharedTheme/persistSharedTheme, so apps/web (apex) and
-// apps/marketplace agree on the visitor's chosen locale. apps/marketplace
-// has no translated UI copy yet; today this only drives number/currency
-// locale formatting (see formatMoney call sites) and stays in sync for when
-// full marketplace i18n content lands.
+// apps/marketplace agree on the visitor's chosen locale. Drives the
+// react-intl catalogs in src/i18n/messages/{es,en}.json — covers the
+// discovery/conversion path today (header, home, search, product); the
+// rest of the app is still Spanish-only pending further migration.
 function readSharedLocale(): UiLocale | null {
   const cookie = document.cookie.match(/(?:^|;\s*)jp-locale=(es|en)(?:;|$)/)?.[1];
   return cookie === 'es' || cookie === 'en' ? cookie : null;
@@ -89,6 +89,13 @@ export function MarketProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', syncWhenVisible);
     };
   }, []);
+
+  // Keep <html lang> accurate — assistive tech and browser translation
+  // features read this, not just the visible copy (same reasoning as apex's
+  // per-locale <html lang={locale}> in apps/web/src/app/[locale]/layout.tsx).
+  useEffect(() => {
+    document.documentElement.lang = uiLocale;
+  }, [uiLocale]);
 
   function setUiLocale(locale: UiLocale) {
     persistSharedLocale(locale);

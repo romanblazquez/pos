@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Award, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
+import { useIntl } from 'react-intl';
 
 export interface ListingDetail {
   id: string;
@@ -74,14 +75,17 @@ export function SellerOfferComparisonTable({
   cartItems: { listingId: string; quantity: number }[];
   onAddToCart: (listing: ListingDetail) => void;
 }) {
+  const intl = useIntl();
   return (
     <section>
       <div className="flex items-baseline justify-between mb-1">
         <h2 className="font-display text-2xl font-bold tracking-tight text-[--tx]">Comparar tiendas</h2>
         {inStockListings.length > 0 && (
           <span className="text-xs text-[--tx-faint]">
-            {inStockListings.length} con stock
-            {outOfStockListings.length > 0 && ` · ${outOfStockListings.length} agotada${outOfStockListings.length > 1 ? 's' : ''}`}
+            {intl.formatMessage(
+              { id: 'offers.stockSummary' },
+              { inStock: inStockListings.length, outOfStock: outOfStockListings.length },
+            )}
           </span>
         )}
       </div>
