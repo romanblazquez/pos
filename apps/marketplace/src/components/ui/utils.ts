@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,7 +17,5 @@ export const inputCls =
  * which intentionally shows whole currency units for browsing).
  */
 export function fmtExact(minor: number, currency = 'MXN') {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2,
-  }).format(minor / 100);
+  return sharedFormatMoney({ minorUnits: minor, currency });
 }

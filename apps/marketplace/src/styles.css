@@ -3,6 +3,7 @@
 @source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
 @source "../../../libs/shared/ui-react/src/components/catalog-search.tsx";
 @source "../../../libs/shared/ui-react/src/components/breadcrumbs.tsx";
+@source "../../../libs/shared/ui-react/src/components/locale-switcher.tsx";
 
 @theme {
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;

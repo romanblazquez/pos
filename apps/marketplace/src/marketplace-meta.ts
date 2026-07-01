@@ -1,3 +1,5 @@
+import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
+
 // Known categories get a friendlier label/description than the raw DB value —
 // but the tiles themselves are only ever built from real categories (see
 // getCategoryOptions), never shown just because they're listed here.
@@ -52,11 +54,7 @@ export function getCategoryOptions(categories: Array<string | null | undefined> 
 }
 
 export function formatMoney(minor: number, currency = 'MXN') {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(minor / 100);
+  return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
 }
 
 function humanizeCategory(category: string) {

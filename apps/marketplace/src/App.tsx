@@ -11,11 +11,12 @@ import { CartProvider, useCart } from './cart/CartContext.js';
 import CartDrawer from './cart/CartDrawer.js';
 import { CustomerProvider, useCustomer } from './context/CustomerContext.js';
 import { ShelfProvider, useShelf } from './context/ShelfContext.js';
+import { MarketProvider, useMarket } from './context/MarketContext.js';
 import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
-import { CatalogSearch } from '@retail-os/ui-react';
+import { CatalogSearch, LocaleSwitcher } from '@retail-os/ui-react';
 import { formatMoney } from './marketplace-meta.js';
 import { trackPageView } from './analytics.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
@@ -31,6 +32,8 @@ type Route =
   | { page: 'addresses' };
 
 type Theme = 'light' | 'dark';
+
+const UI_LOCALES = ['es', 'en'] as const;
 
 function readSharedTheme(): Theme | null {
   const cookie = document.cookie.match(/(?:^|;\s*)jp-theme=(light|dark)(?:;|$)/)?.[1];
@@ -122,13 +125,15 @@ export default function App() {
   }, []);
 
   return (
-    <ShelfProvider>
-      <CustomerProvider>
-        <CartProvider>
-          <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
-        </CartProvider>
-      </CustomerProvider>
-    </ShelfProvider>
+    <MarketProvider>
+      <ShelfProvider>
+        <CustomerProvider>
+          <CartProvider>
+            <AppInner theme={theme} toggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
+          </CartProvider>
+        </CustomerProvider>
+      </ShelfProvider>
+    </MarketProvider>
   );
 }
 
@@ -378,6 +383,7 @@ function Header({
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
+  const { uiLocale, setUiLocale } = useMarket();
 
   const walletTotal = walletSummary
     ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
@@ -415,6 +421,12 @@ function Header({
                 <Wallet className="h-4 w-4" aria-hidden="true" />
               </HeaderIconButton>
             )}
+            <LocaleSwitcher
+              locales={UI_LOCALES}
+              active={uiLocale}
+              onSelect={(l: string) => setUiLocale(l as 'es' | 'en')}
+              ariaLabel={uiLocale === 'es' ? 'Idioma' : 'Language'}
+            />
             <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
               {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
             </HeaderIconButton>
@@ -465,6 +477,13 @@ function Header({
             <Store className="h-4 w-4" aria-hidden="true" />
             Soy vendedor
           </a>
+
+          <LocaleSwitcher
+            locales={UI_LOCALES}
+            active={uiLocale}
+            onSelect={(l: string) => setUiLocale(l as 'es' | 'en')}
+            ariaLabel={uiLocale === 'es' ? 'Idioma' : 'Language'}
+          />
 
           <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
             {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}

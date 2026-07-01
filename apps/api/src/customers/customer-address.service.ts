@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
+import { DEFAULT_COUNTRY_CODE } from '../markets/default-market.constants.js';
 
 export interface AddressInput {
   label?: string;
@@ -47,7 +48,7 @@ export class CustomerAddressService {
         city: input.city,
         state: input.state,
         postalCode: input.postalCode,
-        country: input.country ?? 'MX',
+        country: input.country ?? DEFAULT_COUNTRY_CODE,
         isDefault: makeDefault,
       },
     });

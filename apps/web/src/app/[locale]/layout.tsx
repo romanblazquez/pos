@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Analytics } from '@/components/Analytics';
 import { MeepleMark } from '@/components/MeepleMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { LOCALES, isLocale, listingPath, type Locale } from '@/lib/segments';
 import '../globals.css';
 
@@ -132,6 +133,7 @@ export default function LocaleLayout({
             <Link className="header-search" href={listingPath('search', locale)}>
               <span aria-hidden="true">⌕</span> {t.search}
             </Link>
+            <LocaleSwitcher locale={locale} />
             <ThemeToggle locale={locale} />
           </div>
         </header>

@@ -3,9 +3,10 @@ import { useCustomer } from '../context/CustomerContext.js';
 import { useWallet } from '../hooks/useWallet.js';
 import { Card, CardContent } from '../components/ui/index.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
+import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
 
 function fmt(minor: number, currency = 'MXN') {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
+  return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
 }
 
 const TX_META: Record<string, { icon: string; color: string; sign: string }> = {

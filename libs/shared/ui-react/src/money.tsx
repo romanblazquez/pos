@@ -5,12 +5,16 @@ export interface MoneyDTO {
   currency: string;
 }
 
+/** Default display locale used across apps until per-market locale resolution lands. */
+export const DEFAULT_LOCALE = 'es-MX';
+
 /** Format an integer-minor-units amount as a localized currency string. */
-export function formatMoney(money: MoneyDTO, locale = 'es-MX', fractionDigits = 2): string {
+export function formatMoney(money: MoneyDTO, locale = DEFAULT_LOCALE, fractionDigits = 2): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: money.currency,
     minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(money.minorUnits / 10 ** fractionDigits);
 }
 

@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
+import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 import { TypesenseService } from '../search/typesense.service.js';
 import { BggService } from './bgg.service.js';
 import type { ProductDocument } from '../search/typesense.service.js';
@@ -344,7 +345,7 @@ export class MktCatalogService {
         sellerSku: mapping.sellerSku ?? undefined,
         sellerUrl: (raw.url as string) ?? undefined,
         priceMinorUnits: (variant?.priceMinorUnits as number) ?? 0,
-        currency: (variant?.currency as string) ?? 'MXN',
+        currency: (variant?.currency as string) ?? DEFAULT_CURRENCY_CODE,
         stock: (variant?.stock as number) ?? 0,
         lastSyncedAt: new Date(),
         active: false, // unpublished until the seller explicitly publishes

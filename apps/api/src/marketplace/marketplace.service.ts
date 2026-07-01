@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
+import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 
 export interface ProductSearchParams {
   q?: string;
@@ -107,7 +108,7 @@ export class MarketplaceService {
         bggRating: p.bggRating,
         minPriceMinor: prices.length ? Math.min(...prices) : 0,
         maxPriceMinor: prices.length ? Math.max(...prices) : 0,
-        currency: p.listings[0]?.currency ?? 'MXN',
+        currency: p.listings[0]?.currency ?? DEFAULT_CURRENCY_CODE,
         totalListings: p.listings.length,
         inStockListings: active.length,
       };

@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import type { ProductFilters, UpsertProductDto } from './catalog.dto.js';
+import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 
 @Injectable()
 export class CatalogService {
@@ -31,7 +32,7 @@ export class CatalogService {
 
   async createProduct(tenantId: string, dto: UpsertProductDto) {
     return this.prisma.product.create({
-      data: { tenantId, ...dto, currency: dto.currency ?? 'MXN', taxRatePercent: dto.taxRatePercent ?? 16 },
+      data: { tenantId, ...dto, currency: dto.currency ?? DEFAULT_CURRENCY_CODE, taxRatePercent: dto.taxRatePercent ?? 16 },
     });
   }
 
@@ -74,7 +75,7 @@ export class CatalogService {
           category: p.category,
           photoUrl: p.photoUrl,
           priceMinorUnits: p.priceMinorUnits,
-          currency: p.currency ?? 'MXN',
+          currency: p.currency ?? DEFAULT_CURRENCY_CODE,
           taxRatePercent: p.taxRatePercent ?? 16,
           trackInventory: p.trackInventory ?? true,
           active: p.active ?? true,

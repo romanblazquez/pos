@@ -1,6 +1,7 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { MktCatalogService } from '../mkt-catalog/mkt-catalog.service.js';
+import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 
 /**
  * Seller-facing half of the product-matching pipeline: lists items that
@@ -61,7 +62,7 @@ export class SellerMappingService {
         sellerSku: mapping.sellerSku ?? undefined,
         sellerUrl: (raw.url as string) ?? undefined,
         priceMinorUnits: (variant?.priceMinorUnits as number) ?? 0,
-        currency: (variant?.currency as string) ?? 'MXN',
+        currency: (variant?.currency as string) ?? DEFAULT_CURRENCY_CODE,
         stock: (variant?.stock as number) ?? 0,
         lastSyncedAt: new Date(),
         active: false, // unpublished until the seller explicitly publishes
