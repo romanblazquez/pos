@@ -350,12 +350,20 @@ export class SellersService {
     await this.prisma.listingPromo.delete({ where: { id: promoId } });
   }
 
-  async aiEnhanceListing(sellerId: string, listingId: string, ai: import('../ai/ai.service.js').AiService) {
+  async aiEnhanceListing(
+    sellerId: string,
+    listingId: string,
+    ai: import('../ai/ai.service.js').AiService,
+    aiUsage: import('../ai/ai-usage.service.js').AiUsageService,
+  ) {
     const listing = await this.prisma.listing.findFirst({
       where: { id: listingId, sellerId },
       include: { product: true },
     });
     if (!listing) throw new NotFoundException('Listing not found');
+
+    // Throws ForbiddenException on starter tier or an exhausted monthly budget.
+    const usage = await aiUsage.assertCanEnhance(sellerId);
 
     const allSkus = await this.prisma.listing
       .findMany({ where: { sellerId }, select: { sellerSku: true } })
@@ -377,13 +385,21 @@ export class SellersService {
       allSellerSkus: allSkus,
     });
 
+    await aiUsage.recordEnhancement(sellerId, listing.productId, 'gpt-4o-mini', result);
+
     return { listingId, productId: listing.productId, current: {
       name: listing.product.name,
       description: listing.product.description,
       slug: listing.product.slug,
       tags: listing.product.tags,
       sellerSku: listing.sellerSku,
-    }, suggested: result };
+    }, suggested: result, usage: {
+      tier: usage.tier,
+      used: usage.used + 1,
+      limit: usage.limit,
+      remaining: usage.limit === null ? null : Math.max(0, usage.limit - usage.used - 1),
+      unlimited: usage.unlimited,
+    } };
   }
 
   async applyProductPatch(sellerId: string, listingId: string, data: {

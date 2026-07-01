@@ -26,6 +26,7 @@ import { Roles } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
 import { AiService } from '../ai/ai.service.js';
+import { AiUsageService } from '../ai/ai-usage.service.js';
 
 @ApiTags('sellers')
 @ApiBearerAuth('seller-jwt')
@@ -36,6 +37,7 @@ export class SellersController {
     @Inject(SellersService) private readonly svc: SellersService,
     @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
     @Inject(AiService) private readonly ai: AiService,
+    @Inject(AiUsageService) private readonly aiUsage: AiUsageService,
     @Inject(SellerMappingService) private readonly mapping: SellerMappingService,
   ) {}
 
@@ -586,12 +588,16 @@ export class SellersController {
   // ── AI enhancement ────────────────────────────────────────────────────────
 
   @Post(':id/listings/:listingId/ai-enhance')
-  @ApiOperation({ summary: 'Generate AI SEO suggestions for a listing (preview only — does not save)' })
+  @ApiOperation({
+    summary: 'Generate AI SEO suggestions for a listing (preview only — does not save)',
+    description: 'Gated by the seller\'s tier and monthly budget — see GET :id/ai-usage. Starter tier is blocked entirely.',
+  })
   @ApiParam({ name: 'id', description: 'Seller CUID' })
   @ApiParam({ name: 'listingId', description: 'Listing CUID' })
   @ApiResponse({ status: 200, description: 'AI-generated SEO suggestions. Apply them with PATCH :id/listings/:listingId/product.' })
+  @ApiResponse({ status: 403, description: 'Starter tier, or the paid-tier monthly budget is exhausted.' })
   async aiEnhanceListing(@Param('id') id: string, @Param('listingId') listingId: string) {
-    return this.svc.aiEnhanceListing(id, listingId, this.ai);
+    return this.svc.aiEnhanceListing(id, listingId, this.ai, this.aiUsage);
   }
 
   @Patch(':id/listings/:listingId/product')

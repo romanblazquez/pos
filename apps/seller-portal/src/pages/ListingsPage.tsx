@@ -67,6 +67,14 @@ interface AiEnhanceResult {
   reasoning: string;
 }
 
+interface AiUsage {
+  tier: string;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  unlimited: boolean;
+}
+
 type StatusFilter = 'all' | 'active' | 'inactive' | 'out_of_stock' | 'low_stock';
 type SortKey = 'recent' | 'price_asc' | 'price_desc' | 'stock_asc' | 'stock_desc';
 
@@ -739,6 +747,8 @@ function EditModal({
   const [aiResult, setAiResult] = useState<AiEnhanceResult | null>(null);
   const [aiApplying, setAiApplying] = useState(false);
   const [aiApplied, setAiApplied] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
 
   // Promos state
   const [promos, setPromos] = useState<ListingPromo[]>([]);
@@ -766,6 +776,15 @@ function EditModal({
       .finally(() => setLoadingPromos(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sellerId, listing.id, token]);
+
+  useEffect(() => {
+    fetch(`${API}/api/v1/sellers/${sellerId}/ai-usage`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: AiUsage | null) => setAiUsage(d))
+      .catch(() => setAiUsage(null));
+  }, [sellerId, token]);
 
   function updatePromos(updated: ListingPromo[]) {
     setPromos(updated);
@@ -1302,26 +1321,41 @@ function EditModal({
                 <p className="text-xs text-slate-400 mt-0.5">
                   Genera título, descripción y tags SEO. Revisá antes de aplicar.
                 </p>
+                {aiUsage && (
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {aiUsage.limit === 0
+                      ? 'Disponible desde el plan Growth en adelante.'
+                      : aiUsage.unlimited
+                        ? 'Usos ilimitados en tu plan.'
+                        : `${aiUsage.remaining} de ${aiUsage.limit} usos disponibles este mes.`}
+                  </p>
+                )}
               </div>
               {!aiResult && (
                 <button
                   onClick={async () => {
                     setAiLoading(true);
                     setAiResult(null);
+                    setAiError('');
                     try {
                       const res = await fetch(
                         `${API}/api/v1/sellers/${sellerId}/listings/${listing.id}/ai-enhance`,
                         { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
                       );
-                      if (res.ok) {
-                        const body = await res.json() as { suggested: AiEnhanceResult };
+                      const body = await res.json() as { suggested?: AiEnhanceResult; usage?: AiUsage; message?: string };
+                      if (res.ok && body.suggested) {
                         setAiResult(body.suggested);
+                        if (body.usage) setAiUsage(body.usage);
+                      } else {
+                        setAiError(body.message ?? 'No se pudo generar la sugerencia.');
                       }
+                    } catch {
+                      setAiError('Error de conexión al generar la sugerencia.');
                     } finally {
                       setAiLoading(false);
                     }
                   }}
-                  disabled={aiLoading}
+                  disabled={aiLoading || (aiUsage !== null && aiUsage.limit === 0) || (aiUsage !== null && aiUsage.remaining === 0)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-60 transition-colors shrink-0 ml-3"
                 >
                   {aiLoading ? (
@@ -1343,6 +1377,12 @@ function EditModal({
                 </button>
               )}
             </div>
+
+            {aiError && (
+              <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                {aiError}
+              </div>
+            )}
 
             {aiResult && !aiApplied && (
               <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 space-y-3">

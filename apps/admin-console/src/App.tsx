@@ -6,19 +6,20 @@ import { useAdminAuth } from './auth/AdminAuth.js';
 const API = API_BASE;
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
-type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets';
+type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets' | 'ai-usage';
 
 const NAV: { id: AdminView; icon: string; label: string }[] = [
-  { id: 'sellers',  icon: '🏪', label: 'Vendedores' },
-  { id: 'catalog',  icon: '📚', label: 'Catálogo' },
-  { id: 'mapping',  icon: '🔗', label: 'Solicitudes de mapeo' },
-  { id: 'orders',   icon: '📋', label: 'Pedidos' },
-  { id: 'bgg',      icon: '🎲', label: 'BGG Import' },
-  { id: 'ranking',  icon: '⭐', label: 'Ranking' },
-  { id: 'markets',  icon: '🌎', label: 'Mercados' },
+  { id: 'sellers',   icon: '🏪', label: 'Vendedores' },
+  { id: 'catalog',   icon: '📚', label: 'Catálogo' },
+  { id: 'mapping',   icon: '🔗', label: 'Solicitudes de mapeo' },
+  { id: 'orders',    icon: '📋', label: 'Pedidos' },
+  { id: 'bgg',       icon: '🎲', label: 'BGG Import' },
+  { id: 'ranking',   icon: '⭐', label: 'Ranking' },
+  { id: 'markets',   icon: '🌎', label: 'Mercados' },
+  { id: 'ai-usage',  icon: '✦',  label: 'Uso de IA' },
 ];
 
-const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets']);
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets', 'ai-usage']);
 
 function parseView(): AdminView {
   const segment = window.location.pathname.replace(/^\//, '') as AdminView;
@@ -87,6 +88,7 @@ export default function App() {
         {view === 'bgg'      && <BggImportView />}
         {view === 'ranking'  && <RankingView />}
         {view === 'markets'  && <TenantMarketsView />}
+        {view === 'ai-usage' && <AiUsageView />}
       </main>
     </div>
   );
@@ -357,6 +359,56 @@ function TenantMarketForm({
         <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-lg text-slate-500 hover:text-slate-800">
           Cancelar
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI enrichment usage (oversight only — budgets are enforced server-side) ──
+
+interface SellerAiUsage {
+  sellerId: string; sellerName: string; tier: string;
+  used: number; limit: number | null; remaining: number | null; unlimited: boolean;
+}
+
+function AiUsageView() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-ai-usage'],
+    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/admin/ai-usage`)).json() as Promise<SellerAiUsage[]>,
+  });
+
+  const rows = data ?? [];
+
+  return (
+    <div className="p-6 space-y-5">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">Uso de IA</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Enriquecimiento SEO por IA este mes, por vendedor en plan pago. Los límites se aplican del lado del servidor — esta vista es solo de referencia.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {isLoading ? (
+          <Loading />
+        ) : rows.length === 0 ? (
+          <Empty icon="✦" msg="Ningún vendedor en plan pago todavía." />
+        ) : (
+          <table className="w-full text-sm">
+            <Thead cols={['Vendedor', 'Plan', 'Usados este mes', 'Límite', 'Restantes']} />
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((r) => (
+                <tr key={r.sellerId} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">{r.sellerName}</td>
+                  <td className="px-4 py-3 text-slate-500 capitalize">{r.tier}</td>
+                  <td className="px-4 py-3 text-slate-500">{r.used}</td>
+                  <td className="px-4 py-3 text-slate-500">{r.unlimited ? 'Sin límite' : r.limit}</td>
+                  <td className="px-4 py-3 text-slate-500">{r.unlimited ? '—' : r.remaining}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
