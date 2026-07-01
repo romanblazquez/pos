@@ -11,9 +11,21 @@ import { MarketsPage } from './MarketsPage.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/index.js';
 import { Badge } from '../components/ui/index.js';
 import { Button } from '../components/ui/index.js';
-import { Progress } from '../components/ui/index.js';
-import { Separator } from '../components/ui/index.js';
 import { ToastProvider, useToast } from '../components/ui/index.js';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '../components/ui/index.js';
+import {
+  BarChart3,
+  ExternalLink,
+  Globe2,
+  LayoutDashboard,
+  Link2,
+  LogOut,
+  Menu,
+  Package,
+  RefreshCw,
+  Settings,
+  ShoppingBag,
+} from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -29,14 +41,14 @@ const CONNECTORS = [
 const OAUTH_CONNECTORS = new Set(['tiendanube', 'shopify', 'mercadolibre', 'woocommerce']);
 
 const NAV_ITEMS = [
-  { label: 'Visión general',     id: 'dashboard' },
-  { label: 'Productos',          id: 'listings'  },
-  { label: 'Vincular productos', id: 'mapping'   },
-  { label: 'Pedidos',            id: 'orders'    },
-  { label: 'Sincronización',     id: 'sync'      },
-  { label: 'Analíticas',         id: 'analytics' },
-  { label: 'Mercados',           id: 'markets'   },
-  { label: 'Configuración',      id: 'settings'  },
+  { label: 'Visión general',     id: 'dashboard', icon: LayoutDashboard, group: 'Principal' },
+  { label: 'Productos',          id: 'listings',  icon: Package,         group: 'Operación' },
+  { label: 'Vincular productos', id: 'mapping',   icon: Link2,           group: 'Operación' },
+  { label: 'Pedidos',            id: 'orders',    icon: ShoppingBag,     group: 'Operación' },
+  { label: 'Analíticas',         id: 'analytics', icon: BarChart3,       group: 'Operación' },
+  { label: 'Sincronización',     id: 'sync',      icon: RefreshCw,       group: 'Gestión' },
+  { label: 'Mercados',           id: 'markets',   icon: Globe2,          group: 'Gestión' },
+  { label: 'Configuración',      id: 'settings',  icon: Settings,        group: 'Gestión' },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]['id'];
@@ -65,6 +77,7 @@ export default function Dashboard({ session, onLogout, onSessionUpdate }: Dashbo
 function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) {
   const [activeNav, setActiveNav] = useState<NavId>(parseNavFromPath);
   const [pendingMappings, setPendingMappings] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     function onPop() { setActiveNav(parseNavFromPath()); }
@@ -85,96 +98,178 @@ function DashboardInner({ session, onLogout, onSessionUpdate }: DashboardProps) 
 
   function navigate(id: NavId) {
     setActiveNav(id);
+    setMobileNavOpen(false);
     window.history.pushState({}, '', id === 'dashboard' ? '/' : `/${id}`);
   }
 
+  const activeItem = NAV_ITEMS.find((item) => item.id === activeNav) ?? NAV_ITEMS[0];
+  const ActiveIcon = activeItem.icon;
+
   return (
-    <div className="h-dvh overflow-hidden bg-slate-50">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 flex h-dvh w-56 flex-col overflow-hidden bg-slate-900 text-slate-300">
-        {/* Logo area */}
-        <div className="px-5 pt-6 pb-5 border-b border-white/5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-xs">BG</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">BGMarket</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Retail OS</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="sidebar-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto p-3">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2 relative
-                ${activeNav === item.id
-                  ? 'text-white font-medium'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
-            >
-              {activeNav === item.id && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-emerald-400 rounded-full -ml-3" />
-              )}
-              <span className="flex-1">{item.label}</span>
-              {item.id === 'mapping' && pendingMappings > 0 && (
-                <span className="shrink-0 text-[10px] font-bold bg-amber-400 text-slate-900 rounded-full px-1.5 py-0.5 tabular">
-                  {pendingMappings}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* Bottom user area */}
-        <div className="p-4 border-t border-white/5">
-          <div className="flex items-start gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
-              <span className="text-white text-xs font-semibold">
-                {session.seller.name.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-200 truncate">{session.seller.name}</p>
-              <p className={`text-[10px] font-medium mt-0.5 ${session.seller.connectorType ? 'text-emerald-400' : 'text-slate-500'}`}>
-                {session.seller.connectorType ? `● ${session.seller.connectorType}` : '○ Sin conector'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="text-xs text-slate-600 hover:text-slate-300 transition-colors"
-          >
-            Cerrar sesión →
-          </button>
-        </div>
+    <div className="flex h-dvh min-w-0 overflow-hidden bg-slate-50">
+      <aside className="hidden h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-white/5 bg-slate-950 text-slate-300 lg:flex">
+        <SidebarContent
+          session={session}
+          activeNav={activeNav}
+          pendingMappings={pendingMappings}
+          onNavigate={navigate}
+          onLogout={onLogout}
+        />
       </aside>
 
-      {/* Main */}
-      <main className="ml-56 h-dvh min-w-0 overflow-y-auto overscroll-contain">
-        {activeNav === 'dashboard'  && <DashboardHome session={session} />}
-        {activeNav === 'listings'   && <ListingsPage session={session} />}
-        {activeNav === 'mapping'    && <ProductMappingPage session={session} />}
-        {activeNav === 'orders'     && <OrdersPage session={session} />}
-        {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
-        {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={navigate} />}
-        {activeNav === 'markets'    && <MarketsPage session={session} />}
-        {activeNav === 'settings'   && (
-          <div className="space-y-0">
-            <SettingsPage session={session} onSessionUpdate={onSessionUpdate} />
-            <div className="px-8 pb-8 max-w-2xl">
-              <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent className="p-0 lg:hidden">
+          <SheetTitle className="sr-only">Navegación principal</SheetTitle>
+          <SheetDescription className="sr-only">Secciones del portal de vendedores</SheetDescription>
+          <SidebarContent
+            session={session}
+            activeNav={activeNav}
+            pendingMappings={pendingMappings}
+            onNavigate={navigate}
+            onLogout={onLogout}
+          />
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="-ml-1 inline-flex size-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            aria-label="Abrir menú"
+          >
+            <Menu className="size-5" />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+              <ActiveIcon className="size-[18px]" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{activeItem.label}</p>
+              <p className="truncate text-[11px] text-slate-500">{session.seller.name}</p>
             </div>
           </div>
-        )}
-        {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'mapping' && activeNav !== 'orders' &&
-         activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && activeNav !== 'markets' && (
-          <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
-        )}
-      </main>
+          {activeNav === 'mapping' && pendingMappings > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold tabular text-amber-800">{pendingMappings}</span>
+          )}
+        </header>
+
+        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+          {activeNav === 'dashboard'  && <DashboardHome session={session} />}
+          {activeNav === 'listings'   && <ListingsPage session={session} />}
+          {activeNav === 'mapping'    && <ProductMappingPage session={session} />}
+          {activeNav === 'orders'     && <OrdersPage session={session} />}
+          {activeNav === 'analytics'  && <AnalyticsPage session={session} />}
+          {activeNav === 'sync'       && <SyncHealth session={session} onNavigate={navigate} />}
+          {activeNav === 'markets'    && <MarketsPage session={session} />}
+          {activeNav === 'settings'   && (
+            <div className="space-y-0">
+              <SettingsPage session={session} onSessionUpdate={onSessionUpdate} />
+              <div className="max-w-2xl px-4 pb-6 sm:px-6 lg:px-8 lg:pb-8">
+                <ConnectorSettings session={session} onSessionUpdate={onSessionUpdate} />
+              </div>
+            </div>
+          )}
+          {activeNav !== 'dashboard' && activeNav !== 'listings' && activeNav !== 'mapping' && activeNav !== 'orders' &&
+           activeNav !== 'analytics' && activeNav !== 'sync' && activeNav !== 'settings' && activeNav !== 'markets' && (
+            <ComingSoon section={NAV_ITEMS.find((n) => n.id === activeNav)?.label ?? ''} />
+          )}
+        </main>
+      </div>
     </div>
+  );
+}
+
+function SidebarContent({ session, activeNav, pendingMappings, onNavigate, onLogout }: {
+  session: SellerSession;
+  activeNav: NavId;
+  pendingMappings: number;
+  onNavigate: (id: NavId) => void;
+  onLogout: () => void;
+}) {
+  const groups = ['Principal', 'Operación', 'Gestión'] as const;
+
+  return (
+    <>
+      <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/5 px-5">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500 shadow-lg shadow-emerald-950/30">
+          <span className="text-xs font-black tracking-tight text-white">BG</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-none text-white">BGMarket</p>
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Portal vendedor</p>
+        </div>
+      </div>
+
+      <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Navegación principal">
+        {groups.map((group) => (
+          <div key={group} className="mb-5 last:mb-0">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">{group}</p>
+            <div className="space-y-1">
+              {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
+                const Icon = item.icon;
+                const active = activeNav === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onNavigate(item.id)}
+                    className={`group relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                      active
+                        ? 'bg-white/[0.09] font-medium text-white shadow-sm'
+                        : 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-100'
+                    }`}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-emerald-400" />}
+                    <Icon className={`size-[18px] shrink-0 ${active ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    {item.id === 'mapping' && pendingMappings > 0 && (
+                      <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold tabular text-slate-950">
+                        {pendingMappings}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      <div className="shrink-0 border-t border-white/5 p-3">
+        <a
+          href={import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-2 flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <ExternalLink className="size-4" />
+          Ver marketplace
+        </a>
+        <div className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-xs font-bold text-emerald-300 ring-1 ring-emerald-400/20">
+            {session.seller.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-slate-100">{session.seller.name}</p>
+            <p className={`mt-0.5 truncate text-[10px] ${session.seller.connectorType ? 'text-emerald-400' : 'text-slate-500'}`}>
+              {session.seller.connectorType ? `Conectado a ${session.seller.connectorType}` : 'Sin conector'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -208,13 +303,13 @@ function DashboardHome({ session }: { session: SellerSession }) {
   const firstName = session.seller.name.split(' ')[0];
 
   return (
-    <div className="p-8 max-w-6xl page-enter">
+    <div className="max-w-6xl p-4 sm:p-6 lg:p-8 page-enter">
       {/* Greeting header */}
-      <div className="space-y-1 mb-8">
+      <div className="mb-6 space-y-1 lg:mb-8">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
           {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight sm:text-3xl">
           {greeting}, {firstName}
         </h1>
         <p className="text-sm text-slate-400 mt-1">
@@ -225,7 +320,7 @@ function DashboardHome({ session }: { session: SellerSession }) {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:mb-8 lg:grid-cols-4">
         <MetricCard
           label="Total de productos"
           value={loadingStats ? '—' : String(stats?.total ?? 0)}
@@ -273,7 +368,7 @@ function DashboardHome({ session }: { session: SellerSession }) {
                   )}
                 </div>
                 {/* Legend — 4 numbers */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
                     { label: 'Total',      value: stats.total,        color: 'text-slate-900',  dot: 'bg-slate-300'  },
                     { label: 'Activos',    value: stats.active,       color: 'text-emerald-700', dot: 'bg-emerald-500' },
@@ -296,7 +391,7 @@ function DashboardHome({ session }: { session: SellerSession }) {
       )}
 
       {/* Two-column bottom row */}
-      <div className="grid lg:grid-cols-2 gap-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Connector status */}
         <Card>
           <CardHeader>
@@ -362,9 +457,9 @@ function MetricCard({
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <div className={`h-1 w-full ${accent}`} />
-      <div className="px-5 pt-4 pb-5">
+      <div className="px-4 pb-4 pt-3.5 sm:px-5 sm:pb-5 sm:pt-4">
         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide leading-none">{label}</p>
-        <p className={`text-4xl font-bold tabular tracking-tight mt-2.5 ${valueColor}`}>{value}</p>
+        <p className={`mt-2 text-3xl font-bold tabular tracking-tight sm:mt-2.5 sm:text-4xl ${valueColor}`}>{value}</p>
         {sub && <p className="text-xs text-slate-400 mt-1.5">{sub}</p>}
       </div>
     </div>
@@ -444,9 +539,9 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
   ];
 
   return (
-    <div className="p-8 max-w-3xl page-enter">
+    <div className="max-w-3xl p-4 sm:p-6 lg:p-8 page-enter">
       {/* Page header */}
-      <div className="space-y-1 mb-8">
+      <div className="mb-6 space-y-1 lg:mb-8">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Sincronización</p>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Estado del conector</h1>
         <p className="text-sm text-slate-400">Sincronización automática de catálogo, inventario y precios.</p>
@@ -487,10 +582,10 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
                 const status = syncStatus.find((r) => r.type === s.key);
                 const run = runResults[s.key];
                 return (
-                  <div key={s.key} className="py-3.5 grid grid-cols-[7rem_1fr_auto] items-center gap-4 text-sm">
+                  <div key={s.key} className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1 py-4 text-sm sm:grid-cols-[7rem_1fr_auto] sm:items-center sm:gap-4">
                     <span className="text-slate-700 font-medium">{s.label}</span>
 
-                    <div className="space-y-0.5">
+                    <div className="col-span-2 space-y-0.5 sm:col-span-1">
                       {run ? (
                         run.ok
                           ? <span className="text-emerald-700">{run.items} ítems sincronizados</span>
@@ -513,7 +608,7 @@ function SyncHealth({ session, onNavigate }: { session: SellerSession; onNavigat
                       <p className="text-xs text-slate-400">{s.freq}</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="col-start-2 row-start-1 flex items-center gap-3 sm:col-auto sm:row-auto">
                       <button
                         onClick={() => triggerSync(s.key)}
                         disabled={syncing !== null || !hasConnector}
@@ -586,7 +681,7 @@ function ConnectorSettings({
         </CardHeader>
         <CardContent className="pt-0">
           {current ? (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+            <div className="flex flex-col items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium text-sm text-slate-900">{current.label}</p>
                 <p className="text-xs text-emerald-700 mt-0.5">Credenciales cifradas en reposo</p>
@@ -610,7 +705,7 @@ function ConnectorSettings({
           <CardTitle>{current ? 'Cambiar conector' : 'Conectar tienda'}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3">
             {CONNECTORS.map((c) => (
               <button
                 key={c.type}
@@ -701,7 +796,7 @@ function MpConnectCard({
         {status === null ? (
           <p className="text-sm text-slate-400">Verificando…</p>
         ) : status.connected ? (
-          <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium text-emerald-800">Cuenta conectada</p>
               {status.merchantId && (

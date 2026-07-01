@@ -266,9 +266,9 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-slate-50">
+    <div className="flex min-h-full flex-col bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-8 py-5">
+      <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Productos</h1>
@@ -279,7 +279,7 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
           <button
             onClick={fetchListings}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300
+            className="min-h-10 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 sm:px-4
                        rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Actualizando…' : 'Actualizar'}
@@ -287,13 +287,13 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
         </div>
       </div>
 
-      <div className="flex-1 px-8 py-6 space-y-5 overflow-auto">
+      <div className="flex-1 space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         {/* Stats */}
         {stats && <StatsBar stats={stats} onFilter={setStatusFilter} activeFilter={statusFilter} />}
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col gap-3 xl:flex-row">
+          <div className="relative w-full flex-1 xl:max-w-sm">
             <input
               type="search"
               value={q}
@@ -305,7 +305,7 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
             {(
               [
                 { id: 'all',          label: 'Todos'      },
@@ -319,7 +319,7 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
                 key={f.id}
                 onClick={() => { setStatusFilter(f.id); setPage(1); }}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-full border transition-colors',
+                  'min-h-9 shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors',
                   statusFilter === f.id
                     ? 'bg-slate-900 text-white border-slate-900'
                     : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400 hover:text-slate-800'
@@ -330,11 +330,11 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
             ))}
           </div>
 
-          <div className="ml-auto">
+          <div className="w-full xl:ml-auto xl:w-auto">
             <select
               value={sort}
               onChange={(e) => { setSort(e.target.value as SortKey); setPage(1); }}
-              className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white
+              className="min-h-10 w-full text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white xl:w-auto
                          text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
             >
               <option value="recent">Más recientes</option>
@@ -364,10 +364,44 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
           />
         )}
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        {/* Mobile list */}
+        <div className="space-y-3 md:hidden">
+          {loading && listings.length === 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">Cargando productos…</div>
+          )}
+          {!loading && listings.length === 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+              <p className="text-sm font-medium text-slate-600">Sin resultados</p>
+              <p className="mt-1 text-xs text-slate-400">Probá cambiando los filtros</p>
+            </div>
+          )}
+          {listings.map((listing) => (
+            <MobileListingCard
+              key={listing.id}
+              listing={listing}
+              onToggleActive={() => toggleActive(listing)}
+              onEdit={() => setEditListing(listing)}
+              isSaving={savingId === listing.id}
+              hasActivePromo={promoMap[listing.id] ?? false}
+              selected={selectAllMatching || selectedIds.has(listing.id)}
+              onToggleSelected={() => toggleRowSelected(listing.id)}
+            />
+          ))}
+          {totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPrevious={() => setPage((p) => p - 1)}
+              onNext={() => setPage((p) => p + 1)}
+            />
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:block">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[850px] text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="px-5 py-3 w-10">
@@ -483,7 +517,7 @@ function StatsBar({
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {cards.map((c) => {
         const isActive = activeFilter === c.id;
         return (
@@ -491,7 +525,7 @@ function StatsBar({
             key={c.id}
             onClick={() => onFilter(c.id)}
             className={cn(
-              'p-4 rounded-xl border text-left transition-all',
+              'rounded-xl border p-3 text-left transition-all sm:p-4',
               isActive
                 ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
                 : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
@@ -534,17 +568,17 @@ function BulkActionBar({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900 text-white shadow-sm">
+      <div className="flex flex-col gap-3 rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm sm:flex-row sm:items-center sm:py-2.5">
         <span className="text-sm font-medium">
           {selectAllMatching
             ? `Los ${totalMatching.toLocaleString('es-AR')} productos que coinciden están seleccionados`
             : `${count.toLocaleString('es-AR')} seleccionado${count === 1 ? '' : 's'}`}
         </span>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
           {pendingAction ? (
             <>
-              <span className="text-sm text-slate-300">
+              <span className="w-full text-xs text-slate-300 sm:w-auto sm:text-sm">
                 ¿{pendingAction === 'active' ? 'Activar' : 'Desactivar'} {selectAllMatching ? totalMatching : count} producto{(selectAllMatching ? totalMatching : count) === 1 ? '' : 's'}?
               </span>
               <button
@@ -596,6 +630,111 @@ function BulkActionBar({
         </p>
       )}
     </div>
+  );
+}
+
+function Pagination({ page, totalPages, total, onPrevious, onNext }: {
+  page: number;
+  totalPages: number;
+  total: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3">
+      <p className="text-xs text-slate-500">
+        {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} de {total.toLocaleString('es-AR')}
+      </p>
+      <div className="flex items-center gap-1.5">
+        <button
+          disabled={page === 1}
+          onClick={onPrevious}
+          className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-300 text-sm text-slate-600 disabled:opacity-40"
+          aria-label="Página anterior"
+        >
+          ←
+        </button>
+        <span className="px-1 text-xs font-medium tabular text-slate-600">{page}/{totalPages}</span>
+        <button
+          disabled={page === totalPages}
+          onClick={onNext}
+          className="inline-flex size-9 items-center justify-center rounded-lg border border-slate-300 text-sm text-slate-600 disabled:opacity-40"
+          aria-label="Página siguiente"
+        >
+          →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MobileListingCard({
+  listing, onToggleActive, onEdit, isSaving, hasActivePromo, selected, onToggleSelected,
+}: {
+  listing: Listing;
+  onToggleActive: () => void;
+  onEdit: () => void;
+  isSaving: boolean;
+  hasActivePromo: boolean;
+  selected: boolean;
+  onToggleSelected: () => void;
+}) {
+  const stockClass =
+    listing.stockStatus === 'in_stock' ? 'text-emerald-700 bg-emerald-50' :
+    listing.stockStatus === 'low_stock' ? 'text-amber-700 bg-amber-50' :
+    listing.stockStatus === 'out_of_stock' ? 'text-red-700 bg-red-50' :
+    'text-slate-500 bg-slate-50';
+  const stockLabel =
+    listing.stockStatus === 'out_of_stock' ? 'Sin stock' :
+    listing.stockStatus === 'low_stock' ? `${listing.stock} — bajo` :
+    listing.stock >= 999 ? 'Sin límite' : `${listing.stock} disponibles`;
+
+  return (
+    <article className={cn(
+      'rounded-2xl border bg-white p-4 shadow-sm transition-colors',
+      selected ? 'border-slate-400 ring-1 ring-slate-300' : 'border-slate-200',
+      !listing.active && 'opacity-65',
+    )}>
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelected}
+          className="mt-1 size-4 shrink-0 cursor-pointer accent-slate-900"
+          aria-label={`Seleccionar ${listing.product.name}`}
+        />
+        <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+          {listing.product.images[0] ? (
+            <img src={listing.product.images[0]} alt={listing.product.name} className="size-full object-cover" />
+          ) : (
+            <div className="size-full bg-slate-200" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{listing.product.name}</p>
+              {listing.sellerSku && <p className="mt-1 truncate font-mono text-[11px] text-slate-400">{listing.sellerSku}</p>}
+            </div>
+            {hasActivePromo && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">PROMO</span>}
+          </div>
+          <p className="mt-2 text-base font-bold tabular text-slate-900">{fmtPrice(listing.priceMinorUnits, listing.currency)}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', stockClass)}>{stockLabel}</span>
+        <div className="flex items-center gap-3">
+          <button onClick={onEdit} className="min-h-9 px-2 text-xs font-semibold text-slate-700">Editar</button>
+          {listing.product.slug && (
+            <a href={`${MARKETPLACE}/product/${listing.product.slug}`} target="_blank" rel="noopener noreferrer" className="min-h-9 px-1 py-2 text-xs font-medium text-slate-500">
+              Ver ↗
+            </a>
+          )}
+          <Switch checked={listing.active} onCheckedChange={onToggleActive} disabled={isSaving} aria-label={listing.active ? 'Desactivar' : 'Activar'} />
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -691,7 +830,7 @@ function ListingRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
           <button
             onClick={onEdit}
             className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
@@ -929,14 +1068,14 @@ function EditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative flex max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
 
         {/* Modal header */}
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-slate-100 shrink-0">
+        <div className="flex shrink-0 items-start gap-3 border-b border-slate-100 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0">
             {product.images[0] ? (
               <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
@@ -971,7 +1110,7 @@ function EditModal({
 
         {/* Re-pair to a different master product */}
         {showRelink && (
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 shrink-0 space-y-3">
+          <div className="shrink-0 space-y-3 border-b border-slate-100 bg-slate-50/60 px-4 py-4 sm:px-6">
             <input
               type="search"
               autoFocus
@@ -1030,7 +1169,7 @@ function EditModal({
         )}
 
         {/* Scrollable body */}
-        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
 
           {/* Price */}
           <div>
@@ -1220,7 +1359,7 @@ function EditModal({
                 </div>
 
                 {/* Date range */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
                       Inicio <span className="font-normal text-slate-400">(opcional)</span>
@@ -1474,9 +1613,9 @@ function EditModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
-          <p className="text-xs text-slate-400">Sync: {timeAgo(listing.lastSyncedAt)}</p>
-          <div className="flex gap-2">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 bg-slate-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+          <p className="hidden text-xs text-slate-400 sm:block">Sync: {timeAgo(listing.lastSyncedAt)}</p>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg
@@ -1488,7 +1627,7 @@ function EditModal({
               onClick={handleSave}
               disabled={saving || saved}
               className={cn(
-                'px-5 py-2 text-sm font-semibold rounded-lg transition-all',
+                'px-4 py-2 text-sm font-semibold rounded-lg transition-all sm:px-5',
                 saved
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-900 hover:bg-slate-700 text-white disabled:opacity-60'

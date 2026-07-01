@@ -7,7 +7,10 @@
 
   * { box-sizing: border-box; }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
 
   body {
     background-color: hsl(240 5% 97%);
@@ -16,6 +19,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    min-width: 320px;
+    overflow-x: hidden;
+  }
+
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+
+  input, select, textarea { font-size: 16px; }
+
+  @media (min-width: 640px) {
+    input, select, textarea { font-size: inherit; }
   }
 }
 

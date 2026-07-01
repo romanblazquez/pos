@@ -164,9 +164,9 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-stone-50">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-stone-50 px-4 py-8 sm:py-12">
       <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
+        <div className="mb-6 text-center sm:mb-8">
           <p className="text-2xl font-bold text-emerald-800">🎲 BoardGame Market</p>
           <p className="text-stone-500 text-sm mt-1">
             Hola, <strong>{session.seller.name}</strong> — completá tu perfil
@@ -174,7 +174,7 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
         </div>
 
         {/* Progress bar */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="flex justify-between text-xs text-stone-400 mb-2">
             <span>Paso {step} de {TOTAL_STEPS}</span>
             <span>{Math.round((step / TOTAL_STEPS) * 100)}%</span>
@@ -187,7 +187,7 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 sm:p-8">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-8">
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
               {error}
@@ -211,11 +211,11 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
           )}
         </div>
 
-        <div className="flex justify-between mt-6">
+        <div className="mt-6 flex items-center justify-between gap-3">
           {step > 1 ? (
             <button
               onClick={prev}
-              className="px-5 py-2 text-sm text-stone-600 border border-stone-300 rounded-lg hover:bg-stone-50"
+              className="min-h-11 px-4 py-2 text-sm text-stone-600 border border-stone-300 rounded-lg hover:bg-stone-50 sm:px-5"
             >
               ← Anterior
             </button>
@@ -225,7 +225,7 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
           {step < TOTAL_STEPS ? (
             <button
               onClick={next}
-              className="px-6 py-2 text-sm bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800"
+              className="min-h-11 px-4 py-2 text-sm bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 sm:px-6"
             >
               Continuar →
             </button>
@@ -233,7 +233,7 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
             <button
               onClick={finish}
               disabled={!data.commissionAccepted || isSubmitting}
-              className="px-6 py-2 text-sm bg-emerald-700 text-white font-semibold rounded-lg
+              className="min-h-11 px-4 py-2 text-sm bg-emerald-700 text-white font-semibold rounded-lg sm:px-6
                          hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Activando tu tienda...' : '¡Empezar a vender! 🎲'}
@@ -299,7 +299,7 @@ function Step2Connect({
   return (
     <div className="space-y-5">
       <StepHeader step={2} title="Conectar tu catálogo" desc="¿Dónde están tus productos ahora?" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 min-[440px]:grid-cols-2">
         {CONNECTORS.map((c) => (
           <button
             key={c.type}
