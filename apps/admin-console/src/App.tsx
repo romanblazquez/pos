@@ -176,21 +176,34 @@ function TenantMarketsView() {
     queryKey: ['admin-tenant-markets'],
     queryFn: async () => {
       const res = await adminApi.fetch(`${API}/api/v1/admin/tenant-markets`);
-      return res.json() as Promise<TenantMarket[]>;
+      const data = res.ok ? await res.json() : [];
+      return (Array.isArray(data) ? data : []) as TenantMarket[];
     },
   });
 
   const countriesQuery = useQuery({
     queryKey: ['admin-ref-countries'],
-    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/countries`)).json() as Promise<CountryRef[]>,
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/markets/countries`);
+      const data = res.ok ? await res.json() : [];
+      return (Array.isArray(data) ? data : []) as CountryRef[];
+    },
   });
   const currenciesQuery = useQuery({
     queryKey: ['admin-ref-currencies'],
-    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/currencies`)).json() as Promise<CurrencyRef[]>,
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/markets/currencies`);
+      const data = res.ok ? await res.json() : [];
+      return (Array.isArray(data) ? data : []) as CurrencyRef[];
+    },
   });
   const languagesQuery = useQuery({
     queryKey: ['admin-ref-languages'],
-    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/markets/languages`)).json() as Promise<LanguageRef[]>,
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/markets/languages`);
+      const data = res.ok ? await res.json() : [];
+      return (Array.isArray(data) ? data : []) as LanguageRef[];
+    },
   });
 
   const createMut = useMutation({
@@ -374,7 +387,11 @@ interface SellerAiUsage {
 function AiUsageView() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-ai-usage'],
-    queryFn: async () => (await adminApi.fetch(`${API}/api/v1/admin/ai-usage`)).json() as Promise<SellerAiUsage[]>,
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/admin/ai-usage`);
+      const data = res.ok ? await res.json() : [];
+      return (Array.isArray(data) ? data : []) as SellerAiUsage[];
+    },
   });
 
   const rows = data ?? [];
