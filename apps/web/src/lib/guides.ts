@@ -6,6 +6,8 @@
 // is the ONLY thing that knows that — swap GUIDES for a DB/CMS fetch later and
 // the routing, templates, SEO and interlinking all keep working unchanged.
 import { mejoresJuegos2Jugadores } from '../content/guides/mejores-juegos-2-jugadores.js';
+import { mejoresJuegosParaPrincipiantes } from '../content/guides/mejores-juegos-para-principiantes.js';
+import { mejoresJuegosDeEstrategia } from '../content/guides/mejores-juegos-de-estrategia.js';
 
 /** A curated product recommendation inside a guide (the guide → product link). */
 export interface GuidePick {
@@ -40,7 +42,11 @@ export interface Guide {
   updatedAt: string;
 }
 
-const GUIDES: readonly Guide[] = [mejoresJuegos2Jugadores];
+const GUIDES: readonly Guide[] = [
+  mejoresJuegos2Jugadores,
+  mejoresJuegosParaPrincipiantes,
+  mejoresJuegosDeEstrategia,
+];
 
 export function listGuides(): Guide[] {
   return [...GUIDES].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
