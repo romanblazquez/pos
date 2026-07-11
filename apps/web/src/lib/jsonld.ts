@@ -139,3 +139,43 @@ export function itemListLd(entries: ItemListEntry[]): Json {
 export function productSummaryName(p: ProductSummary): string {
   return p.name;
 }
+
+// Editorial guide -> Article. First-party content authored by Juegospedia, so
+// claiming authorship/publisher here is accurate (unlike catalogue ratings).
+export function articleLd(input: {
+  title: string;
+  description: string;
+  path: string;
+  datePublished: string;
+  dateModified: string;
+  image?: string;
+}): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: input.title,
+    description: input.description,
+    datePublished: input.datePublished,
+    dateModified: input.dateModified,
+    mainEntityOfPage: absoluteUrl(input.path),
+    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      '@type': 'Organization',
+      name: ORGANIZATION.name,
+      logo: { '@type': 'ImageObject', url: ORGANIZATION.logo },
+    },
+    ...(input.image ? { image: [input.image] } : {}),
+  };
+}
+
+export function faqLd(faqs: Array<{ q: string; a: string }>): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+}

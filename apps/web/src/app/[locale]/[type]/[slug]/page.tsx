@@ -12,7 +12,8 @@ import { buildMetadata, entityAlternates } from '@/lib/seo';
 import { APP_URL } from '@/lib/site';
 import { buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
-import { breadcrumbLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
+import { articleLd, breadcrumbLd, faqLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
+import { getGuide, guidesMentioning, type Guide, type GuidePick } from '@/lib/guides';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
@@ -113,6 +114,19 @@ export async function generateMetadata({
     });
   }
 
+  if (kind === 'guides') {
+    const guide = getGuide(params.slug);
+    if (!guide) return {};
+    return buildMetadata({
+      locale,
+      path: entityPath('guides', locale, guide.slug),
+      title: guide.title,
+      description: guide.description,
+      alternates: entityAlternates('guides', guide.slug),
+      type: 'article',
+    });
+  }
+
   return {};
 }
 
@@ -195,7 +209,106 @@ export default async function DetailPage({
     );
   }
 
+  if (kind === 'guides') {
+    const guide = getGuide(params.slug);
+    if (!guide) notFound();
+    return renderGuide(guide, locale, homeName);
+  }
+
   notFound();
+}
+
+async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
+  const path = entityPath('guides', locale, guide.slug);
+  // Resolve each pick to a live product so the guide links into shoppable pages
+  // (and silently drops any pick whose product is no longer in the catalogue).
+  const picks = (await Promise.all(
+    guide.picks.map(async (pick) => {
+      const product = await getProduct(pick.gameSlug);
+      return product ? { pick, product } : null;
+    }),
+  )).filter((x): x is { pick: GuidePick; product: ProductDetail } => x !== null);
+
+  const crumbs: Crumb[] = [
+    { name: homeName, path: homePath(locale) },
+    { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+    { name: guide.title, path },
+  ];
+
+  const dateLabel = new Date(guide.updatedAt).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  return (
+    <main className="container">
+      <Breadcrumbs crumbs={crumbs} />
+      <JsonLd
+        data={[
+          breadcrumbLd(crumbs),
+          articleLd({
+            title: guide.title,
+            description: guide.description,
+            path,
+            datePublished: guide.publishedAt,
+            dateModified: guide.updatedAt,
+            image: picks[0]?.product.images?.[0],
+          }),
+          ...(guide.faq?.length ? [faqLd(guide.faq)] : []),
+        ]}
+      />
+
+      <article className="prose" style={{ maxWidth: 760 }}>
+        <h1 className="product-h1">{guide.title}</h1>
+        <p className="muted" style={{ marginTop: 4 }}>
+          {locale === 'es' ? 'Actualizado el' : 'Updated'} {dateLabel}
+        </p>
+        {guide.intro.map((p, i) => <p key={`intro-${i}`}>{p}</p>)}
+
+        <ol className="guide-picks" style={{ listStyle: 'none', padding: 0, margin: '2rem 0', display: 'grid', gap: '1rem' }}>
+          {picks.map(({ pick, product }, i) => {
+            const range = priceRange(product, locale);
+            return (
+              <li key={product.id} style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 20, opacity: 0.5, minWidth: 28 }}>{i + 1}</div>
+                {product.images?.[0] && (
+                  <img src={product.images[0]} alt={product.name} width={84} height={84} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
+                )}
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ margin: 0, fontSize: '1.05rem' }}>
+                    <Link href={entityPath('games', locale, product.slug)}>{product.name}</Link>
+                    {range && <span className="muted" style={{ fontWeight: 400 }}> · {locale === 'es' ? 'desde' : 'from'} {range.split('–')[0].trim()}</span>}
+                  </h2>
+                  <p style={{ margin: '0.4rem 0 0' }}>{pick.blurb}</p>
+                  <Link className="chip" style={{ marginTop: 8, display: 'inline-block' }} href={entityPath('games', locale, product.slug)}>
+                    {locale === 'es' ? 'Ver ofertas' : 'See offers'} →
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        {guide.sections?.map((s, i) => (
+          <section key={`sec-${i}`}>
+            <h2 className="section-title">{s.heading}</h2>
+            {s.paragraphs.map((p, j) => <p key={`sec-${i}-${j}`}>{p}</p>)}
+          </section>
+        ))}
+
+        {guide.faq?.length ? (
+          <section>
+            <h2 className="section-title">{locale === 'es' ? 'Preguntas frecuentes' : 'FAQ'}</h2>
+            {guide.faq.map((f, i) => (
+              <div key={`faq-${i}`} style={{ marginBottom: '1rem' }}>
+                <h3 style={{ margin: '0 0 4px', fontSize: '1rem' }}>{f.q}</h3>
+                <p style={{ margin: 0 }}>{f.a}</p>
+              </div>
+            ))}
+          </section>
+        ) : null}
+      </article>
+    </main>
+  );
 }
 
 function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
@@ -352,6 +465,24 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
           )}
         </section>
       )}
+
+      {/* Hub-and-spoke back-link: guides that recommend this game. */}
+      {(() => {
+        const related = guidesMentioning(product.slug);
+        if (!related.length) return null;
+        return (
+          <section>
+            <h2 className="section-title">{locale === 'es' ? 'Aparece en estas guías' : 'Featured in these guides'}</h2>
+            <div className="taglist">
+              {related.map((g) => (
+                <Link key={g.slug} className="chip" href={entityPath('guides', locale, g.slug)}>
+                  {g.title} →
+                </Link>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
     </main>
   );
 }

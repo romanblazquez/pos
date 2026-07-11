@@ -12,6 +12,7 @@ import { CatalogSearchField } from '@/components/CatalogSearchField';
 import { Pager } from '@/components/Pager';
 import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
 import {
+  entityPath,
   homePath,
   isLocale,
   listingPath,
@@ -19,6 +20,7 @@ import {
   slugify,
   type Locale,
 } from '@/lib/segments';
+import { listGuides } from '@/lib/guides';
 
 export const revalidate = 1800;
 
@@ -67,6 +69,19 @@ export async function generateMetadata({
           ? 'Busca juegos de mesa y compara precios entre tiendas.'
           : 'Search board games and compare prices across stores.',
       noindex: true,
+    });
+  }
+
+  if (kind === 'guides') {
+    return buildMetadata({
+      locale,
+      path: listingPath('guides', locale),
+      title: locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides',
+      description:
+        locale === 'es'
+          ? 'Guías, comparativas y listas de los mejores juegos de mesa, con precios comparados entre tiendas.'
+          : 'Guides, comparisons and best-of lists for board games, with prices compared across stores.',
+      alternates: { es: listingPath('guides', 'es'), en: listingPath('guides', 'en') },
     });
   }
 
@@ -302,6 +317,45 @@ export default async function ListingPage({
           {categories.map((c) => (
             <Link key={c.category} className="chip" href={`${listingPath('categories', locale)}/${slugify(c.category)}`}>
               {c.category} <span className="count">{c.count}</span>
+            </Link>
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  // ── Guides index (editorial hub) ───────────────────────────────────────────
+  if (kind === 'guides') {
+    const guides = listGuides();
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale) },
+      { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+    ];
+    return (
+      <main className="container">
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(guides.map((g) => ({ name: g.title, path: entityPath('guides', locale, g.slug) }))),
+          ]}
+        />
+        <h1 className="page-title">{locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides'}</h1>
+        <p className="muted">
+          {locale === 'es'
+            ? 'Comparativas y listas de los mejores juegos, con precios comparados entre tiendas.'
+            : 'Comparisons and best-of lists, with prices compared across stores.'}
+        </p>
+        <div className="guide-list" style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
+          {guides.map((g) => (
+            <Link
+              key={g.slug}
+              href={entityPath('guides', locale, g.slug)}
+              className="guide-card"
+              style={{ display: 'block', padding: '1.25rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))', textDecoration: 'none' }}
+            >
+              <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.15rem' }}>{g.title}</h2>
+              <p className="muted" style={{ margin: '0.5rem 0 0' }}>{g.description}</p>
             </Link>
           ))}
         </div>

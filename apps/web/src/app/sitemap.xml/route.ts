@@ -1,4 +1,5 @@
 import { listProducts, getCategories, type ProductSummary } from '@/lib/api';
+import { listGuides } from '@/lib/guides';
 import { SITE_URL } from '@/lib/site';
 import {
   INDEXABLE_LOCALES,
@@ -72,6 +73,12 @@ export async function GET(): Promise<Response> {
     entries.push({ loc: `${SITE_URL}${homePath(locale)}`, changefreq: 'daily', priority: 1 });
     entries.push({ loc: `${SITE_URL}${listingPath('games', locale)}`, changefreq: 'daily', priority: 0.9 });
     entries.push({ loc: `${SITE_URL}${listingPath('categories', locale)}`, changefreq: 'weekly', priority: 0.6 });
+
+    // Editorial hub — guides index + each guide.
+    entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
+    for (const g of listGuides()) {
+      entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
+    }
 
     for (const c of categories) {
       entries.push({
