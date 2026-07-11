@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GoogleSignInButton } from '@retail-os/ui-react';
 import type { BrowserSession } from '@retail-os/api-client';
 import type { SellerSession } from '../App.js';
 import { sellerApi, API_BASE as API } from './api-client.js';
@@ -9,6 +10,8 @@ interface Props {
 
 type Mode = 'login' | 'register';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_SELLER_CLIENT_ID as string | undefined;
+
 export default function AuthGate({ onAuth }: Props) {
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
@@ -16,6 +19,27 @@ export default function AuthGate({ onAuth }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  async function loginWithGoogle(credential: string, state: string) {
+    setError('');
+    try {
+      const res = await fetch(`${API}/api/v1/auth/google`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app: 'seller', credential, state }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message ?? 'No se pudo iniciar sesión con Google');
+        return;
+      }
+      const session = sellerApi.acceptSession(data as BrowserSession);
+      onAuth(session.seller as SellerSession['seller']);
+    } catch {
+      setError('No se pudo conectar con el servidor. ¿Está corriendo la API?');
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -172,6 +196,25 @@ export default function AuthGate({ onAuth }: Props) {
                 : 'Crear cuenta'}
             </button>
           </form>
+
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex items-center gap-3 my-6">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs text-slate-400">o</span>
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div className="flex justify-center">
+                <GoogleSignInButton
+                  app="seller"
+                  clientId={GOOGLE_CLIENT_ID}
+                  apiBase={API}
+                  onCredential={loginWithGoogle}
+                  onError={setError}
+                />
+              </div>
+            </>
+          )}
 
           <p className="text-center text-sm text-slate-500 mt-6">
             {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}

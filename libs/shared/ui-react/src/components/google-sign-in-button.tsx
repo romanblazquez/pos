@@ -23,7 +23,7 @@ declare global {
 }
 
 export interface GoogleSignInButtonProps {
-  app: 'marketplace' | 'admin';
+  app: 'marketplace' | 'admin' | 'seller';
   clientId: string | undefined;
   apiBase: string;
   onCredential: (credential: string, state: string) => void | Promise<void>;

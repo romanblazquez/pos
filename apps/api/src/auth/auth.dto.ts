@@ -69,9 +69,9 @@ export class AuthResponseDto {
 }
 
 export class GoogleCredentialDto {
-  @ApiProperty({ enum: ['marketplace', 'admin'] })
-  @IsIn(['marketplace', 'admin'])
-  app: 'marketplace' | 'admin';
+  @ApiProperty({ enum: ['marketplace', 'admin', 'seller'] })
+  @IsIn(['marketplace', 'admin', 'seller'])
+  app: 'marketplace' | 'admin' | 'seller';
 
   @ApiProperty({ description: 'Google Identity Services ID token' })
   @IsString() @MinLength(20)

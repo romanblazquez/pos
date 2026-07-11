@@ -33,7 +33,9 @@ export class AuthController {
   @Get('google/challenge')
   @ApiOperation({ summary: 'Create a one-time Google login nonce and state' })
   googleChallenge(@Query('app') app: string) {
-    if (app !== 'marketplace' && app !== 'admin') throw new BadRequestException('Invalid app');
+    if (app !== 'marketplace' && app !== 'admin' && app !== 'seller') {
+      throw new BadRequestException('Invalid app');
+    }
     return this.googleAuth.createChallenge(app);
   }
 
