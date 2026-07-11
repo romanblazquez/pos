@@ -2,10 +2,19 @@
 
 @layer base {
   * { box-sizing: border-box; }
+  html {
+    min-width: 0;
+    overflow-x: hidden;
+  }
   body {
     background-color: #f1f5f9;
     color: #0f172a;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+  button, input, select, textarea {
+    font: inherit;
   }
 }

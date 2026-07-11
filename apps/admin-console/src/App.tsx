@@ -28,7 +28,10 @@ function parseView(): AdminView {
 
 export default function App() {
   const [view, setView] = useState<AdminView>(parseView);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const { user, logout } = useAdminAuth();
+  const currentView = NAV.find((item) => item.id === view) ?? NAV[0];
 
   useEffect(() => {
     function onPop() { setView(parseView()); }
@@ -38,49 +41,72 @@ export default function App() {
 
   function navigate(v: AdminView) {
     setView(v);
+    setMobileNavOpen(false);
     window.history.pushState({}, '', `/${v}`);
   }
 
   return (
-    <div className="h-dvh overflow-hidden bg-slate-50">
-      <aside className="fixed inset-y-0 left-0 z-30 flex h-dvh w-52 flex-col overflow-hidden bg-slate-900 text-white">
-        <div className="px-5 py-5 border-b border-slate-800">
-          <p className="text-sm font-bold text-white">🎲 BGM Admin</p>
-          <p className="text-xs text-slate-400 mt-0.5">Consola de administración</p>
+    <div className="min-h-dvh bg-slate-50 lg:h-dvh lg:overflow-hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(true)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700"
+          aria-label="Abrir navegación"
+          aria-expanded={mobileNavOpen}
+        >
+          <span className="text-xl leading-none">☰</span>
+        </button>
+        <div className="min-w-0 px-3 text-center">
+          <p className="truncate text-sm font-semibold text-slate-900">{currentView.label}</p>
+          <p className="truncate text-[11px] text-slate-500">BGM Admin</p>
         </div>
-        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                view === item.id
-                  ? 'bg-slate-700 text-white font-medium'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <p className="truncate text-xs text-slate-400">{user.email}</p>
-          <button onClick={() => { void logout(); }} className="mt-2 text-xs text-slate-500 hover:text-white">
-            Cerrar sesión
-          </button>
-          <a
-            href={`${API}/api/docs`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-slate-500 hover:text-slate-300 flex items-center gap-1"
-          >
-            📄 Swagger API Docs
-          </a>
-        </div>
+        <a
+          href={`${API}/api/docs`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
+          aria-label="Swagger API Docs"
+        >
+          📄
+        </a>
+      </header>
+
+      {mobileNavOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar navegación"
+          className="fixed inset-0 z-40 bg-slate-950/45 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      {!desktopSidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setDesktopSidebarOpen(true)}
+          className="fixed left-4 top-4 z-40 hidden h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm lg:inline-flex"
+          aria-label="Mostrar navegación"
+        >
+          <span className="text-xl leading-none">☰</span>
+        </button>
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(20rem,86vw)] flex-col overflow-hidden bg-slate-900 text-white transition-transform duration-200 lg:z-30 lg:w-52 ${
+        mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${desktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}>
+        <AdminSidebarContent
+          userEmail={user.email}
+          view={view}
+          onNavigate={navigate}
+          onLogout={() => { void logout(); }}
+          onHideDesktop={() => setDesktopSidebarOpen(false)}
+        />
       </aside>
 
-      <main className="ml-52 h-dvh min-w-0 overflow-y-auto overscroll-contain">
+      <main className={`min-w-0 overflow-x-hidden transition-[margin] duration-200 lg:h-dvh lg:overflow-y-auto lg:overscroll-contain ${
+        desktopSidebarOpen ? 'lg:ml-52' : 'lg:ml-0'
+      }`}>
         {view === 'sellers'  && <SellersView />}
         {view === 'catalog'  && <CatalogView />}
         {view === 'mapping'  && <MappingRequestsView />}
@@ -91,6 +117,67 @@ export default function App() {
         {view === 'ai-usage' && <AiUsageView />}
       </main>
     </div>
+  );
+}
+
+function AdminSidebarContent({
+  userEmail, view, onNavigate, onLogout, onHideDesktop,
+}: {
+  userEmail: string;
+  view: AdminView;
+  onNavigate: (view: AdminView) => void;
+  onLogout: () => void;
+  onHideDesktop: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3 border-b border-slate-800 px-5 py-5">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white">🎲 BGM Admin</p>
+          <p className="mt-0.5 text-xs text-slate-400">Consola de administración</p>
+        </div>
+        <button
+          type="button"
+          onClick={onHideDesktop}
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white lg:inline-flex"
+          aria-label="Ocultar navegación"
+        >
+          <span className="text-lg leading-none">☰</span>
+        </button>
+      </div>
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
+        {NAV.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onNavigate(item.id)}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition-colors lg:py-2.5 ${
+              view === item.id
+                ? 'bg-slate-700 font-medium text-white'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <span className="w-5 text-center">{item.icon}</span>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="border-t border-slate-800 p-4">
+        <p className="truncate text-xs text-slate-400">{userEmail}</p>
+        <div className="mt-2 flex flex-col gap-2">
+          <button onClick={onLogout} className="text-left text-xs text-slate-500 hover:text-white">
+            Cerrar sesión
+          </button>
+          <a
+            href={`${API}/api/docs`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300"
+          >
+            📄 Swagger API Docs
+          </a>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -110,15 +197,15 @@ function SellersView() {
   const sellers = data ?? [];
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-slate-900">Vendedores</h1>
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2 overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
           {(['', 'pending', 'active', 'suspended'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+              className={`shrink-0 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 statusFilter === s
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'border-slate-300 text-slate-600 hover:bg-slate-50'
@@ -130,13 +217,13 @@ function SellersView() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : sellers.length === 0 ? (
           <Empty icon="🏪" msg="No hay vendedores registrados aún." />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <Thead cols={['Nombre', 'Email', 'Estado', 'Conector', 'Comisión', 'Onboarding']} />
             <tbody className="divide-y divide-slate-100">
               {sellers.map((s) => (
@@ -241,13 +328,13 @@ function TenantMarketsView() {
   const rows = markets ?? [];
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-slate-900">Mercados</h1>
         {!showNew && (
           <button
             onClick={() => setShowNew(true)}
-            className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800 sm:w-auto sm:py-1.5"
           >
             + Agregar mercado
           </button>
@@ -266,13 +353,13 @@ function TenantMarketsView() {
         />
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : rows.length === 0 ? (
           <Empty icon="🌎" msg="No hay mercados configurados aún." />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <Thead cols={['País', 'Moneda', 'Idioma', 'Zona horaria', 'Estado', '']} />
             <tbody className="divide-y divide-slate-100">
               {rows.map((m) => (
@@ -329,7 +416,7 @@ function TenantMarketForm({
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
       {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs text-slate-500 space-y-1">
           <span>País</span>
           <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-sm text-slate-900">
@@ -361,15 +448,15 @@ function TenantMarketForm({
           />
         </label>
       </div>
-      <div className="flex gap-2 pt-1">
+      <div className="flex flex-col gap-2 pt-1 sm:flex-row">
         <button
           onClick={() => valid && onSubmit({ countryCode, currencyCode, defaultLanguageCode, timezone: timezone.trim() })}
           disabled={!valid || saving}
-          className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+          className="px-3 py-2 text-xs rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 sm:py-1.5"
         >
           {saving ? 'Guardando…' : 'Guardar'}
         </button>
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs rounded-lg text-slate-500 hover:text-slate-800">
+        <button onClick={onCancel} className="px-3 py-2 text-xs rounded-lg text-slate-500 hover:text-slate-800 sm:py-1.5">
           Cancelar
         </button>
       </div>
@@ -397,7 +484,7 @@ function AiUsageView() {
   const rows = data ?? [];
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Uso de IA</h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -405,13 +492,13 @@ function AiUsageView() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : rows.length === 0 ? (
           <Empty icon="✦" msg="Ningún vendedor en plan pago todavía." />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[680px] text-sm">
             <Thead cols={['Vendedor', 'Plan', 'Usados este mes', 'Límite', 'Restantes']} />
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => (
@@ -523,21 +610,21 @@ function CatalogView() {
   }
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 space-y-5">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <h1 className="text-xl font-bold text-slate-900">Catálogo — Cola de revisión</h1>
-        <div className="flex gap-2 items-center">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:w-auto xl:justify-end">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filtrar por nombre..."
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="w-full min-w-0 px-3 py-2 text-sm border border-slate-300 rounded-lg sm:w-64 sm:py-1.5"
           />
           {(['pending', 'verified', 'duplicate'] as const).map((s) => (
             <button
               key={s}
               onClick={() => { setStatusFilter(s); setPage(0); setSelected(new Set()); }}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+              className={`px-3 py-2 text-xs rounded-lg border transition-colors sm:py-1.5 ${
                 statusFilter === s
                   ? 'bg-slate-900 text-white border-slate-900'
                   : 'border-slate-300 text-slate-600 hover:bg-slate-50'
@@ -561,19 +648,19 @@ function CatalogView() {
       )}
 
       {selected.size > 0 && (
-        <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-slate-900 text-white text-sm">
+        <div className="flex flex-col gap-3 p-3 rounded-lg bg-slate-900 text-white text-sm sm:flex-row sm:items-center sm:justify-between">
           <span>{selected.size} seleccionados</span>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               onClick={() => enrichBulkMut.mutate([...selected])}
               disabled={enrichBulkMut.isPending}
-              className="px-3 py-1.5 bg-white text-slate-900 rounded-lg text-xs font-medium hover:bg-slate-100 disabled:opacity-50"
+              className="px-3 py-2 bg-white text-slate-900 rounded-lg text-xs font-medium hover:bg-slate-100 disabled:opacity-50 sm:py-1.5"
             >
               {enrichBulkMut.isPending ? 'Enriqueciendo... (puede tardar)' : `Enriquecer ${selected.size} seleccionados`}
             </button>
             <button
               onClick={() => setSelected(new Set())}
-              className="px-3 py-1.5 text-xs text-slate-300 hover:text-white"
+              className="px-3 py-2 text-xs text-slate-300 hover:text-white sm:py-1.5"
             >
               Limpiar
             </button>
@@ -581,13 +668,13 @@ function CatalogView() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : products.length === 0 ? (
           <Empty icon="📚" msg={`No hay productos con estado "${statusFilter}".`} />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[980px] text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="w-10 px-4 py-3">
@@ -672,20 +759,20 @@ function CatalogView() {
       </div>
 
       {total > 0 && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
+        <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>{total.toLocaleString('es-MX')} productos · página {page + 1} de {pageCount.toLocaleString('es-MX')}</span>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+              className="px-3 py-2 text-xs border border-slate-300 rounded-lg disabled:opacity-40 sm:py-1.5"
             >
               Anterior
             </button>
             <button
               onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
               disabled={page >= pageCount - 1}
-              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+              className="px-3 py-2 text-xs border border-slate-300 rounded-lg disabled:opacity-40 sm:py-1.5"
             >
               Siguiente
             </button>
@@ -771,8 +858,8 @@ function MappingRequestsView() {
   });
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 space-y-5 max-w-5xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Solicitudes de mapeo</h1>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -783,7 +870,7 @@ function MappingRequestsView() {
         <select
           value={sellerFilter}
           onChange={(e) => { setSellerFilter(e.target.value); setPage(0); setExpandedId(null); }}
-          className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white shrink-0"
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white sm:w-64 sm:shrink-0"
         >
           <option value="">Todos los vendedores</option>
           {(sellersQuery.data ?? []).map((s) => (
@@ -798,7 +885,7 @@ function MappingRequestsView() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : requests.length === 0 ? (
@@ -810,7 +897,7 @@ function MappingRequestsView() {
               const topCandidate = r.candidates?.[0];
               return (
                 <div key={r.id}>
-                  <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4">
                     <div className="w-10 h-10 rounded bg-slate-100 overflow-hidden shrink-0">
                       {raw.images?.[0] ? (
                         <img src={raw.images[0]} alt={raw.name} className="w-full h-full object-cover" />
@@ -830,7 +917,7 @@ function MappingRequestsView() {
                     )}
                     <button
                       onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                      className="text-xs font-medium text-blue-600 hover:underline shrink-0"
+                      className="rounded-lg border border-blue-100 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 sm:border-0 sm:px-0 sm:py-0 sm:hover:bg-transparent sm:hover:underline shrink-0"
                     >
                       {expandedId === r.id ? 'Cerrar' : 'Resolver'}
                     </button>
@@ -852,20 +939,20 @@ function MappingRequestsView() {
       </div>
 
       {total > 0 && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
+        <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>{total.toLocaleString('es-MX')} solicitudes · página {page + 1} de {pageCount}</span>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+              className="px-3 py-2 text-xs border border-slate-300 rounded-lg disabled:opacity-40 sm:py-1.5"
             >
               Anterior
             </button>
             <button
               onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
               disabled={page >= pageCount - 1}
-              className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg disabled:opacity-40"
+              className="px-3 py-2 text-xs border border-slate-300 rounded-lg disabled:opacity-40 sm:py-1.5"
             >
               Siguiente
             </button>
@@ -934,7 +1021,7 @@ function MappingRequestDetail({
   return (
     <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100 space-y-4 pt-3">
       {/* Side-by-side comparison: seller's raw data vs the selected proposal */}
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="bg-white rounded-xl border border-slate-200 p-3">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Datos del vendedor</p>
           <div className="flex gap-3">
@@ -970,7 +1057,7 @@ function MappingRequestDetail({
         <div className={`bg-white rounded-xl border p-3 ${selected ? 'border-emerald-300' : 'border-slate-200'}`}>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Propuesta seleccionada</p>
           {!selected ? (
-            <p className="text-xs text-slate-400 py-3">Elegí una opción de la derecha para comparar →</p>
+            <p className="text-xs text-slate-400 py-3">Elegí una opción abajo para comparar.</p>
           ) : (
             <div className="flex gap-3">
               <div className="w-14 h-14 rounded bg-slate-100 overflow-hidden shrink-0">
@@ -988,16 +1075,16 @@ function MappingRequestDetail({
               </div>
             </div>
           )}
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-col gap-2 mt-3 sm:flex-row">
             <button
               disabled={!selected || busy}
               onClick={confirm}
-              className="flex-1 px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40"
+              className="flex-1 px-3 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40 sm:py-1.5"
             >
               Confirmar vínculo
             </button>
             {selected && (
-              <button onClick={() => setSelected(null)} className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800">
+              <button onClick={() => setSelected(null)} className="px-3 py-2 text-xs text-slate-500 hover:text-slate-800 sm:py-1.5">
                 Cancelar
               </button>
             )}
@@ -1028,7 +1115,7 @@ function MappingRequestDetail({
         </div>
       )}
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div>
           <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Buscar en catálogo</p>
           <input
@@ -1137,20 +1224,20 @@ function OrdersView() {
   const canPayOut = (status: string) => status === 'confirmed' || status === 'shipped' || status === 'delivered';
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       <h1 className="text-xl font-bold text-slate-900">Pedidos</h1>
       <p className="text-sm text-slate-500">
         El pago a vendedores es manual mientras el split por MercadoPago no esté habilitado —
         la plataforma recibe el 100% de cada pago. Marcá "Pago enviado" una vez que transferiste
         el neto del vendedor (total − comisión) por fuera de la plataforma.
       </p>
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
         ) : orders.length === 0 ? (
           <Empty icon="📋" msg="Todavía no hay pedidos en el marketplace." />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <Thead cols={['ID', 'Cliente', 'Vendedor', 'Total', 'Neto vendedor', 'Estado', 'Fecha', 'Pago a vendedor']} />
             <tbody className="divide-y divide-slate-100">
               {orders.map((o) => (
@@ -1268,7 +1355,7 @@ function BggImportView() {
   const fullImportPct = fs && fs.total > 0 ? Math.round(((fs.imported + fs.skipped) / fs.total) * 100) : 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
       <h1 className="text-xl font-bold text-slate-900">Importar desde BoardGameGeek</h1>
 
       {importResult && (
@@ -1284,12 +1371,12 @@ function BggImportView() {
 
       {/* Full catalog import */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-slate-900">Catálogo completo (ranks dump)</h2>
           <button
             onClick={() => startFullImportMut.mutate()}
             disabled={startFullImportMut.isPending || fs?.running}
-            className="px-4 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            className="w-full px-4 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-50 sm:w-auto"
           >
             {fs?.running ? 'Importando...' : '🎲 Importar catálogo completo'}
           </button>
@@ -1332,15 +1419,15 @@ function BggImportView() {
         {searchQuery.data && searchQuery.data.length > 0 && (
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {searchQuery.data.map((r) => (
-              <div key={r.bggId} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200">
-                <div>
+              <div key={r.bggId} className="flex flex-col gap-3 p-3 rounded-lg border border-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <p className="font-medium text-sm text-slate-900">{r.name}</p>
                   <p className="text-xs text-slate-400">BGG #{r.bggId}{r.yearPublished ? ` · ${r.yearPublished}` : ''}</p>
                 </div>
                 <button
                   onClick={() => importMut.mutate(r.bggId)}
                   disabled={importMut.isPending}
-                  className="px-3 py-1.5 text-xs bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 shrink-0"
+                  className="px-3 py-2 text-xs bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 sm:py-1.5 sm:shrink-0"
                 >
                   Importar
                 </button>
@@ -1369,7 +1456,7 @@ function BggImportView() {
             if (ids.length) bulkMut.mutate(ids);
           }}
           disabled={bulkMut.isPending || !bulkIds.trim()}
-          className="px-5 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-50"
+          className="w-full px-5 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-50 sm:w-auto"
         >
           {bulkMut.isPending ? `Importando... (puede tardar)` : 'Importar IDs'}
         </button>
@@ -1398,7 +1485,7 @@ function RankingView() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-2xl">
       <h1 className="text-xl font-bold text-slate-900">Ranking</h1>
 
       {jobResult && (
@@ -1412,7 +1499,7 @@ function RankingView() {
         <p className="text-sm text-slate-500">
           El ranking se recalcula automáticamente cada hora. Podés forzar un pase manual en cualquier momento.
         </p>
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid gap-4 text-sm sm:grid-cols-2">
           {[
             ['Frecuencia', 'Cada hora (BullMQ)'],
             ['Dimensiones', '6 (disponibilidad, precio, entrega, confiabilidad, calidad, integración)'],
@@ -1445,8 +1532,8 @@ function RankingView() {
             ['Calidad del vendedor', 10],
             ['Salud de integración', 5],
           ].map(([label, pct]) => (
-            <div key={label as string} className="flex items-center gap-3">
-              <span className="text-sm text-slate-600 w-52 shrink-0">{label}</span>
+            <div key={label as string} className="grid gap-2 sm:flex sm:items-center sm:gap-3">
+              <span className="text-sm text-slate-600 sm:w-52 sm:shrink-0">{label}</span>
               <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full"
