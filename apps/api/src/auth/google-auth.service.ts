@@ -6,7 +6,7 @@ import {
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '@retail-os/db-postgres';
 import type { AuthApp } from './auth.constants.js';
-import type { SessionIdentity } from './session.service.js';
+import { publicSeller, type SessionIdentity } from './session.service.js';
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -16,13 +16,22 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 @Injectable()
 export class GoogleAuthService {
   private readonly google = new OAuth2Client();
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async createChallenge(app: Exclude<AuthApp, 'seller'>): Promise<{ nonce: string; state: string }> {
+  async createChallenge(app: AuthApp): Promise<{ nonce: string; state: string }> {
     this.clientId(app); // fail before rendering a non-functional Google button
     await this.prisma.authChallenge.deleteMany({
       where: { expiresAt: { lt: new Date() } },
@@ -43,7 +52,7 @@ export class GoogleAuthService {
   async authenticate(
     credential: string,
     state: string,
-    app: Exclude<AuthApp, 'seller'>,
+    app: AuthApp,
   ): Promise<SessionIdentity> {
     const challenge = await this.prisma.authChallenge.findUnique({ where: { stateHash: hash(state) } });
     if (!challenge || challenge.app !== app || challenge.consumedAt || challenge.expiresAt <= new Date()) {
@@ -111,6 +120,7 @@ export class GoogleAuthService {
     });
 
     if (app === 'admin') return this.authorizeAdmin(identity.principal.id, normalizedEmail, payload.name);
+    if (app === 'seller') return this.authorizeSeller(identity.principal.id, normalizedEmail, payload.name);
     return this.authorizeCustomer(identity.principal.id, payload.email, payload.name);
   }
 
@@ -127,6 +137,51 @@ export class GoogleAuthService {
       data: { principalId },
     });
     return { principalId, email, name, role: 'admin' };
+  }
+
+  // Existing sellers link their Google identity and sign in; a first-time Google
+  // seller is auto-provisioned as a pending account that lands in onboarding —
+  // mirroring registerSeller (which also creates status 'pending' / 'store-type').
+  private async authorizeSeller(principalId: string, email: string, name?: string): Promise<SessionIdentity> {
+    const existing = await this.prisma.seller.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    if (existing?.authPrincipalId && existing.authPrincipalId !== principalId) {
+      throw new ConflictException('Seller account is linked to another identity');
+    }
+    if (existing && (existing.status === 'suspended' || existing.status === 'churned')) {
+      throw new ForbiddenException('Seller account is not active');
+    }
+    const seller = existing
+      ? await this.prisma.seller.update({
+          where: { id: existing.id },
+          data: { authPrincipalId: principalId, emailVerified: true },
+        })
+      : await this.prisma.seller.create({
+          data: {
+            name: name ?? email,
+            slug: await this.uniqueSellerSlug(name ?? email),
+            email,
+            country: 'MX',
+            status: 'pending',
+            onboardingStep: 'store-type',
+            emailVerified: true,
+            authPrincipalId: principalId,
+          },
+        });
+    return {
+      principalId,
+      email: seller.email,
+      name: seller.name,
+      role: 'seller',
+      seller: publicSeller(seller),
+    };
+  }
+
+  private async uniqueSellerSlug(name: string): Promise<string> {
+    const base = slugify(name) || 'tienda';
+    const conflict = await this.prisma.seller.findUnique({ where: { slug: base } });
+    return conflict ? `${base}-${Date.now()}` : base;
   }
 
   private async authorizeCustomer(principalId: string, email: string, name?: string): Promise<SessionIdentity> {
@@ -153,10 +208,12 @@ export class GoogleAuthService {
     };
   }
 
-  private clientId(app: Exclude<AuthApp, 'seller'>): string {
+  private clientId(app: AuthApp): string {
     const value = app === 'admin'
       ? process.env.GOOGLE_ADMIN_CLIENT_ID
-      : process.env.GOOGLE_MARKETPLACE_CLIENT_ID;
+      : app === 'seller'
+        ? process.env.GOOGLE_SELLER_CLIENT_ID
+        : process.env.GOOGLE_MARKETPLACE_CLIENT_ID;
     if (!value) throw new ServiceUnavailableException(`Google login is not configured for ${app}`);
     return value;
   }
