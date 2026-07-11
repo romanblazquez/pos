@@ -9,6 +9,7 @@ import { Analytics } from '@/components/Analytics';
 import { MeepleMark } from '@/components/MeepleMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { MobileMenu } from '@/components/MobileMenu';
 import { LOCALES, isLocale, listingPath, type Locale } from '@/lib/segments';
 import '../globals.css';
 
@@ -93,8 +94,8 @@ export default function LocaleLayout({
   const locale = params.locale as Locale;
   const t =
     locale === 'es'
-      ? { games: 'Juegos', cats: 'Categorías', search: 'Buscar', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
-      : { games: 'Games', cats: 'Categories', search: 'Search', tagline: 'The board-game encyclopedia with the best price.' };
+      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', search: 'Buscar', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
+      : { games: 'Games', cats: 'Categories', guides: 'Guides', search: 'Search', tagline: 'The board-game encyclopedia with the best price.' };
 
   return (
     <html
@@ -125,16 +126,20 @@ export default function LocaleLayout({
               <span className="brand-mark"><MeepleMark /></span>
               <span>Juegos<span className="brand-word-accent">pedia</span></span>
             </Link>
-            <nav className="nav" aria-label={locale === 'es' ? 'Principal' : 'Main'}>
+            <nav className="nav nav-desktop" aria-label={locale === 'es' ? 'Principal' : 'Main'}>
               <Link href={listingPath('games', locale)}>{t.games}</Link>
               <Link href={listingPath('categories', locale)}>{t.cats}</Link>
+              <Link href={listingPath('guides', locale)}>{t.guides}</Link>
             </nav>
             <span className="nav-spacer" />
-            <Link className="header-search" href={listingPath('search', locale)}>
+            <Link className="header-search nav-desktop" href={listingPath('search', locale)}>
               <span aria-hidden="true">⌕</span> {t.search}
             </Link>
-            <LocaleSwitcher locale={locale} />
-            <ThemeToggle locale={locale} />
+            <div className="header-controls nav-desktop">
+              <LocaleSwitcher locale={locale} />
+              <ThemeToggle locale={locale} />
+            </div>
+            <MobileMenu locale={locale} />
           </div>
         </header>
 
