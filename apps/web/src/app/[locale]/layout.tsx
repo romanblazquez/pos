@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Bricolage_Grotesque, Hanken_Grotesk, Space_Mono } from 'next/font/google';
-import { SITE_NAME, SITE_URL } from '@/lib/site';
+import { APP_URL, SITE_NAME, SITE_URL } from '@/lib/site';
 import { organizationLd, webSiteLd } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Analytics } from '@/components/Analytics';
@@ -94,8 +94,8 @@ export default function LocaleLayout({
   const locale = params.locale as Locale;
   const t =
     locale === 'es'
-      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', search: 'Buscar', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
-      : { games: 'Games', cats: 'Categories', guides: 'Guides', search: 'Search', tagline: 'The board-game encyclopedia with the best price.' };
+      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
+      : { games: 'Games', cats: 'Categories', guides: 'Guides', search: 'Search', login: 'Log in', tagline: 'The board-game encyclopedia with the best price.' };
 
   return (
     <html
@@ -138,6 +138,7 @@ export default function LocaleLayout({
             <div className="header-controls nav-desktop">
               <LocaleSwitcher locale={locale} />
               <ThemeToggle locale={locale} />
+              <a className="header-login" href={`${APP_URL}/account`}>{t.login}</a>
             </div>
             <MobileMenu locale={locale} />
           </div>

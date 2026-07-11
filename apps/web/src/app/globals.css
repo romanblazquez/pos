@@ -55,6 +55,8 @@ button, input, select { font: inherit; }
 .theme-toggle { display: grid; width: 36px; height: 36px; flex: none; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted-foreground); cursor: pointer; }
 .theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
 .header-controls { display: inline-flex; align-items: center; gap: .6rem; }
+.header-login { display: inline-flex; align-items: center; gap: .4rem; padding: .48rem .9rem; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); font-size: .82rem; font-weight: 700; }
+.header-login:hover { background: color-mix(in srgb, var(--primary) 88%, #000); }
 
 /* Mobile navigation — hamburger trigger + slide-in drawer. The trigger is hidden
    on desktop (nav lives inline); below the breakpoint the inline nav is hidden
@@ -90,6 +92,10 @@ button, input, select { font: inherit; }
 .mobile-nav-link-label { font-family: var(--font-display); font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; }
 .mobile-nav-link-hint { color: var(--muted-foreground); font-size: .76rem; }
 .mobile-nav-link-chevron { color: var(--subtle-foreground); flex: none; }
+
+.mobile-nav-login { display: flex; align-items: center; justify-content: center; gap: .55rem; margin: 1.1rem 0 .2rem; padding: .85rem 1rem; border-radius: 13px; background: var(--primary); color: var(--primary-foreground); font-family: var(--font-display); font-size: .98rem; font-weight: 800; letter-spacing: -.01em; box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--primary) 75%, transparent); }
+.mobile-nav-login:hover, .mobile-nav-login:focus-visible { background: color-mix(in srgb, var(--primary) 88%, #000); }
+.mobile-nav-login:active { transform: scale(.99); }
 
 .mobile-nav-foot { margin-top: auto; padding-top: 1.1rem; }
 .mobile-nav-foot-label { display: block; margin-bottom: .55rem; color: var(--muted-foreground); font-family: var(--font-mono); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; }

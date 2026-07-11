@@ -4,11 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ChevronRight, Dices, LayoutGrid, Menu, Search, X } from 'lucide-react';
+import { BookOpen, ChevronRight, Dices, LayoutGrid, Menu, Search, User, X } from 'lucide-react';
 import { MeepleMark } from './MeepleMark';
 import { ThemeToggle } from './ThemeToggle';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { listingPath, type Locale } from '@/lib/segments';
+import { APP_URL } from '@/lib/site';
 
 const COPY = {
   es: {
@@ -17,6 +18,7 @@ const COPY = {
     gamesHint: 'Explora el catálogo completo',
     categoriesHint: 'Navega por tipo y temática',
     guidesHint: 'Rankings y mejores listas',
+    login: 'Iniciar sesión',
     settings: 'Preferencias',
   },
   en: {
@@ -25,6 +27,7 @@ const COPY = {
     gamesHint: 'Browse the full catalogue',
     categoriesHint: 'Explore by type and theme',
     guidesHint: 'Rankings and best-of lists',
+    login: 'Log in',
     settings: 'Preferences',
   },
 } as const;
@@ -157,6 +160,11 @@ export function MobileMenu({ locale }: { locale: Locale }) {
                 </Link>
               ))}
             </nav>
+
+            <a className="mobile-nav-login" href={`${APP_URL}/account`} onClick={close}>
+              <User size={18} aria-hidden="true" />
+              <span>{t.login}</span>
+            </a>
 
             <div className="mobile-nav-foot">
               <span className="mobile-nav-foot-label">{t.settings}</span>

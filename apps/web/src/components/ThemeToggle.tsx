@@ -33,7 +33,13 @@ export function ThemeToggle({ locale }: { locale: 'es' | 'en' }) {
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
-    const initial = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    // The cookie is the source of truth. Switching locale re-renders the root
+    // layout's <html>, which drops the imperatively-set data-theme (SSR can't
+    // emit it) — so read the shared cookie and re-apply, instead of trusting a
+    // data-theme that a navigation may have just reset to the light default.
+    const stored = readSharedTheme();
+    const initial = stored ?? (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    applyTheme(initial);
     setTheme(initial);
     persistSharedTheme(initial);
 
