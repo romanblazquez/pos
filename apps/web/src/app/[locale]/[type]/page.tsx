@@ -9,6 +9,7 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
 import { CatalogSearchField } from '@/components/CatalogSearchField';
+import { Pager } from '@/components/Pager';
 import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
 import {
   homePath,
@@ -113,50 +114,6 @@ function filterQuery(sp: Record<string, string | string[] | undefined>): string 
   }
   for (const mechanic of toMechanicsArray(sp.mechanics)) p.append('mechanics', mechanic);
   return p.toString();
-}
-
-function Pager({
-  base,
-  page,
-  total,
-  locale,
-  query = '',
-}: {
-  base: string;
-  page: number;
-  total: number;
-  locale: Locale;
-  query?: string;
-}) {
-  const pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) return null;
-  const href = (p: number) => {
-    const parts = [query, p > 1 ? `page=${p}` : ''].filter(Boolean);
-    return parts.length ? `${base}?${parts.join('&')}` : base;
-  };
-  // Window of page numbers around the current page.
-  const nums = new Set<number>([1, pages, page, page - 1, page + 1]);
-  const list = [...nums].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
-
-  return (
-    <nav className="pager" aria-label={locale === 'es' ? 'Paginación' : 'Pagination'}>
-      {page > 1 && <Link href={href(page - 1)} rel="prev">‹</Link>}
-      {list.map((p, i) => {
-        const gap = i > 0 && p - list[i - 1] > 1;
-        return (
-          <span key={p} style={{ display: 'contents' }}>
-            {gap && <span className="gap">…</span>}
-            {p === page ? (
-              <span className="current" aria-current="page">{p}</span>
-            ) : (
-              <Link href={href(p)}>{p}</Link>
-            )}
-          </span>
-        );
-      })}
-      {page < pages && <Link href={href(page + 1)} rel="next">›</Link>}
-    </nav>
-  );
 }
 
 export default async function ListingPage({
@@ -321,7 +278,7 @@ export default async function ListingPage({
               ) : (
                 <CatalogEmpty locale={locale} clearHref={base} />
               )}
-              <Pager base={base} page={page} total={total} locale={locale} query={filterQuery(searchParams)} />
+              <Pager base={base} page={page} total={total} locale={locale} pageSize={PAGE_SIZE} query={filterQuery(searchParams)} />
             </div>
           </div>
         </form>

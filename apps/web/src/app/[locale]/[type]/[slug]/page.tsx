@@ -17,6 +17,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
+import { Pager } from '@/components/Pager';
 import {
   entityPath,
   homePath,
@@ -31,6 +32,16 @@ import {
 // they render on demand and cache per ISR window, revalidated on price/stock
 // change in Phase 3. dynamicParams defaults to true.
 export const revalidate = 900;
+
+// Per-category product page size. Larger than the catalogue listing (denser grid)
+// but still paginated so big categories expose their full depth via crawlable
+// pages (products are also all in the sitemap).
+const CATEGORY_PAGE_SIZE = 48;
+
+function pageOf(searchParams: { page?: string } | undefined): number {
+  const n = parseInt(searchParams?.page ?? '1', 10);
+  return Number.isFinite(n) && n > 1 ? n : 1;
+}
 
 function priceRange(p: ProductDetail, locale: Locale): string | null {
   const prices = p.listings.map((l) => l.priceMinorUnits).filter((n) => n > 0);
@@ -50,18 +61,25 @@ function productDescription(p: ProductDetail, locale: Locale): string {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { locale: string; type: string; slug: string };
+  searchParams?: { page?: string };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
   const locale = params.locale as Locale;
   const kind = resolveKind(locale, params.type);
+  const page = pageOf(searchParams);
 
   if (kind === 'games') {
     const product = await getProduct(params.slug);
     if (!product) return {};
     const range = priceRange(product, locale);
     const title = range ? `${product.name} — ${range}` : product.name;
+    // Bare catalog stub (auto-imported, no offers and no enriched copy) — thin for
+    // a shopping page, so keep it out of the index until it has real content. The
+    // API list/search surface already excludes these; this only guards direct hits.
+    const thin = product.listings.length === 0 && !product.description;
     return buildMetadata({
       locale,
       path: entityPath('games', locale, product.slug),
@@ -70,22 +88,28 @@ export async function generateMetadata({
       images: product.images,
       alternates: entityAlternates('games', product.slug),
       type: 'product',
+      noindex: thin,
     });
   }
 
   if (kind === 'categories') {
     const real = await resolveCategory(params.slug);
     if (!real) return {};
-    const title = locale === 'es' ? `${real} — Juegos de mesa` : `${real} — Board games`;
+    const basePath = entityPath('categories', locale, params.slug);
+    // Page 2+ is navigational: self-canonical to the paged URL and noindex so only
+    // the clean category page competes (spec §9); deeper products stay in the sitemap.
+    const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+    const baseTitle = locale === 'es' ? `${real} — Juegos de mesa` : `${real} — Board games`;
     return buildMetadata({
       locale,
-      path: entityPath('categories', locale, params.slug),
-      title,
+      path,
+      title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
       description:
         locale === 'es'
           ? `Juegos de mesa de la categoría ${real}, con precios comparados entre tiendas.`
           : `${real} board games with prices compared across stores.`,
-      alternates: entityAlternates('categories', params.slug),
+      noindex: page > 1,
+      alternates: page > 1 ? undefined : entityAlternates('categories', params.slug),
     });
   }
 
@@ -108,8 +132,10 @@ async function resolveCategory(slug: string): Promise<string | null> {
 
 export default async function DetailPage({
   params,
+  searchParams,
 }: {
   params: { locale: string; type: string; slug: string };
+  searchParams?: { page?: string };
 }) {
   if (!isLocale(params.locale)) notFound();
   const locale = params.locale as Locale;
@@ -126,31 +152,42 @@ export default async function DetailPage({
   if (kind === 'categories') {
     const real = await resolveCategory(params.slug);
     if (!real) notFound();
-    const { results } = await listProducts({ category: real, limit: 48 });
+    const page = pageOf(searchParams);
+    const basePath = entityPath('categories', locale, params.slug);
+    const { results, total } = await listProducts({
+      category: real,
+      limit: CATEGORY_PAGE_SIZE,
+      offset: (page - 1) * CATEGORY_PAGE_SIZE,
+    });
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
-      { name: real, path: entityPath('categories', locale, params.slug) },
+      { name: real, path: basePath },
     ];
     return (
       <main className="container">
         <Breadcrumbs crumbs={crumbs} />
-        <JsonLd
-          data={[
-            breadcrumbLd(crumbs),
-            itemListLd(
-              results.map((p) => ({ name: p.name, path: `${listingPath('games', locale)}/${p.slug}` })),
-            ),
-          ]}
-        />
+        {page === 1 && (
+          <JsonLd
+            data={[
+              breadcrumbLd(crumbs),
+              itemListLd(
+                results.map((p) => ({ name: p.name, path: `${listingPath('games', locale)}/${p.slug}` })),
+              ),
+            ]}
+          />
+        )}
         <h1 className="page-title">{real}</h1>
         <p className="muted">
-          {results.length} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
+          {total} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
         </p>
         {results.length > 0 ? (
-          <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
-            {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
-          </div>
+          <>
+            <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
+              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+            </div>
+            <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
+          </>
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('categories', locale)} />
         )}

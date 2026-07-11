@@ -134,6 +134,12 @@ export class TypesenseService implements OnModuleInit {
       limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
     } = params;
 
+    // Typesense rejects per_page > 250. Requesting more used to throw and silently
+    // drop the caller into the tiny verified-only Prisma fallback (e.g. the sitemap
+    // asking for 5000 got just ~26). Clamp so a large request returns a full 250
+    // page instead; callers that need everything paginate via offset.
+    const perPage = Math.min(Math.max(Math.trunc(limit), 1), 250);
+
     const filterParts: string[] = [];
     if (category)    filterParts.push(`category:=${category}`);
     if (minPlayers)  filterParts.push(`minPlayers:<=${minPlayers} && maxPlayers:>=${minPlayers}`);
@@ -153,8 +159,8 @@ export class TypesenseService implements OnModuleInit {
         query_by_weights: '4,2,1,2',
         filter_by: filterParts.join(' && ') || undefined,
         sort_by: sortBy,
-        per_page: limit,
-        page: Math.floor(offset / limit) + 1,
+        per_page: perPage,
+        page: Math.floor(offset / perPage) + 1,
         facet_by: 'category,tags,language,minPlayers',
         highlight_full_fields: 'name',
       });
