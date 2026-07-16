@@ -222,6 +222,7 @@ Tiers:
 | 2026-07-15 | ark-nova, dune-imperium, terraforming-mars, spirit-island, 7-wonders-duel, wingspan, scythe, root, cascadia, sky-team (10) | en-US, es-MX | opus | Proof slice. Applied APPROVED, verified live via API :3010 (ES now serves Spanish, was falling back to English). |
 | 2026-07-15 | frosthaven, brass-lancashire, food-chain-magnate, cthulhu-death-may-die, harmonies, the-white-castle, arcs, 7-wonders, wyrmspan, patchwork, just-one (11) | en-US, es-MX | opus | Batch 2. 21 games total. |
 | 2026-07-15 | darwin-s-journey, dwellings-of-eldervale, forest-shuffle, iss-vanguard, pandemic, it-s-a-wonderful-world, stone-age, earth, carcassonne, splendor, calico, sushi-go-party (12) | en-US, es-MX | opus | Batch 3. **32 games / 64 rows total** curated+APPROVED, all verified live. |
+| 2026-07-16 | skull-king, micromacro-crime-city, turing-machine, kingdomino, onitama, flamecraft, mysterium, king-of-tokyo, sushi-go, hanabi, can-t-stop, splendor-marvel, dixit (13) | en-US, es-MX | opus | Batch 4. **46 games / 92 rows total** curated+APPROVED. Next-ranked shoppable set (ranks ~291–770), hand-written both locales, verified live via API :3010. |
 
 **Next batch for whoever picks this up:** continue down the shoppable verified set by
 BGG rank (query below), skipping the 32 slugs already in `ledger.json`. Add entries to

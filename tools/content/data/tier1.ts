@@ -436,4 +436,173 @@ export const TIER1: readonly CuratedProduct[] = [
       body: '¡Sushi Go Party! agranda al querido juego de bolsillo hasta convertirlo en un bufé luminoso y personalizable para hasta ocho jugadores. Drafteas cartas de sushi de una mano, te quedas una y pasas el resto, formando conjuntos de dumplings, sashimi, tempura y más que puntúan de maneras traviesas y entrelazadas a lo largo de tres rondas; y no olvides dejar hueco para el postre. La edición de fiesta te permite intercambiar platos para afinar el menú, así que no hay dos partidas con el mismo sabor. Es rápido, colorido y encantadoramente mono, se enseña en un par de minutos y acoge por igual a peques y abuelos. Uno de los mejores juegos ligeros de draft para una mesa grande y variada, y un éxito asegurado en cualquier reunión.',
     },
   },
+  {
+    slug: 'skull-king-150145',
+    en: {
+      title: 'Skull King',
+      short: 'Bid exactly the tricks you can win in Skull King, the swashbuckling trick-taking card game for 2–8 players by Brent Beck.',
+      body: "Skull King takes the classic trick-taking hand and hangs your score on one cruel promise: before each round you must bid exactly how many tricks you will win — no more, no fewer. Hit your number and you sail away rich; miss by a single trick and you walk the plank. Pirates, mermaids, the Skull King himself and a scattering of special cards keep upending the pecking order, so a hand that looked unbeatable can capsize in a heartbeat. It stretches from a sharp duel up to a rowdy table of eight, teaches in a couple of minutes and grows funnier the more people you cram around it. A modern trick-taking favourite that belongs in every card drawer.",
+    },
+    es: {
+      title: 'Skull King',
+      short: 'Apuesta justo las bazas que vas a ganar en Skull King, un trepidante juego de bazas y piratas para 2 a 8 jugadores.',
+      body: 'Skull King coge la clásica mano de bazas y cuelga tu puntuación de una promesa cruel: antes de cada ronda debes apostar exactamente cuántas bazas vas a ganar, ni una más ni una menos. Si clavas tu número, zarpas cargado de oro; si fallas por una sola baza, caminas por la plancha. Piratas, sirenas, el propio Rey Calavera y un puñado de cartas especiales no dejan de darle la vuelta al orden de mando, así que una mano que parecía invencible puede zozobrar en un instante. Va desde un duelo afilado hasta una mesa alborotada de ocho, se enseña en un par de minutos y da más risa cuanta más gente apiñas alrededor. Un favorito moderno de las bazas que merece un hueco en todo cajón de cartas.',
+    },
+  },
+  {
+    slug: 'micromacro-crime-city-318977',
+    en: {
+      title: 'MicroMacro: Crime City',
+      short: 'Solve crimes on one giant hand-drawn map in MicroMacro: Crime City, a co-operative detective game for 1–4 players.',
+      body: "MicroMacro: Crime City hands you a single enormous black-and-white map of a whole city — every street, shop and rooftop teeming with tiny characters frozen mid-story — and a magnifying glass to hunt through it. Each case is a stack of question cards that walk you backwards and forwards through a crime: find the victim, trace their last hours, spot the culprit slipping away three streets over. There are no dice and no board setup; the puzzle is pure observation, and the delight is that dozens of little tragedies and jokes are hiding in plain sight all over the sheet. It plays solo or shoulder-to-shoulder with the whole family, and it won the Spiel des Jahres for making detective work this joyfully simple. Unlike anything else on the shelf.",
+    },
+    es: {
+      title: 'MicroMacro: Crime City',
+      short: 'Resuelve crímenes sobre un enorme mapa dibujado a mano en MicroMacro: Crime City, un juego cooperativo de detectives para 1 a 4 jugadores.',
+      body: 'MicroMacro: Crime City te entrega un único mapa gigante en blanco y negro de toda una ciudad —cada calle, tienda y azotea repleta de personajes diminutos congelados en plena historia— y una lupa para rastrearlo. Cada caso es un mazo de cartas con preguntas que te llevan adelante y atrás por un crimen: encuentra a la víctima, reconstruye sus últimas horas, descubre al culpable escabulléndose tres calles más allá. No hay dados ni montaje de tablero; el reto es pura observación, y lo delicioso es que decenas de pequeñas tragedias y bromas se esconden a plena vista por toda la lámina. Se juega en solitario o codo con codo en familia, y ganó el Spiel des Jahres por hacer que investigar resulte así de sencillo y divertido. No se parece a nada más de la estantería.',
+    },
+  },
+  {
+    slug: 'turing-machine-356123',
+    en: {
+      title: 'Turing Machine',
+      short: 'Crack the code with a paper computer in Turing Machine, an ingenious deduction game for 1–4 players with no electronics.',
+      body: "Turing Machine is a deduction puzzle that turns a stack of punched cards into a working analog computer — no app, no batteries, no answer key. A secret three-digit code is out there, and you interrogate the machine by feeding your guesses through cards that each test one rule: is the blue digit even? is there more red than yellow? Slide your guess into the card and its holes tell you yes or no, and only pure logic connects the clues to the single valid code. Each round is a race to deduce the answer in the fewest questions, and it plays just as sharply alone as it does against friends. Brilliant, tactile and genuinely clever — catnip for anyone who loved logic grids and mastermind as a kid.",
+    },
+    es: {
+      title: 'Turing Machine',
+      short: 'Descifra el código con un ordenador de papel en Turing Machine, un ingenioso juego de deducción para 1 a 4 jugadores sin electrónica.',
+      body: 'Turing Machine es un rompecabezas de deducción que convierte un montón de tarjetas perforadas en un ordenador analógico de verdad: sin app, sin pilas, sin hoja de soluciones. Ahí fuera hay un código secreto de tres dígitos, y tú interrogas a la máquina pasando tus hipótesis por tarjetas que comprueban una regla cada una: ¿es par el dígito azul?, ¿hay más rojo que amarillo? Deslizas tu propuesta por la tarjeta y sus agujeros te responden sí o no, y solo la lógica pura conecta las pistas con el único código válido. Cada ronda es una carrera por deducir la respuesta con el menor número de preguntas, y funciona igual de bien en solitario que contra tus amigos. Brillante, táctil y realmente listo: un caramelo para quien de pequeño adoraba los pasatiempos de lógica y el Mastermind.',
+    },
+  },
+  {
+    slug: 'kingdomino-204583',
+    en: {
+      title: 'Kingdomino',
+      short: 'Build a kingdom from giant dominoes in Kingdomino, the Spiel des Jahres–winning tile game for 2–4 players by Bruno Cathala.',
+      body: "Kingdomino shrinks a whole kingdom-building game into fifteen sparkling minutes. Each tile is an outsized domino showing two terrains, and you draft them from a line-up where the best tiles cost you turn order — grab the lush field now and you pick last next round. You slot each domino into your own five-by-five realm, matching terrains to grow connected regions, then multiply each region by its crowns. The tension is all in that simple trade-off between a strong tile and a good position, and it lands cleanly for kids and adults at the same table. Fast, gorgeous and endlessly re-playable, it earned its Spiel des Jahres and remains one of the best family games you can buy.",
+    },
+    es: {
+      title: 'Kingdomino',
+      short: 'Construye un reino con dominós gigantes en Kingdomino, el juego de losetas ganador del Spiel des Jahres para 2 a 4 jugadores.',
+      body: 'Kingdomino condensa todo un juego de construcción de reinos en quince minutos relucientes. Cada loseta es un dominó de gran tamaño con dos terrenos, y los drafteas de una fila donde las mejores piezas te cuestan el orden de turno: si te quedas ahora con el prado frondoso, elegirás el último en la ronda siguiente. Encajas cada dominó en tu propio reino de cinco por cinco, casando terrenos para hacer crecer regiones conectadas, y luego multiplicas cada región por sus coronas. Toda la tensión está en ese sencillo dilema entre una buena loseta y una buena posición, y encaja por igual con peques y adultos en la misma mesa. Rápido, precioso y con una rejugabilidad enorme, se ganó su Spiel des Jahres y sigue siendo uno de los mejores juegos familiares que puedes comprar.',
+    },
+  },
+  {
+    slug: 'onitama-160477',
+    en: {
+      title: 'Onitama',
+      short: 'A pocket martial-arts duel: Onitama is an elegant abstract strategy game for 2 players by Shimpei Sato.',
+      body: "Onitama distils the soul of chess and shogi into a four-by-four board and a two-minute rulebook. Each side commands a master and four students, and the only thing that moves them is a small hand of shared movement cards drawn from a deck of animal styles. Here is the twist that makes it sing: the card you play is passed to your opponent, and the one they used flows to you, so every move hands your rival your next set of options. Win by capturing the enemy master or marching your own into their temple. It sets up in seconds, rewards deep reading, and no two card combinations play the same. One of the finest two-player abstracts of the modern age — a tiny box with tournament-grade depth.",
+    },
+    es: {
+      title: 'Onitama',
+      short: 'Un duelo de artes marciales de bolsillo: Onitama es un elegante juego abstracto de estrategia para 2 jugadores.',
+      body: 'Onitama destila el alma del ajedrez y el shogi en un tablero de cuatro por cuatro y un reglamento de dos minutos. Cada bando dirige a un maestro y cuatro discípulos, y lo único que los mueve es una pequeña mano de cartas de movimiento compartidas, sacadas de un mazo de estilos animales. Y aquí está el giro que lo hace brillar: la carta que juegas pasa a tu rival, y la que él usó llega a ti, de modo que cada movimiento le entrega al otro tus próximas opciones. Ganas capturando al maestro enemigo o llevando el tuyo hasta su templo. Se prepara en segundos, premia la lectura profunda y no hay dos combinaciones de cartas que se jueguen igual. Uno de los mejores abstractos para dos de la era moderna: una caja diminuta con una profundidad de torneo.',
+    },
+  },
+  {
+    slug: 'flamecraft-336986',
+    en: {
+      title: 'Flamecraft',
+      short: 'Send cosy dragons to work the shops in Flamecraft, a charming light strategy game for 1–5 players by Manny Vega.',
+      body: "Flamecraft is comfort gaming at its warmest: a town of adorable artisan dragons, each tucked into a shop it loves, waiting for you to put them to work. On your turn you either place a dragon into a matching store to boost it, or you visit a shop to gather enchantments and gifts, building sets that score and earning the town's favour. There is real decision-making under the cuteness — reading which shops are heating up, timing the fancy dragons — but nothing here bites, and the whole thing glows with gorgeous art. It plays gently from solo up to five and lands beautifully with newcomers, younger players and anyone craving a low-stress evening. The definitive cosy board game, and a lovely gift.",
+    },
+    es: {
+      title: 'Flamecraft',
+      short: 'Pon a trabajar a dragones adorables en las tiendas de Flamecraft, un encantador juego de estrategia ligera para 1 a 5 jugadores.',
+      body: 'Flamecraft es puro confort de mesa en su versión más cálida: un pueblo de entrañables dragones artesanos, cada uno acurrucado en la tienda que adora, esperando a que le des trabajo. En tu turno o colocas un dragón en un comercio afín para potenciarlo, o visitas una tienda para reunir encantamientos y regalos, formando conjuntos que puntúan y ganándote el favor del pueblo. Bajo tanta ternura hay decisiones de verdad —leer qué tiendas se están calentando, medir el momento de los dragones especiales—, pero nada aquí muerde, y todo resplandece con un arte precioso. Se juega con suavidad desde el solitario hasta cinco y encaja de maravilla con novatos, peques y cualquiera que busque una velada sin estrés. El juego acogedor por excelencia, y un regalo estupendo.',
+    },
+  },
+  {
+    slug: 'mysterium-181304',
+    en: {
+      title: 'Mysterium',
+      short: 'A ghost guides you through dream visions in Mysterium, a co-operative deduction game for 2–7 players.',
+      body: "Mysterium is a séance turned into a co-operative puzzle. One player is the silent ghost of a murder victim and may only communicate through lavish, surreal vision cards; everyone else is a psychic reading those dreamlike images to pin down the right suspect, location and weapon. The ghost cannot speak or point — every hazy picture is a hint, and half the fun is the table arguing over whether that swirling clock means midnight or the old station. Get everyone through their personal case in time and the medium makes one final vision-led guess to name the killer. Atmospheric, gorgeous and warmly co-operative, it turns interpretation itself into the game. Think Dixit meets Cluedo, and a highlight of any group's shelf.",
+    },
+    es: {
+      title: 'Mysterium',
+      short: 'Un fantasma te guía entre visiones oníricas en Mysterium, un juego cooperativo de deducción para 2 a 7 jugadores.',
+      body: 'Mysterium es una sesión de espiritismo convertida en rompecabezas cooperativo. Un jugador es el fantasma mudo de una víctima de asesinato y solo puede comunicarse mediante cartas de visiones exuberantes y surrealistas; los demás son médiums que interpretan esas imágenes oníricas para señalar al sospechoso, el lugar y el arma correctos. El fantasma no puede hablar ni señalar: cada estampa brumosa es una pista, y buena parte de la gracia está en la mesa discutiendo si ese reloj arremolinado significa medianoche o la vieja estación. Si lográis resolver a tiempo el caso personal de cada uno, la médium hace una última conjetura guiada por visiones para nombrar al asesino. Atmosférico, precioso y cálidamente cooperativo, convierte la propia interpretación en el juego. Imagina Dixit con un toque de Cluedo, y una joya para la estantería de cualquier grupo.',
+    },
+  },
+  {
+    slug: 'king-of-tokyo-70323',
+    en: {
+      title: 'King of Tokyo',
+      short: 'Giant monsters brawl for the city in King of Tokyo, a raucous dice game for 2–6 players by Richard Garfield.',
+      body: "King of Tokyo drops you into the paw of a giant monster, a kaiju or a mutated menace, all fighting to stomp their way to the top of the city. It runs on Yahtzee-style dice you roll and re-roll to claw out damage, healing, energy and victory points, then spend your energy on wild power-up cards that break the rules in your favour. Sitting in Tokyo scores big but means everyone hits you at once, so the whole game is a game of nerve: stay in and soak the punishment, or leap out and let a rival take the beating. It is loud, fast, gloriously silly and plays up to six, making it a perfect bridge for families and party tables. A Richard Garfield classic that never stops being fun.",
+    },
+    es: {
+      title: 'King of Tokyo',
+      short: 'Monstruos gigantes se pelean por la ciudad en King of Tokyo, un bullicioso juego de dados para 2 a 6 jugadores.',
+      body: 'King of Tokyo te mete en la zarpa de un monstruo gigante, un kaiju o una amenaza mutante, todos peleando por aplastar la ciudad y coronarse. Funciona con dados al estilo Yahtzee que tiras y vuelves a tirar para arañar daño, curación, energía y puntos de victoria, y luego gastas esa energía en cartas de poder disparatadas que rompen las reglas a tu favor. Sentarte en Tokio puntúa mucho, pero implica que todos te golpean a la vez, así que toda la partida es una cuestión de nervios: te quedas y aguantas el castigo, o saltas fuera y dejas que otro reciba la paliza. Es ruidoso, rápido, gloriosamente absurdo y admite hasta seis, lo que lo convierte en un puente perfecto para familias y mesas de fiesta. Un clásico de Richard Garfield que nunca deja de divertir.',
+    },
+  },
+  {
+    slug: 'sushi-go-133473',
+    en: {
+      title: 'Sushi Go!',
+      short: 'Grab the tastiest cards off the conveyor in Sushi Go!, a lightning-fast drafting game for 2–5 players by Phil Walker-Harding.',
+      body: "Sushi Go! is card drafting shrunk to its purest, snackiest form. You are handed a fistful of sushi cards, keep one and pass the rest, again and again, hunting sets that score in cheeky little ways: collect the most maki, pair up tempura, race for the sashimi trio, and always save room for pudding at the end. It plays in fifteen minutes, teaches in one, and the whole hand you pass is a small gift or a small trap for the player beside you. The tin is tiny, the art is charming, and it slides just as easily into a café table as a family night. A brilliant gateway to drafting and one of the best travel games ever made.",
+    },
+    es: {
+      title: '¡Sushi Go!',
+      short: 'Atrapa las cartas más sabrosas de la cinta en ¡Sushi Go!, un juego de draft rapidísimo para 2 a 5 jugadores.',
+      body: '¡Sushi Go! es el draft de cartas reducido a su forma más pura y apetecible. Recibes un puñado de cartas de sushi, te quedas una y pasas el resto, una y otra vez, buscando conjuntos que puntúan de maneras traviesas: reúne el mayor número de maki, empareja tempuras, corre por el trío de sashimi y deja siempre hueco para el postre al final. Se juega en quince minutos, se enseña en uno, y la mano entera que pasas es un pequeño regalo o una pequeña trampa para quien tienes al lado. La lata es diminuta, el arte es encantador y encaja igual de bien en la mesa de una cafetería que en una noche en familia. Una puerta de entrada estupenda al draft y uno de los mejores juegos de viaje jamás creados.',
+    },
+  },
+  {
+    slug: 'hanabi-98778',
+    en: {
+      title: 'Hanabi',
+      short: 'Build fireworks blind in Hanabi, the Spiel des Jahres–winning co-operative card game for 2–5 players by Antoine Bauza.',
+      body: "Hanabi pulls off a magic trick: you hold your cards facing outward, so everyone can see your hand except you. Together you are trying to launch five perfect firework displays, playing coloured cards up in order, but nobody may say outright what you hold — you spend a small pool of hint tokens to nudge each other with careful clues about colour or number, and every wasted guess snuffs a fuse. It is a pure, elegant puzzle of shared information and trust, tense and quiet and quietly thrilling, and it fits in a pocket. The game that won the Spiel des Jahres for proving a co-op can be this smart with nothing but cards. Unmissable for anyone who loves a team on the same wavelength.",
+    },
+    es: {
+      title: 'Hanabi',
+      short: 'Monta fuegos artificiales a ciegas en Hanabi, el juego cooperativo de cartas ganador del Spiel des Jahres para 2 a 5 jugadores.',
+      body: 'Hanabi logra un truco de magia: sostienes tus cartas mirando hacia fuera, así que todos ven tu mano menos tú. Juntos intentáis lanzar cinco espectáculos de fuegos artificiales perfectos, jugando cartas de colores en orden ascendente, pero nadie puede decir sin más qué llevas: gastáis un pequeño montón de fichas de pista para daros pistas cuidadosas sobre color o número, y cada intento fallido apaga una mecha. Es un rompecabezas puro y elegante de información compartida y confianza, tenso, silencioso y silenciosamente emocionante, y cabe en un bolsillo. El juego que ganó el Spiel des Jahres por demostrar que un cooperativo puede ser así de listo con solo cartas. Imprescindible para quien adora un equipo en la misma sintonía.',
+    },
+  },
+  {
+    slug: 'can-t-stop-41',
+    en: {
+      title: "Can't Stop",
+      short: "Push your luck up the mountain in Can't Stop, Sid Sackson's timeless dice classic for 2–4 players.",
+      body: "Can't Stop is push-your-luck boiled down to a single, agonising question: do you roll again, or do you stop? You roll four dice, pair them into columns and inch three temporary markers up the number tracks — but roll a combination you can't use and you lose every step you gained this turn. Bank your progress and it stays; get greedy one throw too far and it all evaporates. The columns at the edges are the shortest and the safest, the middle ones long and tempting, and the whole table groans and cheers as someone rides their luck one roll too many. It is nearly fifty years old, teaches in a minute and still delivers the purest gambling thrill in gaming. A classic that has never needed fixing.",
+    },
+    es: {
+      title: "Can't Stop",
+      short: "Tienta a la suerte montaña arriba en Can't Stop, el atemporal clásico de dados de Sid Sackson para 2 a 4 jugadores.",
+      body: "Can't Stop reduce el «tienta a la suerte» a una única pregunta angustiosa: ¿vuelves a tirar o te plantas? Lanzas cuatro dados, los emparejas en columnas y haces avanzar tres marcadores temporales por las pistas de números; pero si sacas una combinación que no puedes usar, pierdes todos los pasos que habías ganado en el turno. Si aseguras tu avance, se queda; si te pasas de codicioso una tirada de más, se evapora todo. Las columnas de los extremos son las más cortas y seguras, las del centro largas y tentadoras, y toda la mesa gime y grita cuando alguien exprime su suerte una tirada de más. Tiene casi cincuenta años, se enseña en un minuto y sigue ofreciendo la emoción de apostar más pura que hay en los juegos. Un clásico que nunca ha necesitado arreglos.",
+    },
+  },
+  {
+    slug: 'splendor-marvel-293296',
+    en: {
+      title: 'Splendor: Marvel',
+      short: 'The gem-engine classic reskinned for super heroes: Splendor Marvel is a fast set-collection game for 2–4 players.',
+      body: "Splendor Marvel takes the beloved chip-and-card engine of Splendor and wraps it in the Marvel universe, right down to a new race for the Infinity Gauntlet. You gather coloured Infinity resource tokens, spend them to recruit hero and location cards, and each card you take discounts the next — so a slow start snowballs into a machine that buys the big-scoring cards almost for free. The fresh twist is assembling the Gauntlet and its stones for an alternate, sudden path to victory that keeps opponents honest. It stays as clean, quick and tense as the original, teaches in five minutes and plays from two to four. A perfect on-ramp to engine-building, and an easy sell to any Marvel fan at the table.",
+    },
+    es: {
+      title: 'Splendor: Marvel',
+      short: 'El clásico del motor de gemas con piel de superhéroes: Splendor Marvel es un juego rápido de colección para 2 a 4 jugadores.',
+      body: 'Splendor Marvel toma el querido motor de fichas y cartas de Splendor y lo envuelve en el universo Marvel, hasta con una nueva carrera por el Guantelete del Infinito. Reúnes fichas de recursos del Infinito de distintos colores, las gastas para reclutar cartas de héroes y localizaciones, y cada carta que tomas abarata la siguiente, de modo que un arranque lento se convierte en una bola de nieve: una máquina que compra casi gratis las cartas de más puntos. El giro nuevo está en ensamblar el Guantelete y sus gemas para abrir un camino alternativo y fulminante a la victoria que mantiene honestos a tus rivales. Sigue siendo tan limpio, rápido y tenso como el original, se enseña en cinco minutos y se juega de dos a cuatro. Una rampa de entrada perfecta a la construcción de motores, y una venta fácil para cualquier fan de Marvel en la mesa.',
+    },
+  },
+  {
+    slug: 'dixit-39856',
+    en: {
+      title: 'Dixit',
+      short: 'Tell a story with a single clue in Dixit, the beloved imaginative party game for 3–6 players by Jean-Louis Roubira.',
+      body: "Dixit is a party game built entirely out of imagination and beautiful, dreamlike art. Each round one player is the storyteller and gives a clue — a word, a phrase, a hummed tune — for one of the surreal picture cards in their hand; everyone else secretly submits a card of their own that might fit that clue, and then the table votes on which picture they think was the storyteller's. The genius is in the scoring: give a clue too obvious and everyone guesses it, too obscure and nobody does — either way you score nothing, so you aim for that perfect half-truth only some will catch. Gentle, gorgeous and wonderfully open to all ages, it turns a table of strangers into storytellers in minutes. A modern party classic that belongs in every collection.",
+    },
+    es: {
+      title: 'Dixit',
+      short: 'Cuenta una historia con una sola pista en Dixit, el querido juego de fiesta e imaginación para 3 a 6 jugadores.',
+      body: 'Dixit es un juego de fiesta construido enteramente con imaginación y un arte precioso y onírico. Cada ronda un jugador es el narrador y da una pista —una palabra, una frase, una melodía tarareada— para una de las cartas ilustradas y surrealistas de su mano; el resto entrega en secreto una carta propia que pueda encajar con esa pista, y luego la mesa vota cuál cree que era la del narrador. La genialidad está en la puntuación: si das una pista demasiado obvia, todos la aciertan; si es demasiado rebuscada, no la acierta nadie; en ambos casos no puntúas, así que buscas esa media verdad perfecta que solo algunos captarán. Suave, hermoso y maravillosamente abierto a todas las edades, convierte una mesa de desconocidos en narradores en cuestión de minutos. Un clásico moderno de fiesta que merece estar en cualquier colección.',
+    },
+  },
 ];
