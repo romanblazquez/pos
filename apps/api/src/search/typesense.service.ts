@@ -7,8 +7,12 @@ export interface ProductDocument {
   id: string;
   slug: string;
   name: string;
+  /** Spanish (es-MX) curated title, so Spanish queries match. Falls back to `name`. */
+  nameEs?: string;
   publisher: string;
   description: string;
+  /** Spanish (es-MX) curated body, so Spanish queries match. Falls back to `description`. */
+  descriptionEs?: string;
   category: string;
   tags: string[];
   language: string;
@@ -33,8 +37,10 @@ const COLLECTION_SCHEMA = {
   fields: [
     { name: 'slug',            type: 'string'  as const },
     { name: 'name',            type: 'string'  as const },
+    { name: 'nameEs',          type: 'string'  as const, optional: true },
     { name: 'publisher',       type: 'string'  as const, optional: true },
     { name: 'description',     type: 'string'  as const, optional: true },
+    { name: 'descriptionEs',   type: 'string'  as const, optional: true },
     { name: 'category',        type: 'string'  as const, facet: true },
     { name: 'tags',            type: 'string[]' as const, facet: true },
     { name: 'language',        type: 'string'  as const, facet: true, optional: true },
@@ -77,11 +83,16 @@ export class TypesenseService implements OnModuleInit {
   private async ensureCollection() {
     try {
       const existing = await this.client.collections(COLLECTION).retrieve();
-      // Check if default_sorting_field matches; if not, recreate.
-      if ((existing as { default_sorting_field?: string }).default_sorting_field !== 'inStockListings') {
+      // Recreate when the schema drifts: wrong sort field, or missing the
+      // bilingual search fields (nameEs/descriptionEs). The hourly ranking job
+      // repopulates the empty collection; the Prisma fallback covers the gap.
+      const fields = (existing as { fields?: Array<{ name: string }> }).fields ?? [];
+      const hasBilingual = fields.some((f) => f.name === 'nameEs');
+      const sortOk = (existing as { default_sorting_field?: string }).default_sorting_field === 'inStockListings';
+      if (!hasBilingual || !sortOk) {
         await this.client.collections(COLLECTION).delete();
         await this.client.collections().create(COLLECTION_SCHEMA);
-        this.log.log('Typesense collection recreated (schema updated)');
+        this.log.log('Typesense collection recreated (schema updated — bilingual fields)');
       } else {
         this.log.log('Typesense collection ready');
       }
@@ -155,8 +166,10 @@ export class TypesenseService implements OnModuleInit {
     try {
       const result = await this.client.collections(COLLECTION).documents().search({
         q: q || '*',
-        query_by: 'name,publisher,description,tags',
-        query_by_weights: '4,2,1,2',
+        // Match both languages: a Spanish query hits nameEs/descriptionEs, an
+        // English one hits name/description. Typesense ORs across query_by fields.
+        query_by: 'name,nameEs,publisher,description,descriptionEs,tags',
+        query_by_weights: '4,4,2,1,1,2',
         filter_by: filterParts.join(' && ') || undefined,
         sort_by: sortBy,
         per_page: perPage,

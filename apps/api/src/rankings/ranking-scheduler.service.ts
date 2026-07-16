@@ -211,12 +211,25 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
       (l) => l.stockStatus !== 'out_of_stock',
     ).length;
 
+    // Fold approved localized copy into the search doc so queries match in both
+    // languages: es-MX populates nameEs/descriptionEs, en-US overrides the base
+    // English fields. Falls back to the raw BGG text when no override exists.
+    const localizations = await this.prisma.entityLocalization.findMany({
+      where: { entityType: 'mkt_product', entityId: product.id, moderationStatus: 'APPROVED' },
+      include: { language: { select: { code: true } } },
+    });
+    const byCode = new Map(localizations.map((l) => [l.language.code, l]));
+    const es = byCode.get('es-MX');
+    const en = byCode.get('en-US');
+
     await this.search.upsertProduct({
       id: product.id,
       slug: product.slug,
-      name: product.name,
+      name: en?.title ?? product.name,
+      nameEs: es?.title ?? product.name,
       publisher: product.publisher ?? '',
-      description: product.description ?? '',
+      description: en?.description ?? product.description ?? '',
+      descriptionEs: es?.description ?? product.description ?? '',
       category: product.category,
       tags: product.tags,
       language: product.language ?? '',

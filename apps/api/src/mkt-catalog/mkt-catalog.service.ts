@@ -216,12 +216,24 @@ export class MktCatalogService {
     const prices = product.listings.map((l) => l.priceMinorUnits);
     const inStock = product.listings.filter((l) => l.stockStatus !== 'out_of_stock').length;
 
+    // Fold approved localized copy in so search matches in both languages (see
+    // the ranking scheduler's syncProductToSearch for the same treatment).
+    const localizations = await this.prisma.entityLocalization.findMany({
+      where: { entityType: 'mkt_product', entityId: product.id, moderationStatus: 'APPROVED' },
+      include: { language: { select: { code: true } } },
+    });
+    const byCode = new Map(localizations.map((l) => [l.language.code, l]));
+    const es = byCode.get('es-MX');
+    const en = byCode.get('en-US');
+
     const doc: ProductDocument = {
       id: product.id,
       slug: product.slug,
-      name: product.name,
+      name: en?.title ?? product.name,
+      nameEs: es?.title ?? product.name,
       publisher: product.publisher ?? '',
-      description: product.description ?? '',
+      description: en?.description ?? product.description ?? '',
+      descriptionEs: es?.description ?? product.description ?? '',
       category: product.category,
       tags: product.tags,
       language: product.language ?? '',
