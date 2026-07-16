@@ -5,6 +5,8 @@ import OpenAI from 'openai';
 const MODEL = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
 const PRODUCT_ENTITY_TYPE = 'mkt_product';
 const LOCALES = ['en', 'es'] as const;
+const QUERY_CACHE_LIMIT = 256;
+const QUERY_CACHE_TTL_MS = positiveInt(process.env.SEMANTIC_QUERY_CACHE_TTL_MS, 60 * 60 * 1000);
 
 type SemanticHit = { canonicalId: string; score: number };
 
@@ -12,6 +14,8 @@ type SemanticHit = { canonicalId: string; score: number };
 export class SemanticSearchService {
   private readonly logger = new Logger(SemanticSearchService.name);
   private client: OpenAI | null = null;
+  private readonly queryCache = new Map<string, { embedding: number[]; expiresAt: number }>();
+  private readonly pendingQueries = new Map<string, Promise<number[]>>();
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -29,7 +33,7 @@ export class SemanticSearchService {
   async search(query: string, locale = 'es', limit = 24): Promise<SemanticHit[]> {
     if (!query.trim() || !this.isConfigured()) return [];
     try {
-      const embedding = await this.embed(query.trim());
+      const embedding = await this.embedQuery(query);
       return this.rank(embedding, locale, limit);
     } catch (error) {
       this.logger.warn(`Semantic query unavailable; using lexical fallback: ${String(error)}`);
@@ -66,6 +70,35 @@ export class SemanticSearchService {
   private async embed(input: string): Promise<number[]> {
     const response = await this.getClient().embeddings.create({ model: MODEL, input });
     return response.data[0]?.embedding ?? [];
+  }
+
+  private async embedQuery(input: string): Promise<number[]> {
+    const key = normalizeQuery(input);
+    const cached = this.queryCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      // Refresh insertion order so Map also acts as a bounded LRU cache.
+      this.queryCache.delete(key);
+      this.queryCache.set(key, cached);
+      return cached.embedding;
+    }
+    if (cached) this.queryCache.delete(key);
+
+    const pending = this.pendingQueries.get(key);
+    if (pending) return pending;
+
+    const request = this.embed(key)
+      .then((embedding) => {
+        this.queryCache.set(key, { embedding, expiresAt: Date.now() + QUERY_CACHE_TTL_MS });
+        while (this.queryCache.size > QUERY_CACHE_LIMIT) {
+          const oldest = this.queryCache.keys().next().value as string | undefined;
+          if (!oldest) break;
+          this.queryCache.delete(oldest);
+        }
+        return embedding;
+      })
+      .finally(() => this.pendingQueries.delete(key));
+    this.pendingQueries.set(key, request);
+    return request;
   }
 
   private async embedBatch(inputs: string[]): Promise<number[][]> {
@@ -172,6 +205,15 @@ export class SemanticSearchService {
 
 function normalizeLocale(locale: string): 'en' | 'es' {
   return locale.toLowerCase().startsWith('en') ? 'en' : 'es';
+}
+
+function normalizeQuery(query: string): string {
+  return query.trim().replace(/\s+/g, ' ').toLocaleLowerCase().slice(0, 500);
+}
+
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function normalize(value: string): string {
