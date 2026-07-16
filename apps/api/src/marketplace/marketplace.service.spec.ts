@@ -30,7 +30,7 @@ function setup() {
   const search = { search: vi.fn().mockResolvedValue({ hits: [], total: 0 }) };
   const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
   const service = new MarketplaceService(prisma as never, search as never, semantic as never);
-  return { service, prisma, search };
+  return { service, prisma, search, semantic };
 }
 
 describe('MarketplaceService search filters', () => {
@@ -99,5 +99,18 @@ describe('MarketplaceService search filters', () => {
     expect(prisma.language.findFirst).toHaveBeenCalledWith({
       where: { OR: [{ code: 'es' }, { iso6391: 'es' }] },
     });
+  });
+
+  it('uses semantic retrieval only for an unfiltered natural-language query', async () => {
+    const { service, semantic, search } = setup();
+    semantic.search.mockResolvedValue([]);
+
+    await service.searchProducts({ q: 'cooperative mystery for two players', semantic: true }, 'en');
+    expect(semantic.search).toHaveBeenCalledWith('cooperative mystery for two players', 'en', 24);
+
+    semantic.search.mockClear();
+    await service.searchProducts({ q: 'cooperative mystery for two players', semantic: true, minPlayers: 2 }, 'en');
+    expect(semantic.search).not.toHaveBeenCalled();
+    expect(search.search).toHaveBeenCalled();
   });
 });

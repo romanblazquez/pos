@@ -194,6 +194,10 @@ export default async function ListingPage({
     };
     const { results, total } = await listProducts({
       q,
+      semantic: isNaturalLanguageQuery(q) && !(
+        state.category || state.inStock || state.sort || state.max || state.players
+        || state.complexity || state.mechanics.length > 0
+      ),
       locale,
       category: state.category,
       inStock: state.inStock,
@@ -464,4 +468,8 @@ export default async function ListingPage({
   }
 
   notFound();
+}
+
+function isNaturalLanguageQuery(query: string): boolean {
+  return query.trim().length >= 18 && query.trim().split(/\s+/).length >= 4;
 }

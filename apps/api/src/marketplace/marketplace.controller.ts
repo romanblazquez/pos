@@ -32,6 +32,7 @@ export class MarketplaceController {
   @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
   @ApiQuery({ name: 'mechanics', required: false, description: 'Filter by one or more game mechanics (repeat the param for multiple)', example: 'Deck Building' })
   @ApiQuery({ name: 'complexity', required: false, description: 'Filter by BGG-weight complexity band', example: 'heavy', enum: ['light', 'medium-light', 'medium', 'heavy', 'expert'] })
+  @ApiQuery({ name: 'semantic', required: false, type: String, description: 'Use meaning-based retrieval for an unfiltered natural-language query', example: 'true' })
   @ApiResponse({ status: 200, description: 'Returns { results: Product[], total: number, found: number }' })
   search(
     @Query('q')           q?: string,
@@ -46,6 +47,7 @@ export class MarketplaceController {
     @Query('locale')      locale?: string,
     @Query('mechanics')   mechanics?: string | string[],
     @Query('complexity')  complexity?: string,
+    @Query('semantic')    semantic?: string,
   ) {
     return this.svc.searchProducts({
       q,
@@ -59,6 +61,7 @@ export class MarketplaceController {
       limit: limit ? parseInt(limit, 10) : 24,
       offset: offset ? parseInt(offset, 10) : 0,
       sortBy,
+      semantic: semantic === 'true',
     }, locale);
   }
 

@@ -78,10 +78,16 @@ async function searchProducts(
   if (players) params.set('minPlayers', String(players));
   if (complexity) params.set('complexity', complexity);
   for (const mechanic of mechanics) params.append('mechanics', mechanic);
+  const hasFilters = Boolean(category || inStockOnly || maxPrice || players || mechanics.length || complexity);
+  if (!hasFilters && isNaturalLanguageQuery(q)) params.set('semantic', 'true');
 
   const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
   if (!res.ok) throw new Error('Search failed');
   return res.json() as Promise<{ results: Product[]; total: number }>;
+}
+
+function isNaturalLanguageQuery(query: string): boolean {
+  return query.trim().length >= 18 && query.trim().split(/\s+/).length >= 4;
 }
 
 async function fetchCategories(): Promise<{ category: string; count: number }[]> {

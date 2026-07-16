@@ -118,6 +118,8 @@ export async function listProducts(opts: {
   complexity?: string;
   /** UI locale for name/description overrides; without it cards show base English. */
   locale?: string;
+  /** Meaning-based retrieval for unfiltered natural-language searches. */
+  semantic?: boolean;
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
@@ -125,6 +127,7 @@ export async function listProducts(opts: {
   });
   if (opts.locale) params.set('locale', opts.locale);
   if (opts.q) params.set('q', opts.q);
+  if (opts.semantic) params.set('semantic', 'true');
   if (opts.category) params.set('category', opts.category);
   if (opts.inStock) params.set('inStock', 'true');
   if (opts.minPlayers) params.set('minPlayers', String(opts.minPlayers));

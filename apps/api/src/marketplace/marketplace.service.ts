@@ -17,6 +17,7 @@ export interface ProductSearchParams {
   limit?: number;
   offset?: number;
   sortBy?: string;
+  semantic?: boolean;
 }
 
 // entityType tag used on EntityLocalization rows for MktProduct — the schema
@@ -118,6 +119,10 @@ export class MarketplaceService {
 
   async searchProducts(params: ProductSearchParams, locale?: string) {
     const { q = '', limit = 24, offset = 0 } = params;
+
+    if (params.semantic && q && !hasStructuredFilters(params)) {
+      return this.semanticSearchProducts(q, locale, limit);
+    }
 
     // Typesense path — fast, ranked
     const { hits, total } = await this.search.search({
@@ -511,4 +516,11 @@ function normalizeSort(sortBy?: string): string | undefined {
     case 'rank_score': return 'inStockListings:desc,bggRating:desc';
     default: return undefined;
   }
+}
+
+function hasStructuredFilters(params: ProductSearchParams): boolean {
+  return Boolean(
+    params.category || params.minPlayers || params.minPrice !== undefined || params.maxPrice !== undefined
+    || params.inStockOnly || params.mechanics?.length || params.complexity || params.sortBy,
+  );
 }
