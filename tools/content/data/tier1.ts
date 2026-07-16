@@ -605,4 +605,407 @@ export const TIER1: readonly CuratedProduct[] = [
       body: 'Dixit es un juego de fiesta construido enteramente con imaginación y un arte precioso y onírico. Cada ronda un jugador es el narrador y da una pista —una palabra, una frase, una melodía tarareada— para una de las cartas ilustradas y surrealistas de su mano; el resto entrega en secreto una carta propia que pueda encajar con esa pista, y luego la mesa vota cuál cree que era la del narrador. La genialidad está en la puntuación: si das una pista demasiado obvia, todos la aciertan; si es demasiado rebuscada, no la acierta nadie; en ambos casos no puntúas, así que buscas esa media verdad perfecta que solo algunos captarán. Suave, hermoso y maravillosamente abierto a todas las edades, convierte una mesa de desconocidos en narradores en cuestión de minutos. Un clásico moderno de fiesta que merece estar en cualquier colección.',
     },
   },
+  {
+    slug: 'dixit-odyssey-92828',
+    en: {
+      title: 'Dixit: Odyssey',
+      short: 'The big-table edition of the storytelling classic: Dixit Odyssey plays up to 12 with 84 new dreamlike cards.',
+      body: "Dixit: Odyssey is the party-sized version of the beloved storytelling game, stretching the count all the way to twelve players and adding 84 brand-new surreal illustrations. The heart is unchanged: a storyteller offers a single evocative clue for one hidden card, everyone slips in a card that could match, and the table votes to find the real one — score too plainly or too cryptically and you earn nothing. This edition adds a simplified voting board and faster scoring built for a crowd, so a full living room stays in the game. Gorgeous, gentle and endlessly re-playable, it's the version to own if your gatherings run large. A perfect icebreaker for all ages.",
+    },
+    es: {
+      title: 'Dixit: Odyssey',
+      short: 'La edición para mesas grandes del clásico de narración: Dixit Odyssey juega hasta 12 con 84 cartas oníricas nuevas.',
+      body: 'Dixit: Odyssey es la versión en formato fiesta del querido juego de narración, que amplía el número de participantes hasta doce jugadores y suma 84 ilustraciones surrealistas nuevas. El corazón es el mismo: el narrador ofrece una única pista evocadora para una carta oculta, cada cual desliza una carta que podría encajar y la mesa vota para encontrar la verdadera; si puntúas de forma demasiado obvia o demasiado críptica, no ganas nada. Esta edición añade un tablero de votación simplificado y un recuento más rápido pensado para grupos grandes, así que un salón lleno de gente sigue metido en la partida. Precioso, suave y con una rejugabilidad enorme, es la versión que querrás si tus reuniones son numerosas. Un rompehielos perfecto para todas las edades.',
+    },
+  },
+  {
+    slug: 'toy-battle-434654',
+    en: {
+      title: 'Toy Battle',
+      short: 'A tight two-player area-control skirmish of toy armies, Toy Battle is a 15-minute duel by Paolo Mori.',
+      body: "Toy Battle is Paolo Mori's compact head-to-head, a fifteen-minute war of tin soldiers and toy tanks fought across a handful of small maps. You deploy your forces to seize zones and out-muscle your rival for majority, with a sudden-death edge that keeps every placement sharp. There's no downtime and no sprawling rulebook — just clean, aggressive area control that resets fast and begs for a rematch. Light in weight but pointed in decisions, it's an ideal filler duel for two. Grab it when you want strategy in a small box and a short evening.",
+    },
+    es: {
+      title: 'Toy Battle',
+      short: 'Una escaramuza de control de zonas para dos con ejércitos de juguete: Toy Battle es un duelo de 15 minutos de Paolo Mori.',
+      body: 'Toy Battle es el enfrentamiento compacto de Paolo Mori, una guerra de quince minutos de soldaditos de plomo y tanques de juguete librada sobre un puñado de mapas pequeños. Despliegas tus fuerzas para tomar zonas y superar a tu rival en mayoría, con un remate de muerte súbita que mantiene afilada cada colocación. No hay tiempos muertos ni un reglamento interminable: solo control de área limpio y agresivo que se reinicia rápido y pide la revancha. Ligero de peso pero afilado en decisiones, es un duelo relleno ideal para dos. Hazte con él cuando quieras estrategia en una caja pequeña y una velada corta.',
+    },
+  },
+  {
+    slug: 'keep-the-heroes-out-333255',
+    en: {
+      title: 'Keep the Heroes Out!',
+      short: 'Flip the dungeon crawl: Keep the Heroes Out! is a co-operative tower-defence game for 1–4 players by Luís Brueh.',
+      body: "Keep the Heroes Out! turns the dungeon crawl inside out — you are the monsters, and a party of greedy heroes is marching in to loot your lair. Together you draw from a shared bag of minions and spend actions to block corridors, spring traps and ambush the adventurers before they reach the treasure and escape. It's a co-operative, scenario-driven tower defence with a modular board and deck-and-bag building, wrapped in gloriously cute cartoon art. Tense puzzles, escalating difficulty and a solid solo mode make it play beautifully from one to four. A fresh, funny twist on fantasy co-op.",
+    },
+    es: {
+      title: 'Keep the Heroes Out!',
+      short: 'Le da la vuelta al dungeon crawl: Keep the Heroes Out! es un tower defense cooperativo para 1 a 4 jugadores de Luís Brueh.',
+      body: 'Keep the Heroes Out! pone el dungeon crawl del revés: vosotros sois los monstruos, y un grupo de héroes codiciosos entra a saquear vuestra guarida. Juntos robáis de una bolsa compartida de esbirros y gastáis acciones para bloquear pasillos, activar trampas y emboscar a los aventureros antes de que lleguen al tesoro y escapen. Es un tower defense cooperativo guiado por escenarios, con tablero modular y construcción de mazo y bolsa, envuelto en un arte de dibujos gloriosamente adorable. Sus puzles tensos, la dificultad creciente y un buen modo en solitario hacen que brille de uno a cuatro jugadores. Un giro fresco y divertido al cooperativo de fantasía.',
+    },
+  },
+  {
+    slug: 'finspan-436126',
+    en: {
+      title: 'Finspan',
+      short: 'Build an ocean of fish in Finspan, an engine-building card game for 1–5 players in the Wingspan family.',
+      body: "Finspan takes the gentle engine-building of the Wingspan universe beneath the waves, where you build a thriving community of fish across the sunlit, twilight and midnight depths of the sea. You play beautifully illustrated fish cards down through the ocean layers, each triggering chains of eggs, food and special once-per-game abilities that reward smart sequencing. It's a lighter, quicker cousin to Wingspan — approachable enough for a family table yet full of satisfying combos — and it carries the same educational streak, packing real marine facts onto every card. Solo up to five, it's a lovely gateway strategy game. A stunning, calming build for nature lovers.",
+    },
+    es: {
+      title: 'Finspan',
+      short: 'Crea un océano de peces en Finspan, un juego de construcción de motores con cartas para 1 a 5 jugadores de la familia Wingspan.',
+      body: 'Finspan lleva la amable construcción de motores del universo Wingspan bajo las olas, donde formas una próspera comunidad de peces por las profundidades soleadas, crepusculares y abisales del mar. Juegas cartas de peces bellamente ilustradas a través de las capas del océano, y cada una desencadena cadenas de huevos, comida y habilidades especiales de un solo uso que premian una buena secuencia. Es un primo más ligero y rápido de Wingspan —accesible para una mesa familiar pero lleno de combos satisfactorios— y conserva su vena educativa, con datos marinos reales en cada carta. En solitario o hasta cinco, es una preciosa puerta de entrada a la estrategia. Una construcción espectacular y relajante para los amantes de la naturaleza.',
+    },
+  },
+  {
+    slug: 'carpe-diem-245934',
+    en: {
+      title: 'Carpe Diem',
+      short: 'Build a Roman estate in Carpe Diem, a tile-drafting point-salad euro for 2–4 players by Stefan Feld.',
+      body: "Carpe Diem is classic Stefan Feld: a tight, elegant race to build the finest villa district in Ancient Rome, scored a dozen different ways. Each round you move around a ring of tiles and draft one, adding it to your board to complete food chains, fountains, houses and harbours — every tile feeding several scoring tracks at once. Fulfil contract cards for bursts of points and time your buildings to catch the periodic scorings before your rivals do. It's medium weight, plays cleanly in about 75 minutes and layers plenty of decisions without ever bogging down. A refined euro for players who love a rich points puzzle.",
+    },
+    es: {
+      title: 'Carpe Diem',
+      short: 'Construye una finca romana en Carpe Diem, un eurogame de draft de losetas y puntos para 2 a 4 jugadores de Stefan Feld.',
+      body: 'Carpe Diem es Stefan Feld en estado puro: una carrera ajustada y elegante por levantar el mejor barrio de villas de la antigua Roma, puntuada de una docena de maneras. Cada ronda avanzas por un anillo de losetas y drafteas una, sumándola a tu tablero para completar cadenas de alimentos, fuentes, casas y puertos; cada loseta alimenta varios marcadores a la vez. Cumples cartas de contrato para lograr estallidos de puntos y mides tus construcciones para llegar a las puntuaciones periódicas antes que tus rivales. De peso medio, se juega con fluidez en unos 75 minutos y encadena decisiones sin atascarse nunca. Un euro refinado para quienes disfrutan un buen rompecabezas de puntos.',
+    },
+  },
+  {
+    slug: 'honey-buzz-284742',
+    en: {
+      title: 'Honey Buzz',
+      short: 'Bees build a honeycomb economy in Honey Buzz, a worker-placement game for 1–4 players by Paul Salomon.',
+      body: "In Honey Buzz you are a bee building out your hive one hexagonal comb tile at a time, then selling honey and goods to the forest's woodland customers. Workers are retrieved and redeployed to draft comb tiles, and where you place each hexagon shapes the actions you'll unlock — a spatial puzzle stacked on top of a tidy little economy. Fill contracts, spy on the market and race to turn nectar into the most profitable hive on the meadow. It's a charming medium-light euro with gorgeous components and a strong solo mode. Sweet on the surface, surprisingly sharp underneath.",
+    },
+    es: {
+      title: 'Honey Buzz',
+      short: 'Las abejas montan una economía de panal en Honey Buzz, un juego de colocación de trabajadores para 1 a 4 jugadores de Paul Salomon.',
+      body: 'En Honey Buzz eres una abeja que amplía su colmena loseta hexagonal a loseta hexagonal para luego vender miel y productos a la clientela del bosque. Recuperas y vuelves a colocar a tus trabajadoras para draftear losetas de panal, y el lugar donde encajas cada hexágono determina las acciones que desbloqueas: un puzle espacial montado sobre una economía pequeña y muy pulida. Cumples contratos, espías el mercado y compites por convertir el néctar en la colmena más rentable del prado. Es un euro de peso medio-ligero encantador, con unos componentes preciosos y un buen modo en solitario. Dulce en la superficie y sorprendentemente afilado por debajo.',
+    },
+  },
+  {
+    slug: 'hitster-318243',
+    en: {
+      title: 'Hitster',
+      short: 'Place the hits on your timeline in Hitster, a music party game for 2–10 players.',
+      body: "Hitster turns your phone into a jukebox and the table into a race through pop history. You scan a card's code, a song plays, and you have to slot it into your growing timeline — was it released before or after the track already sitting there? Guess the right spot and you keep the card; first to ten wins. There's no board to learn and nothing to set up, just instant, sing-along fun that spans decades and gets a whole party arguing and humming. It plays up to ten and lands with any crowd. The easiest big-group icebreaker you'll ever open.",
+    },
+    es: {
+      title: 'Hitster',
+      short: 'Coloca los éxitos en tu línea temporal en Hitster, un juego de fiesta musical para 2 a 10 jugadores.',
+      body: 'Hitster convierte tu móvil en una gramola y la mesa en una carrera por la historia de la música. Escaneas el código de una carta, suena una canción y tienes que encajarla en tu línea temporal creciente: ¿se publicó antes o después del tema que ya está ahí? Si aciertas el hueco, te quedas la carta; el primero en llegar a diez gana. No hay tablero que aprender ni nada que preparar, solo diversión instantánea para cantar a coro que abarca décadas y pone a toda la fiesta a discutir y tararear. Juega hasta diez y encaja con cualquier grupo. El rompehielos para grupos grandes más fácil que abrirás nunca.',
+    },
+  },
+  {
+    slug: 'knarr-379629',
+    en: {
+      title: 'Knarr',
+      short: 'Sail and recruit in Knarr, a fast Viking card game of engine-building for 2–4 players by Thomas Dupont.',
+      body: "Knarr is a brisk little Viking engine in a small box. Each turn is a single clean choice — recruit a crew card or set sail to new lands — and both feed two currencies that snowball as your board grows. Recruits chain bonuses off one another, exploration earns reputation and goods, and the game ends the moment someone hits the target, so every turn counts. It teaches in minutes, plays in half an hour and hides real optimization under a very approachable surface. Two to four players, no downtime, all momentum. A perfect gateway-plus card game for game night.",
+    },
+    es: {
+      title: 'Knarr',
+      short: 'Navega y recluta en Knarr, un ágil juego de cartas vikingo de construcción de motores para 2 a 4 jugadores de Thomas Dupont.',
+      body: 'Knarr es un pequeño motor vikingo trepidante en una caja pequeña. Cada turno es una elección limpia y única —reclutar una carta de tripulación o zarpar hacia nuevas tierras— y ambas alimentan dos monedas que se disparan a medida que crece tu tablero. Los reclutas encadenan bonificaciones entre sí, la exploración da reputación y mercancías, y la partida termina en cuanto alguien alcanza el objetivo, así que cada turno cuenta. Se enseña en minutos, se juega en media hora y esconde una optimización real bajo una superficie muy accesible. De dos a cuatro jugadores, sin tiempos muertos, puro empuje. Un juego de cartas puente perfecto para la noche de juegos.',
+    },
+  },
+  {
+    slug: 'flip-7-420087',
+    en: {
+      title: 'Flip 7',
+      short: 'Push your luck one card too far in Flip 7, a bust-or-bank party card game for 3–18 players.',
+      body: "Flip 7 is push-your-luck stripped to its most addictive core: flip number cards one at a time, chasing points, but draw a duplicate and you bust and lose the lot. Hit seven different cards in a round and you score a fat bonus — but do you dare go for it, or bank what you've got and sit smug while a neighbour flames out? Special action cards let you force, freeze and flip on others, so a quiet game of solitaire luck becomes a gleeful group pile-on. It scales absurdly wide, up to eighteen players, and teaches in a single round. Pure, loud, one-more-hand fun.",
+    },
+    es: {
+      title: 'Flip 7',
+      short: 'Tienta a la suerte una carta de más en Flip 7, un juego de cartas de fiesta de plántate o revienta para 3 a 18 jugadores.',
+      body: 'Flip 7 reduce el «tienta a la suerte» a su núcleo más adictivo: giras cartas de número una a una persiguiendo puntos, pero si sacas una repetida revientas y lo pierdes todo. Si consigues siete cartas distintas en una ronda, te llevas un buen bonus; ¿pero te atreves a ir a por ello o aseguras lo que tienes y te quedas tan tranquilo mientras el vecino se calcina? Unas cartas de acción especiales te dejan forzar, congelar y girar sobre los demás, así que un tranquilo solitario de azar se convierte en una encantada montonera colectiva. Escala de forma disparatada, hasta dieciocho jugadores, y se enseña en una sola ronda. Diversión pura, ruidosa y de una-mano-más.',
+    },
+  },
+  {
+    slug: 'micromacro-crime-city-full-house-338834',
+    en: {
+      title: 'MicroMacro: Crime City – Full House',
+      short: 'More cases on a brand-new city map: MicroMacro Full House is a stand-alone co-operative detective game for 1–4 players.',
+      body: "MicroMacro: Crime City – Full House is a complete stand-alone follow-up to the Spiel des Jahres winner, with sixteen fresh cases sprawled across an all-new hand-drawn black-and-white metropolis. Armed with a magnifying glass, you and your fellow sleuths trace crimes backwards and forwards through the teeming streets, spotting the same characters at different moments to piece each story together. No dice, no setup — just pure observation, dark humour and dozens of tiny tragedies hiding in plain sight. It plays solo or shoulder-to-shoulder with the family, and needs nothing from the original. A brilliant, unlike-anything detective experience.",
+    },
+    es: {
+      title: 'MicroMacro: Crime City – Full House',
+      short: 'Más casos en un mapa de ciudad nuevo: MicroMacro Full House es un juego cooperativo de detectives independiente para 1 a 4 jugadores.',
+      body: 'MicroMacro: Crime City – Full House es una secuela completamente independiente del ganador del Spiel des Jahres, con dieciséis casos nuevos desplegados sobre una metrópolis dibujada a mano en blanco y negro totalmente inédita. Con una lupa en la mano, tú y tus compañeros investigadores rastreáis los crímenes adelante y atrás por las calles atestadas, localizando a los mismos personajes en distintos momentos para reconstruir cada historia. Sin dados ni montaje: pura observación, humor negro y decenas de pequeñas tragedias escondidas a plena vista. Se juega en solitario o codo con codo en familia, y no necesita nada del original. Una experiencia detectivesca brillante que no se parece a nada.',
+    },
+  },
+  {
+    slug: 'potion-explosion-180974',
+    en: {
+      title: 'Potion Explosion',
+      short: 'Chain-react marbles to brew spells in Potion Explosion, a tactile puzzle game for 2–4 players.',
+      body: "Potion Explosion hands you a marble dispenser and a mischievous grin. Pluck one ingredient marble from the rack and any same-coloured marbles that then touch explode into your hands too — the bigger the chain reaction, the more you grab in a single satisfying turn. You spend those ingredients to complete potion cards, each granting a one-off magical power, racing to brew and score before the shelf runs dry. It's a clever set-collection puzzle with a wonderfully physical hook, and it teaches in minutes. Colourful, moreish and just right for two to four. Few games feel this good in the hand.",
+    },
+    es: {
+      title: 'Potion Explosion',
+      short: 'Encadena canicas para preparar pociones en Potion Explosion, un juego de puzle muy táctil para 2 a 4 jugadores.',
+      body: 'Potion Explosion te entrega un dispensador de canicas y una sonrisa traviesa. Sacas una canica de ingrediente del soporte y todas las del mismo color que queden en contacto estallan también hacia tus manos: cuanto mayor sea la reacción en cadena, más consigues en un solo turno de lo más satisfactorio. Gastas esos ingredientes para completar cartas de poción, cada una con un poder mágico de un solo uso, en una carrera por preparar y puntuar antes de que se vacíe la estantería. Es un puzle de colección de conjuntos muy ingenioso con un gancho maravillosamente físico, y se enseña en minutos. Colorido, adictivo y perfecto para dos a cuatro. Pocos juegos se sienten tan bien en la mano.',
+    },
+  },
+  {
+    slug: 'take-time-440540',
+    en: {
+      title: 'Take Time',
+      short: 'A co-operative puzzle of limited words and shared deduction, Take Time plays 2–4 across a scenario campaign.',
+      body: "Take Time is a quiet, clever co-operative puzzle built around communication limits: your team must line up on the same answer while saying far less than you'd like. Across a series of scenarios you read one another's carefully rationed clues, deduce the hidden picture of what everyone means, and commit together — a game of restraint and reading the room as much as logic. It's light to carry and quick to play but leaves a lot of room for that lovely 'we're on the same wavelength' click. Two to four players, campaign-style variety, no fuss. A thoughtful little co-op for close groups.",
+    },
+    es: {
+      title: 'Take Time',
+      short: 'Un puzle cooperativo de palabras limitadas y deducción compartida, Take Time se juega de 2 a 4 en una campaña de escenarios.',
+      body: 'Take Time es un puzle cooperativo tranquilo e ingenioso construido en torno a los límites de comunicación: vuestro equipo debe coincidir en la misma respuesta diciendo mucho menos de lo que os gustaría. A lo largo de una serie de escenarios interpretáis las pistas cuidadosamente racionadas de los demás, deducís la imagen oculta de lo que cada uno quiere decir y os comprometéis juntos: un juego de contención y de leer a la mesa tanto como de lógica. Es ligero de llevar y rápido de jugar, pero deja mucho espacio para ese precioso chasquido de «estamos en la misma sintonía». De dos a cuatro jugadores, con variedad tipo campaña y sin complicaciones. Un pequeño cooperativo reflexivo para grupos que se conocen bien.',
+    },
+  },
+  {
+    slug: 'mille-fiori-346501',
+    en: {
+      title: 'Mille Fiori',
+      short: 'Master Venetian glassmaking in Mille Fiori, a chaining area-and-drafting euro for 2–4 players by Reiner Knizia.',
+      body: "Mille Fiori is Reiner Knizia at his interlocking best, a game of Renaissance glassmakers where every card you play flows into the next. Place a card into one of several production areas — trade routes, kilns, boats, ornaments — and it fires that area's scoring while handing you a fresh card to keep the chain alive. The joy is in engineering long cascades that light up region after region in a single turn. It's clean medium-weight fun, plays smoothly in about ninety minutes and rewards planning without ever feeling heavy. Two to four players, beautifully produced. A modern Knizia gem for euro fans.",
+    },
+    es: {
+      title: 'Mille Fiori',
+      short: 'Domina la vidriería veneciana en Mille Fiori, un euro de áreas encadenadas y draft para 2 a 4 jugadores de Reiner Knizia.',
+      body: 'Mille Fiori es Reiner Knizia en su mejor versión engranada, un juego de vidrieros del Renacimiento en el que cada carta que juegas fluye hacia la siguiente. Colocas una carta en una de varias áreas de producción —rutas comerciales, hornos, barcos, adornos— y eso activa la puntuación de esa zona a la vez que te entrega una carta nueva para mantener viva la cadena. La gracia está en diseñar largas cascadas que iluminan región tras región en un solo turno. Es diversión limpia de peso medio, se juega con fluidez en unos noventa minutos y premia la planificación sin resultar nunca pesado. De dos a cuatro jugadores y con una producción preciosa. Una joya moderna de Knizia para los fans del euro.',
+    },
+  },
+  {
+    slug: 'disney-villainous-wicked-to-the-core-271518',
+    en: {
+      title: 'Disney Villainous: Wicked to the Core',
+      short: 'Play the villain in Disney Villainous: Wicked to the Core, a stand-alone asymmetric game for 2–3 players.',
+      body: "Disney Villainous: Wicked to the Core is a stand-alone expansion that puts you in the shoes of three of Disney's darkest icons — Hades, Dr. Facilier and the Evil Queen — each chasing a completely different, gleefully wicked goal. Every villain plays from their own board and deck with unique rules, so the puzzle is racing your own scheme while your rivals drop heroes into your realm to trip you up. It stands entirely on its own or mixes with the rest of the Villainous line for bigger showdowns. Rich, thematic and endlessly re-playable across two or three players. A must for any Disney fan's shelf.",
+    },
+    es: {
+      title: 'Disney Villainous: Wicked to the Core',
+      short: 'Ponte en la piel del villano en Disney Villainous: Wicked to the Core, un juego asimétrico independiente para 2 a 3 jugadores.',
+      body: 'Disney Villainous: Wicked to the Core es una expansión independiente que te mete en la piel de tres de los iconos más oscuros de Disney —Hades, el Dr. Facilier y la Reina Malvada—, cada uno persiguiendo un objetivo completamente distinto y deliciosamente perverso. Cada villano juega desde su propio tablero y mazo con reglas únicas, así que el reto está en avanzar tu propia intriga mientras tus rivales sueltan héroes en tu reino para entorpecerte. Funciona por sí solo o se combina con el resto de la línea Villainous para duelos más grandes. Rico, temático y con una rejugabilidad enorme para dos o tres jugadores. Imprescindible en la estantería de cualquier fan de Disney.',
+    },
+  },
+  {
+    slug: '7-wonders-architects-346703',
+    en: {
+      title: '7 Wonders: Architects',
+      short: 'The gateway version of the classic: 7 Wonders Architects builds a wonder in 25 minutes for 2–7 players.',
+      body: "7 Wonders: Architects distils the beloved civilization game into its simplest, fastest form yet. On your turn you draw a single card from one of three decks beside you and play it — no simultaneous drafting to teach, no hand-passing to track — steadily assembling your wonder, your military and your scientific symbols. It keeps the tension and the satisfying build of the original while shrinking the rules to a couple of minutes and the runtime to about twenty-five. Gorgeous individual wonder boxes and a smooth two-to-seven count make it the perfect on-ramp for families and newcomers. The friendliest door into the 7 Wonders world.",
+    },
+    es: {
+      title: '7 Wonders: Architects',
+      short: 'La versión puerta de entrada del clásico: 7 Wonders Architects construye una maravilla en 25 minutos para 2 a 7 jugadores.',
+      body: '7 Wonders: Architects destila el querido juego de civilizaciones en su forma más sencilla y rápida hasta la fecha. En tu turno robas una única carta de uno de los tres mazos que tienes al lado y la juegas —sin draft simultáneo que enseñar, sin pasar manos que controlar—, ensamblando poco a poco tu maravilla, tu ejército y tus símbolos científicos. Conserva la tensión y la satisfactoria construcción del original mientras reduce las reglas a un par de minutos y la duración a unos veinticinco. Sus preciosas cajas individuales de maravilla y un cómodo rango de dos a siete lo convierten en la rampa de entrada perfecta para familias y novatos. La puerta más amable al mundo de 7 Wonders.',
+    },
+  },
+  {
+    slug: 'disney-villainous-evil-comes-prepared-284760',
+    en: {
+      title: 'Disney Villainous: Evil Comes Prepared',
+      short: 'Three more villains scheme in Disney Villainous: Evil Comes Prepared, a stand-alone game for 2–3 players.',
+      body: "Disney Villainous: Evil Comes Prepared is another stand-alone chapter in the hit asymmetric series, handing you Scar, Ratigan and Yzma — three schemers each with their own board, deck and devious win condition. As ever, you pursue your private plot while feeding heroes into your rivals' realms to slow them down, so no two villains ever feel alike. It plays perfectly on its own for two or three, or shuffles into the wider Villainous line for a table of arch-nemeses. Thematic to the core and hugely re-playable, with that signature moment of your villain's plan finally clicking into place. A treat for Disney lovers and strategy fans alike.",
+    },
+    es: {
+      title: 'Disney Villainous: Evil Comes Prepared',
+      short: 'Tres villanos más conspiran en Disney Villainous: Evil Comes Prepared, un juego independiente para 2 a 3 jugadores.',
+      body: 'Disney Villainous: Evil Comes Prepared es otro capítulo independiente de la exitosa serie asimétrica, que te entrega a Scar, Ratigan e Yzma: tres intrigantes con su propio tablero, mazo y retorcida condición de victoria. Como siempre, persigues tu trama privada mientras metes héroes en los reinos de tus rivales para frenarlos, de modo que no hay dos villanos que se sientan iguales. Se juega perfectamente por sí solo para dos o tres, o se mezcla con el resto de la línea Villainous para una mesa de archienemigos. Temático hasta la médula y muy rejugable, con ese momento inconfundible en que el plan de tu villano encaja por fin. Un regalo tanto para los amantes de Disney como para los aficionados a la estrategia.',
+    },
+  },
+  {
+    slug: 'spicy-299169',
+    en: {
+      title: 'Spicy',
+      short: 'Bluff your way through the spice cards in Spicy, a sharp bluffing card game for 2–6 players.',
+      body: "Spicy is a pure, gorgeous game of nerve: play a card face-down and announce it — chili, wasabi or pepper, in ascending value — but you may be lying through your teeth. The next player either trusts you and plays on top, or calls 'colour!' or 'number!' to challenge, and someone loses the whole pile. Beautifully illustrated and printed on tactile embossed cards, it turns a tiny box into twenty minutes of table-reading, poker-faced fun. It scales from two up to six and teaches in a single hand. A stylish, giftable bluffing filler that punches well above its size.",
+    },
+    es: {
+      title: 'Spicy',
+      short: 'Farolea con las cartas de especias en Spicy, un afilado juego de faroles con cartas para 2 a 6 jugadores.',
+      body: 'Spicy es un juego de nervios puro y precioso: juegas una carta boca abajo y la anuncias —chili, wasabi o pimienta, en valor ascendente—, pero puedes estar mintiendo descaradamente. El siguiente jugador o confía en ti y juega encima, o grita «¡color!» o «¡número!» para desafiarte, y alguien pierde todo el montón. Con unas ilustraciones bellísimas e impreso en cartas repujadas muy táctiles, convierte una caja diminuta en veinte minutos de diversión con cara de póker leyendo a la mesa. Escala de dos a seis y se enseña en una sola mano. Un relleno de faroles con estilo, ideal para regalar, que rinde muy por encima de su tamaño.',
+    },
+  },
+  {
+    slug: 'rhino-hero-super-battle-218333',
+    en: {
+      title: 'Rhino Hero: Super Battle',
+      short: 'Stack a wobbly skyscraper of superheroes in Rhino Hero: Super Battle, a dexterity game for 2–4 players.',
+      body: "Rhino Hero: Super Battle turns the beloved card-stacking game into a towering three-dimensional brawl. Players build an ever-taller, ever-more-precarious skyscraper of folding walls and floor cards, then send their superhero monkeys climbing up it, bumping rivals off and racing for the top — all while trying not to bring the whole trembling tower crashing down. It's tense, giggly, white-knuckle fun that kids and adults feel equally in their fingertips, playing in about twenty minutes for two to four. The dice and spider monkey add just enough chaos to keep everyone shrieking. A modern dexterity classic and a guaranteed family hit.",
+    },
+    es: {
+      title: 'Rhino Hero: Super Battle',
+      short: 'Apila un rascacielos tambaleante de superhéroes en Rhino Hero: Super Battle, un juego de habilidad para 2 a 4 jugadores.',
+      body: 'Rhino Hero: Super Battle convierte el querido juego de apilar cartas en una pelea tridimensional por las alturas. Los jugadores construyen un rascacielos cada vez más alto y más precario de paredes plegadas y cartas de suelo, y luego mandan a sus monos superhéroes a trepar por él, empujando a los rivales y corriendo hacia la cima, todo sin echar abajo la temblorosa torre entera. Es una diversión tensa, risueña y de dedos en tensión que peques y adultos sienten por igual en las yemas, y se juega en unos veinte minutos para dos a cuatro. El dado y el mono araña añaden justo el caos necesario para que todos griten. Un clásico moderno de habilidad y un éxito familiar asegurado.',
+    },
+  },
+  {
+    slug: 'deep-sea-adventure-169654',
+    en: {
+      title: 'Deep Sea Adventure',
+      short: 'Share one dwindling tank of air in Deep Sea Adventure, a push-your-luck diving game for 2–6 players.',
+      body: "Deep Sea Adventure is a tiny box of pure greed. A crew of broke treasure hunters shares a single submarine and, worse, a single supply of oxygen — and every treasure you pick up on the seabed slows you down and burns air faster for everyone. Press your luck too deep and you'll drown before you can climb back aboard, dropping your whole haul into the murk. The genius is that your greed poisons the whole team's air, so the table groans and cheers with every step. It plays in half an hour for two to six and teaches in a minute. A brilliant, brutal little filler.",
+    },
+    es: {
+      title: 'Deep Sea Adventure',
+      short: 'Compartís un único tanque de aire que se agota en Deep Sea Adventure, un juego de tienta a la suerte y buceo para 2 a 6 jugadores.',
+      body: 'Deep Sea Adventure es una cajita de pura codicia. Una tripulación de buscadores de tesoros sin blanca comparte un solo submarino y, peor aún, una sola reserva de oxígeno; y cada tesoro que recoges del fondo marino te ralentiza y quema aire más rápido para todos. Si tientas a la suerte demasiado abajo, te ahogarás antes de poder volver a bordo, dejando caer todo tu botín a las profundidades. La genialidad está en que tu codicia envenena el aire de todo el equipo, así que la mesa gime y grita con cada paso. Se juega en media hora para dos a seis y se enseña en un minuto. Un relleno pequeño, brillante y despiadado.',
+    },
+  },
+  {
+    slug: 'las-vegas-royale-271319',
+    en: {
+      title: 'Las Vegas Royale',
+      short: 'Bet your dice on the casinos in Las Vegas Royale, a press-your-luck area-majority game for 2–5 players.',
+      body: "Las Vegas Royale is the deluxe edition of Rüdiger Dorn's dice-betting favourite, all bright chips and big cash. Each round you roll a fistful of dice and commit them to casinos matching their numbers, fighting for the majority at each one — but every die you place is a die you can't spread elsewhere, and ties cancel out entirely. Whoever backs a casino hardest scoops its top banknote when the dust settles, and new bonus tiles and slot cards keep the tactics fresh. It's loud, swingy, quick to teach and plays a full five with real presence on the table. The definitive edition of a modern dice classic.",
+    },
+    es: {
+      title: 'Las Vegas Royale',
+      short: 'Apuesta tus dados en los casinos en Las Vegas Royale, un juego de tienta a la suerte y mayorías para 2 a 5 jugadores.',
+      body: 'Las Vegas Royale es la edición de lujo del querido juego de apuestas con dados de Rüdiger Dorn, todo fichas llamativas y grandes fajos de dinero. Cada ronda lanzas un puñado de dados y los comprometes en los casinos que coinciden con sus números, peleando por la mayoría en cada uno; pero cada dado que colocas es un dado que no puedes repartir en otra parte, y los empates se anulan por completo. Quien apueste más fuerte por un casino se lleva su billete más alto cuando se asienta el polvo, y las nuevas losetas de bonus y cartas de tragaperras mantienen la táctica fresca. Es ruidoso, cambiante, rápido de enseñar y luce de verdad en la mesa con cinco jugadores. La edición definitiva de un clásico moderno de dados.',
+    },
+  },
+  {
+    slug: 'disney-villainous-the-worst-takes-it-all-256382',
+    en: {
+      title: 'Disney Villainous: The Worst Takes it All',
+      short: 'A six-player expansion of asymmetric villainy: The Worst Takes it All adds Gaston, the Horned King and Ratigan-scale mayhem.',
+      body: "Disney Villainous: The Worst Takes it All is an expansion that swells the beloved asymmetric game to a full six players, adding new villains — including Gaston and the Horned King — each with their own board, deck and dastardly objective. As always you pursue your private scheme while dealing heroes into your rivals' realms to slow their plans, but now the table can seat a whole gallery of Disney's worst at once. It needs a base Villainous game to mix into, and rewards groups who already love the series with bigger, longer, more chaotic showdowns. Deeply thematic and hugely re-playable. The pick for large Villainous nights.",
+    },
+    es: {
+      title: 'Disney Villainous: The Worst Takes it All',
+      short: 'Una expansión para seis de villanía asimétrica: The Worst Takes it All añade a Gastón, el Rey Cornudo y caos a raudales.',
+      body: 'Disney Villainous: The Worst Takes it All es una expansión que amplía el querido juego asimétrico hasta seis jugadores, sumando nuevos villanos —entre ellos Gastón y el Rey Cornudo—, cada uno con su propio tablero, mazo y retorcido objetivo. Como siempre, persigues tu intriga privada mientras repartes héroes en los reinos de tus rivales para frenar sus planes, pero ahora la mesa puede reunir a toda una galería de los peores de Disney a la vez. Necesita un juego base de Villainous con el que combinarse y recompensa a los grupos que ya adoran la serie con duelos más grandes, largos y caóticos. Profundamente temático y muy rejugable. La elección para las grandes noches de Villainous.',
+    },
+  },
+  {
+    slug: 'kinfire-delve-vainglory-s-grotto-391795',
+    en: {
+      title: "Kinfire Delve: Vainglory's Grotto",
+      short: "A small-box co-op dungeon crawl for 1–2 players, Kinfire Delve: Vainglory's Grotto packs a full adventure into a card game.",
+      body: "Kinfire Delve: Vainglory's Grotto squeezes a whole co-operative dungeon crawl into one small box of cards. You and a partner — or you alone — dive through a deck-driven grotto, rolling dice to fight monsters, manage light and press deeper toward a boss before your resources run dry. Every card pulls double duty as loot, enemy or event, and the tension of moving through the deck keeps each expedition taut and quick, around an hour a run. It's self-contained, endlessly replayable thanks to its branching draws, and an ideal solo or two-player nightcap. A gateway crawler that respects your table space and your time.",
+    },
+    es: {
+      title: "Kinfire Delve: Vainglory's Grotto",
+      short: 'Un dungeon crawl cooperativo en caja pequeña para 1 a 2 jugadores: Kinfire Delve: Vainglory\'s Grotto mete toda una aventura en un juego de cartas.',
+      body: "Kinfire Delve: Vainglory's Grotto exprime todo un dungeon crawl cooperativo en una cajita de cartas. Tú y un compañero —o tú en solitario— os adentráis en una gruta guiada por mazo, tirando dados para combatir monstruos, gestionar la luz y avanzar hacia un jefe antes de que se agoten vuestros recursos. Cada carta cumple una doble función como botín, enemigo o evento, y la tensión de atravesar el mazo mantiene cada expedición tensa y rápida, alrededor de una hora por partida. Es autoconclusivo, muy rejugable gracias a sus robos ramificados y un remate ideal en solitario o para dos. Un crawler de entrada que respeta el espacio de tu mesa y tu tiempo.",
+    },
+  },
+  {
+    slug: 'kinfire-chronicles-night-s-fall-364655',
+    en: {
+      title: "Kinfire Chronicles: Night's Fall",
+      short: "A story-rich co-operative quest game for 1–4 players, Kinfire Chronicles: Night's Fall blends RPG adventure with card combat.",
+      body: "Kinfire Chronicles: Night's Fall is a big, gorgeous co-operative adventure that unfolds like a story campaign. One to four heroes explore a beautifully illustrated world through branching quests, building and tuning personal action decks, then resolving tense card-and-dice battles against the darkness closing in. Between missions you return to a hub town, follow the mystery and shape which threads you chase next, so the tale bends around your choices. It's meatier than the pocket Kinfire Delve games — a full evening's role-playing without a Game Master — and it looks stunning on the table. A standout co-op for groups who love narrative and progression.",
+    },
+    es: {
+      title: "Kinfire Chronicles: Night's Fall",
+      short: 'Un juego de misiones cooperativo cargado de historia para 1 a 4 jugadores: Kinfire Chronicles: Night\'s Fall mezcla aventura de rol con combate de cartas.',
+      body: "Kinfire Chronicles: Night's Fall es una aventura cooperativa grande y preciosa que se despliega como una campaña narrativa. De uno a cuatro héroes exploran un mundo bellamente ilustrado a través de misiones ramificadas, construyendo y afinando mazos de acción personales para luego resolver tensas batallas de cartas y dados contra la oscuridad que se cierra. Entre misiones regresáis a un pueblo base, seguís el misterio y decidís qué hilos perseguir a continuación, de modo que el relato se pliega a vuestras elecciones. Es más contundente que los Kinfire Delve de bolsillo —toda una velada de rol sin director de juego— y luce espectacular en la mesa. Un cooperativo destacado para grupos que aman la narrativa y la progresión.",
+    },
+  },
+  {
+    slug: 'kinfire-delve-scorn-s-stockade-404538',
+    en: {
+      title: "Kinfire Delve: Scorn's Stockade",
+      short: "A stand-alone co-op card dungeon for 1–2 players, Kinfire Delve: Scorn's Stockade is a one-hour adventure in a small box.",
+      body: "Kinfire Delve: Scorn's Stockade is another self-contained entry in the small-box co-op crawler line, pitting one or two delvers against a fresh deck-driven dungeon and its lurking boss. You roll dice to battle, manage your dwindling light and push deeper through cards that serve as enemies, loot and events all at once, racing to win before you're overwhelmed. Each new Delve box is its own hour-long adventure with a different villain and layout, and this one needs nothing else to play. Compact, tense and hugely replayable, it's perfect for solo nights or a quick two-player quest. A great pick-up-and-crawl in your bag.",
+    },
+    es: {
+      title: "Kinfire Delve: Scorn's Stockade",
+      short: 'Un dungeon cooperativo de cartas independiente para 1 a 2 jugadores: Kinfire Delve: Scorn\'s Stockade es una aventura de una hora en caja pequeña.',
+      body: "Kinfire Delve: Scorn's Stockade es otra entrega autoconclusiva de la línea de crawlers cooperativos en caja pequeña, que enfrenta a uno o dos exploradores contra una nueva mazmorra guiada por mazo y su jefe al acecho. Tiras dados para combatir, gestionas tu luz menguante y avanzas por cartas que hacen a la vez de enemigos, botín y eventos, en una carrera por vencer antes de que te superen. Cada nueva caja Delve es su propia aventura de una hora con un villano y un trazado distintos, y esta no necesita nada más para jugarse. Compacta, tensa y muy rejugable, es perfecta para noches en solitario o una misión rápida a dos. Un estupendo «coge y explora» para tu mochila.",
+    },
+  },
+  {
+    slug: 'kinfire-delve-callous-lab-406174',
+    en: {
+      title: "Kinfire Delve: Callous' Lab",
+      short: "A stand-alone 1–2 player co-op crawler, Kinfire Delve: Callous' Lab delivers a fresh deck-driven dungeon and boss.",
+      body: "Kinfire Delve: Callous' Lab is a self-contained chapter in the beloved small-box co-op series, sending one or two adventurers into a new card-driven dungeon ruled by its own menacing boss. As ever you fight with dice, ration your light and press through a deck where every card might be an enemy, a treasure or a twist, gambling on how deep to go before the odds turn against you. It plays complete out of the box in around an hour and shares a system across all the Delve titles, so it slots straight into game night alone or with a partner. Tight, portable and richly replayable. Another excellent bite-sized crawl.",
+    },
+    es: {
+      title: "Kinfire Delve: Callous' Lab",
+      short: 'Un crawler cooperativo independiente para 1 a 2 jugadores: Kinfire Delve: Callous\' Lab ofrece una nueva mazmorra y un jefe guiados por mazo.',
+      body: "Kinfire Delve: Callous' Lab es un capítulo autoconclusivo de la querida serie cooperativa en caja pequeña, que envía a uno o dos aventureros a una nueva mazmorra guiada por cartas gobernada por su propio jefe amenazante. Como siempre, combates con dados, racionas tu luz y avanzas por un mazo donde cada carta puede ser un enemigo, un tesoro o un giro, apostando cuánto adentrarte antes de que la suerte se vuelva en tu contra. Se juega completo tal cual, en torno a una hora, y comparte sistema con todos los títulos Delve, así que encaja directamente en la noche de juegos en solitario o con un compañero. Ajustado, portátil y muy rejugable. Otro excelente crawl de bocado.",
+    },
+  },
+  {
+    slug: 'arkham-horror-lovecraft-letter-424784',
+    en: {
+      title: 'Arkham Horror: Lovecraft Letter',
+      short: 'A deduction filler with a sanity-bending twist, Arkham Horror: Lovecraft Letter plays 2–6 in about 20 minutes.',
+      body: "Arkham Horror: Lovecraft Letter reworks the elegant Love Letter formula through a Lovecraftian lens. You play a single card each turn from a hand of one, trying to deduce and knock out your rivals — but this version adds Insanity cards that grant powerful, risky effects while creeping madness threatens to eliminate you outright if the dice of fate turn. That tension between playing it safe and gambling on forbidden power gives an old classic a wicked new edge. It's a fast, sharp, endlessly replayable filler for two to six that teaches in minutes. A must for fans of bluffing and deduction with a horror streak.",
+    },
+    es: {
+      title: 'Arkham Horror: Lovecraft Letter',
+      short: 'Un relleno de deducción con un giro que trastorna la cordura: Arkham Horror: Lovecraft Letter se juega de 2 a 6 en unos 20 minutos.',
+      body: 'Arkham Horror: Lovecraft Letter reelabora la elegante fórmula de Love Letter a través de una lente lovecraftiana. Juegas una sola carta por turno de una mano de una, intentando deducir y eliminar a tus rivales; pero esta versión añade cartas de Locura que conceden efectos poderosos y arriesgados mientras la demencia creciente amenaza con eliminarte de golpe si los dados del destino se tuercen. Esa tensión entre ir a lo seguro y apostar por el poder prohibido le da a un viejo clásico un filo nuevo y perverso. Es un relleno rápido, afilado y muy rejugable para dos a seis que se enseña en minutos. Imprescindible para los fans del farol y la deducción con vena de terror.',
+    },
+  },
+  {
+    slug: 'zombicide-white-death-383496',
+    en: {
+      title: 'Zombicide: White Death',
+      short: 'A miniatures-packed co-operative survival game for 1–6 players, Zombicide: White Death brings the horde to a frozen fantasy world.',
+      body: "Zombicide: White Death drops one to six survivors into a frozen fantasy realm overrun by the undead, and hands you a mountain of detailed miniatures to fight them off. Working together, you move across modular maps, hunt for gear and blast through the horde on your own turns — but every noise you make draws more zombies, and each survivor levels into deadlier, riskier abilities as the danger climbs. It's the streamlined, gloriously excessive Zombicide engine wrapped in a snowbound medieval setting, built for big co-op nights that can run a few hours. Scenario-driven and endlessly re-configurable. A centrepiece for miniatures and ameritrash fans.",
+    },
+    es: {
+      title: 'Zombicide: White Death',
+      short: 'Un juego cooperativo de supervivencia repleto de miniaturas para 1 a 6 jugadores: Zombicide: White Death lleva la horda a un mundo de fantasía helado.',
+      body: 'Zombicide: White Death lanza a uno a seis supervivientes a un reino de fantasía helado invadido por los muertos vivientes, y te entrega una montaña de miniaturas detalladas para hacerles frente. Trabajando juntos, os movéis por mapas modulares, buscáis equipo y arrasáis la horda en vuestros turnos; pero cada ruido que hacéis atrae más zombis, y cada superviviente sube de nivel hacia habilidades más letales y arriesgadas a medida que crece el peligro. Es el motor Zombicide, ágil y gloriosamente excesivo, envuelto en una ambientación medieval nevada, pensado para grandes noches cooperativas que pueden durar unas horas. Guiado por escenarios e infinitamente reconfigurable. Una pieza central para los fans de las miniaturas y el ameritrash.',
+    },
+  },
+  {
+    slug: 'zombie-kittens-362202',
+    en: {
+      title: 'Zombie Kittens',
+      short: 'The undead sequel to Exploding Kittens: Zombie Kittens is a chaotic party card game for 2–5 players.',
+      body: "Zombie Kittens is a stand-alone follow-up to the mega-hit Exploding Kittens, and it adds a devilish new rule: getting knocked out doesn't mean you're done. Blown up players shuffle into a Zombie Pile and can claw their way back into the game, keeping everyone in the chaos right to the bitter end. It's the same fast, silly, push-your-luck card play — dodge the exploding kittens, sling nopes and steals at your friends — with new cards and a cheeky second life. It plays in fifteen loud minutes for two to five and needs no prior game. Pure party mischief, perfect for casual crowds.",
+    },
+    es: {
+      title: 'Zombie Kittens',
+      short: 'La secuela no-muerta de Exploding Kittens: Zombie Kittens es un caótico juego de cartas de fiesta para 2 a 5 jugadores.',
+      body: 'Zombie Kittens es una secuela independiente del exitazo Exploding Kittens, y añade una nueva regla endiablada: quedar eliminado no significa que hayas terminado. Los jugadores que estallan pasan a una Pila Zombi y pueden arañar su vuelta a la partida, manteniendo a todos en el caos hasta el amargo final. Es el mismo juego de cartas rápido, absurdo y de tienta a la suerte —esquiva a los gatitos explosivos, lanza «noes» y robos a tus amigos— con cartas nuevas y una descarada segunda vida. Se juega en quince ruidosos minutos para dos a cinco y no necesita ningún juego previo. Pura travesura de fiesta, perfecta para grupos informales.',
+    },
+  },
+  {
+    slug: 'junk-art-revolution-448188',
+    en: {
+      title: 'Junk Art Revolution',
+      short: 'A stand-alone stacking party game for 2–6 players, Junk Art Revolution challenges you to build wild sculptures from wobbly blocks.',
+      body: "Junk Art Revolution is a fresh stand-alone helping of the beloved dexterity game, all colourful wooden junk and precarious towers. Across a series of quick mini-games — including an 'I cut, you choose' block draft — you stack oddball pieces into teetering sculptures, scoring for balance and nerve while trying not to be the one who topples them. It's light, loud and endlessly re-playable thanks to its bundle of different modes, and it scales from a two-player duel to a rowdy six. New blocks and rule cards keep the challenges varied every night. A joyful, hands-on party filler for all ages.",
+    },
+    es: {
+      title: 'Junk Art Revolution',
+      short: 'Un juego de fiesta de apilar independiente para 2 a 6 jugadores: Junk Art Revolution te reta a construir esculturas locas con bloques inestables.',
+      body: 'Junk Art Revolution es una nueva ración independiente del querido juego de habilidad, todo chatarra de madera colorida y torres precarias. A lo largo de una serie de minijuegos rápidos —incluido un draft de bloques del tipo «yo corto, tú eliges»— apilas piezas estrambóticas en esculturas tambaleantes, puntuando por equilibrio y temple mientras intentas no ser quien las derribe. Es ligero, ruidoso e infinitamente rejugable gracias a su paquete de modos distintos, y escala de un duelo a dos hasta unos alborotados seis. Los nuevos bloques y cartas de reglas mantienen los retos variados cada noche. Un relleno de fiesta alegre y manual para todas las edades.',
+    },
+  },
+  {
+    slug: 'cats-knocking-things-off-ledges-459990',
+    en: {
+      title: 'Cats Knocking Things Off Ledges',
+      short: 'A flicking party game of mischievous cats for 2–4 players, exactly as delightfully silly as its name.',
+      body: "Cats Knocking Things Off Ledges is a flicking dexterity party game that does precisely what the title promises. You play cats with one glorious purpose in life — swatting objects off shelves — flicking discs to knock the right items tumbling while defending your own perch from your rivals' paws. It's fast, funny and wonderfully physical, rewarding a good aim and a wicked sense of timing over any deep strategy. Quick to learn and giggly for the whole family, it plays two to four in about fifteen minutes. The perfect light-hearted opener or closer for a game night. Simple, chaotic, cat-approved fun.",
+    },
+    es: {
+      title: 'Cats Knocking Things Off Ledges',
+      short: 'Un juego de fiesta de pulsos con gatos traviesos para 2 a 4 jugadores, exactamente tan maravillosamente absurdo como su nombre.',
+      body: 'Cats Knocking Things Off Ledges es un juego de fiesta de habilidad y capirotazos que hace justo lo que promete su título. Interpretas a gatos con un único y glorioso propósito en la vida —tirar objetos de las estanterías—, dando capirotazos a fichas para hacer caer los objetos correctos mientras defiendes tu propia repisa de las zarpas de tus rivales. Es rápido, divertido y maravillosamente físico, y premia la buena puntería y un perverso sentido del momento por encima de cualquier estrategia profunda. Fácil de aprender y risueño para toda la familia, se juega de dos a cuatro en unos quince minutos. El aperitivo o el broche desenfadado perfecto para una noche de juegos. Diversión sencilla, caótica y aprobada por gatos.',
+    },
+  },
+  {
+    slug: 'zombicide-white-death-eternal-empire-385623',
+    en: {
+      title: 'Zombicide: White Death – Eternal Empire',
+      short: 'A big-box expansion for Zombicide: White Death, Eternal Empire adds new survivors, foes and campaign-driven scenarios.',
+      body: "Zombicide: White Death – Eternal Empire is an expansion that pours fresh content into the frozen-fantasy Zombicide: White Death, so it needs that base game to play. It brings a new wave of detailed miniatures — extra survivors and nastier undead threats — plus additional battle cards and campaign-driven scenarios that extend the co-operative story for one to six players. Everything slots into the same streamlined system, ramping up variety, difficulty and spectacle for tables that have already fallen for the horde. It's aimed squarely at existing fans hungry for more maps and more monsters to grind through. A generous top-up for a beloved miniatures co-op.",
+    },
+    es: {
+      title: 'Zombicide: White Death – Eternal Empire',
+      short: 'Una expansión en caja grande para Zombicide: White Death, Eternal Empire añade nuevos supervivientes, enemigos y escenarios de campaña.',
+      body: 'Zombicide: White Death – Eternal Empire es una expansión que vuelca contenido nuevo en el Zombicide: White Death de fantasía helada, por lo que necesita ese juego base para jugarse. Trae una nueva oleada de miniaturas detalladas —supervivientes extra y amenazas no-muertas más peligrosas— además de cartas de batalla adicionales y escenarios de campaña que prolongan la historia cooperativa para uno a seis jugadores. Todo encaja en el mismo sistema ágil, aumentando la variedad, la dificultad y el espectáculo para las mesas que ya han caído rendidas ante la horda. Está pensada de lleno para los fans que ya tienen el juego y ansían más mapas y más monstruos que arrasar. Una ampliación generosa para un querido cooperativo de miniaturas.',
+    },
+  },
 ];

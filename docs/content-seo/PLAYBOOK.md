@@ -223,6 +223,13 @@ Tiers:
 | 2026-07-15 | frosthaven, brass-lancashire, food-chain-magnate, cthulhu-death-may-die, harmonies, the-white-castle, arcs, 7-wonders, wyrmspan, patchwork, just-one (11) | en-US, es-MX | opus | Batch 2. 21 games total. |
 | 2026-07-15 | darwin-s-journey, dwellings-of-eldervale, forest-shuffle, iss-vanguard, pandemic, it-s-a-wonderful-world, stone-age, earth, carcassonne, splendor, calico, sushi-go-party (12) | en-US, es-MX | opus | Batch 3. **32 games / 64 rows total** curated+APPROVED, all verified live. |
 | 2026-07-16 | skull-king, micromacro-crime-city, turing-machine, kingdomino, onitama, flamecraft, mysterium, king-of-tokyo, sushi-go, hanabi, can-t-stop, splendor-marvel, dixit (13) | en-US, es-MX | opus | Batch 4. **46 games / 92 rows total** curated+APPROVED. Next-ranked shoppable set (ranks ~291–770), hand-written both locales, verified live via API :3010. |
+| 2026-07-16 | dixit-odyssey, toy-battle, keep-the-heroes-out, finspan, carpe-diem, honey-buzz, hitster, knarr, flip-7, micromacro-full-house, potion-explosion, take-time, mille-fiori, 3× disney-villainous, 7-wonders-architects, spicy, rhino-hero-super-battle, deep-sea-adventure, las-vegas-royale, arkham-horror-lovecraft-letter, 3× kinfire-delve, kinfire-chronicles, zombicide-white-death (+expansion), zombie-kittens, junk-art-revolution, cats-knocking-things-off-ledges (31) | en-US, es-MX | opus | Batch 5. **77 games / 154 rows total — 100% of the shoppable verified catalog now has hand-written native ES/EN copy.** Whole remaining catalog was only 77 games with complete attributes, so Tier-2 templating was unnecessary; all hand-written. Verified live via API :3010. |
+
+**Milestone (2026-07-16):** every shoppable verified game (77) now serves curated
+`curated-v1` copy in both locales. Tier-2 composed pipeline is therefore **not
+needed for the current catalog** — revisit only if the shoppable set grows well
+beyond hand-writing capacity, or to backfill the ~11k unranked/non-shoppable
+`master_game` rows if they ever gain listings.
 
 **Next batch for whoever picks this up:** continue down the shoppable verified set by
 BGG rank (query below), skipping the 32 slugs already in `ledger.json`. Add entries to
