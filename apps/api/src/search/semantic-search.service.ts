@@ -68,6 +68,12 @@ export class SemanticSearchService {
     return response.data[0]?.embedding ?? [];
   }
 
+  private async embedBatch(inputs: string[]): Promise<number[][]> {
+    if (inputs.length === 0) return [];
+    const response = await this.getClient().embeddings.create({ model: MODEL, input: inputs });
+    return response.data.sort((left, right) => left.index - right.index).map((item) => item.embedding);
+  }
+
   /** Idempotently embeds every verified product with an active listing in EN and ES. */
   async indexShoppableCatalog(): Promise<{ indexed: number; skipped: number }> {
     const products = await this.prisma.mktProduct.findMany({
@@ -93,8 +99,15 @@ export class SemanticSearchService {
       select: { canonicalId: true, locale: true, sourceVersion: true, embedding: true },
     });
     const current = new Map(existing.map((row) => [`${row.canonicalId}:${row.locale}`, row]));
-    let indexed = 0;
     let skipped = 0;
+    const pending: Array<{
+      product: (typeof products)[number];
+      locale: (typeof LOCALES)[number];
+      title: string;
+      summary: string | null;
+      searchableText: string;
+      sourceVersion: bigint;
+    }> = [];
 
     for (const product of products) {
       for (const locale of LOCALES) {
@@ -111,7 +124,21 @@ export class SemanticSearchService {
         const title = copy?.title || product.name;
         const summary = copy?.description || product.description;
         const searchableText = buildSearchableText(product, title, summary);
-        const embedding = await this.embed(searchableText);
+        pending.push({ product, locale, title, summary, searchableText, sourceVersion });
+      }
+    }
+
+    let indexed = 0;
+    // Batching cuts a full 154-document backfill from 154 network round trips to
+    // four while staying comfortably below the embeddings endpoint input limit.
+    for (let offset = 0; offset < pending.length; offset += 50) {
+      const batch = pending.slice(offset, offset + 50);
+      const embeddings = await this.embedBatch(batch.map((item) => item.searchableText));
+      if (embeddings.length !== batch.length) throw new Error('Embedding response count mismatch');
+
+      for (let index = 0; index < batch.length; index += 1) {
+        const { product, locale, title, summary, searchableText, sourceVersion } = batch[index];
+        const embedding = embeddings[index];
         const prices = product.listings.map((listing) => listing.priceMinorUnits);
         const currencies = [...new Set(product.listings.map((listing) => listing.currency))];
 
