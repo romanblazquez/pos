@@ -217,8 +217,9 @@ curl -s 'http://localhost:3010/api/v1/products/<slug>?locale=en' | jq '{name,des
    bylines~~ **DONE (2026-07-16)** — `content/editorial/takes.ts` + `editorTake(slug,locale)`;
    product pages render a persona-signed opinion card (`.editor-take`) beneath the
    description, assigned by fit across all 6 personas. Takes are written natively in BOTH
-   locales (2–3 sentences each, no MT flag). 24 marquee games covered; section renders
-   only when a take exists, so it's incremental — add slugs to `TAKES` to extend.
+   locales (2–3 sentences each, no MT flag). **All 77 shoppable games covered** (Sofía 21,
+   Dave 13, Mateo 12, Núria 11, Eoin 11, Kasia 9). Section renders only when a take exists,
+   so new catalogue additions degrade gracefully — add slugs to `TAKES` to extend.
 4. Extend curated copy Tier-2 (verified-but-not-shoppable) via MT + light edit.
 5. Approve/replace the 11,134 legacy `es-MX` NEEDS_REVIEW rows or delete them once
    superseded by `curated-v1`.
