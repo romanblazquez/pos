@@ -4,6 +4,11 @@
   "header.imASeller": "Soy vendedor",
   "header.searchPlaceholder": "Busca Catan, Root, Wingspan...",
   "header.search": "Buscar",
+  "header.menu": "Menú",
+  "header.closeMenu": "Cerrar menú",
+  "header.logout": "Cerrar sesión",
+  "header.wallet": "Cartera",
+  "header.settings": "Preferencias",
 
   "wallet.title": "Mi Wallet",
   "wallet.freeCredits": "Créditos libres",

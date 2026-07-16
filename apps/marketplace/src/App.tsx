@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
-import { Moon, Search, ShoppingCart, Store, Sun, User, Wallet } from 'lucide-react';
+import { useState, useEffect, useRef, type FormEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, LogOut, Menu, Moon, Search, ShoppingCart, Store, Sun, User, Wallet, X } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
@@ -435,24 +436,15 @@ function Header({
           </button>
 
           <div className="ml-auto flex items-center gap-1 lg:hidden">
-            {session && (
-              <HeaderIconButton label="Wallet" onClick={onWalletClick}>
-                <Wallet className="h-4 w-4" aria-hidden="true" />
-              </HeaderIconButton>
-            )}
-            <LocaleSwitcher
-              locales={UI_LOCALES}
-              active={uiLocale}
-              onSelect={(l: string) => setUiLocale(l as 'es' | 'en')}
-              ariaLabel={uiLocale === 'es' ? 'Idioma' : 'Language'}
-            />
-            <HeaderIconButton label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} onClick={onToggleTheme}>
-              {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
-            </HeaderIconButton>
-            <HeaderIconButton label={session ? intl.formatMessage({ id: 'header.myAccount' }) : intl.formatMessage({ id: 'header.login' })} onClick={session ? onAccountClick : onAuthClick}>
-              <User className="h-4 w-4" aria-hidden="true" />
-            </HeaderIconButton>
             <CartButton count={count} onClick={onCartOpen} compact />
+            <MobileMenu
+              theme={theme}
+              onToggleTheme={onToggleTheme}
+              onHome={onHome}
+              onAccountClick={onAccountClick}
+              onWalletClick={onWalletClick}
+              onAuthClick={onAuthClick}
+            />
           </div>
         </div>
 
@@ -534,6 +526,185 @@ function Header({
         </nav>
       </div>
     </header>
+  );
+}
+
+// Mobile navigation drawer — the phone counterpart to the desktop header nav.
+// Trigger stays inline; the panel is portalled to <body> so the header's
+// backdrop-blur can't become the containing block for the fixed overlay.
+// Focus-trapped, scroll-locked, closes on scrim/Escape.
+function MobileMenu({
+  theme, onToggleTheme, onHome, onAccountClick, onWalletClick, onAuthClick,
+}: {
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+  onHome: () => void;
+  onAccountClick: () => void;
+  onWalletClick: () => void;
+  onAuthClick: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const { session, logout } = useCustomer();
+  const { data: walletSummary } = useWallet(session?.customer.id);
+  const { uiLocale, setUiLocale } = useMarket();
+  const intl = useIntl();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const walletTotal = walletSummary
+    ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
+    : 0;
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => {
+      panelRef.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }, 0);
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') { e.preventDefault(); setOpen(false); return; }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const f = panelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (f.length === 0) return;
+      const first = f[0]; const last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      window.clearTimeout(focusTimer);
+      triggerRef.current?.focus();
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
+  const run = (fn: () => void) => { setOpen(false); fn(); };
+
+  const rowCls = 'flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-[--bg-hover]';
+  const iconWrap = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[--bg-subtle] text-[--tx-muted]';
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label={intl.formatMessage({ id: 'header.menu' })}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
+      >
+        <Menu className="h-4 w-4" aria-hidden="true" />
+      </button>
+
+      {open && createPortal(
+        <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
+          <div className="animate-fade-in absolute inset-0 bg-stone-950/60 backdrop-blur-md" aria-hidden="true" onClick={close} />
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={intl.formatMessage({ id: 'header.menu' })}
+            className="animate-slide-right relative flex h-full w-[86%] max-w-sm flex-col border-l border-[--border] bg-[--bg-raised] shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
+              <span className="inline-flex items-center gap-2.5 font-display text-lg font-extrabold tracking-[-0.03em] text-[--tx]">
+                <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--brand-tile)] text-[var(--brand-mark)] shadow-sm">
+                  <BrandMark className="h-5 w-5" />
+                </span>
+                Juegos<span className="text-[var(--brand-word)]">pedia</span>
+              </span>
+              <button
+                type="button"
+                data-autofocus
+                aria-label={intl.formatMessage({ id: 'header.closeMenu' })}
+                onClick={close}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx-muted] transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+              {session ? (
+                <button onClick={() => run(onAccountClick)} className={`${rowCls} border border-[--border] bg-[--bg-subtle]`}>
+                  <span className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                    {(session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-[--tx]">
+                      {session.customer.name ?? intl.formatMessage({ id: 'header.myAccount' })}
+                    </span>
+                    <span className="block truncate text-xs text-[--tx-muted]">{session.customer.email}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
+                </button>
+              ) : (
+                <Button onClick={() => run(onAuthClick)} className="w-full justify-center py-3">
+                  <User className="h-4 w-4" aria-hidden="true" />
+                  {intl.formatMessage({ id: 'header.login' })}
+                </Button>
+              )}
+
+              <nav className="mt-1 flex flex-col gap-1">
+                {session && (
+                  <button onClick={() => run(onWalletClick)} className={rowCls}>
+                    <span className={iconWrap}><Wallet className="h-4 w-4" aria-hidden="true" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'header.wallet' })}</span>
+                      {walletSummary && <span className="block text-xs text-[--tx-muted]">{formatMoney(walletTotal)}</span>}
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
+                  </button>
+                )}
+
+                <a
+                  href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
+                  onClick={close}
+                  className={rowCls}
+                >
+                  <span className={iconWrap}><Store className="h-4 w-4" aria-hidden="true" /></span>
+                  <span className="flex-1 text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'header.imASeller' })}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
+                </a>
+              </nav>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[--border] p-4">
+              {session && (
+                <button onClick={() => run(() => { void logout().then(onHome); })} className={`${rowCls} text-[--tx-muted]`}>
+                  <span className={iconWrap}><LogOut className="h-4 w-4" aria-hidden="true" /></span>
+                  <span className="flex-1 text-sm font-medium">{intl.formatMessage({ id: 'header.logout' })}</span>
+                </button>
+              )}
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[--border] bg-[--bg-subtle] p-2.5">
+                <span className="pl-1 text-xs font-medium uppercase tracking-wide text-[--tx-faint]">{intl.formatMessage({ id: 'header.settings' })}</span>
+                <div className="flex items-center gap-2">
+                  <LocaleSwitcher
+                    locales={UI_LOCALES}
+                    active={uiLocale}
+                    onSelect={(l: string) => setUiLocale(l as 'es' | 'en')}
+                    ariaLabel={uiLocale === 'es' ? 'Idioma' : 'Language'}
+                  />
+                  <button
+                    type="button"
+                    aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+                    onClick={onToggleTheme}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--border] bg-[--bg-raised] text-[--tx-muted] transition-colors hover:text-[--tx]"
+                  >
+                    {theme === 'dark' ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 

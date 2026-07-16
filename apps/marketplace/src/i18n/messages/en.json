@@ -4,6 +4,11 @@
   "header.imASeller": "I'm a seller",
   "header.searchPlaceholder": "Search Catan, Root, Wingspan...",
   "header.search": "Search",
+  "header.menu": "Menu",
+  "header.closeMenu": "Close menu",
+  "header.logout": "Log out",
+  "header.wallet": "Wallet",
+  "header.settings": "Preferences",
 
   "wallet.title": "My Wallet",
   "wallet.freeCredits": "Free credits",
