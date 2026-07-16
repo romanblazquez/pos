@@ -17,4 +17,10 @@ export class RankingsController {
   trigger() {
     return this.scheduler.triggerNow();
   }
+
+  @ApiOperation({ summary: 'Trigger an idempotent semantic-index refresh immediately' })
+  @Post('semantic/trigger')
+  triggerSemantic() {
+    return this.scheduler.triggerSemanticNow();
+  }
 }

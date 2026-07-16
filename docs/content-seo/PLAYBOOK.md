@@ -212,7 +212,10 @@ curl -s 'http://localhost:3010/api/v1/products/<slug>?locale=en' | jq '{name,des
    confirming embedding API credentials and budget in the deployment environment.
    Query embeddings use a bounded 256-entry, one-hour in-memory LRU cache and
    concurrent-request deduplication to control latency and API spend; override the
-   TTL with `SEMANTIC_QUERY_CACHE_TTL_MS` when needed.
+   TTL with `SEMANTIC_QUERY_CACHE_TTL_MS` when needed. A BullMQ refresh runs every
+   six hours through `RankingSchedulerService`; it is version-aware and embeds only
+   new or changed documents. Admins can enqueue it immediately with
+   `POST /api/v1/admin/rankings/semantic/trigger`.
 2. Populate `shortDescription` on all curated rows (done inline by the pipeline).
 3. ~~Add author byline rendering to guide templates~~ **DONE** — `GuideContent.authorId`
    wired through; guide pages render a byline (name · origin · date + bio) and emit

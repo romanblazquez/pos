@@ -105,7 +105,7 @@ export function SearchFilters({
     >
       {/* Availability — styled to match ToggleFilter in marketplace */}
       <CatalogFilterSection title={t.avail}>
-        <label className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors
+        <label className={`mobile-filter-choice flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors
           ${state.inStock
             ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950'
             : 'border-[--border] bg-[--bg-subtle] hover:bg-[--bg-hover]'}`}
@@ -131,7 +131,7 @@ export function SearchFilters({
             return (
               <label
                 key={o.value}
-                className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
+                className={`mobile-filter-choice cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
                   ${isActive
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                     : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
@@ -152,7 +152,7 @@ export function SearchFilters({
             return (
               <label
                 key={o.value}
-                className={`h-8 cursor-pointer rounded-lg border px-2 text-xs font-semibold transition-colors inline-flex items-center justify-center min-w-8
+                className={`mobile-filter-choice h-8 cursor-pointer rounded-lg border px-2 text-xs font-semibold transition-colors inline-flex items-center justify-center min-w-8
                   ${isActive
                     ? 'border-emerald-600 bg-emerald-700 text-white'
                     : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
@@ -173,7 +173,7 @@ export function SearchFilters({
             return (
               <label
                 key={o.value}
-                className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
+                className={`mobile-filter-choice cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
                   ${isActive
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                     : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
@@ -195,7 +195,7 @@ export function SearchFilters({
               return (
                 <label
                   key={m.mechanic}
-                  className={`cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
+                  className={`mobile-filter-choice cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors
                     ${isActive
                       ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                       : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}
@@ -230,7 +230,7 @@ export function SearchFilters({
           ].map((c) => (
             <label
               key={c.value}
-              className={`mb-1 block w-full cursor-pointer rounded-lg px-2.5 py-2 text-left transition-colors
+              className={`mobile-filter-choice mb-1 block w-full cursor-pointer rounded-lg px-2.5 py-2 text-left transition-colors
                 ${c.isActive
                   ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                   : 'border border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]'}`}

@@ -11,6 +11,7 @@ export function ResponsiveFilterPanel({ children, locale, activeCount }: {
   const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const t = locale === 'es'
     ? { open: 'Abrir filtros', title: 'Filtros', close: 'Cerrar filtros', apply: 'Ver resultados' }
     : { open: 'Open filters', title: 'Filters', close: 'Close filters', apply: 'View results' };
@@ -31,6 +32,13 @@ export function ResponsiveFilterPanel({ children, locale, activeCount }: {
     };
   }, [open]);
 
+  const applyFilters = () => {
+    const form = modalRef.current?.closest('form');
+    if (!form) return;
+    setOpen(false);
+    form.requestSubmit();
+  };
+
   return (
     <div className="responsive-filter-panel">
       <button
@@ -47,6 +55,7 @@ export function ResponsiveFilterPanel({ children, locale, activeCount }: {
       </button>
 
       <div
+        ref={modalRef}
         className={`mobile-filter-modal${open ? ' is-open' : ''}`}
         role={open ? 'dialog' : undefined}
         aria-modal={open || undefined}
@@ -60,7 +69,7 @@ export function ResponsiveFilterPanel({ children, locale, activeCount }: {
         </header>
         <div className="mobile-filter-scroll">{children}</div>
         <footer className="mobile-filter-footer">
-          <button type="submit" className="mobile-filter-apply">{t.apply}</button>
+          <button type="button" className="mobile-filter-apply" onClick={applyFilters}>{t.apply}</button>
         </footer>
       </div>
     </div>

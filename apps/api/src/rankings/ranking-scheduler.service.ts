@@ -2,11 +2,13 @@ import { Injectable, Inject, Logger, OnModuleInit, OnModuleDestroy } from '@nest
 import { Queue, Worker, Job } from 'bullmq';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
+import { SemanticSearchService } from '../search/semantic-search.service.js';
 import { calculateRankScore } from '@retail-os/rankings';
 import type { RankingInput } from '@retail-os/rankings';
 
 const QUEUE_NAME = 'ranking';
 const JOB_NAME = 'rank-all-listings';
+const SEMANTIC_JOB_NAME = 'refresh-semantic-index';
 
 // How many listings to process in each batch (avoids loading all into memory at once)
 const BATCH_SIZE = 100;
@@ -25,6 +27,7 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TypesenseService) private readonly search: TypesenseService,
+    @Inject(SemanticSearchService) private readonly semantic: SemanticSearchService,
   ) {}
 
   async onModuleInit() {
@@ -32,7 +35,7 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     this.worker = new Worker(
       QUEUE_NAME,
-      (job: Job) => this.processJob(job),
+      (job: Job) => job.name === SEMANTIC_JOB_NAME ? this.processSemanticJob() : this.processJob(job),
       { connection: redisConnection, concurrency: 1 },
     );
 
@@ -50,7 +53,16 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
       { name: JOB_NAME },
     );
 
-    this.log.log('Ranking scheduler initialized — hourly job registered');
+    // Product and approved-localization changes are much less frequent than
+    // price/rank changes. A separate six-hour job keeps vectors fresh without
+    // coupling paid embedding work to every hourly ranking pass.
+    await this.queue.upsertJobScheduler(
+      'six-hour-semantic-index',
+      { every: 6 * 60 * 60 * 1000 },
+      { name: SEMANTIC_JOB_NAME },
+    );
+
+    this.log.log('Ranking scheduler initialized — hourly ranking and six-hour semantic refresh registered');
   }
 
   async onModuleDestroy() {
@@ -61,6 +73,12 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
   /** Trigger an immediate ranking pass (useful for admin / manual trigger). */
   async triggerNow(): Promise<{ jobId: string }> {
     const job = await this.queue.add(JOB_NAME, {}, { priority: 1 });
+    return { jobId: job.id ?? 'queued' };
+  }
+
+  /** Trigger an immediate, idempotent semantic-index refresh. */
+  async triggerSemanticNow(): Promise<{ jobId: string }> {
+    const job = await this.queue.add(SEMANTIC_JOB_NAME, {}, { priority: 2 });
     return { jobId: job.id ?? 'queued' };
   }
 
@@ -170,6 +188,23 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     const ms = Date.now() - startedAt;
     this.log.log(`Ranking pass complete: ${processed} ok, ${failed} failed, ${ms}ms`);
+  }
+
+  private async processSemanticJob(): Promise<void> {
+    if (!this.semantic.isConfigured()) {
+      this.log.warn('Semantic refresh skipped: OPENAI_API_KEY is not configured');
+      return;
+    }
+    try {
+      const startedAt = Date.now();
+      const result = await this.semantic.indexShoppableCatalog();
+      this.log.log(
+        `Semantic refresh complete: ${result.indexed} indexed, ${result.skipped} unchanged, ${Date.now() - startedAt}ms`,
+      );
+    } catch (error) {
+      // Vector freshness must never take down lexical search or ranking jobs.
+      this.log.error(`Semantic refresh failed; existing index retained: ${String(error)}`);
+    }
   }
 
   private async reindexProducts(): Promise<void> {
