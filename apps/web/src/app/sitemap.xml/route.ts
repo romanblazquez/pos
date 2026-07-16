@@ -1,12 +1,12 @@
-import { listProducts, getCategories, type ProductSummary } from '@/lib/api';
+import { listProducts, type ProductSummary } from '@/lib/api';
 import { listGuides } from '@/lib/guides';
+import { THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
 import {
   INDEXABLE_LOCALES,
   entityPath,
   homePath,
   listingPath,
-  slugify,
 } from '@/lib/segments';
 
 // Custom XML sitemap (spec §7). Next 14.2's MetadataRoute.Sitemap silently drops
@@ -62,10 +62,7 @@ function renderUrl({ loc, changefreq, priority, image }: UrlEntry): string {
 }
 
 export async function GET(): Promise<Response> {
-  const [products, categories] = await Promise.all([
-    allIndexableProducts(),
-    getCategories(),
-  ]);
+  const products = await allIndexableProducts();
 
   const entries: UrlEntry[] = [];
 
@@ -76,13 +73,14 @@ export async function GET(): Promise<Response> {
 
     // Editorial hub — guides index + each guide.
     entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
-    for (const g of listGuides()) {
+    for (const g of listGuides(locale)) {
       entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
     }
 
-    for (const c of categories) {
+    // Curated theme landing pages (the real category SEO targets).
+    for (const theme of THEMES) {
       entries.push({
-        loc: `${SITE_URL}${entityPath('categories', locale, slugify(c.category))}`,
+        loc: `${SITE_URL}${entityPath('categories', locale, theme.slug[locale])}`,
         changefreq: 'weekly',
         priority: 0.7,
       });

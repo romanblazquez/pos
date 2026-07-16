@@ -30,6 +30,14 @@ export interface SeoInput {
   /** Force noindex even on an indexable locale (e.g. search results). */
   noindex?: boolean;
   type?: 'website' | 'article' | 'product';
+  /** Article-specific Open Graph fields — improves rich sharing of editorial. */
+  article?: {
+    authors?: string[];
+    publishedTime?: string;
+    modifiedTime?: string;
+    section?: string;
+    tags?: string[];
+  };
 }
 
 const OG_LOCALE: Record<Locale, string> = { es: 'es_MX', en: 'en_US' };
@@ -96,6 +104,15 @@ export function buildMetadata(input: SeoInput): Metadata {
       title: input.title,
       description: input.description,
       images: openGraphImages,
+      ...(input.type === 'article' && input.article
+        ? {
+            authors: input.article.authors,
+            publishedTime: input.article.publishedTime,
+            modifiedTime: input.article.modifiedTime,
+            section: input.article.section,
+            tags: input.article.tags,
+          }
+        : {}),
     },
     twitter: {
       card: 'summary_large_image',

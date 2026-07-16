@@ -9,12 +9,17 @@ import {
   type ProductDetail,
 } from '@/lib/api';
 import { buildMetadata, entityAlternates } from '@/lib/seo';
-import { APP_URL } from '@/lib/site';
+import { APP_URL, absoluteUrl } from '@/lib/site';
 import { buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
 import { articleLd, breadcrumbLd, faqLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
-import { getGuide, guidesMentioning, type Guide, type GuidePick } from '@/lib/guides';
+import { getGuide, guideAlternates, guidesMentioning, type Guide, type GuidePick } from '@/lib/guides';
+import { guideCover } from '@/lib/guide-cover';
+import { AUTHORS_BY_ID } from '@/content/editorial/authors';
+import { THEMES, getThemeBySlug } from '@/lib/themes';
 import { JsonLd } from '@/components/JsonLd';
+import { LocaleAlternates } from '@/components/LocaleAlternates';
+import { ShareBar } from '@/components/ShareBar';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
@@ -73,7 +78,7 @@ export async function generateMetadata({
   const page = pageOf(searchParams);
 
   if (kind === 'games') {
-    const product = await getProduct(params.slug);
+    const product = await getProduct(params.slug, locale);
     if (!product) return {};
     const range = priceRange(product, locale);
     const title = range ? `${product.name} — ${range}` : product.name;
@@ -94,12 +99,27 @@ export async function generateMetadata({
   }
 
   if (kind === 'categories') {
-    const real = await resolveCategory(params.slug);
-    if (!real) return {};
     const basePath = entityPath('categories', locale, params.slug);
     // Page 2+ is navigational: self-canonical to the paged URL and noindex so only
     // the clean category page competes (spec §9); deeper products stay in the sitemap.
     const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+    const theme = getThemeBySlug(locale, params.slug);
+    if (theme) {
+      const baseTitle = locale === 'es' ? `${theme.label.es} — Juegos de mesa` : `${theme.label.en} — Board games`;
+      return buildMetadata({
+        locale,
+        path,
+        title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
+        description: theme.description[locale],
+        noindex: page > 1,
+        // Themes have distinct per-locale slugs, so map hreflang explicitly.
+        alternates: page > 1
+          ? undefined
+          : { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) },
+      });
+    }
+    const real = await resolveCategory(params.slug);
+    if (!real) return {};
     const baseTitle = locale === 'es' ? `${real} — Juegos de mesa` : `${real} — Board games`;
     return buildMetadata({
       locale,
@@ -115,15 +135,26 @@ export async function generateMetadata({
   }
 
   if (kind === 'guides') {
-    const guide = getGuide(params.slug);
+    const guide = getGuide(params.slug, locale);
     if (!guide) return {};
+    // Cover = first pick's product image, so social cards show a real game photo
+    // instead of the default banner.
+    const cover = await guideCover(guide, locale);
+    const author = guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined;
     return buildMetadata({
       locale,
       path: entityPath('guides', locale, guide.slug),
       title: guide.title,
       description: guide.description,
-      alternates: entityAlternates('guides', guide.slug),
+      alternates: guideAlternates(guide),
       type: 'article',
+      images: cover ? [cover] : undefined,
+      article: {
+        authors: author ? [author.name] : undefined,
+        publishedTime: guide.publishedAt,
+        modifiedTime: guide.updatedAt,
+        section: locale === 'es' ? 'Juegos de mesa' : 'Board games',
+      },
     });
   }
 
@@ -158,28 +189,47 @@ export default async function DetailPage({
   const homeName = locale === 'es' ? 'Inicio' : 'Home';
 
   if (kind === 'games') {
-    const product = await getProduct(params.slug);
+    const product = await getProduct(params.slug, locale);
     if (!product) notFound();
     return renderProduct(product, locale, homeName);
   }
 
   if (kind === 'categories') {
-    const real = await resolveCategory(params.slug);
-    if (!real) notFound();
     const page = pageOf(searchParams);
     const basePath = entityPath('categories', locale, params.slug);
-    const { results, total } = await listProducts({
-      category: real,
-      limit: CATEGORY_PAGE_SIZE,
-      offset: (page - 1) * CATEGORY_PAGE_SIZE,
-    });
+    const theme = getThemeBySlug(locale, params.slug);
+    // A curated theme (query by its BGG-tag / player-count rule) or, for legacy
+    // links, the raw catalog category (base-game vs expansion).
+    const real = theme ? null : await resolveCategory(params.slug);
+    if (!theme && !real) notFound();
+
+    const { results, total } = await listProducts(
+      theme
+        ? { locale, mechanics: theme.tags, minPlayers: theme.players, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE }
+        : { locale, category: real!, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE },
+    );
+
+    const title = theme ? theme.label[locale] : real!;
+    const lede = theme
+      ? theme.description[locale]
+      : locale === 'es'
+        ? `Compara precios y stock real de juegos de mesa de ${real} entre tiendas verificadas y encuentra el mejor precio para tu próxima partida.`
+        : `Compare real prices and stock for ${real} board games across verified stores and find the best price for your next game night.`;
+
+    // Lateral nav into sibling themes — denser internal linking + better journey.
+    const siblings = THEMES.filter((t) => t.slug[locale] !== params.slug);
+
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
-      { name: real, path: basePath },
+      { name: title, path: basePath },
     ];
+    const catAlternates = theme
+      ? { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) }
+      : entityAlternates('categories', params.slug);
     return (
       <main className="container">
+        <LocaleAlternates alternates={catAlternates} />
         <Breadcrumbs crumbs={crumbs} />
         {page === 1 && (
           <JsonLd
@@ -191,10 +241,11 @@ export default async function DetailPage({
             ]}
           />
         )}
-        <h1 className="page-title">{real}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className="muted">
-          {total} {locale === 'es' ? 'juegos en esta categoría' : 'games in this category'}
+          {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
         </p>
+        {page === 1 && <p className="lede">{lede}</p>}
         {results.length > 0 ? (
           <>
             <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
@@ -205,12 +256,22 @@ export default async function DetailPage({
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('categories', locale)} />
         )}
+        <section aria-label={locale === 'es' ? 'Explora por tema' : 'Explore by theme'}>
+          <h2 className="section-title">{locale === 'es' ? 'Explora por tema' : 'Explore by theme'}</h2>
+          <div className="taglist">
+            {siblings.map((t) => (
+              <Link key={t.key} className="chip" href={entityPath('categories', locale, t.slug[locale])}>
+                <span aria-hidden="true">{t.glyph}</span> {t.label[locale]}
+              </Link>
+            ))}
+          </div>
+        </section>
       </main>
     );
   }
 
   if (kind === 'guides') {
-    const guide = getGuide(params.slug);
+    const guide = getGuide(params.slug, locale);
     if (!guide) notFound();
     return renderGuide(guide, locale, homeName);
   }
@@ -224,7 +285,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
   // (and silently drops any pick whose product is no longer in the catalogue).
   const picks = (await Promise.all(
     guide.picks.map(async (pick) => {
-      const product = await getProduct(pick.gameSlug);
+      const product = await getProduct(pick.gameSlug, locale);
       return product ? { pick, product } : null;
     }),
   )).filter((x): x is { pick: GuidePick; product: ProductDetail } => x !== null);
@@ -239,8 +300,11 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
+  const author = guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined;
+
   return (
     <main className="container">
+      <LocaleAlternates alternates={guideAlternates(guide)} />
       <Breadcrumbs crumbs={crumbs} />
       <JsonLd
         data={[
@@ -252,6 +316,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
             datePublished: guide.publishedAt,
             dateModified: guide.updatedAt,
             image: picks[0]?.product.images?.[0],
+            author: author ? { name: author.name } : undefined,
           }),
           ...(guide.faq?.length ? [faqLd(guide.faq)] : []),
         ]}
@@ -259,9 +324,36 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
 
       <article className="prose" style={{ maxWidth: 760 }}>
         <h1 className="product-h1">{guide.title}</h1>
-        <p className="muted" style={{ marginTop: 4 }}>
-          {locale === 'es' ? 'Actualizado el' : 'Updated'} {dateLabel}
-        </p>
+        {author ? (
+          <div className="guide-byline" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 4px' }}>
+            <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--bg-raised, var(--card))', border: '1px solid var(--border)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>
+              {author.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+            </span>
+            <span style={{ fontSize: 14, lineHeight: 1.35 }}>
+              <b>{locale === 'es' ? 'Por' : 'By'} {author.name}</b>
+              <span className="muted"> · {author.from}</span>
+              <br />
+              <span className="muted">
+                {locale === 'es' ? 'Actualizado el' : 'Updated'} {dateLabel}
+                {guide.autoTranslated && (
+                  <span
+                    className="chip"
+                    style={{ marginLeft: 8, fontSize: 11, padding: '1px 7px', verticalAlign: 'middle' }}
+                    title={locale === 'es' ? 'Traducido automáticamente del idioma original' : 'Automatically translated from the original language'}
+                  >
+                    {locale === 'es' ? 'Traducción automática' : 'Auto-translated'}
+                  </span>
+                )}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <p className="muted" style={{ marginTop: 4 }}>
+            {locale === 'es' ? 'Actualizado el' : 'Updated'} {dateLabel}
+          </p>
+        )}
+        {author && <p className="muted" style={{ fontSize: 13.5, fontStyle: 'italic', margin: '2px 0 8px' }}>{author.bio}</p>}
+        <ShareBar url={absoluteUrl(path)} title={guide.title} locale={locale} />
         {guide.intro.map((p, i) => <p key={`intro-${i}`}>{p}</p>)}
 
         <ol className="guide-picks" style={{ listStyle: 'none', padding: 0, margin: '2rem 0', display: 'grid', gap: '1rem' }}>
@@ -347,6 +439,7 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
 
   return (
     <main className="container">
+      <LocaleAlternates alternates={entityAlternates('games', product.slug)} />
       <Breadcrumbs crumbs={crumbs} />
       <JsonLd data={[breadcrumbLd(crumbs), productLd(product, path)]} />
 
@@ -468,7 +561,7 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
 
       {/* Hub-and-spoke back-link: guides that recommend this game. */}
       {(() => {
-        const related = guidesMentioning(product.slug);
+        const related = guidesMentioning(product.slug, locale);
         if (!related.length) return null;
         return (
           <section>

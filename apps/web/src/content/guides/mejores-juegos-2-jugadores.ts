@@ -5,6 +5,7 @@ import type { Guide } from '../../lib/guides.js';
 export const mejoresJuegos2Jugadores: Guide = {
   slug: 'mejores-juegos-de-mesa-2-jugadores',
   title: 'Los mejores juegos de mesa para 2 jugadores',
+  authorId: 'mateo-ar',
   description:
     'Guía de los mejores juegos de mesa para 2 jugadores: duelos rápidos, estrategia en pareja y juegos para noches de dos. Con precios comparados entre tiendas.',
   intro: [
@@ -73,6 +74,80 @@ export const mejoresJuegos2Jugadores: Guide = {
       a: 'Algunos sí, pero muchos pierden gracia. Por eso esta guía prioriza juegos diseñados para dos o que se juegan mejor así, en vez de adaptaciones forzadas.',
     },
   ],
+  translations: {
+    en: {
+      slug: 'best-board-games-for-2-players',
+      title: 'The best board games for 2 players',
+      description:
+        'A guide to the best board games for 2 players: quick duels, head-to-head strategy and games for two-player nights, with prices compared across stores.',
+      intro: [
+        'Two-player gaming has its own rhythm: tighter turns, sharper decisions and the tension of sitting across from the only person who can ruin your plan. But not every game works well at two; many are built for groups and lose energy when the table gets smaller.',
+        'This guide focuses on games that were designed for two, or that genuinely shine at that player count. You will find twenty-minute duels, portable card games and heavier strategy for a longer night. Each recommendation links to a product page where you can compare prices across verified stores.',
+      ],
+      picks: [
+        {
+          gameSlug: '7-wonders-duel-173346',
+          blurb:
+            'The best starting point. It takes the strongest ideas from 7 Wonders and turns them into a tense duel where both players draft from the same display. Sudden scientific and military victories keep every game on edge. If you buy just one, make it this.',
+        },
+        {
+          gameSlug: 'patchwork-163412',
+          blurb:
+            'Tetris with buttons and fabric. You fill your board with patches while managing time and income. Elegant, quick and surprisingly competitive. Ideal for people who say they do not like board games.',
+        },
+        {
+          gameSlug: 'jaipur-54043',
+          blurb:
+            'A fast trading card game packed with small decisions. You buy and sell goods while looking for the right moment to cash in a set. It fits in a small bag and hooks players from the first hand.',
+        },
+        {
+          gameSlug: 'codenames-duet-224037',
+          blurb:
+            'The cooperative version of Codenames, tuned specifically for two. You give one-word clues to find agents against the clock. Great for couples and for players who prefer teamwork over competition.',
+        },
+        {
+          gameSlug: 'star-realms-frontiers-230253',
+          blurb:
+            'A spaceship deckbuilder with direct combat. You start with a tiny deck and keep upgrading it until you can crush your opponent’s authority. Fast, aggressive and highly replayable.',
+        },
+        {
+          gameSlug: 'watergate-274364',
+          blurb:
+            'An asymmetric historical duel: one player is the Nixon administration, the other is The Washington Post. Tense, thematic and full of back-and-forth pressure. Pick this when you want something weightier.',
+        },
+      ],
+      sections: [
+        {
+          heading: 'How do you choose a good game for two?',
+          paragraphs: [
+            'Look at three things: play time, strategic weight and whether the game was designed for two rather than merely allowing two. A 20-minute duel like Jaipur asks for a very different mood than Watergate, which can turn into an hour of focused tension.',
+            'If you are just starting out, keep it light: 7 Wonders Duel and Patchwork are easy to teach without a long rulebook. If you already play often, an asymmetric duel will give you more to chew on.',
+          ],
+        },
+        {
+          heading: 'Quick duels vs. longer strategy',
+          paragraphs: [
+            'Quick duels such as Jaipur and Star Realms are perfect after dinner or for several rematches in a row. Longer strategy games like Watergate and 7 Wonders Duel ask for one focused play but leave you thinking about the move you missed.',
+            'A strong two-player shelf has both: something breezy for tired nights and something deeper when you want a real contest.',
+          ],
+        },
+      ],
+      faq: [
+        {
+          q: 'What is the best 2-player board game for beginners?',
+          a: '7 Wonders Duel is the safest recommendation: accessible rules, 30-minute games and a lot of replay value. Patchwork is another excellent entry point if you want something lighter.',
+        },
+        {
+          q: 'Are there cooperative games for 2 players?',
+          a: 'Yes. Codenames: Duet is cooperative and built for two players: instead of competing, you work together to find every agent before time runs out.',
+        },
+        {
+          q: 'Can you play bigger group games with only two players?',
+          a: 'Some work, but many lose their spark. This guide prioritizes games designed for two or games that play best at two, rather than forced adaptations.',
+        },
+      ],
+    },
+  },
   publishedAt: '2026-07-11',
   updatedAt: '2026-07-11',
 };

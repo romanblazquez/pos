@@ -94,8 +94,11 @@ async function api<T>(path: string, revalidate: number): Promise<T | null> {
   }
 }
 
-export function getProduct(slug: string): Promise<ProductDetail | null> {
-  return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}`, REVALIDATE.product);
+// `locale` selects the API's approved title/description override (es-MX / en-US);
+// without it the API falls back to the base English BGG text, so always pass it.
+export function getProduct(slug: string, locale?: string): Promise<ProductDetail | null> {
+  const qs = locale ? `?locale=${encodeURIComponent(locale)}` : '';
+  return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}${qs}`, REVALIDATE.product);
 }
 
 export type SortBy = 'rank_score' | 'price_asc' | 'price_desc' | 'name';
@@ -113,11 +116,14 @@ export async function listProducts(opts: {
   maxPriceMinor?: number;
   mechanics?: string[];
   complexity?: string;
+  /** UI locale for name/description overrides; without it cards show base English. */
+  locale?: string;
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
     offset: String(opts.offset ?? 0),
   });
+  if (opts.locale) params.set('locale', opts.locale);
   if (opts.q) params.set('q', opts.q);
   if (opts.category) params.set('category', opts.category);
   if (opts.inStock) params.set('inStock', 'true');

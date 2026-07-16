@@ -3,6 +3,7 @@ import type { Guide } from '../../lib/guides.js';
 export const mejoresJuegosDeEstrategia: Guide = {
   slug: 'mejores-juegos-de-mesa-de-estrategia',
   title: 'Los mejores juegos de mesa de estrategia',
+  authorId: 'mateo-ar',
   description:
     'Guía de los mejores juegos de mesa de estrategia: euros de peso, motores de recursos y planificación a largo plazo para jugadores exigentes. Con precios comparados entre tiendas.',
   intro: [
@@ -71,6 +72,80 @@ export const mejoresJuegosDeEstrategia: Guide = {
       a: 'Sí. Terraforming Mars, Wingspan y Scythe funcionan muy bien de a dos, y Brass: Birmingham también, aunque brilla especialmente con tres o cuatro.',
     },
   ],
+  translations: {
+    en: {
+      slug: 'best-strategy-board-games',
+      title: 'The best strategy board games',
+      description:
+        'A guide to the best strategy board games: heavier euros, resource engines and long-term planning for demanding players, with prices compared across stores.',
+      intro: [
+        'When gateway games start feeling too small, the good stuff begins: resource engines to tune, decisions that echo through the whole game and the satisfaction of building something piece by piece.',
+        'This guide collects strategy games with real weight, the kind that ask for a full afternoon and leave you thinking about the perfect move afterwards. They are not ideal for a first game night, but they are a big reason the hobby becomes so compelling. Each recommendation links to a product page where you can compare prices across stores.',
+      ],
+      picks: [
+        {
+          gameSlug: 'terraforming-mars-167791',
+          blurb:
+            'A favorite first step into heavier games. You terraform the red planet by playing cards that combine into stronger and stronger engines. Dense, thematic and almost endlessly replayable.',
+        },
+        {
+          gameSlug: 'brass-birmingham-224517',
+          blurb:
+            'For many players, the best eurogame ever designed. You build industrial networks in Revolutionary-era England while managing loans, canals and railways. The interaction is sharp and the decisions hurt. A masterpiece.',
+        },
+        {
+          gameSlug: 'gaia-project-220308',
+          blurb:
+            'Space colonization with fourteen asymmetric factions, each with its own puzzle. It is one of the deepest eurogames available: demanding, huge and addictive for players who want a serious challenge.',
+        },
+        {
+          gameSlug: 'ark-nova-342942',
+          blurb:
+            'You design a modern zoo by combining animal cards, conservation projects and sponsors. The result is a huge, satisfying engine that became an instant phenomenon. Heavy weight, charming theme.',
+        },
+        {
+          gameSlug: 'scythe-169786',
+          blurb:
+            'Strategy in an alternate 1920s Europe with mechs. It mixes resource management, area control and impressive production. It is less hostile than it looks: the winner is usually the player who manages their engine best.',
+        },
+        {
+          gameSlug: 'wingspan-266192',
+          blurb:
+            'A perfect bridge into medium-heavy games. You build a bird sanctuary where each bird powers future turns in increasingly elegant chains. Calm, beautiful and deeper than it first appears.',
+        },
+      ],
+      sections: [
+        {
+          heading: 'What defines a strong strategy game?',
+          paragraphs: [
+            'Depth without luck taking over. In a good strategy eurogame, chance may exist, but your decisions matter more: you plan several turns ahead, build an engine and look for the right timing to use it. The tension comes from choosing well among many good options, not from a single die roll.',
+            'Asymmetry and replay value matter too. The best examples, such as Gaia Project and Ark Nova, change enough from game to game that you can play them dozens of times without repeating the same strategy.',
+          ],
+        },
+        {
+          heading: 'Medium weight vs. heavy weight',
+          paragraphs: [
+            'Wingspan and Scythe are excellent doors into medium-heavy strategy: deep but still approachable. Brass: Birmingham and Gaia Project are true heavyweights, with steeper learning curves and longer sessions.',
+            'If you are moving up from gateway games, start with Wingspan or Terraforming Mars before jumping into Brass. Your table will thank you.',
+          ],
+        },
+      ],
+      faq: [
+        {
+          q: 'What is the best strategy board game?',
+          a: 'Brass: Birmingham sits near the top of many hobby rankings because of its depth and interaction. Terraforming Mars and Gaia Project are also standout choices, depending on whether you prefer card engines or a spatial puzzle.',
+        },
+        {
+          q: 'What strategy game should I buy after lighter games?',
+          a: 'Wingspan and Terraforming Mars are ideal bridges: they have real weight but are easier to teach than Brass or Gaia Project, which expect more experience.',
+        },
+        {
+          q: 'Are these good with two players?',
+          a: 'Yes. Terraforming Mars, Wingspan and Scythe work very well at two players, and Brass: Birmingham also works, though it especially shines with three or four.',
+        },
+      ],
+    },
+  },
   publishedAt: '2026-07-11',
   updatedAt: '2026-07-11',
 };

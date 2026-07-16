@@ -71,7 +71,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const t = T[locale];
 
   const [{ results: featured }, categories] = await Promise.all([
-    listProducts({ inStock: true, limit: 18 }),
+    listProducts({ inStock: true, limit: 18, locale }),
     getCategories(),
   ]);
 

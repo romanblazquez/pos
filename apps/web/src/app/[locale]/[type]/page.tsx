@@ -3,9 +3,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCategories, getMechanics, listProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/seo';
-import { breadcrumbLd, itemListLd, type Crumb } from '@/lib/jsonld';
+import { breadcrumbLd, itemListLd, blogLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
+import { LocaleAlternates } from '@/components/LocaleAlternates';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { GuidesExplorer, type GuideCardData } from '@/components/GuidesExplorer';
+import { guideCover } from '@/lib/guide-cover';
+import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
 import { CatalogSearchField } from '@/components/CatalogSearchField';
@@ -17,14 +21,32 @@ import {
   isLocale,
   listingPath,
   resolveKind,
-  slugify,
   type Locale,
 } from '@/lib/segments';
 import { listGuides } from '@/lib/guides';
+import { THEMES } from '@/lib/themes';
 
 export const revalidate = 1800;
 
 const PAGE_SIZE = 24;
+
+// A short newspaper-style section label derived from the guide's title, so the
+// hub cards carry a "kicker" without adding data to every guide module.
+function guideKicker(title: string, locale: Locale): string {
+  const t = title.toLowerCase();
+  const map: Array<[RegExp, [string, string]]> = [
+    [/estrateg|strategy/, ['Estrategia', 'Strategy']],
+    [/famil/, ['Familia', 'Family']],
+    [/principiante|beginner/, ['Principiantes', 'Beginners']],
+    [/2 jugador|2 player|dos jugador/, ['2 jugadores', '2 players']],
+    [/solitario|\bsolo\b/, ['En solitario', 'Solo']],
+    [/cooperativ|cooperative|co-op/, ['Cooperativos', 'Co-op']],
+    [/miniatura|miniature/, ['Miniaturas', 'Miniatures']],
+    [/abstract/, ['Abstractos', 'Abstract']],
+  ];
+  for (const [re, [es, en]] of map) if (re.test(t)) return locale === 'es' ? es : en;
+  return locale === 'es' ? 'Guía' : 'Guide';
+}
 
 function pageOf(searchParams: { page?: string }): number {
   const n = parseInt(searchParams.page ?? '1', 10);
@@ -106,8 +128,8 @@ export async function generateMetadata({
       ? 'Catálogo de juegos de mesa con precios comparados entre tiendas verificadas.'
       : 'Board game catalogue with prices compared across verified stores.'
     : locale === 'es'
-      ? 'Explora juegos de mesa por categoría.'
-      : 'Browse board games by category.';
+      ? 'Explora juegos de mesa por categoría —estrategia, familiares, party, 2 jugadores y más— con precios y stock real comparados entre tiendas verificadas.'
+      : 'Browse board games by category —strategy, family, party, 2-player and more— with real prices and stock compared across verified stores.';
 
   return buildMetadata({
     locale,
@@ -170,6 +192,7 @@ export default async function ListingPage({
     };
     const { results, total } = await listProducts({
       q,
+      locale,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
@@ -246,6 +269,7 @@ export default async function ListingPage({
       || state.complexity || state.mechanics.length > 0,
     );
     const { results, total } = await listProducts({
+      locale,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
@@ -301,35 +325,30 @@ export default async function ListingPage({
     );
   }
 
-  // ── Category index ────────────────────────────────────────────────────────
+  // ── Category index (curated BGG-aligned themes) ────────────────────────────
   if (kind === 'categories') {
-    const categories = await getCategories();
+    const catBase = listingPath('categories', locale);
+    // Accurate per-theme total + a representative cover via one small ranked query
+    // each (the same rule the theme's detail page uses). ~16 indexed lookups, cached
+    // by ISR — cheap, and far more honest than counting within a capped batch.
+    const cards = (await Promise.all(
+      THEMES.map(async (theme) => {
+        const { results, total } = await listProducts({
+          mechanics: theme.tags,
+          minPlayers: theme.players,
+          limit: 5,
+          sortBy: 'rank_score',
+        });
+        return { theme, count: total, cover: results.find((p) => p.images?.[0])?.images[0] };
+      }),
+    ))
+      .filter((c) => c.count > 0) // only surface themes that actually have games yet
+      .sort((a, b) => b.count - a.count);
+    const gamesWord = (n: number) =>
+      locale === 'es' ? (n === 1 ? 'juego' : 'juegos') : (n === 1 ? 'game' : 'games');
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
-    ];
-    return (
-      <main className="container">
-        <Breadcrumbs crumbs={crumbs} />
-        <JsonLd data={breadcrumbLd(crumbs)} />
-        <h1 className="page-title">{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
-        <div className="taglist" style={{ marginTop: '1.25rem' }}>
-          {categories.map((c) => (
-            <Link key={c.category} className="chip" href={`${listingPath('categories', locale)}/${slugify(c.category)}`}>
-              {c.category} <span className="count">{c.count}</span>
-            </Link>
-          ))}
-        </div>
-      </main>
-    );
-  }
-
-  // ── Guides index (editorial hub) ───────────────────────────────────────────
-  if (kind === 'guides') {
-    const guides = listGuides();
-    const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+      { name: locale === 'es' ? 'Categorías' : 'Categories', path: catBase },
     ];
     return (
       <main className="container">
@@ -337,28 +356,100 @@ export default async function ListingPage({
         <JsonLd
           data={[
             breadcrumbLd(crumbs),
-            itemListLd(guides.map((g) => ({ name: g.title, path: entityPath('guides', locale, g.slug) }))),
+            itemListLd(cards.map((c) => ({ name: c.theme.label[locale], path: entityPath('categories', locale, c.theme.slug[locale]) }))),
           ]}
         />
-        <h1 className="page-title">{locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides'}</h1>
-        <p className="muted">
+        <h1 className="page-title">{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
+        <p className="lede">
           {locale === 'es'
-            ? 'Comparativas y listas de los mejores juegos, con precios comparados entre tiendas.'
-            : 'Comparisons and best-of lists, with prices compared across stores.'}
+            ? 'Explora el catálogo por tema —estrategia, eurogames, cooperativos, 2 jugadores, cartas, terror y más— siguiendo la clasificación de BoardGameGeek, y compara precios y stock real entre tiendas verificadas.'
+            : 'Browse the catalogue by theme —strategy, eurogames, cooperative, 2-player, card games, horror and more— following BoardGameGeek’s taxonomy, and compare real prices and stock across verified stores.'}
         </p>
-        <div className="guide-list" style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
-          {guides.map((g) => (
-            <Link
-              key={g.slug}
-              href={entityPath('guides', locale, g.slug)}
-              className="guide-card"
-              style={{ display: 'block', padding: '1.25rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))', textDecoration: 'none' }}
-            >
-              <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.15rem' }}>{g.title}</h2>
-              <p className="muted" style={{ margin: '0.5rem 0 0' }}>{g.description}</p>
-            </Link>
-          ))}
-        </div>
+        {cards.length > 0 ? (
+          <div className="category-grid">
+            {cards.map(({ theme, count, cover }) => (
+              <Link key={theme.key} href={entityPath('categories', locale, theme.slug[locale])} className="category-card">
+                <div className="category-card-media">
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cover} alt="" width={320} height={200} loading="lazy" />
+                  ) : (
+                    <span className="category-card-glyph" aria-hidden="true">{theme.glyph}</span>
+                  )}
+                </div>
+                <div className="category-card-body">
+                  <h2 className="category-card-name">{theme.label[locale]}</h2>
+                  <span className="category-card-count">{count} {gamesWord(count)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale)} />
+        )}
+      </main>
+    );
+  }
+
+  // ── Guides index (editorial hub: searchable, paginated, magazine cards) ─────
+  if (kind === 'guides') {
+    const guides = listGuides(locale);
+    const dateFmt = (iso: string) =>
+      new Date(iso).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+      });
+    // Resolve a cover image per guide (cheap, ISR-cached) alongside byline/date.
+    const cards: GuideCardData[] = await Promise.all(
+      guides.map(async (g) => {
+        const author = g.authorId ? AUTHORS_BY_ID[g.authorId] : undefined;
+        return {
+          slug: g.slug,
+          href: entityPath('guides', locale, g.slug),
+          title: g.title,
+          excerpt: g.description,
+          author: author ? { name: author.name, from: author.from } : undefined,
+          dateISO: g.updatedAt,
+          dateLabel: dateFmt(g.updatedAt),
+          cover: await guideCover(g, locale),
+          kicker: guideKicker(g.title, locale),
+          autoTranslated: g.autoTranslated,
+        };
+      }),
+    );
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale) },
+      { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+    ];
+    const hubName = locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides';
+    const hubDesc = locale === 'es'
+      ? 'Comparativas, análisis y listas de los mejores juegos de mesa, escritas por nuestro equipo editorial y con precios comparados entre tiendas.'
+      : 'Comparisons, reviews and best-of lists for board games, written by our editorial team and with prices compared across stores.';
+    return (
+      <main className="container">
+        <LocaleAlternates alternates={{ es: listingPath('guides', 'es'), en: listingPath('guides', 'en') }} />
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(guides.map((g) => ({ name: g.title, path: entityPath('guides', locale, g.slug) }))),
+            blogLd({
+              name: hubName,
+              description: hubDesc,
+              path: listingPath('guides', locale),
+              posts: guides.map((g) => ({
+                title: g.title,
+                path: entityPath('guides', locale, g.slug),
+                datePublished: g.publishedAt,
+                dateModified: g.updatedAt,
+                author: g.authorId ? AUTHORS_BY_ID[g.authorId]?.name : undefined,
+                description: g.description,
+              })),
+            }),
+          ]}
+        />
+        <h1 className="page-title">{hubName}</h1>
+        <p className="lede">{hubDesc}</p>
+        <GuidesExplorer guides={cards} locale={locale} />
       </main>
     );
   }

@@ -140,6 +140,50 @@ export function productSummaryName(p: ProductSummary): string {
   return p.name;
 }
 
+// Editorial hub -> Blog with a BlogPosting per guide. Richer than a bare ItemList:
+// it tells search engines this is a first-party publication with dated, authored
+// articles, which helps the section qualify for news/article rich results.
+export function blogLd(input: {
+  name: string;
+  description: string;
+  path: string;
+  posts: Array<{
+    title: string;
+    path: string;
+    datePublished: string;
+    dateModified: string;
+    author?: string;
+    image?: string;
+    description?: string;
+  }>;
+}): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: input.name,
+    description: input.description,
+    url: absoluteUrl(input.path),
+    publisher: {
+      '@type': 'Organization',
+      name: ORGANIZATION.name,
+      logo: { '@type': 'ImageObject', url: ORGANIZATION.logo },
+    },
+    blogPost: input.posts.map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.title,
+      url: absoluteUrl(p.path),
+      mainEntityOfPage: absoluteUrl(p.path),
+      datePublished: p.datePublished,
+      dateModified: p.dateModified,
+      ...(p.description ? { description: p.description } : {}),
+      ...(p.image ? { image: [p.image] } : {}),
+      author: p.author
+        ? { '@type': 'Person', name: p.author }
+        : { '@type': 'Organization', name: SITE_NAME },
+    })),
+  };
+}
+
 // Editorial guide -> Article. First-party content authored by Juegospedia, so
 // claiming authorship/publisher here is accurate (unlike catalogue ratings).
 export function articleLd(input: {
@@ -149,6 +193,8 @@ export function articleLd(input: {
   datePublished: string;
   dateModified: string;
   image?: string;
+  /** Named byline persona; falls back to the org when absent. */
+  author?: { name: string };
 }): Json {
   return {
     '@context': 'https://schema.org',
@@ -158,7 +204,9 @@ export function articleLd(input: {
     datePublished: input.datePublished,
     dateModified: input.dateModified,
     mainEntityOfPage: absoluteUrl(input.path),
-    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    author: input.author
+      ? { '@type': 'Person', name: input.author.name }
+      : { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     publisher: {
       '@type': 'Organization',
       name: ORGANIZATION.name,
