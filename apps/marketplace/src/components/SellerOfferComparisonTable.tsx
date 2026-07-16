@@ -78,7 +78,7 @@ export function SellerOfferComparisonTable({
   const intl = useIntl();
   return (
     <section>
-      <div className="flex items-baseline justify-between mb-1">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-display text-2xl font-bold tracking-tight text-[--tx]">{intl.formatMessage({ id: 'offers.compareStores' })}</h2>
         {inStockListings.length > 0 && (
           <span className="text-xs text-[--tx-faint]">
@@ -239,7 +239,7 @@ function ListingRow({
             </span>
           )}
         </div>
-        <p className="font-mono text-[11px] text-[--tx-muted] mt-[3px]">
+        <p className="mt-[3px] break-words font-mono text-[11px] text-[--tx-muted]">
           ★ {(l.sellerScore * 5).toFixed(1)}
           {' · '}{stockLabel}
           {deliveryLabel && ` · ${deliveryLabel}`}

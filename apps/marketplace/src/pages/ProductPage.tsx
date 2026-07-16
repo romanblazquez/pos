@@ -168,7 +168,7 @@ export default function ProductPage({
   };
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:py-8">
+    <div className="mx-auto max-w-[1200px] overflow-x-clip px-3 py-5 sm:px-4 sm:py-8">
       <SeoHead
         title={`${p.name} — precio y disponibilidad | Juegospedia`}
         description={description.slice(0, 160)}
@@ -195,7 +195,7 @@ export default function ProductPage({
         bggWeight={p.bggWeight}
         language={p.language}
       />
-      <div className="mb-12 grid gap-8 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:gap-14">
+      <div className="mb-12 grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:gap-14">
 
         {/* Images */}
         <div className="flex flex-col gap-3">
@@ -225,9 +225,9 @@ export default function ProductPage({
         </div>
 
         {/* Info */}
-        <div className="flex flex-col gap-4 lg:pt-2">
+        <div className="min-w-0 flex flex-col gap-4 lg:pt-2">
           {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-700">{p.publisher}</p>}
-          <h1 className="max-w-[18ch] font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
+          <h1 className="max-w-[18ch] break-words font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
 
           <ProductStatsPanel
             slug={p.slug}
@@ -256,7 +256,7 @@ export default function ProductPage({
             ));
             return (
               <div className="flex flex-col gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
-                <div className="flex items-baseline justify-between">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">{intl.formatMessage({ id: 'product.from' })}</p>
                   <p className="text-xs text-emerald-600 dark:text-emerald-500">
                     {intl.formatMessage({ id: 'product.storesWithStock' }, { count: activeListings.length })}

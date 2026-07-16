@@ -134,9 +134,9 @@ function ComplexityMeter({ weight }: { weight: number }) {
     weight < 4.5 ? intl.formatMessage({ id: 'product.complexityHeavy' }) : intl.formatMessage({ id: 'product.complexityExpert' });
   return (
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.complexity' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
+        <span className="max-w-full font-mono text-[11px] sm:text-[12px] rounded-[7px] border px-2 py-0.5
                          border-[#E7D3A6] bg-[#F6EBD2] text-[#8A5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]">
           {weight.toFixed(1)} / 5 · {band}
         </span>
@@ -158,7 +158,16 @@ function ComplexityMeter({ weight }: { weight: number }) {
 
 function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPlayers: number }) {
   const intl = useIntl();
-  const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
+  // One cell per player becomes unusable for party games such as Flip 7
+  // (3–18). Keep exact cells for normal ranges and summarize large ranges
+  // into the same meaningful states shown by the detailed version.
+  const slots = maxPlayers <= 8
+    ? Array.from({ length: maxPlayers }, (_, index) => ({ start: index + 1, end: index + 1 }))
+    : [
+        ...(minPlayers > 1 ? [{ start: 1, end: minPlayers - 1 }] : []),
+        { start: minPlayers, end: minPlayers },
+        ...(maxPlayers > minPlayers ? [{ start: minPlayers + 1, end: maxPlayers }] : []),
+      ];
   const badge = minPlayers === maxPlayers
     ? intl.formatMessage({ id: 'product.playersCount' }, { count: minPlayers })
     : intl.formatMessage({ id: 'product.playersBadge' }, { range: `${minPlayers}–${maxPlayers}` });
@@ -195,20 +204,21 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
 
   return (
     <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
         <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
                          border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]">
           {badge}
         </span>
       </div>
-      <div className="flex gap-2">
-        {counts.map((n) => {
-          const s = slotStyle(n);
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }}>
+        {slots.map(({ start, end }) => {
+          const s = slotStyle(start);
+          const value = start === end ? String(start) : `${start}–${end}`;
           return (
-            <div key={n} className="flex-1 text-center">
-              <div className={`h-[38px] rounded-[9px] grid place-items-center font-mono font-bold text-[14px] ${s.cellClass} ${s.strikethrough ? 'line-through' : ''}`}>
-                {n}
+            <div key={value} className="min-w-0 text-center">
+              <div className={`grid h-[38px] place-items-center rounded-[9px] px-1 font-mono text-[13px] font-bold sm:text-[14px] ${s.cellClass} ${s.strikethrough ? 'line-through' : ''}`}>
+                {value}
               </div>
               <div className={`font-mono text-[9px] uppercase mt-[5px] ${s.labelClass}`}>
                 {s.label}
