@@ -20,6 +20,17 @@ export interface ProductSearchParams {
   semantic?: boolean;
 }
 
+// searchProducts and semanticSearchProducts call each other (semantic falls back
+// to the lexical path when it finds nothing), so both need an explicit shared
+// return type — without it TypeScript can't break the mutual-recursion cycle and
+// infers `any`. Results are serialized straight to JSON, so the element shape
+// (Typesense hit / hydrated product / db summary) is intentionally untyped here.
+export interface ProductSearchResult {
+  results: unknown[];
+  total: number;
+  source: 'search' | 'semantic' | 'db';
+}
+
 // entityType tag used on EntityLocalization rows for MktProduct — the schema
 // is polymorphic (entityType/entityId), so wiring localization onto a model
 // never needs a migration, just a consistent literal for that model.
@@ -35,7 +46,7 @@ export class MarketplaceService {
     @Inject(SemanticSearchService) private readonly semantic: SemanticSearchService,
   ) {}
 
-  async semanticSearchProducts(query: string, locale?: string, limit = 24) {
+  async semanticSearchProducts(query: string, locale?: string, limit = 24): Promise<ProductSearchResult> {
     const hits = await this.semantic.search(query, locale, limit);
     if (hits.length === 0) return this.searchProducts({ q: query, limit }, locale);
     const results = await this.hydrateSemanticHits(hits.map((hit) => hit.canonicalId), locale);
@@ -117,7 +128,7 @@ export class MarketplaceService {
     }
   }
 
-  async searchProducts(params: ProductSearchParams, locale?: string) {
+  async searchProducts(params: ProductSearchParams, locale?: string): Promise<ProductSearchResult> {
     const { q = '', limit = 24, offset = 0 } = params;
 
     if (params.semantic && q && !hasStructuredFilters(params)) {
