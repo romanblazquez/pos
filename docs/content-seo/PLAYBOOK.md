@@ -193,9 +193,20 @@ curl -s 'http://localhost:3010/api/v1/products/<slug>?locale=en' | jq '{name,des
 
 ## 7. Follow-ups / backlog (not blocking, ordered)
 
+0. ~~**Bilingual Typesense search.**~~ **DONE (2026-07-16).** The index held only base
+   English, so Spanish queries matched nothing (localization was applied to *results*,
+   never to *matching*). Fixed: the search doc now carries `nameEs`/`descriptionEs` from
+   the approved es-MX localization and `name`/`description` from en-US; `query_by` spans
+   both. Collection auto-recreates when the new fields are missing; the hourly ranking
+   job (or an enqueued `rank-all-listings` job) repopulates it. Verified live: "abejas"→
+   Honey Buzz, "constructor de mazos"→It's a Wonderful World, "cooperativo"→13 co-ops,
+   English unchanged. Code: `search/typesense.service.ts`, `rankings/ranking-scheduler.service.ts`,
+   `mkt-catalog/mkt-catalog.service.ts` (`syncToSearch`). Deployed via API container rebuild.
 1. **Populate `search_document`** (embeddings + tsvector) for the shoppable set so
-   semantic search and "similar games" run on real vectors. Structure exists; needs an
-   indexer job (see `bgg-enricher` for the batch-job pattern).
+   *semantic* search and "similar games" run on real vectors. Separate from #0 (that's
+   lexical Typesense). Structure exists; needs an indexer job + an embedding model
+   (`OPENAI_API_KEY` is wired for `gpt-4o-mini`; use `text-embedding-3-small`). Low value
+   while the catalog is 77 games and the site is noindex — revisit near launch.
 2. Populate `shortDescription` on all curated rows (done inline by the pipeline).
 3. ~~Add author byline rendering to guide templates~~ **DONE** — `GuideContent.authorId`
    wired through; guide pages render a byline (name · origin · date + bio) and emit
