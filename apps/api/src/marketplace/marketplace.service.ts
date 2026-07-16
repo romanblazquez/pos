@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
+import { SemanticSearchService } from '../search/semantic-search.service.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './complexity-bands.js';
 
@@ -30,7 +31,56 @@ export class MarketplaceService {
   constructor(
     @Inject(PrismaService)    private readonly prisma: PrismaService,
     @Inject(TypesenseService) private readonly search: TypesenseService,
+    @Inject(SemanticSearchService) private readonly semantic: SemanticSearchService,
   ) {}
+
+  async semanticSearchProducts(query: string, locale?: string, limit = 24) {
+    const hits = await this.semantic.search(query, locale, limit);
+    if (hits.length === 0) return this.searchProducts({ q: query, limit }, locale);
+    const results = await this.hydrateSemanticHits(hits.map((hit) => hit.canonicalId), locale);
+    return { results, total: results.length, source: 'semantic' as const };
+  }
+
+  private async hydrateSemanticHits(ids: string[], locale?: string) {
+    if (ids.length === 0) return [];
+    const products = await this.prisma.mktProduct.findMany({
+      where: { id: { in: ids }, canonicalStatus: 'verified', listings: { some: { active: true } } },
+      include: {
+        listings: {
+          where: { active: true },
+          select: { priceMinorUnits: true, currency: true, stockStatus: true },
+        },
+      },
+    });
+    const localizations = await this.getProductLocalizations(ids, locale);
+    const order = new Map(ids.map((id, index) => [id, index]));
+    return products.map((product) => {
+      const localized = localizations.get(product.id);
+      const prices = product.listings.map((listing) => listing.priceMinorUnits);
+      return {
+        id: product.id,
+        slug: product.slug,
+        name: localized?.title ?? product.name,
+        description: localized?.description ?? product.description,
+        images: product.images,
+        category: product.category,
+        tags: product.tags,
+        publisher: product.publisher,
+        minPlayers: product.minPlayers,
+        maxPlayers: product.maxPlayers,
+        minAge: product.minAge,
+        playTimeMinutes: product.playTimeMinutes,
+        bggRating: product.bggRating,
+        bggWeight: product.bggWeight,
+        language: product.language,
+        minPriceMinor: prices.length ? Math.min(...prices) : 0,
+        maxPriceMinor: prices.length ? Math.max(...prices) : 0,
+        currency: product.listings[0]?.currency ?? DEFAULT_CURRENCY_CODE,
+        totalListings: product.listings.length,
+        inStockListings: product.listings.filter((listing) => listing.stockStatus !== 'out_of_stock').length,
+      };
+    }).sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+  }
 
   /**
    * Approved title/description overrides for the given product ids, keyed by
@@ -378,9 +428,14 @@ export class MarketplaceService {
    * product out client-side instead of adding an "exclude id" filter to
    * TypesenseService, since this is the only caller that needs it.
    */
-  async getSimilarProducts(slug: string, limit = 8) {
+  async getSimilarProducts(slug: string, limit = 8, locale?: string) {
     const source = await this.prisma.mktProduct.findUnique({ where: { slug } });
     if (!source) return [];
+
+    const semanticHits = await this.semantic.similar(source.id, locale, limit);
+    if (semanticHits.length > 0) {
+      return this.hydrateSemanticHits(semanticHits.map((hit) => hit.canonicalId), locale);
+    }
 
     const complexity = source.bggWeight ? bandForWeight(source.bggWeight) : undefined;
 

@@ -28,7 +28,8 @@ function setup() {
     entityLocalization: { findMany: vi.fn() },
   };
   const search = { search: vi.fn().mockResolvedValue({ hits: [], total: 0 }) };
-  const service = new MarketplaceService(prisma as never, search as never);
+  const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
+  const service = new MarketplaceService(prisma as never, search as never, semantic as never);
   return { service, prisma, search };
 }
 

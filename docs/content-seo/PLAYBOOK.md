@@ -202,18 +202,20 @@ curl -s 'http://localhost:3010/api/v1/products/<slug>?locale=en' | jq '{name,des
    Honey Buzz, "constructor de mazos"→It's a Wonderful World, "cooperativo"→13 co-ops,
    English unchanged. Code: `search/typesense.service.ts`, `rankings/ranking-scheduler.service.ts`,
    `mkt-catalog/mkt-catalog.service.ts` (`syncToSearch`). Deployed via API container rebuild.
-1. **Populate `search_document`** (embeddings + tsvector) for the shoppable set so
-   *semantic* search and "similar games" run on real vectors. Separate from #0 (that's
-   lexical Typesense). Structure exists; needs an indexer job + an embedding model
-   (`OPENAI_API_KEY` is wired for `gpt-4o-mini`; use `text-embedding-3-small`). Low value
-   while the catalog is 77 games and the site is noindex — revisit near launch.
+1. **Populate `search_document`** (embeddings + tsvector) for the shoppable set. **Code
+   complete (2026-07-16), production indexing pending:** the idempotent bilingual
+   indexer is `tools/content/index-semantic-search.ts`; semantic query is exposed at
+   `GET /api/v1/products/semantic`, and "similar games" now prefers stored cosine
+   similarity before its existing Typesense/Prisma fallback. It uses
+   `text-embedding-3-small` by default and degrades to lexical search when
+   `OPENAI_API_KEY` or indexed vectors are unavailable. Run the indexer only after
+   confirming embedding API credentials and budget in the deployment environment.
 2. Populate `shortDescription` on all curated rows (done inline by the pipeline).
 3. ~~Add author byline rendering to guide templates~~ **DONE** — `GuideContent.authorId`
    wired through; guide pages render a byline (name · origin · date + bio) and emit
    `Person` authorship in the Article JSON-LD. Personas live: Mateo (×3 es), Sofía
-   (es), Eoin (×2 en), Dave (en), Kasia (en). **Núria (nuria-es) is not yet used** —
-   give her the next abstract/2-player Spanish guide, written natively in peninsular
-   voice (vosotros), not a byline pasted on voseo text. ~~Product-page "editor's take"
+   (es), Eoin (×2 en), Dave (en), Kasia (en), and Núria (es abstract guide, written
+   natively in peninsular Spanish). ~~Product-page "editor's take"
    bylines~~ **DONE (2026-07-16)** — `content/editorial/takes.ts` + `editorTake(slug,locale)`;
    product pages render a persona-signed opinion card (`.editor-take`) beneath the
    description, assigned by fit across all 6 personas. Takes are written natively in BOTH
@@ -247,9 +249,9 @@ needed for the current catalog** — revisit only if the shoppable set grows wel
 beyond hand-writing capacity, or to backfill the ~11k unranked/non-shoppable
 `master_game` rows if they ever gain listings.
 
-**Next batch for whoever picks this up:** continue down the shoppable verified set by
-BGG rank (query below), skipping the 32 slugs already in `ledger.json`. Add entries to
-`tools/content/data/tier1.ts`, run the loader, append here.
+**When the shoppable set grows:** continue down it by BGG rank (query below), skipping
+the slugs already in `ledger.json`. Add entries to `tools/content/data/tier1.ts`, run
+the loader, and append here.
 Query for candidates:
 ```sql
 SELECT p.slug, p.name, p."bggRank" FROM "MktProduct" p JOIN "Listing" l ON l."productId"=p.id

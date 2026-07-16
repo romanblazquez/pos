@@ -90,6 +90,18 @@ export class MarketplaceController {
     return this.svc.getSuggestions(q, limit ? parseInt(limit, 10) : 8);
   }
 
+  @Get('semantic')
+  @ApiOperation({
+    summary: 'Semantic product search',
+    description: 'Meaning-based bilingual search over embedded shoppable products. Falls back to lexical search when embeddings or credentials are unavailable.',
+  })
+  @ApiQuery({ name: 'q', required: true, description: 'Natural-language search intent', example: 'a cooperative mystery for two players' })
+  @ApiQuery({ name: 'locale', required: false, example: 'es' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 12 })
+  semanticSearch(@Query('q') q = '', @Query('locale') locale?: string, @Query('limit') limit?: string) {
+    return this.svc.semanticSearchProducts(q, locale, limit ? parseInt(limit, 10) : 24);
+  }
+
   @Get(':slug')
   @ApiOperation({
     summary: 'Get product by slug',
@@ -112,8 +124,8 @@ export class MarketplaceController {
   })
   @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
   @ApiResponse({ status: 200, description: 'Array of up to 8 similar products.' })
-  getSimilar(@Param('slug') slug: string) {
-    return this.svc.getSimilarProducts(slug);
+  getSimilar(@Param('slug') slug: string, @Query('locale') locale?: string) {
+    return this.svc.getSimilarProducts(slug, 8, locale);
   }
 
   @Get(':slug/sales-by-year')
