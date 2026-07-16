@@ -4,6 +4,7 @@ import { Button, CatalogFilterPanel, CatalogFilterSection } from '@retail-os/ui-
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
+import { ResponsiveFilterPanel } from './ResponsiveFilterPanel';
 
 // Same bggWeight bands as apps/marketplace/src/pages/ProductPage.tsx's
 // ComplexityMeter and the API's complexity-bands.ts — keeps the filter and
@@ -82,8 +83,11 @@ export function SearchFilters({
   ];
 
   const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
+  const activeCount = [state.category, state.inStock, state.max, state.players, state.complexity]
+    .filter(Boolean).length + state.mechanics.length;
 
   return (
+    <ResponsiveFilterPanel locale={locale} activeCount={activeCount}>
     <CatalogFilterPanel
       title={locale === 'es' ? 'Explorar' : 'Explore'}
       subtitle={`${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${locale === 'es' ? 'resultados' : 'results'}`}
@@ -247,6 +251,7 @@ export function SearchFilters({
       {/* Fallback submit for no-JS environments */}
       <Button type="submit" className="mt-3 w-full js-hidden">{t.apply}</Button>
     </CatalogFilterPanel>
+    </ResponsiveFilterPanel>
   );
 }
 

@@ -11,6 +11,7 @@ export function FormAutoSubmit() {
     const form = ref.current?.closest('form');
     if (!form) return;
     function onChange(e: Event) {
+      if (window.matchMedia('(max-width: 860px)').matches) return;
       const t = e.target as HTMLInputElement;
       if (t.type === 'text' || t.type === 'search') return;
       form!.requestSubmit();
