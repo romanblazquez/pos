@@ -25,6 +25,8 @@ import {
 } from '@/lib/segments';
 import { listGuides } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
+import { absoluteUrl } from '@/lib/site';
+import { CardShareButton } from '@/components/CardShareButton';
 
 export const revalidate = 1800;
 
@@ -367,22 +369,28 @@ export default async function ListingPage({
         </p>
         {cards.length > 0 ? (
           <div className="category-grid">
-            {cards.map(({ theme, count, cover }) => (
-              <Link key={theme.key} href={entityPath('categories', locale, theme.slug[locale])} className="category-card">
-                <div className="category-card-media">
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={cover} alt="" width={320} height={200} loading="lazy" />
-                  ) : (
-                    <span className="category-card-glyph" aria-hidden="true">{theme.glyph}</span>
-                  )}
-                </div>
-                <div className="category-card-body">
-                  <h2 className="category-card-name">{theme.label[locale]}</h2>
-                  <span className="category-card-count">{count} {gamesWord(count)}</span>
-                </div>
-              </Link>
-            ))}
+            {cards.map(({ theme, count, cover }) => {
+              const href = entityPath('categories', locale, theme.slug[locale]);
+              return (
+                <article key={theme.key} className="category-card">
+                  <Link href={href} className="category-card-link" aria-label={theme.label[locale]}>
+                    <div className="category-card-media">
+                      {cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={cover} alt="" width={320} height={200} loading="lazy" />
+                      ) : (
+                        <span className="category-card-glyph" aria-hidden="true">{theme.glyph}</span>
+                      )}
+                    </div>
+                    <div className="category-card-body">
+                      <h2 className="category-card-name">{theme.label[locale]}</h2>
+                      <span className="category-card-count">{count} {gamesWord(count)}</span>
+                    </div>
+                  </Link>
+                  <CardShareButton url={absoluteUrl(href)} title={theme.label[locale]} locale={locale} />
+                </article>
+              );
+            })}
           </div>
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale)} />
@@ -405,6 +413,7 @@ export default async function ListingPage({
         return {
           slug: g.slug,
           href: entityPath('guides', locale, g.slug),
+          shareUrl: absoluteUrl(entityPath('guides', locale, g.slug)),
           title: g.title,
           excerpt: g.description,
           author: author ? { name: author.name, from: author.from } : undefined,

@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { CardShareButton } from './CardShareButton';
 
 export interface GuideCardData {
   slug: string;
   href: string;
+  shareUrl: string;
   title: string;
   excerpt: string;
   author?: { name: string; from: string };
@@ -97,6 +99,7 @@ export function GuidesExplorer({
         <div className="guides-grid">
           {visible.map((g) => (
             <article key={g.slug} className="guide-hit">
+              <CardShareButton url={g.shareUrl} title={g.title} locale={locale} />
               <Link href={g.href} className="guide-hit-cover" aria-hidden="true" tabIndex={-1}>
                 {g.cover ? (
                   // eslint-disable-next-line @next/next/no-img-element

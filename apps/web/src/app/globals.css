@@ -137,7 +137,8 @@ button, input, select { font: inherit; }
 /* Category index — visual journey. Cards mirror the product-card language
    (rounded, bordered, cover image, hover lift) for one consistent system. */
 .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.75rem; }
-.category-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); transition: border-color 180ms, transform 180ms cubic-bezier(.2,0,0,1), box-shadow 180ms; }
+.category-card { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); transition: border-color 180ms, transform 180ms cubic-bezier(.2,0,0,1), box-shadow 180ms; }
+.category-card-link { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .category-card:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); transform: translateY(-3px); box-shadow: 0 12px 26px rgb(43 38 34 / .13); }
 .category-card-media { position: relative; display: grid; aspect-ratio: 16 / 10; place-items: center; overflow: hidden; background: var(--accent-bg); }
 .category-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms cubic-bezier(.2,0,0,1); }
@@ -307,7 +308,7 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 
 .guides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
 
-.guide-hit { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px;
+.guide-hit { position: relative; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px;
   overflow: hidden; background: var(--bg-raised, var(--card)); transition: transform .15s ease, box-shadow .15s ease; }
 .guide-hit:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -18px rgba(0,0,0,.5); }
 .guide-hit-cover { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--accent-bg);
@@ -332,6 +333,16 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .guide-hit-date { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; white-space: nowrap; text-align: right; }
 .guide-hit-auto { padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--card);
   font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted-foreground); }
+
+/* Share is a sibling of each card link, avoiding nested controls and accidental navigation. */
+.card-share-button { position: absolute; z-index: 2; top: 10px; right: 10px; display: grid; width: 40px; height: 40px;
+  place-items: center; padding: 0; border: 1px solid rgb(255 255 255 / .45); border-radius: 11px;
+  background: rgb(25 20 17 / .74); color: #fff; box-shadow: 0 4px 14px rgb(0 0 0 / .18);
+  backdrop-filter: blur(8px); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.card-share-button:hover { background: rgb(25 20 17 / .9); transform: translateY(-1px); }
+.card-share-button:focus-visible { outline: 3px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
+.card-share-button svg { width: 19px; height: 19px; }
+.card-share-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .guides-pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 2rem 0 .5rem; }
 .guides-pager button { padding: .5rem 1rem; border: 1px solid var(--border); border-radius: 10px;
