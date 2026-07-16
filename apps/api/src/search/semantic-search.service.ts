@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import OpenAI from 'openai';
 
@@ -13,7 +13,7 @@ export class SemanticSearchService {
   private readonly logger = new Logger(SemanticSearchService.name);
   private client: OpenAI | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private getClient(): OpenAI {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
