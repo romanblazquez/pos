@@ -213,8 +213,12 @@ curl -s 'http://localhost:3010/api/v1/products/<slug>?locale=en' | jq '{name,des
    `Person` authorship in the Article JSON-LD. Personas live: Mateo (×3 es), Sofía
    (es), Eoin (×2 en), Dave (en), Kasia (en). **Núria (nuria-es) is not yet used** —
    give her the next abstract/2-player Spanish guide, written natively in peninsular
-   voice (vosotros), not a byline pasted on voseo text. Product-page "editor's take"
-   bylines are still TODO.
+   voice (vosotros), not a byline pasted on voseo text. ~~Product-page "editor's take"
+   bylines~~ **DONE (2026-07-16)** — `content/editorial/takes.ts` + `editorTake(slug,locale)`;
+   product pages render a persona-signed opinion card (`.editor-take`) beneath the
+   description, assigned by fit across all 6 personas. Takes are written natively in BOTH
+   locales (2–3 sentences each, no MT flag). 24 marquee games covered; section renders
+   only when a take exists, so it's incremental — add slugs to `TAKES` to extend.
 4. Extend curated copy Tier-2 (verified-but-not-shoppable) via MT + light edit.
 5. Approve/replace the 11,134 legacy `es-MX` NEEDS_REVIEW rows or delete them once
    superseded by `curated-v1`.

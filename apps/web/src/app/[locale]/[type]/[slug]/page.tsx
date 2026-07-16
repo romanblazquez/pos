@@ -16,6 +16,7 @@ import { articleLd, breadcrumbLd, faqLd, itemListLd, productLd, type Crumb } fro
 import { getGuide, guideAlternates, guidesMentioning, type Guide, type GuidePick } from '@/lib/guides';
 import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
+import { editorTake } from '@/content/editorial/takes';
 import { THEMES, getThemeBySlug } from '@/lib/themes';
 import { JsonLd } from '@/components/JsonLd';
 import { LocaleAlternates } from '@/components/LocaleAlternates';
@@ -489,6 +490,26 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
       </div>
 
       {product.description && <p className="prose" style={{ marginTop: '1.5rem' }}>{product.description}</p>}
+
+      {/* Persona-signed editor's take — unique human-voice content + a product→author link. */}
+      {(() => {
+        const take = editorTake(product.slug, locale);
+        if (!take) return null;
+        const { author, text } = take;
+        const initials = author.name.split(' ').map((w) => w[0]).join('').slice(0, 2);
+        return (
+          <figure className="editor-take">
+            <figcaption className="editor-take-head">
+              <span aria-hidden="true" className="editor-take-avatar">{initials}</span>
+              <span>
+                <b>{locale === 'es' ? 'La opinión de' : "Editor's take by"} {author.name}</b>
+                <span className="muted"> · {author.from}</span>
+              </span>
+            </figcaption>
+            <blockquote className="editor-take-quote">{text}</blockquote>
+          </figure>
+        );
+      })()}
 
       {sorted.length > 0 && (
         <section>

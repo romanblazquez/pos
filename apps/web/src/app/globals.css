@@ -347,3 +347,12 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .share-btn:hover { background: var(--muted); }
 .share-btn svg { width: 18px; height: 18px; }
 .share-copied { font-size: .8rem; font-weight: 600; color: var(--primary); }
+
+/* Product-page editor's take — persona-signed opinion card */
+.editor-take { margin: 1.75rem 0 0; padding: 1.1rem 1.25rem; border: 1px solid var(--border);
+  border-left: 3px solid var(--primary); border-radius: 14px; background: var(--bg-raised, var(--card)); }
+.editor-take-head { display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 1.35; }
+.editor-take-avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
+  font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.editor-take-quote { margin: .7rem 0 .1rem; font-size: 1.02rem; line-height: 1.55; font-style: italic; }
