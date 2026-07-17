@@ -84,6 +84,7 @@
   "home.players": "Players",
   "home.categories": "Categories",
   "home.mechanics": "Mechanics",
+  "home.showMore": "Show {count} more",
   "home.allCatalog": "Full catalog",
   "home.allStoresConnected": "All connected stores",
 
@@ -98,6 +99,10 @@
   "search.budget": "Budget",
   "search.players": "{count} players",
   "search.playersAny": "Any",
+  "search.sortBestMatch": "Best match",
+  "search.sortPriceAsc": "Price: low to high",
+  "search.sortPriceDesc": "Price: high to low",
+  "search.sortName": "Name (A–Z)",
   "search.errorTitle": "Something went wrong while searching",
   "search.errorBody": "Check your connection to the API and try again.",
   "search.startTitle": "Find your next game",

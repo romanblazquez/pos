@@ -37,6 +37,26 @@ const PRICE_OPTIONS = [
 ] as const;
 const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
 
+// Mirrors the SEO app's Sort control and the API's `sortBy` enum. Left
+// undefined until the user picks: the API counts sortBy as a structured filter
+// (hasStructuredFilters), so always sending it would silently disable semantic
+// search for natural-language queries.
+type SortBy = 'rank_score' | 'price_asc' | 'price_desc' | 'name';
+// Search-specific labels, matching the SEO app's Sort control word for word.
+// Deliberately NOT HomePage's `home.sort*` keys: browsing a catalogue calls
+// rank_score "Recomendados", but on a query it means best *match*.
+const SORT_OPTIONS: { value: SortBy; labelId: string }[] = [
+  { value: 'rank_score', labelId: 'search.sortBestMatch' },
+  { value: 'price_asc', labelId: 'search.sortPriceAsc' },
+  { value: 'price_desc', labelId: 'search.sortPriceDesc' },
+  { value: 'name', labelId: 'search.sortName' },
+];
+
+// Keep the rail short enough that Categorías stays reachable without scrolling
+// inside the sticky panel — same budget as the SEO app.
+const MECHANICS_SHOWN = 6;
+const MECHANICS_RANKED = 15;
+
 // Same bggWeight bands as ProductPage.tsx's ComplexityMeter and the API's
 // complexity-bands.ts — keeps the filter and the product-page display
 // (and both backends, Typesense + Prisma fallback) all in agreement.
@@ -66,6 +86,7 @@ async function searchProducts(
   players?: number,
   mechanics: string[] = [],
   complexity?: string,
+  sortBy?: SortBy,
 ): Promise<{ results: Product[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -78,8 +99,11 @@ async function searchProducts(
   if (maxPrice) params.set('maxPrice', String(maxPrice));
   if (players) params.set('minPlayers', String(players));
   if (complexity) params.set('complexity', complexity);
+  if (sortBy) params.set('sortBy', sortBy);
   for (const mechanic of mechanics) params.append('mechanics', mechanic);
-  const hasFilters = Boolean(category || inStockOnly || maxPrice || players || mechanics.length || complexity);
+  // Mirrors the API's hasStructuredFilters, which counts sortBy — so an explicit
+  // sort turns semantic search off rather than sending a contradictory pair.
+  const hasFilters = Boolean(category || inStockOnly || maxPrice || players || mechanics.length || complexity || sortBy);
   if (!hasFilters && isNaturalLanguageQuery(q)) params.set('semantic', 'true');
 
   const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
@@ -123,16 +147,17 @@ export default function SearchPage({
   const [players, setPlayers] = useState<number | undefined>(undefined);
   const [mechanics, setMechanics] = useState<string[]>([]);
   const [complexity, setComplexity] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<SortBy | undefined>(undefined);
   const [page, setPage] = useState(1);
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
   useEffect(() => setDraft(query), [query]);
-  useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players, mechanics, complexity]);
+  useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['search', query, category, inStockOnly, maxPrice, players, mechanics, complexity, page, intl.locale],
-    queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players, mechanics, complexity),
+    queryKey: ['search', query, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy, page, intl.locale],
+    queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy),
     placeholderData: (previous) => previous,
   });
 
@@ -145,6 +170,23 @@ export default function SearchPage({
     queryKey: ['marketplace-mechanics'],
     queryFn: fetchMechanics,
   });
+
+  const rankedMechanics = (mechanicsData ?? []).slice(0, MECHANICS_RANKED);
+  const hiddenMechanics = rankedMechanics.slice(MECHANICS_SHOWN);
+  const mechanicChip = (mechanic: string) => {
+    const active = mechanics.includes(mechanic);
+    return (
+      <FilterChip
+        key={mechanic}
+        active={active}
+        onClick={() => setMechanics((current) => (
+          active ? current.filter((m) => m !== mechanic) : [...current, mechanic]
+        ))}
+      >
+        {mechanic}
+      </FilterChip>
+    );
+  };
 
   const results = data?.results ?? [];
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
@@ -183,7 +225,7 @@ export default function SearchPage({
           title={intl.formatMessage({ id: 'home.explore' })}
           subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
           icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
-          action={(inStockOnly || maxPrice !== undefined || players !== undefined || mechanics.length > 0 || complexity !== undefined || category) ? (
+          action={(inStockOnly || maxPrice !== undefined || players !== undefined || mechanics.length > 0 || complexity !== undefined || sortBy !== undefined || category) ? (
             <button
               type="button"
               onClick={() => {
@@ -192,6 +234,7 @@ export default function SearchPage({
                 setPlayers(undefined);
                 setMechanics([]);
                 setComplexity(undefined);
+                setSortBy(undefined);
                 onSearch(query, undefined);
               }}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]"
@@ -201,6 +244,20 @@ export default function SearchPage({
             </button>
           ) : undefined}
         >
+          {/* Sort leads the panel, matching the SEO app's rail order. */}
+          <CatalogFilterSection title={intl.formatMessage({ id: 'home.sort' })}>
+            <select
+              className="filter-select"
+              aria-label={intl.formatMessage({ id: 'home.sort' })}
+              value={sortBy ?? 'rank_score'}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{intl.formatMessage({ id: o.labelId })}</option>
+              ))}
+            </select>
+          </CatalogFilterSection>
+
           <CatalogFilterSection title={intl.formatMessage({ id: 'home.availability' })}>
             <FilterToggle
               checked={inStockOnly}
@@ -256,21 +313,20 @@ export default function SearchPage({
           {mechanicsData && mechanicsData.length > 0 && (
             <CatalogFilterSection title={intl.formatMessage({ id: 'home.mechanics' })}>
               <div className="flex flex-wrap gap-1.5">
-                {mechanicsData.slice(0, 15).map(({ mechanic }) => {
-                  const active = mechanics.includes(mechanic);
-                  return (
-                    <FilterChip
-                      key={mechanic}
-                      active={active}
-                      onClick={() => setMechanics((current) => (
-                        active ? current.filter((m) => m !== mechanic) : [...current, mechanic]
-                      ))}
-                    >
-                      {mechanic}
-                    </FilterChip>
-                  );
-                })}
+                {rankedMechanics.slice(0, MECHANICS_SHOWN).map(({ mechanic }) => mechanicChip(mechanic))}
               </div>
+              {hiddenMechanics.length > 0 && (
+                // Opened when one of the user's own picks is in here — never
+                // hide an active filter behind a disclosure.
+                <details className="filter-more" open={hiddenMechanics.some((m) => mechanics.includes(m.mechanic))}>
+                  <summary className="filter-more-summary">
+                    {intl.formatMessage({ id: 'home.showMore' }, { count: hiddenMechanics.length })}
+                  </summary>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {hiddenMechanics.map(({ mechanic }) => mechanicChip(mechanic))}
+                  </div>
+                </details>
+              )}
             </CatalogFilterSection>
           )}
 

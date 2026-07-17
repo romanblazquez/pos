@@ -8,6 +8,9 @@ export type UiLocale = 'es' | 'en';
 const CATEGORY_LABELS: Record<UiLocale, Record<string, string>> = {
   es: {
     'board-game': 'Juegos de mesa',
+    // Without this the tile fell through to the raw DB value and rendered the
+    // English "Expansion" on the Spanish storefront.
+    expansion: 'Expansiones',
     'Tipo de Juego': 'Tipo de juego',
     Preventas: 'Preventas',
     Inventario: 'Disponibles ahora',
@@ -15,6 +18,7 @@ const CATEGORY_LABELS: Record<UiLocale, Record<string, string>> = {
   },
   en: {
     'board-game': 'Board games',
+    expansion: 'Expansions',
     'Tipo de Juego': 'Game type',
     Preventas: 'Pre-orders',
     Inventario: 'Available now',
@@ -25,6 +29,7 @@ const CATEGORY_LABELS: Record<UiLocale, Record<string, string>> = {
 const CATEGORY_DESCRIPTIONS: Record<UiLocale, Record<string, string>> = {
   es: {
     'board-game': 'Clásicos modernos, estrategia, party games y familiares.',
+    expansion: 'Amplía los juegos que ya están en tu mesa.',
     'Tipo de Juego': 'Explora por mecánica, estilo de partida y ocasión.',
     Preventas: 'Reserva novedades antes de que lleguen a tienda.',
     Inventario: 'Opciones con disponibilidad activa para compra rápida.',
@@ -32,6 +37,7 @@ const CATEGORY_DESCRIPTIONS: Record<UiLocale, Record<string, string>> = {
   },
   en: {
     'board-game': 'Modern classics, strategy, party games, and family favorites.',
+    expansion: 'Expand games already on your table.',
     'Tipo de Juego': 'Browse by mechanic, play style, and occasion.',
     Preventas: 'Reserve new releases before they hit the store.',
     Inventario: 'Options with active stock for a quick purchase.',

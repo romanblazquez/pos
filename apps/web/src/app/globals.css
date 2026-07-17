@@ -1,4 +1,5 @@
 @import "../../../../libs/shared/ui-react/src/styles.css";
+@import "../../../../libs/shared/ui-react/src/filter-panel.css";
 
 @source "../**/*.{ts,tsx}";
 @source "../../../../libs/shared/ui-react/src/components/**/*.{ts,tsx}";
@@ -225,8 +226,9 @@ button, input, select { font: inherit; }
 .filter-opt[aria-current='true'] { color: var(--primary); font-weight: 700; }
 .filter-opt input, .filter-check input { accent-color: var(--primary); }
 .filter-check { display: flex; align-items: center; gap: .5rem; color: var(--foreground); font-size: .86rem; cursor: pointer; }
-.filter-select, .filter-price input { border: 1px solid var(--input); border-radius: 10px; background: var(--card); color: var(--foreground); }
-.filter-select { width: 100%; padding: .55rem .65rem; font-size: .84rem; }
+/* .filter-select is styled in the shared filter-panel.css partial (imported at
+   the top of this file) — it must not be restyled here or the later rule wins. */
+.filter-price input { border: 1px solid var(--input); border-radius: 10px; background: var(--card); color: var(--foreground); }
 .filter-price { display: flex; align-items: center; gap: .4rem; }
 .filter-price label { min-width: 0; flex: 1; }
 .filter-price label > span { display: block; margin-bottom: .3rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .58rem; text-transform: uppercase; }
@@ -573,20 +575,6 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 /* Sort control (§04 form controls). A native select so it works in the no-JS
    GET form the whole filter panel is built as; styled to the parchment kit
    rather than left as the browser default. */
-.filter-select {
-  width: 100%; padding: .55rem 2rem .55rem .7rem;
-  border: 1px solid var(--border-strong, var(--input)); border-radius: 10px;
-  background-color: var(--bg-input); color: var(--tx);
-  font-size: .85rem; font-weight: 600; line-height: 1.3;
-  cursor: pointer; appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236f6557' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right .6rem center;
-}
-.filter-select:hover { border-color: var(--primary); }
-[data-theme="dark"] .filter-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239a8e79' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-
 /* ── Sticky filter rail (desktop) ────────────────────────────────────────────
    The panel already declared `position: sticky; top: 80px` and still scrolled
    away, because a sticky box can only travel inside its containing block and
@@ -601,18 +589,5 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   .mobile-filter-modal > .mobile-filter-scroll { height: 100%; }
 }
 
-/* Progressive disclosure inside the filter rail. <details> keeps this working
-   with no JS — the same contract as the rest of the panel — and collapsed
-   inputs still submit, since <details> hides its content rather than detaching
-   it from the form. */
-.filter-more { margin-top: .5rem; }
-.filter-more-summary { display: inline-flex; align-items: center; gap: .3rem; width: fit-content;
-  padding: .3rem .1rem; color: var(--primary); font-size: .78rem; font-weight: 700;
-  cursor: pointer; list-style: none; }
-.filter-more-summary::-webkit-details-marker { display: none; }
-.filter-more-summary::after { content: ''; width: 7px; height: 7px; margin-left: .1rem;
-  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s ease; }
-.filter-more[open] .filter-more-summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
-.filter-more-summary:hover { text-decoration: underline; }
-.filter-more-summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; border-radius: 4px; }
+/* .filter-more / .filter-select now live in the shared filter-panel.css partial
+   (imported at the top of this file), so apps/marketplace gets them too. */

@@ -1,0 +1,46 @@
+/* Filter-panel chrome shared by both frontends (§04).
+ *
+ * Lives apart from styles.css because that file carries `@import "tailwindcss"`
+ * plus the full token set, and apps/marketplace deliberately declares its own
+ * @theme — importing the whole thing there would double-import Tailwind and
+ * clash tokens. This partial defines no tokens; it only *reads* vars that both
+ * apps already define (--bg-input, --tx, --primary, --border-strong, --ring),
+ * so it is safe to import into either.
+ *
+ * Import it after Tailwind so these rules win over utility defaults:
+ *   apps/web/src/app/globals.css
+ *   apps/marketplace/src/styles.css
+ */
+
+/* Native <select>, not the Radix one: the SEO app's panel is a no-JS GET form
+   (see FormAutoSubmit), so the control must work unhydrated. Styled to the
+   parchment kit rather than left as the browser default. */
+.filter-select {
+  width: 100%; padding: .55rem 2rem .55rem .7rem;
+  border: 1px solid var(--border-strong, var(--input)); border-radius: 10px;
+  background-color: var(--bg-input); color: var(--tx);
+  font-size: .85rem; font-weight: 600; line-height: 1.3;
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236f6557' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right .6rem center;
+}
+.filter-select:hover { border-color: var(--primary); }
+[data-theme="dark"] .filter-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239a8e79' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Progressive disclosure inside the filter rail. <details> keeps this working
+   with no JS — the same contract as the rest of the SEO panel — and collapsed
+   inputs still submit, since <details> hides its content rather than detaching
+   it from the form. */
+.filter-more { margin-top: .5rem; }
+.filter-more-summary { display: inline-flex; align-items: center; gap: .3rem; width: fit-content;
+  padding: .3rem .1rem; color: var(--primary); font-size: .78rem; font-weight: 700;
+  cursor: pointer; list-style: none; }
+.filter-more-summary::-webkit-details-marker { display: none; }
+.filter-more-summary::after { content: ''; width: 7px; height: 7px; margin-left: .1rem;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s ease; }
+.filter-more[open] .filter-more-summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.filter-more-summary:hover { text-decoration: underline; }
+.filter-more-summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; border-radius: 4px; }
