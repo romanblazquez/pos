@@ -301,9 +301,9 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   .hero { padding: 3.25rem 0 2.75rem; }
   .hero h1 { font-size: clamp(2.5rem, 13vw, 3.7rem); }
   /* Stack the product header: its desktop grid keeps a 260px-min figure column,
-     which plus the gap pushed the title/price/buy column off a phone screen. */
+     which plus the gap pushed the title/price/buy column off a phone screen.
+     Single column lets the cover span the full phone width. */
   .product-head { grid-template-columns: 1fr; gap: 1.5rem; }
-  .product-figure { max-width: 320px; }
   .value-grid { grid-template-columns: 1fr; }
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
   .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
