@@ -160,6 +160,8 @@ const COMMERCE_BADGE_STYLES: Record<CommerceState, string> = {
   'top-ranked': 'border-[#E2CF9C] bg-[#F4E9CF] text-[#8A6312] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]',
   'community-pick': 'border-[#CCD8CD] bg-[#E5EBE5] text-[#354A3D] dark:border-[#789981]/30 dark:bg-[#789981]/15 dark:text-[#A9C5AF]',
   new: 'border-[#F0D9C2] bg-[#FBEFE0] text-[#9C4324] dark:border-[#CE6A41]/30 dark:bg-[#CE6A41]/15 dark:text-[#E89270]',
+  hot: 'border-[#B4502E] bg-[#B4502E] text-white dark:border-[#CE6A41] dark:bg-[#CE6A41] dark:text-white',
+  expansion: 'border-[#D9CEE6] bg-[#ECE6F3] text-[#574079] dark:border-[#A88AD0]/30 dark:bg-[#A88AD0]/15 dark:text-[#C9B6EC]',
 };
 
 function CommerceBadge({ state }: { state: CommerceState }) {

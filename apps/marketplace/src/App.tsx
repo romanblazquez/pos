@@ -169,8 +169,17 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
   const [cartOpen, setCartOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [checkout, setCheckout] = useState<CheckoutState>({ state: 'idle' });
-  const { session } = useCustomer();
+  const { session, isLoading: isSessionLoading } = useCustomer();
   const { awardXP } = useShelf();
+
+  const isAccountRoute = route.page === 'account'
+    || route.page === 'wallet'
+    || route.page === 'orders'
+    || route.page === 'addresses';
+
+  useEffect(() => {
+    if (!isSessionLoading && isAccountRoute && !session) setAuthOpen(true);
+  }, [isAccountRoute, isSessionLoading, session]);
 
   useEffect(() => {
     const onPop = () => {
@@ -378,7 +387,9 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
           onClose={() => {
             setAuthOpen(false);
             if (session) navigate({ page: 'account' });
+            else if (isAccountRoute) replaceRoute({ page: 'home' });
           }}
+          defaultTab="login"
         />
       )}
     </div>
