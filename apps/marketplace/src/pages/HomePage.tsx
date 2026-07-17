@@ -22,6 +22,7 @@ import {
   CatalogFilterPanel,
   CatalogFilterSection,
   CatalogSearch,
+  FilterChip,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -32,6 +33,13 @@ import {
   formatMoney,
   getCategoryOptions,
 } from '../marketplace-meta.js';
+import {
+  COMPLEXITY_OPTIONS,
+  MECHANICS_RANKED,
+  MECHANICS_SHOWN,
+  PLAYER_OPTIONS,
+  PRICE_OPTIONS,
+} from '../catalog-filter-options.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 24;
@@ -64,24 +72,7 @@ const DEFAULT_FILTERS: CatalogFilters = {
   sortBy: 'rank_score',
 };
 
-const PRICE_OPTIONS = [
-  { labelId: 'home.priceUpTo500', value: 50_000 },
-  { labelId: 'home.priceUpTo1000', value: 100_000 },
-  { labelId: 'home.priceUpTo1500', value: 150_000 },
-] as const;
-
-const PLAYER_OPTIONS = [1, 2, 3, 4, 5] as const;
-
-// Same bggWeight bands as ProductPage.tsx's ComplexityMeter and the API's
-// complexity-bands.ts — keeps the filter and the product-page display
-// (and the two backends, Typesense + Prisma fallback) all in agreement.
-const COMPLEXITY_OPTIONS = [
-  { value: 'light', labelId: 'product.complexityLight' },
-  { value: 'medium-light', labelId: 'product.complexityMediumLight' },
-  { value: 'medium', labelId: 'product.complexityMedium' },
-  { value: 'heavy', labelId: 'product.complexityHeavy' },
-  { value: 'expert', labelId: 'product.complexityExpert' },
-] as const;
+// Filter axes live in catalog-filter-options.ts, shared with SearchPage.
 
 async function fetchProducts(page: number, category: string | undefined, filters: CatalogFilters, locale: string): Promise<ProductsResponse> {
   const offset = (page - 1) * PAGE_SIZE;
@@ -321,23 +312,23 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
           {(activeCategory || activeFilterCount > 0) && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {activeCategory && (
-                <FilterChip label={categoryLabel(activeCategory, intl.locale as 'es' | 'en')} onClear={() => selectCategory(undefined)} />
+                <ActiveFilterPill label={categoryLabel(activeCategory, intl.locale as 'es' | 'en')} onClear={() => selectCategory(undefined)} />
               )}
-              {filters.inStockOnly && <FilterChip label={intl.formatMessage({ id: 'home.filterInStock' })} onClear={() => updateFilters({ inStockOnly: false })} />}
+              {filters.inStockOnly && <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterInStock' })} onClear={() => updateFilters({ inStockOnly: false })} />}
               {filters.maxPrice && (
-                <FilterChip label={intl.formatMessage({ id: 'home.filterMaxPrice' }, { price: formatMoney(filters.maxPrice) })} onClear={() => updateFilters({ maxPrice: undefined })} />
+                <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterMaxPrice' }, { price: formatMoney(filters.maxPrice) })} onClear={() => updateFilters({ maxPrice: undefined })} />
               )}
               {filters.players && (
-                <FilterChip label={intl.formatMessage({ id: 'home.filterPlayers' }, { count: filters.players })} onClear={() => updateFilters({ players: undefined })} />
+                <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterPlayers' }, { count: filters.players })} onClear={() => updateFilters({ players: undefined })} />
               )}
               {filters.complexity && (
-                <FilterChip
+                <ActiveFilterPill
                   label={intl.formatMessage({ id: COMPLEXITY_OPTIONS.find((o) => o.value === filters.complexity)?.labelId ?? 'product.complexity' })}
                   onClear={() => updateFilters({ complexity: undefined })}
                 />
               )}
               {filters.mechanics.map((mechanic) => (
-                <FilterChip
+                <ActiveFilterPill
                   key={mechanic}
                   label={mechanic}
                   onClear={() => updateFilters({ mechanics: filters.mechanics.filter((m) => m !== mechanic) })}
@@ -570,6 +561,24 @@ function MarketplaceCatalogFilters({
   onReset: () => void;
 }) {
   const intl = useIntl();
+  const rankedMechanics = mechanics.slice(0, MECHANICS_RANKED);
+  const hiddenMechanics = rankedMechanics.slice(MECHANICS_SHOWN);
+  const mechanicChip = (mechanic: string) => {
+    const active = filters.mechanics.includes(mechanic);
+    return (
+      <FilterChip
+        key={mechanic}
+        active={active}
+        onClick={() => onFilters({
+          mechanics: active
+            ? filters.mechanics.filter((m) => m !== mechanic)
+            : [...filters.mechanics, mechanic],
+        })}
+      >
+        {mechanic}
+      </FilterChip>
+    );
+  };
   return (
     <CatalogFilterPanel
       title={intl.formatMessage({ id: 'home.explore' })}
@@ -599,18 +608,13 @@ function MarketplaceCatalogFilters({
       <CatalogFilterSection title={intl.formatMessage({ id: 'home.budget' })}>
         <div className="grid grid-cols-2 gap-1.5">
           {PRICE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
+            <FilterChip
+              key={option.value ?? 'none'}
+              active={filters.maxPrice === option.value}
               onClick={() => onFilters({ maxPrice: filters.maxPrice === option.value ? undefined : option.value })}
-              className={cn(
-                'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                filters.maxPrice === option.value
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                  : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-              )}
             >
               {intl.formatMessage({ id: option.labelId })}
-            </button>
+            </FilterChip>
           ))}
         </div>
       </CatalogFilterSection>
@@ -618,18 +622,16 @@ function MarketplaceCatalogFilters({
       <CatalogFilterSection title={intl.formatMessage({ id: 'home.players' })}>
         <div className="flex flex-wrap gap-1.5">
           {PLAYER_OPTIONS.map((players) => (
-            <button
-              key={players}
+            <FilterChip
+              key={players ?? 'any'}
+              shape="compact"
+              active={filters.players === players}
               onClick={() => onFilters({ players: filters.players === players ? undefined : players })}
-              className={cn(
-                'h-8 min-w-8 rounded-lg border px-2 text-xs font-semibold transition-colors',
-                filters.players === players
-                  ? 'border-emerald-600 bg-emerald-700 text-white'
-                  : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-              )}
             >
-              {players === 5 ? '5+' : players}
-            </button>
+              {players === undefined
+                ? intl.formatMessage({ id: 'search.playersAny' })
+                : players === 5 ? '5+' : players}
+            </FilterChip>
           ))}
         </div>
       </CatalogFilterSection>
@@ -637,18 +639,13 @@ function MarketplaceCatalogFilters({
       <CatalogFilterSection title={intl.formatMessage({ id: 'product.complexity' })}>
         <div className="flex flex-wrap gap-1.5">
           {COMPLEXITY_OPTIONS.map((option) => (
-            <button
+            <FilterChip
               key={option.value}
+              active={filters.complexity === option.value}
               onClick={() => onFilters({ complexity: filters.complexity === option.value ? undefined : option.value })}
-              className={cn(
-                'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                filters.complexity === option.value
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                  : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-              )}
             >
               {intl.formatMessage({ id: option.labelId })}
-            </button>
+            </FilterChip>
           ))}
         </div>
       </CatalogFilterSection>
@@ -656,28 +653,20 @@ function MarketplaceCatalogFilters({
       {mechanics.length > 0 && (
         <CatalogFilterSection title={intl.formatMessage({ id: 'home.mechanics' })}>
           <div className="flex flex-wrap gap-1.5">
-            {mechanics.slice(0, 15).map(({ mechanic }) => {
-              const active = filters.mechanics.includes(mechanic);
-              return (
-                <button
-                  key={mechanic}
-                  onClick={() => onFilters({
-                    mechanics: active
-                      ? filters.mechanics.filter((m) => m !== mechanic)
-                      : [...filters.mechanics, mechanic],
-                  })}
-                  className={cn(
-                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                    active
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                  )}
-                >
-                  {mechanic}
-                </button>
-              );
-            })}
+            {rankedMechanics.slice(0, MECHANICS_SHOWN).map(({ mechanic }) => mechanicChip(mechanic))}
           </div>
+          {hiddenMechanics.length > 0 && (
+            // Opened when one of the user's own picks is in here — never hide an
+            // active filter behind a disclosure.
+            <details className="filter-more" open={hiddenMechanics.some((m) => filters.mechanics.includes(m.mechanic))}>
+              <summary className="filter-more-summary">
+                {intl.formatMessage({ id: 'home.showMore' }, { count: hiddenMechanics.length })}
+              </summary>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {hiddenMechanics.map(({ mechanic }) => mechanicChip(mechanic))}
+              </div>
+            </details>
+          )}
         </CatalogFilterSection>
       )}
 
@@ -706,7 +695,9 @@ function MarketplaceCatalogFilters({
   );
 }
 
-function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+// An *applied* filter shown above the grid, with a clear affordance — not a
+// filter option. Distinct from the shared FilterChip, which is an option.
+function ActiveFilterPill({ label, onClear }: { label: string; onClear: () => void }) {
   return (
     <button
       onClick={onClear}

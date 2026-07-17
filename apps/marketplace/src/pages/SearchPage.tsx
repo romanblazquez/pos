@@ -28,45 +28,20 @@ import {
   categoryLabel,
   getCategoryOptions,
 } from '../marketplace-meta.js';
+import {
+  COMPLEXITY_OPTIONS,
+  MECHANICS_RANKED,
+  MECHANICS_SHOWN,
+  PLAYER_OPTIONS,
+  PRICE_OPTIONS,
+  SORT_OPTIONS,
+  type SortBy,
+} from '../catalog-filter-options.js';
 
-const PRICE_OPTIONS = [
-  { labelId: 'search.noLimit', value: undefined },
-  { labelId: 'home.priceUpTo500', value: 50_000 },
-  { labelId: 'home.priceUpTo1000', value: 100_000 },
-  { labelId: 'home.priceUpTo1500', value: 150_000 },
-] as const;
-const PLAYER_OPTIONS = [undefined, 1, 2, 3, 4, 5] as const;
-
-// Mirrors the SEO app's Sort control and the API's `sortBy` enum. Left
-// undefined until the user picks: the API counts sortBy as a structured filter
-// (hasStructuredFilters), so always sending it would silently disable semantic
+// Filter axes live in catalog-filter-options.ts, shared with HomePage.
+// `sortBy` stays undefined until the user picks one: the API counts it in
+// hasStructuredFilters, so always sending it would silently disable semantic
 // search for natural-language queries.
-type SortBy = 'rank_score' | 'price_asc' | 'price_desc' | 'name';
-// Search-specific labels, matching the SEO app's Sort control word for word.
-// Deliberately NOT HomePage's `home.sort*` keys: browsing a catalogue calls
-// rank_score "Recomendados", but on a query it means best *match*.
-const SORT_OPTIONS: { value: SortBy; labelId: string }[] = [
-  { value: 'rank_score', labelId: 'search.sortBestMatch' },
-  { value: 'price_asc', labelId: 'search.sortPriceAsc' },
-  { value: 'price_desc', labelId: 'search.sortPriceDesc' },
-  { value: 'name', labelId: 'search.sortName' },
-];
-
-// Keep the rail short enough that Categorías stays reachable without scrolling
-// inside the sticky panel — same budget as the SEO app.
-const MECHANICS_SHOWN = 6;
-const MECHANICS_RANKED = 15;
-
-// Same bggWeight bands as ProductPage.tsx's ComplexityMeter and the API's
-// complexity-bands.ts — keeps the filter and the product-page display
-// (and both backends, Typesense + Prisma fallback) all in agreement.
-const COMPLEXITY_OPTIONS = [
-  { value: 'light', labelId: 'product.complexityLight' },
-  { value: 'medium-light', labelId: 'product.complexityMediumLight' },
-  { value: 'medium', labelId: 'product.complexityMedium' },
-  { value: 'heavy', labelId: 'product.complexityHeavy' },
-  { value: 'expert', labelId: 'product.complexityExpert' },
-] as const;
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
