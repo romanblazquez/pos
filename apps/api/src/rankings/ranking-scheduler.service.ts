@@ -63,6 +63,18 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
     );
 
     this.log.log('Ranking scheduler initialized — hourly ranking and six-hour semantic refresh registered');
+
+    // If the search collection was just recreated on a schema change (or this is
+    // a fresh environment), it is empty and search would fall back to Prisma
+    // until the next hourly pass. Enqueue one immediate pass to close that gap.
+    try {
+      if (await this.search.isEmpty()) {
+        await this.queue.add(JOB_NAME, {}, { priority: 1 });
+        this.log.log('Search index empty on boot — enqueued an immediate ranking pass');
+      }
+    } catch (error) {
+      this.log.warn(`Could not check search index on boot: ${String(error)}`);
+    }
   }
 
   async onModuleDestroy() {

@@ -36,7 +36,10 @@ const COLLECTION_SCHEMA = {
   name: COLLECTION,
   fields: [
     { name: 'slug',            type: 'string'  as const },
-    { name: 'name',            type: 'string'  as const },
+    // sort: true is required for `sortBy=name` (name:asc). Without it Typesense
+    // rejects the sort, the search returns nothing, and the code falls through
+    // to the empty Prisma path — so "Nombre (A–Z)" silently showed 0 results.
+    { name: 'name',            type: 'string'  as const, sort: true },
     { name: 'nameEs',          type: 'string'  as const, optional: true },
     { name: 'publisher',       type: 'string'  as const, optional: true },
     { name: 'description',     type: 'string'  as const, optional: true },
@@ -86,13 +89,15 @@ export class TypesenseService implements OnModuleInit {
       // Recreate when the schema drifts: wrong sort field, or missing the
       // bilingual search fields (nameEs/descriptionEs). The hourly ranking job
       // repopulates the empty collection; the Prisma fallback covers the gap.
-      const fields = (existing as { fields?: Array<{ name: string }> }).fields ?? [];
+      const fields = (existing as { fields?: Array<{ name: string; sort?: boolean }> }).fields ?? [];
       const hasBilingual = fields.some((f) => f.name === 'nameEs');
       const sortOk = (existing as { default_sorting_field?: string }).default_sorting_field === 'inStockListings';
-      if (!hasBilingual || !sortOk) {
+      // `name` must be sortable for sortBy=name; older collections predate it.
+      const nameSortable = fields.some((f) => f.name === 'name' && f.sort === true);
+      if (!hasBilingual || !sortOk || !nameSortable) {
         await this.client.collections(COLLECTION).delete();
         await this.client.collections().create(COLLECTION_SCHEMA);
-        this.log.log('Typesense collection recreated (schema updated — bilingual fields)');
+        this.log.log('Typesense collection recreated (schema updated)');
       } else {
         this.log.log('Typesense collection ready');
       }
@@ -104,6 +109,22 @@ export class TypesenseService implements OnModuleInit {
         // Non-fatal — search degrades to Prisma full-text fallback
         this.log.warn(`Typesense unavailable: ${String(err)}`);
       }
+    }
+  }
+
+  /**
+   * True when the collection holds no documents — e.g. just after
+   * ensureCollection() recreated it on a schema change. The scheduler uses this
+   * to reindex immediately on boot instead of leaving search on the Prisma
+   * fallback until the next hourly pass. Treats an unreachable Typesense as
+   * "not empty" so a transient outage never triggers a needless full reindex.
+   */
+  async isEmpty(): Promise<boolean> {
+    try {
+      const c = await this.client.collections(COLLECTION).retrieve();
+      return ((c as { num_documents?: number }).num_documents ?? 0) === 0;
+    } catch {
+      return false;
     }
   }
 
