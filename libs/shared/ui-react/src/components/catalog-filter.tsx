@@ -25,7 +25,10 @@ export function CatalogFilterPanel({
     <aside
       className={cn(
         'catalog-filter-panel flex flex-col overflow-hidden rounded-[14px] border border-(--border) bg-(--bg-raised) p-3 shadow-sm',
-        sticky && 'sticky top-20 max-h-[calc(100dvh-6rem)]',
+        // 100dvh - 5rem sticky top - 1rem bottom breathing room. Because the
+        // panel is a flex column, its body gets exactly the remainder after
+        // the filter header and footer take their intrinsic heights.
+        sticky && 'sticky top-20 h-[calc(100dvh-6rem)] max-h-[calc(100dvh-6rem)]',
         className,
       )}
       {...props}
