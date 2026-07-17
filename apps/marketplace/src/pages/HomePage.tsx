@@ -472,7 +472,7 @@ function SellerCallout() {
       <p className="text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'home.hasStore' })}</p>
       <p className="mt-1 text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'home.hasStoreHint' })}</p>
       <Button asChild variant="outline" className="mt-4 w-full">
-        <a href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}>
+        <a href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'} target="_blank" rel="noopener noreferrer">
           {intl.formatMessage({ id: 'home.registerStore' })}
           <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
         </a>

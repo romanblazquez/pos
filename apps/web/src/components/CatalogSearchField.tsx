@@ -27,12 +27,23 @@ export function CatalogSearchField({
   const router = useRouter();
   const [value, setValue] = useState(initialValue);
 
+  // A new query starts a fresh search, so it must not inherit the current
+  // facet filters. The filter rail is a no-JS GET form of uncontrolled inputs
+  // (defaultChecked), so a soft router.push to the clean ?q= URL leaves those
+  // checked inputs stale — the filters would look cleared yet ride along on the
+  // next submit. A full-document load to just ?q= remounts the rail with empty
+  // defaults, which is what actually clears the filters for the new query.
+  const runSearch = (term: string) => {
+    const q = term.trim();
+    window.location.assign(q ? `${searchPath}?q=${encodeURIComponent(q)}` : searchPath);
+  };
+
   return (
     <CatalogSearchBar
       endpoint="/api/search-suggestions"
       value={value}
       onValueChange={setValue}
-      onSearch={(term) => router.push(`${searchPath}?q=${encodeURIComponent(term)}`)}
+      onSearch={runSearch}
       onProduct={(slug) => router.push(`${productBase}/${slug}`)}
       locale={locale}
       placeholder={placeholder}

@@ -17,7 +17,7 @@ import { getGuide, guideAlternates, guidesMentioning, type Guide, type GuidePick
 import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { editorTake } from '@/content/editorial/takes';
-import { THEMES, getThemeBySlug } from '@/lib/themes';
+import { THEMES, getThemeBySlug, primaryTheme } from '@/lib/themes';
 import { identityFor } from '@/lib/category-identity';
 import { CategoryMotif } from '@/components/CategoryMotif';
 import { ShelfHero } from '@/components/ShelfHero';
@@ -141,9 +141,9 @@ export async function generateMetadata({
   if (kind === 'guides') {
     const guide = getGuide(params.slug, locale);
     if (!guide) return {};
-    // Cover = first pick's product image, so social cards show a real game photo
-    // instead of the default banner.
-    const cover = await guideCover(guide, locale);
+    // Social card = the guide's curated editorial banner; fall back to the first
+    // pick's product photo only if a guide somehow has no art.
+    const cover = guide.ogImage ?? (await guideCover(guide, locale));
     const author = guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined;
     return buildMetadata({
       locale,
@@ -432,37 +432,77 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
   );
 }
 
-function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
-  const path = entityPath('games', locale, product.slug);
+// Raw catalogue categories are only base-game vs expansion — surface them with
+// human labels when a product has no richer theme to sit under.
+const RAW_CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
+  'board-game': { es: 'Juegos de mesa', en: 'Board games' },
+  expansion: { es: 'Expansiones', en: 'Expansions' },
+  Preventas: { es: 'Preventas', en: 'Preorders' },
+};
+
+// Breadcrumb trail for a product, built from the product's own info so it mirrors
+// where the game actually sits in the browse taxonomy:
+//   Inicio › Categorías › <best theme | labelled category> › <product>
+// The middle crumb prefers the product's primary curated theme (e.g. "Para 2
+// jugadores"), which is both the most useful landing for users and the most
+// search-relevant hub for bots; it falls back to the labelled raw category, and
+// finally to just the catalogue. Every crumb links to a page that resolves, so
+// the BreadcrumbList stays valid (no dead links, no fabricated levels).
+function productCrumbs(product: ProductDetail, locale: Locale, homeName: string, path: string): Crumb[] {
   const crumbs: Crumb[] = [
     { name: homeName, path: homePath(locale) },
-    { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: listingPath('games', locale) },
-    ...(product.category
-      ? [{
-          name: product.category,
-          path: entityPath('categories', locale, slugify(product.category)),
-        }]
-      : []),
-    { name: product.name, path },
+    { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
   ];
+
+  const primaryCategory = product.categories?.find((category) => category.isPrimary) ?? product.categories?.[0];
+  const theme = primaryTheme(product);
+  if (primaryCategory) {
+    crumbs.push({
+      name: primaryCategory.name,
+      path: entityPath('categories', locale, primaryCategory.slug),
+    });
+  } else if (theme) {
+    crumbs.push({ name: theme.label[locale], path: entityPath('categories', locale, theme.slug[locale]) });
+  } else if (product.category) {
+    const label = RAW_CATEGORY_LABELS[product.category]?.[locale] ?? product.category;
+    crumbs.push({ name: label, path: entityPath('categories', locale, slugify(product.category)) });
+  }
+
+  crumbs.push({ name: product.name, path });
+  return crumbs;
+}
+
+function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
+  const path = entityPath('games', locale, product.slug);
+  const crumbs = productCrumbs(product, locale, homeName, path);
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
 
-  const attrs: Array<{ label: string; value: string | number | undefined; wide?: boolean }> = [
-    { label: locale === 'es' ? 'Editorial' : 'Publisher', value: product.publisher, wide: true },
-    { label: locale === 'es' ? 'Diseñador' : 'Designer', value: product.designer, wide: true },
-    { label: locale === 'es' ? 'Año' : 'Year', value: product.yearPublished },
+  // Each attribute doubles as a crawlable entry point into a real filtered view,
+  // so bots discover publisher/designer/player-count hubs and users can pivot
+  // from any fact to "more like this". Publisher/year/player/age/duration use
+  // explicit structured filters; designer remains lexical until it gains a
+  // normalized relation of its own.
+  const searchFor = (term: string) => `${listingPath('search', locale)}?q=${encodeURIComponent(term)}`;
+  const gamesWith = (key: string, value: string | number) =>
+    `${listingPath('games', locale)}?${key}=${encodeURIComponent(String(value))}`;
+  const attrs: Array<{ label: string; value: string | number | undefined; wide?: boolean; href?: string }> = [
+    { label: locale === 'es' ? 'Editorial' : 'Publisher', value: product.publisher, wide: true, href: product.publisher ? gamesWith('publisher', product.publisher) : undefined },
+    { label: locale === 'es' ? 'Diseñador' : 'Designer', value: product.designer, wide: true, href: product.designer ? searchFor(product.designer) : undefined },
+    { label: locale === 'es' ? 'Año' : 'Year', value: product.yearPublished, href: product.yearPublished ? gamesWith('year', product.yearPublished) : undefined },
     {
       label: locale === 'es' ? 'Jugadores' : 'Players',
       value: product.minPlayers
         ? `${product.minPlayers}${product.maxPlayers && product.maxPlayers !== product.minPlayers ? `–${product.maxPlayers}` : ''}`
         : undefined,
+      href: product.minPlayers ? gamesWith('players', product.minPlayers) : undefined,
     },
-    { label: locale === 'es' ? 'Edad' : 'Age', value: product.minAge ? `${product.minAge}+` : undefined },
+    { label: locale === 'es' ? 'Edad' : 'Age', value: product.minAge ? `${product.minAge}+` : undefined, href: product.minAge ? gamesWith('age', product.minAge) : undefined },
     {
       label: locale === 'es' ? 'Duración' : 'Play time',
       value: product.playTimeMinutes ? `${product.playTimeMinutes} min` : undefined,
+      href: product.playTimeMinutes ? gamesWith('duration', product.playTimeMinutes) : undefined,
     },
   ];
 
@@ -497,13 +537,26 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
             </a>
           )}
 
+          <ShareBar url={absoluteUrl(path)} title={product.name} locale={locale} />
+
           <ul className="attrs">
             {attrs
               .filter(({ value }) => value !== undefined && value !== '')
-              .map(({ label, value, wide }) => (
+              .map(({ label, value, wide, href }) => (
                 <li key={label} className={wide ? 'attr-wide' : undefined}>
-                  <b>{value}</b>
-                  {label}
+                  {href ? (
+                    // Stretched link: the whole card is clickable (see .attr-link
+                    // in globals.css) while the value stays the visible anchor text.
+                    <Link className="attr-link" href={href}>
+                      <b>{value}</b>
+                      {label}
+                    </Link>
+                  ) : (
+                    <>
+                      <b>{value}</b>
+                      {label}
+                    </>
+                  )}
                 </li>
               ))}
           </ul>

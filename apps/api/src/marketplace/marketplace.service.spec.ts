@@ -47,7 +47,11 @@ describe('MarketplaceService search filters', () => {
 
     expect(prisma.mktProduct.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
-        category: 'board-game',
+        AND: expect.arrayContaining([
+          expect.objectContaining({
+            OR: expect.arrayContaining([{ category: 'board-game' }]),
+          }),
+        ]),
         minPlayers: { lte: 4 },
         maxPlayers: { gte: 4 },
         listings: {

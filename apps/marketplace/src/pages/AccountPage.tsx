@@ -103,12 +103,17 @@ export default function AccountPage({
             backgroundSize: '18px 18px',
           }}
         >
-          {/* Logout — top-right of banner */}
+          {/* Logout — top-right of the banner. The ghost variant ships an opaque
+              light pill (bg-[--bg-subtle]); on this fixed dark-green felt that
+              left white text on a light background (invisible in light theme).
+              The banner colour is theme-invariant, so override the pill to
+              transparent and use white-based text (theme tokens would flip dark
+              and disappear here) with a red destructive hover. */}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="absolute right-3 top-3 text-white/70 hover:text-red-300 hover:bg-white/10"
+            className="absolute right-3 top-3 bg-transparent text-white/80 hover:bg-white/10 hover:text-red-300"
           >
             Cerrar sesión
           </Button>

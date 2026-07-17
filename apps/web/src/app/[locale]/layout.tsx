@@ -152,7 +152,7 @@ export default function LocaleLayout({
               <span className="brand-mark"><MeepleMark size={17} /></span>
               <span>Juegos<span className="brand-word-accent">pedia</span></span>
             </span>
-            <span>{t.tagline}</span>
+            <span className="footer-tagline">{t.tagline}</span>
             <span className="nav-spacer" />
             <Link href={listingPath('games', locale)}>{t.games}</Link>
             <Link href={listingPath('categories', locale)}>{t.cats}</Link>

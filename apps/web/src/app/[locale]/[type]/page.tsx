@@ -24,7 +24,7 @@ import {
   resolveKind,
   type Locale,
 } from '@/lib/segments';
-import { listGuides } from '@/lib/guides';
+import { listGuides, GUIDE_OG_DEFAULT } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
 import { listShelves } from '@/lib/shelves';
 import { ShelfCard } from '@/components/ShelfCard';
@@ -81,6 +81,10 @@ export async function generateMetadata({
     players?: string;
     mechanics?: string | string[];
     complexity?: string;
+    publisher?: string;
+    year?: string;
+    age?: string;
+    duration?: string;
   };
 }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
@@ -110,6 +114,7 @@ export async function generateMetadata({
         locale === 'es'
           ? 'Guías, comparativas y listas de los mejores juegos de mesa, con precios comparados entre tiendas.'
           : 'Guides, comparisons and best-of lists for board games, with prices compared across stores.',
+      images: [GUIDE_OG_DEFAULT],
       alternates: { es: listingPath('guides', 'es'), en: listingPath('guides', 'en') },
     });
   }
@@ -120,7 +125,8 @@ export async function generateMetadata({
   // index so only the clean base listing competes (spec §9).
   const filtered = Boolean(
     searchParams.category || searchParams.inStock || searchParams.sort || searchParams.max || searchParams.players
-    || searchParams.complexity || toMechanicsArray(searchParams.mechanics).length > 0,
+    || searchParams.complexity || searchParams.publisher || searchParams.year
+    || searchParams.age || searchParams.duration || toMechanicsArray(searchParams.mechanics).length > 0,
   );
   const navigational = page > 1 || filtered;
 
@@ -153,7 +159,7 @@ export async function generateMetadata({
 // Serialize active filters (everything except page) so pagination preserves them.
 function filterQuery(sp: Record<string, string | string[] | undefined>): string {
   const p = new URLSearchParams();
-  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players', 'complexity'] as const) {
+  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players', 'complexity', 'publisher', 'year', 'age', 'duration'] as const) {
     if (sp[k]) p.set(k, sp[k] as string);
   }
   for (const mechanic of toMechanicsArray(sp.mechanics)) p.append('mechanics', mechanic);
@@ -175,6 +181,10 @@ export default async function ListingPage({
     players?: string;
     mechanics?: string | string[];
     complexity?: string;
+    publisher?: string;
+    year?: string;
+    age?: string;
+    duration?: string;
   };
 }) {
   if (!isLocale(params.locale)) notFound();
@@ -196,12 +206,17 @@ export default async function ListingPage({
       players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
       mechanics: toMechanicsArray(searchParams.mechanics),
       complexity: searchParams.complexity || undefined,
+      publisher: searchParams.publisher || undefined,
+      yearPublished: searchParams.year ? Math.max(1, parseInt(searchParams.year, 10)) || undefined : undefined,
+      minAge: searchParams.age ? Math.max(1, parseInt(searchParams.age, 10)) || undefined : undefined,
+      playTimeMinutes: searchParams.duration ? Math.max(1, parseInt(searchParams.duration, 10)) || undefined : undefined,
     };
     const { results, total } = await listProducts({
       q,
       semantic: isNaturalLanguageQuery(q) && !(
         state.category || state.inStock || state.sort || state.max || state.players
-        || state.complexity || state.mechanics.length > 0
+        || state.complexity || state.publisher || state.yearPublished || state.minAge
+        || state.playTimeMinutes || state.mechanics.length > 0
       ),
       locale,
       category: state.category,
@@ -211,6 +226,10 @@ export default async function ListingPage({
       minPlayers: state.players,
       mechanics: state.mechanics,
       complexity: state.complexity,
+      publisher: state.publisher,
+      yearPublished: state.yearPublished,
+      minAge: state.minAge,
+      playTimeMinutes: state.playTimeMinutes,
       limit: 48,
     });
     const crumbs: Crumb[] = [
@@ -247,7 +266,7 @@ export default async function ListingPage({
                 clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
               />
             </FilterSheetPanel>
-            <div>
+            <div className="search-results">
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'resultados' : 'results'}
               </p>
@@ -279,10 +298,15 @@ export default async function ListingPage({
       players: searchParams.players ? Math.max(1, parseInt(searchParams.players, 10)) || undefined : undefined,
       mechanics: toMechanicsArray(searchParams.mechanics),
       complexity: searchParams.complexity || undefined,
+      publisher: searchParams.publisher || undefined,
+      yearPublished: searchParams.year ? Math.max(1, parseInt(searchParams.year, 10)) || undefined : undefined,
+      minAge: searchParams.age ? Math.max(1, parseInt(searchParams.age, 10)) || undefined : undefined,
+      playTimeMinutes: searchParams.duration ? Math.max(1, parseInt(searchParams.duration, 10)) || undefined : undefined,
     };
     const filtered = Boolean(
       state.category || state.inStock || state.sort || state.max || state.players
-      || state.complexity || state.mechanics.length > 0,
+      || state.complexity || state.publisher || state.yearPublished || state.minAge
+      || state.playTimeMinutes || state.mechanics.length > 0,
     );
     const { results, total } = await listProducts({
       locale,
@@ -293,6 +317,10 @@ export default async function ListingPage({
       minPlayers: state.players,
       mechanics: state.mechanics,
       complexity: state.complexity,
+      publisher: state.publisher,
+      yearPublished: state.yearPublished,
+      minAge: state.minAge,
+      playTimeMinutes: state.playTimeMinutes,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     });
@@ -328,7 +356,7 @@ export default async function ListingPage({
                 clearHref={base}
               />
             </FilterSheetPanel>
-            <div>
+            <div className="search-results">
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
               </p>

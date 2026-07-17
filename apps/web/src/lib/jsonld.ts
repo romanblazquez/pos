@@ -61,12 +61,19 @@ function availability(listing: Listing): string {
     : 'https://schema.org/OutOfStock';
 }
 
+// Google flags Offers with no price-validity horizon; a rolling ~30-day window
+// (the page is ISR-revalidated well within it) clears the warning honestly.
+function priceValidUntil(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 function offerLd(listing: Listing, canonicalUrl: string): Json {
   return {
     '@type': 'Offer',
     url: canonicalUrl,
     price: (listing.priceMinorUnits / 100).toFixed(2),
     priceCurrency: listing.currency,
+    priceValidUntil: priceValidUntil(),
     availability: availability(listing),
     itemCondition: 'https://schema.org/NewCondition',
     seller: { '@type': 'Organization', name: listing.sellerName },
@@ -89,6 +96,7 @@ export function productLd(product: ProductDetail, canonicalPath: string): Json {
     url,
     ...(product.description ? { description: product.description } : {}),
     ...(product.images?.length ? { image: product.images } : {}),
+    ...(product.category ? { category: product.category } : {}),
     ...(product.publisher ? { brand: { '@type': 'Brand', name: product.publisher } } : {}),
     ...(product.bggId
       ? {

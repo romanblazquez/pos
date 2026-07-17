@@ -8,6 +8,10 @@ import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './compl
 export interface ProductSearchParams {
   q?: string;
   category?: string;
+  publisher?: string;
+  yearPublished?: number;
+  minAge?: number;
+  playTimeMinutes?: number;
   minPlayers?: number;
   minPrice?: number;
   maxPrice?: number;
@@ -135,8 +139,13 @@ export class MarketplaceService {
       return this.semanticSearchProducts(q, locale, limit);
     }
 
-    // Typesense path — fast, ranked
-    const { hits, total } = await this.search.search({
+    // Typesense does not index the normalized taxonomy or the long-tail SEO
+    // facets yet. Route those filters through Prisma so a requested facet is
+    // never silently ignored; the ordinary query remains fast and ranked.
+    const databaseOnlyFilters = Boolean(
+      params.category || params.publisher || params.yearPublished || params.minAge || params.playTimeMinutes,
+    );
+    const { hits, total } = databaseOnlyFilters ? { hits: [], total: 0 } : await this.search.search({
       q,
       category: params.category,
       minPrice: params.minPrice,
@@ -181,7 +190,27 @@ export class MarketplaceService {
 
     const where = {
       canonicalStatus: 'verified' as const,
-      ...(params.category ? { category: params.category } : {}),
+      AND: [
+        ...(params.category ? [{ OR: [
+          { category: params.category },
+          { categories: { some: { category: { normalizedName: params.category } } } },
+        ] }] : []),
+        ...(params.publisher ? [{ OR: [
+          { publisher: { equals: params.publisher, mode: 'insensitive' as const } },
+          { publisherEntity: { normalizedName: params.publisher } },
+          { publisherEntity: { canonicalName: { equals: params.publisher, mode: 'insensitive' as const } } },
+        ] }] : []),
+        ...(q ? [{ OR: [
+          { name: { contains: q, mode: 'insensitive' as const } },
+          { publisher: { contains: q, mode: 'insensitive' as const } },
+          { designer: { contains: q, mode: 'insensitive' as const } },
+          { description: { contains: q, mode: 'insensitive' as const } },
+          { tags: { has: q } },
+        ] }] : []),
+      ],
+      ...(params.yearPublished ? { yearPublished: params.yearPublished } : {}),
+      ...(params.minAge ? { minAge: params.minAge } : {}),
+      ...(params.playTimeMinutes ? { playTimeMinutes: params.playTimeMinutes } : {}),
       ...(params.minPlayers ? {
         minPlayers: { lte: params.minPlayers },
         maxPlayers: { gte: params.minPlayers },
@@ -194,15 +223,6 @@ export class MarketplaceService {
         },
       } : {}),
       listings: { some: listingFilter },
-      ...(q ? {
-        OR: [
-          { name: { contains: q, mode: 'insensitive' as const } },
-          { publisher: { contains: q, mode: 'insensitive' as const } },
-          { designer: { contains: q, mode: 'insensitive' as const } },
-          { description: { contains: q, mode: 'insensitive' as const } },
-          { tags: { has: q } },
-        ],
-      } : {}),
     };
 
     const [products, totalCount] = await Promise.all([
@@ -320,13 +340,26 @@ export class MarketplaceService {
 
   /** Distinct categories with at least one active listing — backs the marketplace's category-browse tiles. */
   async getCategories(): Promise<{ category: string; count: number }[]> {
-    const rows = await this.prisma.mktProduct.groupBy({
+    const [normalized, legacy] = await Promise.all([
+      this.prisma.category.findMany({
+        where: { marketplaceProducts: { some: { product: { canonicalStatus: 'verified', listings: { some: { active: true } } } } } },
+        select: {
+          normalizedName: true,
+          _count: { select: { marketplaceProducts: { where: { product: { canonicalStatus: 'verified', listings: { some: { active: true } } } } } } },
+        },
+      }),
+      this.prisma.mktProduct.groupBy({
       by: ['category'],
       where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
       _count: { category: true },
       orderBy: { _count: { category: 'desc' } },
-    });
-    return rows.map((r) => ({ category: r.category, count: r._count.category }));
+      }),
+    ]);
+    const counts = new Map(legacy.map((row) => [row.category, row._count.category]));
+    for (const row of normalized) counts.set(row.normalizedName, row._count.marketplaceProducts);
+    return [...counts.entries()]
+      .map(([category, count]) => ({ category, count }))
+      .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category));
   }
 
   /**
@@ -355,6 +388,8 @@ export class MarketplaceService {
     const product = await this.prisma.mktProduct.findUnique({
       where: { slug },
       include: {
+        publisherEntity: true,
+        categories: { include: { category: true }, orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
         listings: {
           where: { active: true },
           include: {
@@ -387,10 +422,15 @@ export class MarketplaceService {
       id: product.id,
       slug: product.slug,
       name: localized?.title ?? product.name,
-      category: product.category,
+      category: product.categories[0]?.category.normalizedName ?? product.category,
+      categories: product.categories.map(({ category, isPrimary }) => ({
+        slug: category.normalizedName,
+        name: category.canonicalName,
+        isPrimary,
+      })),
       description: localized?.description ?? product.description,
       images: product.images,
-      publisher: product.publisher,
+      publisher: product.publisherEntity?.canonicalName ?? product.publisher,
       designer: product.designer,
       yearPublished: product.yearPublished,
       minPlayers: product.minPlayers,
@@ -531,7 +571,8 @@ function normalizeSort(sortBy?: string): string | undefined {
 
 function hasStructuredFilters(params: ProductSearchParams): boolean {
   return Boolean(
-    params.category || params.minPlayers || params.minPrice !== undefined || params.maxPrice !== undefined
+    params.category || params.publisher || params.yearPublished || params.minAge || params.playTimeMinutes
+    || params.minPlayers || params.minPrice !== undefined || params.maxPrice !== undefined
     || params.inStockOnly || params.mechanics?.length || params.complexity || params.sortBy,
   );
 }

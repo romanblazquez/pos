@@ -32,6 +32,15 @@ export function CatalogSearchBar({ submitLabel, trailing, barClassName, ...searc
       <button
         type="submit"
         aria-label={submitLabel}
+        // Runs the same onSearch as pressing Enter. It stays a native submit for
+        // the no-JS fallback, but where the bar sits inside a wider GET form (the
+        // SEO app pairs it with a facet-filter form), a raw submit would carry
+        // those filter fields onto the new query. Handling it here keeps a search
+        // a clean search — the button submits the term, not the filters.
+        onClick={(event) => {
+          event.preventDefault();
+          search.onSearch(search.value.trim());
+        }}
         className="inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-xl bg-(--primary) px-3.5
                    text-[15px] font-semibold text-(--primary-foreground) transition-colors
                    hover:bg-[color-mix(in_srgb,var(--primary)_88%,#000)] sm:px-4"

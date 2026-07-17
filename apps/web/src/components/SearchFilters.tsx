@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
@@ -41,13 +40,18 @@ export interface FilterState {
   players?: number;
   mechanics: string[];
   complexity?: string;
+  publisher?: string;
+  yearPublished?: number;
+  minAge?: number;
+  playTimeMinutes?: number;
 }
 
 
 /** Badge count for the filter sheet trigger. Lives here so the rule that decides
  *  "how many filters are on" stays next to the controls that set them. */
 export function filterActiveCount(state: FilterState) {
-  return [state.category, state.inStock, state.max, state.players, state.complexity]
+  return [state.category, state.inStock, state.max, state.players, state.complexity,
+    state.publisher, state.yearPublished, state.minAge, state.playTimeMinutes]
     .filter(Boolean).length + state.mechanics.length;
 }
 
@@ -123,11 +127,20 @@ export function SearchFilters({
       inputType="checkbox"
       active={state.mechanics.includes(m.mechanic)}
     >
+      {/* Preserve deep-link facets that currently have attribute-card entry
+          points but no rail control. They remain visible in the URL and can be
+          cleared with the panel's Clear action. */}
+      {state.publisher ? <input type="hidden" name="publisher" value={state.publisher} /> : null}
+      {state.yearPublished ? <input type="hidden" name="year" value={state.yearPublished} /> : null}
+      {state.minAge ? <input type="hidden" name="age" value={state.minAge} /> : null}
+      {state.playTimeMinutes ? <input type="hidden" name="duration" value={state.playTimeMinutes} /> : null}
       {m.mechanic}
     </FilterChip>
   );
 
-  const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
+  const active = Boolean(state.category || state.inStock || state.max || state.players
+    || state.mechanics.length > 0 || state.complexity || state.publisher
+    || state.yearPublished || state.minAge || state.playTimeMinutes);
 
   return (
     <CatalogFilterPanel
@@ -136,13 +149,19 @@ export function SearchFilters({
       icon={<SlidersHorizontal size={16} aria-hidden="true" />}
       aria-label={t.filters}
       action={active ? (
-        <Link
+        // A native <a>, not next/link: the chips are uncontrolled inputs
+        // (defaultChecked), and a soft client nav updates the URL and classes
+        // but leaves their checked DOM state intact — so the filters would look
+        // cleared yet resubmit on the next change. A full-document load
+        // remounts the form with fresh, empty defaults, which is what actually
+        // clears it (and matches this panel's no-JS-first contract).
+        <a
           href={clearHref}
           className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)"
         >
           <RotateCcw size={12} aria-hidden="true" />
           {t.clear}
-        </Link>
+        </a>
       ) : undefined}
     >
       {/* Sort — a native select, not the Radix one: this panel is a no-JS GET

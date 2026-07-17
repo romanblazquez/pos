@@ -490,6 +490,8 @@ function Header({
 
           <a
             href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-[--bg-subtle] px-3 text-sm font-medium text-[--tx-muted]
                        transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
           >
@@ -671,6 +673,8 @@ function MobileMenu({
 
                 <a
                   href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={close}
                   className={rowCls}
                 >

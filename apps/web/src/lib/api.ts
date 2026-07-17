@@ -35,6 +35,7 @@ export interface ProductDetail {
   slug: string;
   name: string;
   category: string;
+  categories?: Array<{ slug: string; name: string; isPrimary: boolean }>;
   description?: string;
   images: string[];
   publisher?: string;
@@ -105,6 +106,10 @@ export type SortBy = 'rank_score' | 'price_asc' | 'price_desc' | 'name';
 
 export async function listProducts(opts: {
   category?: string;
+  publisher?: string;
+  yearPublished?: number;
+  minAge?: number;
+  playTimeMinutes?: number;
   q?: string;
   limit?: number;
   offset?: number;
@@ -129,6 +134,10 @@ export async function listProducts(opts: {
   if (opts.q) params.set('q', opts.q);
   if (opts.semantic) params.set('semantic', 'true');
   if (opts.category) params.set('category', opts.category);
+  if (opts.publisher) params.set('publisher', opts.publisher);
+  if (opts.yearPublished) params.set('yearPublished', String(opts.yearPublished));
+  if (opts.minAge) params.set('minAge', String(opts.minAge));
+  if (opts.playTimeMinutes) params.set('playTimeMinutes', String(opts.playTimeMinutes));
   if (opts.inStock) params.set('inStock', 'true');
   if (opts.minPlayers) params.set('minPlayers', String(opts.minPlayers));
   if (opts.sortBy) params.set('sortBy', opts.sortBy);

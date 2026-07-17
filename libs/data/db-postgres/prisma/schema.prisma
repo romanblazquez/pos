@@ -455,6 +455,7 @@ model MktProduct {
   bggId           String?                @unique // BoardGameGeek ID — primary dedup anchor
   category        String                 @default("board-game")
   publisher       String?
+  publisherId     String?
   designer        String?
   yearPublished   Int?
   minPlayers      Int?
@@ -478,8 +479,11 @@ model MktProduct {
   sellerMappings  SellerProductMapping[]
   shelfItems      ShelfItem[]
   bggEnrichment   BggEnrichmentState?
+  publisherEntity Publisher?             @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  categories      MktProductCategory[]
 
   @@index([category])
+  @@index([publisherId])
   @@index([canonicalStatus])
   @@index([bggId])
   @@index([bggRank])
@@ -1826,22 +1830,23 @@ model Artist {
 }
 
 model Publisher {
-  id               String                @id @default(cuid())
-  canonicalName    String
-  normalizedName   String
-  description      String?
-  officialSiteUrl  String?
-  countryCode      String?
-  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
-  moderationStatus ModerationStatus      @default(PENDING)
-  reviewedBy       String?
-  reviewedAt       DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  games            MasterGamePublisher[]
-  editions         GameEdition[]
-  printings        GamePrinting[]
-  products         CatalogProduct[]
+  id                  String                @id @default(cuid())
+  canonicalName       String
+  normalizedName      String
+  description         String?
+  officialSiteUrl     String?
+  countryCode         String?
+  canonicalStatus     CanonicalRecordStatus @default(DRAFT)
+  moderationStatus    ModerationStatus      @default(PENDING)
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  games               MasterGamePublisher[]
+  editions            GameEdition[]
+  printings           GamePrinting[]
+  products            CatalogProduct[]
+  marketplaceProducts MktProduct[]
 
   @@index([normalizedName])
   @@map("publisher")
@@ -1945,21 +1950,40 @@ model Mechanic {
 }
 
 model Category {
-  id               String                @id @default(cuid())
-  parentId         String?
-  canonicalName    String
-  normalizedName   String                @unique
-  description      String?
-  canonicalStatus  CanonicalRecordStatus @default(DRAFT)
-  moderationStatus ModerationStatus      @default(PENDING)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  parent           Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children         Category[]            @relation("CategoryTree")
-  games            MasterGameCategory[]
+  id                  String                @id @default(cuid())
+  parentId            String?
+  canonicalName       String
+  normalizedName      String                @unique
+  description         String?
+  canonicalStatus     CanonicalRecordStatus @default(DRAFT)
+  moderationStatus    ModerationStatus      @default(PENDING)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  parent              Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children            Category[]            @relation("CategoryTree")
+  games               MasterGameCategory[]
+  marketplaceProducts MktProductCategory[]
 
   @@index([parentId])
   @@map("category")
+}
+
+/// Marketplace-product taxonomy bridge. A shoppable product may belong to
+/// several browse categories while one relation can be selected as the stable
+/// breadcrumb/category-hub parent.
+model MktProductCategory {
+  productId  String
+  categoryId String
+  isPrimary  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  product    MktProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([productId, categoryId])
+  @@index([categoryId, productId])
+  @@index([productId, isPrimary])
+  @@map("mkt_product_category")
 }
 
 model Theme {

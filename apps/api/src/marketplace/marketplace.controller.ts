@@ -22,6 +22,10 @@ export class MarketplaceController {
   })
   @ApiQuery({ name: 'q', required: false, description: 'Free-text search query', example: 'Catan' })
   @ApiQuery({ name: 'category', required: false, description: 'Filter by category slug', example: 'strategy' })
+  @ApiQuery({ name: 'publisher', required: false, description: 'Filter by publisher/editorial name or normalized slug', example: 'devir' })
+  @ApiQuery({ name: 'yearPublished', required: false, type: Number, description: 'Exact publication year', example: 2025 })
+  @ApiQuery({ name: 'minAge', required: false, type: Number, description: 'Exact recommended minimum age', example: 14 })
+  @ApiQuery({ name: 'playTimeMinutes', required: false, type: Number, description: 'Exact advertised play time in minutes', example: 60 })
   @ApiQuery({ name: 'minPlayers', required: false, type: Number, description: 'Minimum number of players', example: 2 })
   @ApiQuery({ name: 'minPrice', required: false, type: Number, description: 'Minimum price in minor currency units (centavos)', example: 50000 })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number, description: 'Maximum price in minor currency units (centavos)', example: 500000 })
@@ -37,6 +41,10 @@ export class MarketplaceController {
   search(
     @Query('q')           q?: string,
     @Query('category')    category?: string,
+    @Query('publisher')   publisher?: string,
+    @Query('yearPublished') yearPublished?: string,
+    @Query('minAge')      minAge?: string,
+    @Query('playTimeMinutes') playTimeMinutes?: string,
     @Query('minPlayers')  minPlayers?: string,
     @Query('minPrice')    minPrice?: string,
     @Query('maxPrice')    maxPrice?: string,
@@ -52,6 +60,10 @@ export class MarketplaceController {
     return this.svc.searchProducts({
       q,
       category,
+      publisher,
+      yearPublished: yearPublished ? parseInt(yearPublished, 10) : undefined,
+      minAge: minAge ? parseInt(minAge, 10) : undefined,
+      playTimeMinutes: playTimeMinutes ? parseInt(playTimeMinutes, 10) : undefined,
       minPlayers: minPlayers ? parseInt(minPlayers, 10) : undefined,
       minPrice: minPrice ? parseInt(minPrice, 10) : undefined,
       maxPrice: maxPrice ? parseInt(maxPrice, 10) : undefined,

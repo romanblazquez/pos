@@ -206,7 +206,7 @@ function ListingRow({
       className={`relative flex flex-col gap-3 px-[18px] py-[15px] transition-colors
         sm:flex-row sm:items-center sm:gap-4
         ${!isFirst ? 'border-t border-[--border]' : ''}
-        ${isBest ? 'border-l-4 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' : ''}
+        ${isBest ? 'border-l-4 border-l-[--success] bg-[--success-bg]' : ''}
         ${isOutOfStock ? 'opacity-70 select-none cursor-pointer [-webkit-touch-callout:none]' : ''}
       `}
       {...peekHandlers}
@@ -224,17 +224,17 @@ function ListingRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           {isBest && (
-            <Award className="h-3.5 w-3.5 text-emerald-600 shrink-0" aria-hidden="true" />
+            <Award className="h-3.5 w-3.5 text-[--success] shrink-0" aria-hidden="true" />
           )}
           <span className="font-bold text-[15px] text-[--tx] truncate">{l.sellerName}</span>
           {isBest && (
-            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
+            <span className="inline-flex items-center gap-1 bg-[--success-solid] text-[--success-fg] font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
               {intl.formatMessage({ id: 'offers.bestOffer' })}
             </span>
           )}
           {isBestPrice && !isBest && (
-            <span className="inline-flex items-center bg-emerald-100 text-emerald-700 font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
+            <span className="inline-flex items-center bg-[--success-solid] text-[--success-fg] font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
               {intl.formatMessage({ id: 'offers.lowestPrice' })}
             </span>
           )}
@@ -264,7 +264,7 @@ function ListingRow({
                 {Object.entries(l.scoreBreakdown).map(([key, val]) => (
                   <div key={key} className="text-center">
                     <div className="h-1.5 bg-[--bg-subtle] rounded-full overflow-hidden mb-1">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.round(val * 100)}%` }} />
+                      <div className="h-full bg-[--success-solid] rounded-full" style={{ width: `${Math.round(val * 100)}%` }} />
                     </div>
                     <p className="text-[10px] text-[--tx-faint] capitalize">
                       {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
@@ -287,7 +287,7 @@ function ListingRow({
               <span
                 className={`font-display font-extrabold text-[23px] tabular-nums transition-[filter] duration-300
                   ${showGlass ? 'blur-[5px]' : ''}
-                  ${isBestPrice ? 'text-emerald-700' : 'text-[--tx]'}`}
+                  ${isBestPrice ? 'text-[--success]' : 'text-[--tx]'}`}
               >
                 {showGlass ? 'XXX' : price.integer}
               </span>
@@ -307,8 +307,8 @@ function ListingRow({
             className={`flex-none inline-flex items-center gap-2 font-bold text-[13.5px] px-4 py-[10px] rounded-[9px]
               cursor-pointer border-0 transition-colors disabled:opacity-50 disabled:pointer-events-none
               ${isBest
-                ? 'bg-emerald-500 text-emerald-50 hover:bg-emerald-600'
-                : 'bg-[--bg-raised] text-[--tx] border border-[--border-strong] hover:border-emerald-500 hover:text-emerald-500'
+                ? 'bg-[--success-solid] text-[--success-fg] hover:opacity-90'
+                : 'bg-[--bg-raised] text-[--tx] border border-[--border-strong] hover:border-[--success] hover:text-[--success]'
               }`}
           >
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />

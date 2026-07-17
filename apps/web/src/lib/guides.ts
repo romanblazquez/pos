@@ -70,7 +70,28 @@ export interface Guide extends GuideContent {
   /** ISO dates — drive <article> datePublished/dateModified. */
   publishedAt: string;
   updatedAt: string;
+  /**
+   * Curated 1600×900 social/OG image (language-neutral), served from /public.
+   * Attached from OG_IMAGES below by the guide's canonical slug, so it survives
+   * localization (translations spread over the base but never carry this key).
+   */
+  ogImage?: string;
 }
+
+// Per-guide OG art (public/guides/*.jpg), keyed by each guide's canonical
+// (original-locale) slug. The common guides-section banner is the fallback for
+// the hub and any guide without its own art (see GUIDE_OG_DEFAULT).
+export const GUIDE_OG_DEFAULT = '/guides/guides-default.jpg';
+const OG_IMAGES: Record<string, string> = {
+  'mejores-juegos-de-mesa-2-jugadores': '/guides/2-jugadores.jpg',
+  'mejores-juegos-de-mesa-para-principiantes': '/guides/principiantes.jpg',
+  'mejores-juegos-de-mesa-de-estrategia': '/guides/estrategia.jpg',
+  'mejores-juegos-de-mesa-para-toda-la-familia': '/guides/familia.jpg',
+  'best-solo-board-games': '/guides/solitario.jpg',
+  'best-cooperative-board-games': '/guides/cooperativos.jpg',
+  'best-miniatures-board-games': '/guides/miniaturas.jpg',
+  'mejores-juegos-de-mesa-abstractos': '/guides/abstractos.jpg',
+};
 
 // Build-time Google-Translate output, keyed by the guide's ORIGINAL-locale slug
 // then by target locale. Regenerate with `pnpm tsx tools/content/translate-guides.ts`.
@@ -85,7 +106,7 @@ const GUIDES: readonly Guide[] = [
   bestCooperativeBoardGames,
   bestMiniaturesBoardGames,
   mejoresJuegosAbstractos,
-];
+].map((guide) => ({ ...guide, ogImage: OG_IMAGES[guide.slug] ?? GUIDE_OG_DEFAULT }));
 
 /** Raw, un-localized guides — for the build-time translation tool only. */
 export function allGuidesRaw(): readonly Guide[] {

@@ -72,6 +72,23 @@
     --primary:         var(--accent);
     --primary-foreground: var(--brand-mark);
 
+    /* Success / availability — the design system's forest green, used for
+       best-offer + in-stock emphasis. -solid is the fill (buttons, bars) that
+       carries -fg text; plain --success is the readable text/icon/border shade;
+       --success-bg is the tinted surface. */
+    --success:         #2c6b43;
+    --success-solid:   #2c6b43;
+    --success-bg:      #e4efe4;
+    --success-fg:      #ffffff;
+    --warning:         #8a5a12;
+    --warning-bg:      #f6ebd2;
+    --error:           #93291f;
+    --error-bg:        #f6e1dc;
+    --error-solid:     #b23a2e;
+    --error-fg:        #fbf1ed;
+    --info:            #3a5876;
+    --info-bg:         #e3eaf1;
+
     /* Aliases for the SEO app's token vocabulary.
        The two apps name the same things differently — this file says --bg/--tx,
        ui-react/styles.css says --background/--foreground (shadcn-style) — and
@@ -109,6 +126,19 @@
     --brand-tile:      #ce6a41;
     --brand-mark:      #1a140e;
     --brand-word:      #ce6a41;
+
+    --success:         #8cc49c;
+    --success-solid:   #3e7c53;
+    --success-bg:      #203528;
+    --success-fg:      #eaf3ec;
+    --warning:         #e0bc72;
+    --warning-bg:      #33290f;
+    --error:           #e68a7c;
+    --error-bg:        #3d2117;
+    --error-solid:     #d06152;
+    --error-fg:        #fff1ed;
+    --info:            #8eb1d3;
+    --info-bg:         #26384a;
   }
 
   * { box-sizing: border-box; margin: 0; }

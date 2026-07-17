@@ -211,14 +211,30 @@ export const THEMES: Theme[] = [
   },
 ];
 
+// Only the three fields a theme rule reads, so both ProductSummary (index) and
+// ProductDetail (product page breadcrumb) can be matched without coupling to
+// either full shape.
+type ThemeMatchable = Pick<ProductSummary, 'tags' | 'minPlayers' | 'maxPlayers'>;
+
 /** True when a product belongs in the theme (same rule the API detail query uses). */
-export function productMatchesTheme(p: ProductSummary, theme: Theme): boolean {
+export function productMatchesTheme(p: ThemeMatchable, theme: Theme): boolean {
   if (theme.players != null) {
     return p.minPlayers != null && p.maxPlayers != null
       && p.minPlayers <= theme.players && p.maxPlayers >= theme.players;
   }
   if (theme.tags) return theme.tags.some((tag) => p.tags.includes(tag));
   return false;
+}
+
+/**
+ * The single best browse theme for a product, used as the middle breadcrumb
+ * crumb. THEMES is ordered by BGG prominence, so genre themes (Estrategia,
+ * Cooperativos…) win over the player-count theme when both apply — a genre
+ * reads as a truer "category" than "Para N jugadores". Undefined when the
+ * product carries no theme signal (e.g. a bare catalogue stub with no tags).
+ */
+export function primaryTheme(p: ThemeMatchable): Theme | undefined {
+  return THEMES.find((theme) => productMatchesTheme(p, theme));
 }
 
 export function getThemeBySlug(locale: Locale, slug: string): Theme | undefined {
