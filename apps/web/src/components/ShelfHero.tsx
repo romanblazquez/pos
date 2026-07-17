@@ -37,16 +37,20 @@ export function ShelfHero({
     >
       {hero ? (
         // The LCP element on this page — eager and high priority, never lazy.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="shelf-hero-art"
-          src={hero}
-          alt=""
-          width={1100}
-          height={619}
-          fetchPriority="high"
-          decoding="async"
-        />
+        // AVIF roughly halves it, which matters more here than anywhere else.
+        <picture>
+          <source type="image/avif" srcSet={hero.replace(/\.webp$/, '.avif')} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="shelf-hero-art"
+            src={hero}
+            alt=""
+            width={1100}
+            height={619}
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
       ) : (
         <CategoryMotif motif={id.motif} className="shelf-hero-motif" size={140} />
       )}

@@ -52,11 +52,14 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   solo:           { family: 'solo',        tint: '#e9e3f0', accent: '#574079', motif: 'solo' },
   campaign:       { family: 'legacy',      tint: '#e3eaf1', accent: '#3a5a7d', motif: 'legacy' },
 
-  // ── Derived in-family (awaiting design system coverage) ──────────────────
-  deckbuilding:   { family: 'cards',       tint: '#dfe9e6', accent: '#31564a', motif: 'deckbuilding', derived: true },
-  horror:         { family: 'adventure',   tint: '#1b1518', accent: '#d98a63', motif: 'horror', dark: true, derived: true },
-  scifi:          { family: 'adventure',   tint: '#dce8ea', accent: '#2f6470', motif: 'scifi', derived: true },
-  abstract:       { family: 'abstract',    tint: '#e8e6e0', accent: '#5f5648', motif: 'abstract', derived: true },
+  // ── Tint/accent derived in-family; art commissioned ─────────────────────
+  // These five aren't named in the design system's swatch set, so their tint and
+  // accent are still derived — but all sixteen now carry commissioned art, so the
+  // tint only shows through as the motif wash on a card that fails to load.
+  deckbuilding:   { family: 'cards',       tint: '#dfe9e6', accent: '#31564a', motif: 'deckbuilding', art: '/categories/deckbuilding.webp', derived: true },
+  horror:         { family: 'adventure',   tint: '#1b1518', accent: '#d98a63', motif: 'horror', art: '/categories/horror.webp', dark: true, derived: true },
+  scifi:          { family: 'adventure',   tint: '#dce8ea', accent: '#2f6470', motif: 'scifi', art: '/categories/scifi.webp', derived: true },
+  abstract:       { family: 'abstract',    tint: '#e8e6e0', accent: '#5f5648', motif: 'abstract', art: '/categories/abstract.webp', derived: true },
   wargame:        { family: 'strategy',    tint: '#e2e3d3', accent: '#4f5730', motif: 'wargame', art: '/categories/wargame.webp', derived: true },
 };
 
