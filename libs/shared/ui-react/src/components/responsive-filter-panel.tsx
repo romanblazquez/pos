@@ -8,6 +8,8 @@ export interface FilterSheetLabels {
   open: string;
   /** Heading inside the sheet. */
   title: string;
+  /** Optional context line below the heading, such as the result count. */
+  subtitle?: string;
   close: string;
   apply: string;
 }
@@ -143,7 +145,13 @@ export function FilterSheetPanel({ children }: { children: React.ReactNode }) {
         aria-label={labels.open}
       >
         <header className="mobile-filter-header">
-          <span><SlidersIcon /><b>{labels.title}</b></span>
+          <span>
+            <SlidersIcon />
+            <span className="mobile-filter-heading">
+              <b>{labels.title}</b>
+              {labels.subtitle ? <small>{labels.subtitle}</small> : null}
+            </span>
+          </span>
           <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label={labels.close}>
             <CloseIcon />
           </button>

@@ -58,10 +58,13 @@ export function filterActiveCount(state: FilterState) {
 /** Labels for the filter sheet. The page owns <FilterSheet> (the trigger sits by
  *  the search field, the rail inside the panel), so the strings live here beside
  *  the rest of the filter copy rather than being reinvented at the call site. */
-export function filterSheetLabels(locale: Locale) {
+export function filterSheetLabels(locale: Locale, total?: number) {
+  const subtitle = total == null
+    ? undefined
+    : `${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${locale === 'es' ? 'resultados' : 'results'}`;
   return locale === 'es'
-    ? { open: 'Abrir filtros', title: 'Filtros', close: 'Cerrar filtros', apply: 'Ver resultados' }
-    : { open: 'Open filters', title: 'Filters', close: 'Close filters', apply: 'View results' };
+    ? { open: 'Abrir filtros', title: 'Filtros', subtitle, close: 'Cerrar filtros', apply: 'Ver resultados' }
+    : { open: 'Open filters', title: 'Filters', subtitle, close: 'Close filters', apply: 'View results' };
 }
 
 // Server-rendered faceted filters (no client JS): the whole search view is one

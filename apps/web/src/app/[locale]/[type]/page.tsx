@@ -245,7 +245,7 @@ export default async function ListingPage({
             : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
         </h1>
         <form method="get" action={listingPath('search', locale)}>
-          <FilterSheet labels={filterSheetLabels(locale)} activeCount={filterActiveCount(state)}>
+          <FilterSheet labels={filterSheetLabels(locale, total)} activeCount={filterActiveCount(state)}>
           <CatalogSearchField
             locale={locale}
             initialValue={q}
@@ -341,7 +341,7 @@ export default async function ListingPage({
         )}
         <h1 className="page-title">{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
         <form method="get" action={base}>
-          <FilterSheet labels={filterSheetLabels(locale)} activeCount={filterActiveCount(state)}>
+          <FilterSheet labels={filterSheetLabels(locale, total)} activeCount={filterActiveCount(state)}>
           {/* No search field on a listing page, so the trigger has no lens to sit
               beside — it gets its own row above the grid. */}
           <div className="listing-filter-bar"><FilterSheetTrigger /></div>
