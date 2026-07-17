@@ -166,10 +166,19 @@ condition grade. Do not invent them — that data arrives with the BO.
    field, so the card cannot know. Fixing it is an API contract change **and**
    needs a product call: is the catalogue meant to be multi-currency, or should
    ARS not be on an es-MX storefront at all?
-2. **Product covers dominate page weight.** A shelf landing page pulls ~1,048 KB
-   of images: 38 jpg + 10 png of BGG covers, full-size, no `srcset`. The shelf
-   hero is 46 KB of that. The category art is now a rounding error; the covers
-   are the real perf problem on every catalogue page.
+2. ~~**Product covers dominate page weight.**~~ **Addressed — and the original
+   diagnosis here was wrong.** This entry claimed ~1,048 KB of "full-size, no
+   `srcset`" covers. Measured: a search page pulls **286 KB across 13 images**,
+   and the covers are **already ~246×300 thumbnails** for a 300px slot. The
+   waste was **format, not dimensions**. `ProductCard` now uses `next/image`
+   (JPEG 17.8 KB → WebP 12.1 KB; a 43 KB PNG → 17 KB). Two things worth keeping:
+   - The optimizer **caps at the source width and never upscales** — request
+     `w=640` for a 246px source and you get 246px back. So the 2x `srcset`
+     candidate costs **zero** extra bytes. Don't "optimize" it away.
+   - **AVIF is off deliberately.** On this Pi: AVIF **573 ms/image** vs WebP
+     **18 ms** (32×) for only ~6 KB more on a 246px cover. A 48-cover shelf
+     would burn ~27 CPU-seconds on the same 4-core box that serves the API.
+     Build-time AVIF (category art) is fine; **request-time AVIF is not**.
 3. **`apps/marketplace` (SPA) is not migrated.** Its `HomePage` calls
    `/api/v1/products/categories` — the same raw `board-game`/`expansion` axis
    that was removed from the SEO site. It imports the shared `commerce-state`, so
@@ -200,6 +209,20 @@ condition grade. Do not invent them — that data arrives with the BO.
   `PageNotFoundError: /api/search-suggestions` purely because `next dev` was
   writing `.next` concurrently. Kill it and `rm -rf apps/web/.next` before
   believing a build failure.
+- **`pgrep next` shows the *container's* next-server — do not kill it.** Chasing
+  the trap above, `pgrep` showed a `next-server (v14.2.15)` that survived
+  `kill -9`. It is the **deployed container's** process, visible through the host
+  PID namespace and owned by **root**; `kill` failed only because we don't own
+  it. **That failure is what kept the live site up.** Confirm ownership with
+  `ps -o pid,ppid,user,cmd -p <pid>` and check `ss -ltnp | grep 4310` for a real
+  dev server before concluding anything is clobbering `.next`.
+- **`nx build web` fails; `pnpm --filter web run build` is the real path.**
+  `nx build web` dies with `<Html> should not be imported outside of
+  pages/_document` / `useContext of null`. **This is not in the deploy path** —
+  the seo-web Dockerfile runs `pnpm --filter web run build` (i.e. `next build`
+  with cwd `apps/web`), which succeeds. Verified: clean tree and working tree
+  both build green that way. Don't let an `nx build web` failure block a ship,
+  and don't assume it's your diff.
 - **A parallel Codex agent shares this worktree** and commits directly to `main`.
   Verify tree-clean and `git fetch` before any ref surgery; stage explicit paths,
   never `git add -A`.
