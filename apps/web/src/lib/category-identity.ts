@@ -49,8 +49,8 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   fantasy:        { family: 'fantasy',     tint: '#e3ece4', accent: '#2c6b43', motif: 'fantasy',     art: '/categories/fantasy.webp' },
   coop:           { family: 'cooperative', tint: '#f2e6c8', accent: '#8a5a12', motif: 'cooperative', art: '/categories/coop.webp' },
   thematic:       { family: 'adventure',   tint: '#1e1712', accent: '#d7a654', motif: 'adventure',   art: '/categories/thematic.webp', dark: true },
-  solo:           { family: 'solo',        tint: '#e9e3f0', accent: '#574079', motif: 'solo' },
-  campaign:       { family: 'legacy',      tint: '#e3eaf1', accent: '#3a5a7d', motif: 'legacy' },
+  solo:           { family: 'solo',        tint: '#e9e3f0', accent: '#574079', motif: 'solo',      art: '/categories/solo.webp' },
+  campaign:       { family: 'legacy',      tint: '#e3eaf1', accent: '#3a5a7d', motif: 'legacy',    art: '/categories/campaign.webp' },
 
   // ── Tint/accent derived in-family; art commissioned ─────────────────────
   // These five aren't named in the design system's swatch set, so their tint and

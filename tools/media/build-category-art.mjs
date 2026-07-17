@@ -15,7 +15,7 @@
 //   <key>.webp       card tile, 2x desktop               ([shelf] 1:1)
 //   <key>-hero.webp  landing hero                        ([hero] 16:9)
 import sharp from 'sharp';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 const OUT = resolve(import.meta.dirname, '../../apps/web/public/categories');
@@ -77,3 +77,23 @@ const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
 console.log(`\n${Object.keys(MASTERS).length} shelves x ${VARIANTS.length} sizes`);
 console.log(`  avif total ${kb(totals.avif)}   webp total ${kb(totals.webp)}   (avif is ${Math.round((1 - totals.avif / totals.webp) * 100)}% smaller)`);
 console.log(`  note: a page loads ONE size per tile, not all of them.`);
+
+// Building a derivative does nothing until CATEGORY_IDENTITY points at it, and a
+// shelf that silently keeps its motif fallback looks deliberate rather than
+// broken — which is exactly how solo/campaign shipped unreferenced once. Fail
+// loudly instead.
+const identity = readFileSync(
+  resolve(import.meta.dirname, '../../apps/web/src/lib/category-identity.ts'),
+  'utf8',
+);
+const unwired = Object.values(MASTERS).filter(
+  (key) => !identity.includes(`art: '/categories/${key}.webp'`),
+);
+if (unwired.length) {
+  console.error(
+    `\nERROR: art built but not referenced in category-identity.ts: ${unwired.join(', ')}` +
+      `\n  Add   art: '/categories/<key>.webp'   to each, or those shelves keep the motif fallback.`,
+  );
+  process.exit(1);
+}
+console.log(`  all ${Object.keys(MASTERS).length} shelves wired into CATEGORY_IDENTITY.`);
