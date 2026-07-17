@@ -64,24 +64,50 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     this.log.log('Ranking scheduler initialized — hourly ranking and six-hour semantic refresh registered');
 
-    // A freshly recreated collection (schema change) is empty and search would
-    // sit on the Prisma fallback until the next hourly pass. Reindex the
-    // storefront catalogue once, off the boot path, to close that gap.
+    // Keep the search index covering the whole verified catalogue. The hourly
+    // ranking pass only reindexes products with an active listing, so a freshly
+    // recreated (or under-populated) collection would drop every offer-less
+    // verified product — yet they are searchable, shown as "no offer".
     //
-    // "Storefront catalogue" = products with an active listing, NOT every row
-    // in mkt_product: that table also holds the ~178k raw BGG discovery pool,
-    // which must never be indexed. This mirrors the marketplace query's own
-    // filter (listings: { some: { active: true } }).
+    // Compare the index size to the count of *verified* products only — NEVER
+    // to mkt_product.count(), which includes the ~178k raw BGG discovery pool.
+    // If the index is short, reindex the verified catalogue once. Self-healing:
+    // once indexed == verified it no-ops; a schema recreation (0 docs) trips it.
     try {
-      if (await this.search.documentCount() === 0) {
-        this.log.log('Search index empty on boot — reindexing the storefront catalogue');
-        void this.reindexProducts().then(() =>
-          this.log.log('Boot reindex of the storefront catalogue complete'),
-        );
+      const [indexed, verified] = await Promise.all([
+        this.search.documentCount(),
+        this.prisma.mktProduct.count({ where: { canonicalStatus: 'verified' } }),
+      ]);
+      if (indexed >= 0 && indexed < verified) {
+        this.log.log(`Search index has ${indexed}/${verified} verified products — reindexing the verified catalogue`);
+        void this.reindexVerifiedCatalog();
       }
     } catch (error) {
       this.log.warn(`Could not check search index on boot: ${String(error)}`);
     }
+  }
+
+  /**
+   * Reindex every verified product, offer-less ones included — unlike
+   * reindexProducts, which is scoped to active listings for the hourly ranking
+   * pass. Repopulates a freshly recreated collection at full search coverage
+   * without pulling in the raw BGG discovery pool (canonicalStatus != verified).
+   */
+  private async reindexVerifiedCatalog(): Promise<void> {
+    const products = await this.prisma.mktProduct.findMany({
+      where: { canonicalStatus: 'verified' },
+      select: { id: true },
+    });
+    let ok = 0;
+    for (const { id } of products) {
+      try {
+        await this.syncProductToSearch(id);
+        ok += 1;
+      } catch {
+        // Non-fatal — the next hourly pass or a manual reindex will catch it.
+      }
+    }
+    this.log.log(`Boot reindex of the verified catalogue complete: ${ok}/${products.length} products`);
   }
 
   async onModuleDestroy() {
