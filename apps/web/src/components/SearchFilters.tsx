@@ -64,8 +64,8 @@ export function SearchFilters({
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar' }
-      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort' };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más` }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more` };
 
   // Every one of these already worked end-to-end (FilterState.sort -> API
   // sortBy) but had no control — `sort` was a hidden input, so the only way to
@@ -91,6 +91,29 @@ export function SearchFilters({
     { label: '4', value: '4' },
     { label: '5+', value: '5' },
   ];
+
+  // Keep the rail short enough that the sections below Mecánicas stay reachable
+  // without scrolling inside a sticky panel.
+  const MECHANICS_SHOWN = 6;
+  const rankedMechanics = mechanics.slice(0, 15);
+  const visibleMechanics = rankedMechanics.slice(0, MECHANICS_SHOWN);
+  const hiddenMechanics = rankedMechanics.slice(MECHANICS_SHOWN);
+
+  const mechanicChip = (m: MechanicCount) => {
+    const isActive = state.mechanics.includes(m.mechanic);
+    return (
+      <label
+        key={m.mechanic}
+        className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
+          ${isActive
+            ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
+            : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
+      >
+        <input type="checkbox" name="mechanics" value={m.mechanic} defaultChecked={isActive} className="sr-only" />
+        {m.mechanic}
+      </label>
+    );
+  };
 
   const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
   const activeCount = [state.category, state.inStock, state.max, state.players, state.complexity]
@@ -206,26 +229,27 @@ export function SearchFilters({
         </div>
       </CatalogFilterSection>
 
-      {/* Mechanics — checkboxes, natively submit multiple values in a GET form */}
+      {/* Mechanics — checkboxes, natively submit multiple values in a GET form.
+          15 chips ran 468px, over a third of the rail, pushing Categorías behind
+          an internal scroll. Only the top few show; the rest live in a <details>
+          so the disclosure works with no JS, like the rest of this panel.
+          Collapsed inputs still submit — <details> hides its content, it doesn't
+          remove it from the form. */}
       {mechanics.length > 0 && (
         <CatalogFilterSection title={t.mechanics}>
           <div className="flex flex-wrap gap-1.5">
-            {mechanics.slice(0, 15).map((m) => {
-              const isActive = state.mechanics.includes(m.mechanic);
-              return (
-                <label
-                  key={m.mechanic}
-                  className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
-                    ${isActive
-                      ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
-                      : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-                >
-                  <input type="checkbox" name="mechanics" value={m.mechanic} defaultChecked={isActive} className="sr-only" />
-                  {m.mechanic}
-                </label>
-              );
-            })}
+            {visibleMechanics.map(mechanicChip)}
           </div>
+          {hiddenMechanics.length > 0 && (
+            // Opened when one of the user's own picks is in here — never hide
+            // an active filter behind a disclosure.
+            <details className="filter-more" open={hiddenMechanics.some((m) => state.mechanics.includes(m.mechanic))}>
+              <summary className="filter-more-summary">{t.more(hiddenMechanics.length)}</summary>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {hiddenMechanics.map(mechanicChip)}
+              </div>
+            </details>
+          )}
         </CatalogFilterSection>
       )}
 

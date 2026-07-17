@@ -565,3 +565,19 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   .responsive-filter-panel > .mobile-filter-modal { height: 100%; }
   .mobile-filter-modal > .mobile-filter-scroll { height: 100%; }
 }
+
+/* Progressive disclosure inside the filter rail. <details> keeps this working
+   with no JS — the same contract as the rest of the panel — and collapsed
+   inputs still submit, since <details> hides its content rather than detaching
+   it from the form. */
+.filter-more { margin-top: .5rem; }
+.filter-more-summary { display: inline-flex; align-items: center; gap: .3rem; width: fit-content;
+  padding: .3rem .1rem; color: var(--primary); font-size: .78rem; font-weight: 700;
+  cursor: pointer; list-style: none; }
+.filter-more-summary::-webkit-details-marker { display: none; }
+.filter-more-summary::after { content: ''; width: 7px; height: 7px; margin-left: .1rem;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s ease; }
+.filter-more[open] .filter-more-summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.filter-more-summary:hover { text-decoration: underline; }
+.filter-more-summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; border-radius: 4px; }
