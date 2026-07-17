@@ -18,6 +18,9 @@ import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { editorTake } from '@/content/editorial/takes';
 import { THEMES, getThemeBySlug } from '@/lib/themes';
+import { identityFor } from '@/lib/category-identity';
+import { CategoryMotif } from '@/components/CategoryMotif';
+import { ShelfHero } from '@/components/ShelfHero';
 import { JsonLd } from '@/components/JsonLd';
 import { LocaleAlternates } from '@/components/LocaleAlternates';
 import { ShareBar } from '@/components/ShareBar';
@@ -242,11 +245,27 @@ export default async function DetailPage({
             ]}
           />
         )}
-        <h1 className="page-title">{title}</h1>
-        <p className="muted">
-          {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
-        </p>
-        {page === 1 && <p className="lede">{lede}</p>}
+        {/* A curated shelf carries its identity through the click; a legacy raw
+            category has none to carry, so it keeps the plain header. */}
+        {theme ? (
+          <ShelfHero
+            identity={identityFor(theme)}
+            title={title}
+            // Page 2+ drops the lede, as the plain header always has — it's the
+            // shelf's intro, not a per-page restatement.
+            lede={page === 1 ? lede : ''}
+            total={total}
+            locale={locale}
+          />
+        ) : (
+          <>
+            <h1 className="page-title">{title}</h1>
+            <p className="muted">
+              {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
+            </p>
+            {page === 1 && <p className="lede">{lede}</p>}
+          </>
+        )}
         {results.length > 0 ? (
           <>
             <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
@@ -260,11 +279,20 @@ export default async function DetailPage({
         <section aria-label={locale === 'es' ? 'Explora por tema' : 'Explore by theme'}>
           <h2 className="section-title">{locale === 'es' ? 'Explora por tema' : 'Explore by theme'}</h2>
           <div className="taglist">
-            {siblings.map((t) => (
-              <Link key={t.key} className="chip" href={entityPath('categories', locale, t.slug[locale])}>
-                <span aria-hidden="true">{t.glyph}</span> {t.label[locale]}
-              </Link>
-            ))}
+            {siblings.map((t) => {
+              const sid = identityFor(t);
+              return (
+                <Link
+                  key={t.key}
+                  className="chip chip-shelf"
+                  href={entityPath('categories', locale, t.slug[locale])}
+                  style={{ '--cat-accent': sid.accent } as React.CSSProperties}
+                >
+                  <CategoryMotif motif={sid.motif} size={14} className="chip-shelf-motif" />
+                  {t.label[locale]}
+                </Link>
+              );
+            })}
           </div>
         </section>
       </main>

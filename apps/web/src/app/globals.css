@@ -480,3 +480,44 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .home-shelf-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 900px) { .home-shelf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 680px) { .home-shelf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── Shelf hero — the landing page's half of the identity (§06) ──────────────
+   Art heroes lay text over a scrim; motif heroes keep the tint and dark ink, so
+   both read as the same object at the same size. */
+.shelf-hero { position: relative; display: flex; align-items: flex-end; overflow: hidden;
+  min-height: 210px; margin: 1rem 0 1.75rem; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--cat-tint, var(--accent-bg)); color: var(--foreground); }
+.shelf-hero-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shelf-hero-motif { position: absolute; top: 50%; right: 5%; transform: translateY(-50%);
+  color: var(--cat-accent); opacity: .5; }
+/* Scrim only under art — a flat tint needs no help, and dimming it would mute
+   the very accent the shelf is identified by. */
+.shelf-hero[data-art="true"]::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgb(20 14 10 / .88) 0%, rgb(20 14 10 / .62) 38%, rgb(20 14 10 / .12) 72%, transparent 100%); }
+.shelf-hero[data-art="true"] { color: #f6f1e6; border-color: transparent; }
+.shelf-hero[data-dark="true"]:not([data-art="true"]) { color: #f0e8d8; border-color: transparent; }
+
+.shelf-hero-body { position: relative; z-index: 1; max-width: 62ch; padding: 1.5rem 1.6rem 1.4rem; }
+.shelf-hero-title { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 4.4vw, 3rem);
+  font-weight: 800; line-height: .98; letter-spacing: -.03em; }
+.shelf-hero-count { margin: .55rem 0 0; font-family: var(--font-mono); font-size: .7rem;
+  letter-spacing: .12em; text-transform: uppercase; color: inherit; opacity: .78; }
+.shelf-hero-lede { margin: .7rem 0 0; font-size: .95rem; line-height: 1.5; opacity: .92; }
+/* The shelf accents are specified to clear 4.5:1 against their own light tint,
+   so using one raw on the dark scrim fails contrast (forest #2c6b43 on near-black
+   is unreadable). Lift it toward parchment: keeps the shelf's hue as a signal,
+   stays legible over art. */
+.shelf-hero[data-art="true"] .shelf-hero-count {
+  color: color-mix(in srgb, var(--cat-accent) 26%, #f6f1e6); opacity: 1;
+}
+
+@media (max-width: 680px) {
+  .shelf-hero { min-height: 170px; }
+  .shelf-hero-body { padding: 1.1rem 1.1rem 1rem; }
+  .shelf-hero-motif { right: 2%; opacity: .35; }
+  .shelf-hero-lede { font-size: .88rem; }
+}
+/* Shelf chips carry their accent motif instead of an emoji, so lateral nav
+   reads as the same system as the cards. */
+.chip-shelf { display: inline-flex; align-items: center; gap: .4rem; }
+.chip-shelf-motif { color: var(--cat-accent); flex: none; }

@@ -29,6 +29,7 @@ export interface CategoryIdentity {
    * Commissioned shelf illustration (`/categories/<key>.webp`, 1:1 per the
    * design system's `[shelf]` slot). Shelves still awaiting art fall back to
    * `tint` + `motif`, which is the designed placeholder — not a broken state.
+   * A `-hero.webp` sibling (16:9, the `[hero]` slot) exists wherever `art` does.
    */
   art?: string;
   /** True when the wash is dark and the card must flip to light ink. */
