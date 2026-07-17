@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCategories, listProducts } from '@/lib/api';
+import { listProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/seo';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogSearchField } from '@/components/CatalogSearchField';
-import { homePath, isLocale, listingPath, slugify, type Locale } from '@/lib/segments';
+import { PromoBanner, PromoStrip } from '@/components/PromoBanner';
+import { ShelfCard } from '@/components/ShelfCard';
+import { listShelves } from '@/lib/shelves';
+import { getPromos, rotateTones } from '@/lib/promos';
+import { homePath, isLocale, listingPath, type Locale } from '@/lib/segments';
 
 export const revalidate = 1800;
+
+/** Busiest shelves to surface on the home page; the rest live on the hub. */
+const HOME_SHELVES = 8;
 
 const T = {
   es: {
@@ -17,6 +24,7 @@ const T = {
     h1: 'La enciclopedia de juegos de mesa, con el mejor precio.',
     lead: 'Encuentra cualquier juego y compara las ofertas de todas las tiendas en un solo lugar.',
     cats: 'Explora por categoría',
+    allCats: 'Ver las 16 categorías',
     featured: 'Disponibles ahora',
     all: 'Ver todo el catálogo',
     searchPlaceholder: 'Busca Catan, cooperativos, 2 jugadores…',
@@ -35,6 +43,7 @@ const T = {
     h1: 'The board-game encyclopedia, at the best price.',
     lead: 'Find any game and compare offers from every store in one place.',
     cats: 'Browse by category',
+    allCats: 'See all 16 categories',
     featured: 'Available now',
     all: 'See the full catalogue',
     searchPlaceholder: 'Search Catan, cooperative, 2 players…',
@@ -70,10 +79,15 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const locale = params.locale as Locale;
   const t = T[locale];
 
-  const [{ results: featured }, categories] = await Promise.all([
+  // The home page browses by *shelf*, not by the catalogue's raw `category`
+  // field — that field is only base-game vs expansion, so it produced chips
+  // reading "board-game 26" that led to a thin `/categorias/board-game` page.
+  // The sixteen curated shelves are the real browse axis (see `lib/themes.ts`).
+  const [{ results: featured }, shelves] = await Promise.all([
     listProducts({ inStock: true, limit: 18, locale }),
-    getCategories(),
+    listShelves(),
   ]);
+  const topShelves = shelves.slice(0, HOME_SHELVES);
 
   return (
     <>
@@ -102,23 +116,29 @@ export default async function HomePage({ params }: { params: { locale: string } 
       </section>
 
       <main className="container">
-        {categories.length > 0 && (
+        {/* Trust first: shipping/returns answer the objection before the browse. */}
+        <PromoStrip locale={locale} />
+
+        {topShelves.length > 0 && (
           <>
             <p className="section-kicker home-section-kicker">{locale === 'es' ? 'Explorar' : 'Explore'}</p>
             <h2 className="section-title home-section-title">{t.cats}</h2>
-            <div className="taglist">
-              {categories.map((c) => (
-                <Link
-                  key={c.category}
-                  className="chip"
-                  href={`${listingPath('categories', locale)}/${slugify(c.category)}`}
-                >
-                  {c.category} <span className="count">{c.count}</span>
-                </Link>
+            <div className="category-grid home-shelf-grid">
+              {topShelves.map((shelf) => (
+                <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} share={false} />
               ))}
             </div>
+            <p style={{ marginTop: '1.5rem' }}>
+              <Link className="chip" href={listingPath('categories', locale)}>
+                {t.allCats} →
+              </Link>
+            </p>
           </>
         )}
+
+        {rotateTones(getPromos('home')).map(({ item, tone }) => (
+          <PromoBanner key={item.id} promo={item} locale={locale} tone={tone} />
+        ))}
 
         {featured.length > 0 && (
           <>

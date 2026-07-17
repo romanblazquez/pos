@@ -25,6 +25,10 @@ import {
 } from '@/lib/segments';
 import { listGuides } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
+import { listShelves } from '@/lib/shelves';
+import { ShelfCard } from '@/components/ShelfCard';
+import { PromoBanner, PromoStrip } from '@/components/PromoBanner';
+import { getPromos, rotateTones } from '@/lib/promos';
 import { absoluteUrl } from '@/lib/site';
 import { CardShareButton } from '@/components/CardShareButton';
 
@@ -334,24 +338,7 @@ export default async function ListingPage({
   // ── Category index (curated BGG-aligned themes) ────────────────────────────
   if (kind === 'categories') {
     const catBase = listingPath('categories', locale);
-    // Accurate per-theme total + a representative cover via one small ranked query
-    // each (the same rule the theme's detail page uses). ~16 indexed lookups, cached
-    // by ISR — cheap, and far more honest than counting within a capped batch.
-    const cards = (await Promise.all(
-      THEMES.map(async (theme) => {
-        const { results, total } = await listProducts({
-          mechanics: theme.tags,
-          minPlayers: theme.players,
-          limit: 5,
-          sortBy: 'rank_score',
-        });
-        return { theme, count: total, cover: results.find((p) => p.images?.[0])?.images[0] };
-      }),
-    ))
-      .filter((c) => c.count > 0) // only surface themes that actually have games yet
-      .sort((a, b) => b.count - a.count);
-    const gamesWord = (n: number) =>
-      locale === 'es' ? (n === 1 ? 'juego' : 'juegos') : (n === 1 ? 'game' : 'games');
+    const cards = await listShelves();
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: catBase },
@@ -362,7 +349,7 @@ export default async function ListingPage({
         <JsonLd
           data={[
             breadcrumbLd(crumbs),
-            itemListLd(cards.map((c) => ({ name: c.theme.label[locale], path: entityPath('categories', locale, c.theme.slug[locale]) }))),
+            itemListLd(cards.map((s) => ({ name: s.theme.label[locale], path: entityPath('categories', locale, s.theme.slug[locale]) }))),
           ]}
         />
         <h1 className="page-title">{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
@@ -371,34 +358,19 @@ export default async function ListingPage({
             ? 'Explora el catálogo por tema —estrategia, eurogames, cooperativos, 2 jugadores, cartas, terror y más— siguiendo la clasificación de BoardGameGeek, y compara precios y stock real entre tiendas verificadas.'
             : 'Browse the catalogue by theme —strategy, eurogames, cooperative, 2-player, card games, horror and more— following BoardGameGeek’s taxonomy, and compare real prices and stock across verified stores.'}
         </p>
+        {rotateTones(getPromos('categories')).map(({ item, tone }) => (
+          <PromoBanner key={item.id} promo={item} locale={locale} tone={tone} />
+        ))}
         {cards.length > 0 ? (
           <div className="category-grid">
-            {cards.map(({ theme, count, cover }) => {
-              const href = entityPath('categories', locale, theme.slug[locale]);
-              return (
-                <article key={theme.key} className="category-card">
-                  <Link href={href} className="category-card-link" aria-label={theme.label[locale]}>
-                    <div className="category-card-media">
-                      {cover ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={cover} alt="" width={320} height={200} loading="lazy" />
-                      ) : (
-                        <span className="category-card-glyph" aria-hidden="true">{theme.glyph}</span>
-                      )}
-                    </div>
-                    <div className="category-card-body">
-                      <h2 className="category-card-name">{theme.label[locale]}</h2>
-                      <span className="category-card-count">{count} {gamesWord(count)}</span>
-                    </div>
-                  </Link>
-                  <CardShareButton url={absoluteUrl(href)} title={theme.label[locale]} locale={locale} />
-                </article>
-              );
-            })}
+            {cards.map((shelf) => (
+              <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} />
+            ))}
           </div>
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale)} />
         )}
+        <PromoStrip locale={locale} />
       </main>
     );
   }

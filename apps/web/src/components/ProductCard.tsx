@@ -3,7 +3,17 @@ import { Clock3, Users } from 'lucide-react';
 import type { ProductSummary } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import { listingPath, type Locale } from '@/lib/segments';
-import { commerceStateLabel, resolveCommerceState } from '@retail-os/ui-react';
+import {
+  commerceStateEmphasis,
+  commerceStateLabel,
+  commerceStateText,
+  resolveCommerceState,
+} from '@retail-os/ui-react';
+
+// Glyph marks (§04). Stock states take a colour dot instead — an empty mark span
+// renders as one — and every other state carries no mark at all.
+const MARKS: Partial<Record<string, string>> = { rare: '◆', 'top-ranked': '★', 'best-price': '✓' };
+const DOTTED = new Set(['in-stock', 'low-stock', 'out-of-stock']);
 
 // Catalog card for a price-comparison storefront: image, name, lowest price,
 // and how many stores carry it. Crawlable <a> to the product page.
@@ -12,6 +22,10 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
   const inStock = product.inStockListings > 0;
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const hasPrice = product.minPriceMinor > 0;
+  // `category` is base-game vs expansion, so this qualifier is the one extra
+  // badge the catalogue can back today. The design system's detail suffixes
+  // (Sale −19%, Low · 3 left, Used · VG) need BO data we don't have yet.
+  const isExpansion = product.category === 'expansion';
 
   return (
     <Link className="card-link" href={href}>
@@ -22,12 +36,22 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
         ) : (
           <div className="card-noimg" aria-hidden="true">🎲</div>
         )}
-        <span className={`commerce-badge commerce-badge--${commerceState}`}>
-          <span className="commerce-badge-mark" aria-hidden="true">
-            {commerceState === 'rare' ? '◆' : commerceState === 'top-ranked' ? '★' : commerceState === 'best-price' ? '✓' : ''}
+        <div className="card-badges">
+          <span
+            className={`commerce-badge commerce-badge--${commerceState}`}
+            data-emphasis={commerceStateEmphasis(commerceState)}
+          >
+            {(MARKS[commerceState] || DOTTED.has(commerceState)) && (
+              <span className="commerce-badge-mark" aria-hidden="true">{MARKS[commerceState] ?? ''}</span>
+            )}
+            {commerceStateText(commerceState, locale)}
           </span>
-          {commerceStateLabel(commerceState, locale)}
-        </span>
+          {isExpansion && (
+            <span className="commerce-badge commerce-badge--expansion" data-emphasis="soft">
+              {commerceStateLabel('expansion', locale)}
+            </span>
+          )}
+        </div>
       </div>
       <div className="card-body">
         <div className="card-category">{product.publisher ?? product.category}</div>

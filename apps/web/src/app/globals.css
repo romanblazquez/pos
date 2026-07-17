@@ -140,7 +140,7 @@ button, input, select { font: inherit; }
 .category-card { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); transition: border-color 180ms, transform 180ms cubic-bezier(.2,0,0,1), box-shadow 180ms; }
 .category-card-link { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .category-card:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); transform: translateY(-3px); box-shadow: 0 12px 26px rgb(43 38 34 / .13); }
-.category-card-media { position: relative; display: grid; aspect-ratio: 16 / 10; place-items: center; overflow: hidden; background: var(--accent-bg); }
+.category-card-media { position: relative; display: grid; aspect-ratio: 1 / 1; place-items: center; overflow: hidden; background: var(--accent-bg); }
 .category-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms cubic-bezier(.2,0,0,1); }
 .category-card:hover .category-card-media img { transform: scale(1.04); }
 .category-card-glyph { font-size: 2.1rem; opacity: .55; }
@@ -165,17 +165,34 @@ button, input, select { font: inherit; }
 .commerce-badge { position: absolute; top: .6rem; left: .6rem; max-width: calc(100% - 1.2rem); padding: .28rem .5rem; border: 1px solid var(--commerce-border); background: var(--commerce-bg); color: var(--commerce-fg); box-shadow: 0 1px 2px rgb(43 38 34 / .08); backdrop-filter: blur(4px); }
 .commerce-badge-mark { display: grid; min-width: 6px; height: 10px; place-items: center; color: var(--commerce-mark); font-size: .55rem; line-height: 1; }
 .commerce-badge-mark:empty { width: 6px; height: 6px; border-radius: 50%; background: var(--commerce-mark); }
-.commerce-badge--in-stock, .commerce-badge--best-price { --commerce-bg: #e4efe4; --commerce-fg: #2c6b43; --commerce-border: #cbe0cd; --commerce-mark: #3e7c53; }
+.commerce-badge--in-stock { --commerce-bg: #e4efe4; --commerce-fg: #2c6b43; --commerce-border: #cbe0cd; --commerce-mark: #3e7c53; }
 .commerce-badge--low-stock { --commerce-bg: #f6ebd2; --commerce-fg: #8a5a12; --commerce-border: #e7d3a6; --commerce-mark: #c0852f; }
 .commerce-badge--out-of-stock, .commerce-badge--out-of-print { --commerce-bg: #e9e2d2; --commerce-fg: #2b2622; --commerce-border: #d8ccb3; --commerce-mark: #6f6557; }
 .commerce-badge--preorder { --commerce-bg: #ece6f3; --commerce-fg: #574079; --commerce-border: #d9cee6; --commerce-mark: #6b5191; }
 .commerce-badge--backorder { --commerce-bg: #f5e6d6; --commerce-fg: #8a4a18; --commerce-border: #e6cdb2; --commerce-mark: #b4632a; }
 .commerce-badge--used { --commerce-bg: #deeeea; --commerce-fg: #2c6b5f; --commerce-border: #c2ddd6; --commerce-mark: #3e7c6f; }
-.commerce-badge--rare, .commerce-badge--top-ranked { --commerce-bg: #f2e6c8; --commerce-fg: #7e5a12; --commerce-border: #e2cf9c; --commerce-mark: #a9791f; }
+.commerce-badge--rare { --commerce-bg: #f2e6c8; --commerce-fg: #7e5a12; --commerce-border: #e2cf9c; --commerce-mark: #a9791f; }
+.commerce-badge--top-ranked { --commerce-bg: #f4e9cf; --commerce-fg: #8a6312; --commerce-border: #e2cf9c; --commerce-mark: #b5852f; }
+.commerce-badge--expansion { --commerce-bg: #e3eaf1; --commerce-fg: #3a5876; --commerce-border: #ccd9e5; --commerce-mark: #46688a; }
 .commerce-badge--sale { --commerce-bg: #f6e1dc; --commerce-fg: #93291f; --commerce-border: #e8c7bf; --commerce-mark: #b23a2e; }
+.commerce-badge--hot { --commerce-bg: #f6e4da; --commerce-fg: #9c4324; --commerce-border: #e8cfc2; --commerce-mark: #b4502e; }
+.commerce-badge--best-price { --commerce-bg: #e4efe4; --commerce-fg: #2c6b43; --commerce-border: #cbe0cd; --commerce-mark: #3e7c53; }
 .commerce-badge--community-pick { --commerce-bg: #e5ebe5; --commerce-fg: #354a3d; --commerce-border: #ccd8cd; --commerce-mark: #3f5a4a; }
 .commerce-badge--new { --commerce-bg: #fbefe0; --commerce-fg: #9c4324; --commerce-border: #f0d9c2; --commerce-mark: #b4502e; }
-[data-theme="dark"] .commerce-badge { --commerce-bg: color-mix(in srgb, var(--commerce-mark) 15%, var(--card)); --commerce-border: color-mix(in srgb, var(--commerce-mark) 35%, var(--border)); --commerce-fg: color-mix(in srgb, var(--commerce-mark) 65%, #f0e8d8); }
+[data-theme="dark"] .commerce-badge[data-emphasis="soft"] { --commerce-bg: color-mix(in srgb, var(--commerce-mark) 15%, var(--card)); --commerce-border: color-mix(in srgb, var(--commerce-mark) 35%, var(--border)); --commerce-fg: color-mix(in srgb, var(--commerce-mark) 65%, #f0e8d8); }
+
+/* Emphasis tiers (§04) — solid interrupts scanning, outline recedes. Both keep
+   their palette in dark mode: the whole point of a loud badge is that it doesn't
+   quietly restyle itself. */
+.commerce-badge[data-emphasis="solid"] { --commerce-bg: var(--commerce-mark); --commerce-fg: #fbf1ed; --commerce-border: transparent; }
+.commerce-badge[data-emphasis="solid"] .commerce-badge-mark { color: #fbf1ed; }
+.commerce-badge[data-emphasis="solid"] .commerce-badge-mark:empty { background: #fbf1ed; }
+.commerce-badge[data-emphasis="outline"] { --commerce-bg: transparent; --commerce-border: #b6a98c; border-width: 1.5px; backdrop-filter: blur(6px); }
+[data-theme="dark"] .commerce-badge[data-emphasis="outline"] { --commerce-fg: #f0e8d8; --commerce-border: #6f6557; }
+
+/* A card may carry a qualifier (Expansion) beside its commerce state. */
+.card-badges { position: absolute; top: .6rem; left: .6rem; display: flex; flex-wrap: wrap; gap: .3rem; max-width: calc(100% - 1.2rem); }
+.card-badges .commerce-badge { position: static; max-width: none; }
 .card-body { display: flex; flex: 1; flex-direction: column; padding: .82rem .88rem .9rem; }
 .card-category { color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .61rem; letter-spacing: .1em; text-transform: uppercase; }
 .card-title { display: -webkit-box; overflow: hidden; margin: .2rem 0 0; color: var(--foreground); font-family: var(--font-display); font-size: 1.04rem; font-weight: 700; line-height: 1.18; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -396,3 +413,70 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   flex-shrink: 0; background: var(--card); border: 1px solid var(--border);
   font-family: var(--font-display); font-weight: 700; font-size: 14px; }
 .editor-take-quote { margin: .7rem 0 .1rem; font-size: 1.02rem; line-height: 1.55; font-style: italic; }
+
+/* ── Category identity — "sixteen shelves, one collection" (design system §06) ─
+   Each shelf sets --cat-tint/--cat-accent inline (see CATEGORY_IDENTITY); the
+   motif is the stand-in for commissioned per-category artwork ("Art TBD"), so
+   the whole set reads as one family regardless of which covers exist. */
+.category-card-media { color: var(--cat-accent, var(--primary)); background: var(--cat-tint, var(--accent-bg)); }
+.category-card-motif { width: 42%; max-width: 92px; height: auto; opacity: .92; transition: transform 240ms cubic-bezier(.2,0,0,1); }
+.category-card:hover .category-card-motif { transform: scale(1.06) rotate(-2deg); }
+/* The accent wash grounds the bare motif; commissioned art brings its own light,
+   so it only gets a whisper of accent at the foot to tie back to the rule. */
+.category-card-media::after { content: ''; position: absolute; inset: 0; pointer-events: none; background:
+  radial-gradient(120% 90% at 50% 115%, color-mix(in srgb, var(--cat-accent, var(--primary)) 16%, transparent), transparent 70%); }
+.category-card-media:has(img)::after { background:
+  linear-gradient(to top, color-mix(in srgb, var(--cat-accent, var(--primary)) 22%, transparent), transparent 42%); }
+.category-card[data-dark="true"] .category-card-media { color: var(--cat-accent); }
+.category-card-rule { height: 3px; flex: none; background: var(--cat-accent, var(--primary)); opacity: .85; }
+.category-card-desc { margin: 0; padding: 0 .9rem .85rem; color: var(--muted-foreground); font-size: .8rem; line-height: 1.45; }
+.category-card-body { align-items: center; }
+
+/* ── Promo banners — site hero / email header / paid social (§05) ────────────
+   Four tones rotate clay → gold → forest → felt so no two stacked placements
+   repeat a background. Sponsored placements always carry a disclosure chip. */
+.promo { position: relative; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; overflow: hidden;
+  margin: 1.75rem 0; padding: 30px 34px; border: 1px solid var(--promo-line); border-radius: 16px;
+  background: var(--promo-bg); color: var(--promo-ink); }
+.promo-clay   { --promo-bg: #f6e4da; --promo-ink: #2b2622; --promo-accent: #b4502e; --promo-line: #e8cfc2; --promo-mark: #e0cdb0; --promo-cta-ink: #fbf6ec; }
+.promo-gold   { --promo-bg: #f4e9cf; --promo-ink: #2b2622; --promo-accent: #8a5a12; --promo-line: #e2cf9c; --promo-mark: #dfc79a; --promo-cta-ink: #fbf6ec; }
+.promo-forest { --promo-bg: #1e3a2e; --promo-ink: #f0e8d8; --promo-accent: #d7a654; --promo-line: #2c5140; --promo-mark: #2f5643; --promo-cta-ink: #1a140e; }
+.promo-felt   { --promo-bg: #3f5a4a; --promo-ink: #f0e8d8; --promo-accent: #e2cf9c; --promo-line: #52705e; --promo-mark: #4c6a59; --promo-cta-ink: #1a140e; }
+[data-theme="dark"] .promo-clay { --promo-bg: #3d2117; --promo-ink: #f0e8d8; --promo-accent: #e08a63; --promo-line: #55301f; --promo-mark: #56311f; --promo-cta-ink: #1a140e; }
+[data-theme="dark"] .promo-gold { --promo-bg: #33290f; --promo-ink: #f0e8d8; --promo-accent: #d7a654; --promo-line: #4a3a17; --promo-mark: #4a3a17; --promo-cta-ink: #1a140e; }
+
+.promo-marks { position: absolute; right: 18px; top: 50%; display: flex; gap: 10px; transform: translateY(-50%);
+  color: var(--promo-mark); opacity: .5; pointer-events: none; }
+.promo-body { position: relative; z-index: 1; flex: 1; min-width: 240px; }
+.promo-kicker { margin: 0; color: var(--promo-accent); font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 2px; text-transform: uppercase; }
+.promo-headline { margin: 8px 0 0; font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(26px, 4vw, 40px); line-height: .98; letter-spacing: -.03em; }
+.promo-headline-accent { color: var(--promo-accent); }
+.promo-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.promo-cta { display: inline-flex; align-items: center; padding: 11px 20px; border-radius: 11px;
+  background: var(--promo-accent); color: var(--promo-cta-ink); font-weight: 700; font-size: 14px; }
+.promo-cta:hover { background: color-mix(in srgb, var(--promo-accent) 86%, #000); }
+.promo-stat { color: color-mix(in srgb, var(--promo-ink) 72%, transparent); font-family: var(--font-mono); font-size: 11px; }
+.promo-disclosure { position: absolute; top: 10px; right: 12px; z-index: 1; padding: 3px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--promo-ink) 12%, transparent); color: color-mix(in srgb, var(--promo-ink) 78%, transparent);
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; }
+
+.promo-strip { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  margin: 1.75rem 0; padding: 13px; border-radius: 12px; background: #1e3a2e; color: #d7a654; }
+.promo-strip-lead { color: #f0e8d8; font-weight: 600; font-size: 13.5px; }
+.promo-strip-dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: #5e7568; }
+.promo-strip-detail { color: #9db0a0; font-family: var(--font-mono); font-size: 11.5px; }
+
+@media (max-width: 680px) {
+  .promo { gap: 14px; padding: 22px 20px; }
+  .promo-marks { display: none; }
+  .promo-strip { flex-direction: column; gap: 6px; text-align: center; }
+  .category-card-desc { display: none; }
+}
+
+/* Home rail: the busiest shelves, four across — denser than the browse hub,
+   which lets all sixteen breathe. */
+.home-shelf-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .home-shelf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .home-shelf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
