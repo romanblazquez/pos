@@ -64,17 +64,42 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     this.log.log('Ranking scheduler initialized — hourly ranking and six-hour semantic refresh registered');
 
-    // If the search collection was just recreated on a schema change (or this is
-    // a fresh environment), it is empty and search would fall back to Prisma
-    // until the next hourly pass. Enqueue one immediate pass to close that gap.
+    // Keep the search index covering the whole catalogue. The hourly ranking
+    // pass only reindexes products with an active listing, so a freshly
+    // recreated collection (schema change) ends up missing every listing-less
+    // product — yet the full catalogue is searchable, shown as "no offer". On
+    // boot, if the index holds fewer docs than the catalogue, rebuild it once.
     try {
-      if (await this.search.isEmpty()) {
-        await this.queue.add(JOB_NAME, {}, { priority: 1 });
-        this.log.log('Search index empty on boot — enqueued an immediate ranking pass');
+      const [indexed, total] = await Promise.all([
+        this.search.documentCount(),
+        this.prisma.mktProduct.count(),
+      ]);
+      if (indexed >= 0 && indexed < total) {
+        this.log.log(`Search index has ${indexed}/${total} products — reindexing the full catalogue`);
+        void this.reindexEntireCatalog();
       }
     } catch (error) {
       this.log.warn(`Could not check search index on boot: ${String(error)}`);
     }
+  }
+
+  /**
+   * Reindex every product, listing-less ones included — unlike reindexProducts,
+   * which is scoped to active listings for the hourly ranking pass. Used to
+   * repopulate a freshly recreated collection without losing search coverage.
+   */
+  private async reindexEntireCatalog(): Promise<void> {
+    const products = await this.prisma.mktProduct.findMany({ select: { id: true } });
+    let ok = 0;
+    for (const { id } of products) {
+      try {
+        await this.syncProductToSearch(id);
+        ok += 1;
+      } catch {
+        // Non-fatal — the next hourly pass or a manual reindex will catch it.
+      }
+    }
+    this.log.log(`Full-catalogue reindex complete: ${ok}/${products.length} products`);
   }
 
   async onModuleDestroy() {

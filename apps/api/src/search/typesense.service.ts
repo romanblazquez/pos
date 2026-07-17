@@ -113,18 +113,18 @@ export class TypesenseService implements OnModuleInit {
   }
 
   /**
-   * True when the collection holds no documents — e.g. just after
-   * ensureCollection() recreated it on a schema change. The scheduler uses this
-   * to reindex immediately on boot instead of leaving search on the Prisma
-   * fallback until the next hourly pass. Treats an unreachable Typesense as
-   * "not empty" so a transient outage never triggers a needless full reindex.
+   * How many documents the collection holds. The scheduler compares this to the
+   * catalogue size on boot: a short index (freshly recreated, or repopulated by
+   * the active-listing-only hourly job after a wipe) triggers a full reindex.
+   * Returns -1 when Typesense is unreachable, so a transient outage never looks
+   * like a short index and never triggers a needless full reindex.
    */
-  async isEmpty(): Promise<boolean> {
+  async documentCount(): Promise<number> {
     try {
       const c = await this.client.collections(COLLECTION).retrieve();
-      return ((c as { num_documents?: number }).num_documents ?? 0) === 0;
+      return (c as { num_documents?: number }).num_documents ?? 0;
     } catch {
-      return false;
+      return -1;
     }
   }
 
