@@ -69,6 +69,91 @@ export function CatalogFilterSection({
   );
 }
 
+// A single filter chip, shared by both frontends (§04).
+//
+// It exists because the chip was hand-copied at four call sites in the SEO app
+// and four more in the SPA, and one copy silently lost `data-filter="chip"` —
+// which killed live selection feedback for the Players filter on mobile with no
+// other symptom. The attribute is emitted here so a call site cannot forget it.
+//
+// Two modes, because the frontends genuinely differ and neither should bend:
+//   form — a <label> wrapping a visually-hidden native input. The SEO app's
+//          filter panel is one no-JS GET <form>, so chips must submit unhydrated.
+//   button — a plain button driving React state, for the SPA.
+// The `active` prop paints both, but note it is only trustworthy where the
+// component re-renders on change. In the SEO app's mobile modal FormAutoSubmit
+// deliberately batches (it bails below 861px), so server-computed `active` goes
+// stale on tap and the [data-filter="chip"]:has(input:checked) rules in the web
+// app's globals.css are what actually paint it. That is why the attribute is
+// load-bearing rather than decorative.
+type FilterChipShape = 'pill' | 'compact';
+
+interface FilterChipBaseProps {
+  active: boolean;
+  /** pill: wraps text (mechanics, budget, complexity). compact: fixed-height, for short labels (players). */
+  shape?: FilterChipShape;
+  children: React.ReactNode;
+  className?: string;
+}
+
+interface FilterChipFormProps extends FilterChipBaseProps {
+  /** Submitted field name. Presence of `name` selects form mode. */
+  name: string;
+  value: string;
+  inputType: 'radio' | 'checkbox';
+  onClick?: never;
+}
+
+interface FilterChipButtonProps extends FilterChipBaseProps {
+  onClick: () => void;
+  name?: never;
+  value?: never;
+  inputType?: never;
+}
+
+export type FilterChipProps = FilterChipFormProps | FilterChipButtonProps;
+
+const CHIP_SHAPE: Record<FilterChipShape, string> = {
+  pill: 'rounded-full px-3.5 py-1.5 text-center text-[13px]',
+  compact: 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs',
+};
+
+function filterChipClass(active: boolean, shape: FilterChipShape, className?: string) {
+  return cn(
+    'mobile-filter-choice border font-semibold transition-colors',
+    CHIP_SHAPE[shape],
+    active
+      ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
+      : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)',
+    className,
+  );
+}
+
+export function FilterChip(props: FilterChipProps) {
+  const { active, shape = 'pill', children, className } = props;
+
+  if (props.name !== undefined) {
+    return (
+      <label data-filter="chip" className={cn('cursor-pointer', filterChipClass(active, shape, className))}>
+        <input
+          type={props.inputType}
+          name={props.name}
+          value={props.value}
+          defaultChecked={active}
+          className="sr-only"
+        />
+        {children}
+      </label>
+    );
+  }
+
+  return (
+    <button type="button" data-filter="chip" onClick={props.onClick} className={filterChipClass(active, shape, className)}>
+      {children}
+    </button>
+  );
+}
+
 export function FilterToggle({
   checked,
   label,

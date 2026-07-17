@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { Button, CatalogFilterPanel, CatalogFilterSection } from '@retail-os/ui-react';
+import { Button, CatalogFilterPanel, CatalogFilterSection, FilterChip } from '@retail-os/ui-react';
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
@@ -99,22 +99,17 @@ export function SearchFilters({
   const visibleMechanics = rankedMechanics.slice(0, MECHANICS_SHOWN);
   const hiddenMechanics = rankedMechanics.slice(MECHANICS_SHOWN);
 
-  const mechanicChip = (m: MechanicCount) => {
-    const isActive = state.mechanics.includes(m.mechanic);
-    return (
-      <label
-        key={m.mechanic}
-        data-filter="chip"
-                className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
-          ${isActive
-            ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
-            : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-      >
-        <input type="checkbox" name="mechanics" value={m.mechanic} defaultChecked={isActive} className="sr-only" />
-        {m.mechanic}
-      </label>
-    );
-  };
+  const mechanicChip = (m: MechanicCount) => (
+    <FilterChip
+      key={m.mechanic}
+      name="mechanics"
+      value={m.mechanic}
+      inputType="checkbox"
+      active={state.mechanics.includes(m.mechanic)}
+    >
+      {m.mechanic}
+    </FilterChip>
+  );
 
   const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
   const activeCount = [state.category, state.inStock, state.max, state.players, state.complexity]
@@ -171,65 +166,52 @@ export function SearchFilters({
       {/* Budget chips — matches marketplace 2-col grid */}
       <CatalogFilterSection title={t.price}>
         <div className="grid grid-cols-2 gap-1.5">
-          {budgetOpts.map((o) => {
-            const isActive = o.value === '' ? state.max == null : state.max === Number(o.value);
-            return (
-              <label
-                key={o.value}
-                data-filter="chip"
-                className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
-                  ${isActive
-                    ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
-                    : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-              >
-                <input type="radio" name="max" value={o.value} defaultChecked={isActive} className="sr-only" />
-                {o.label}
-              </label>
-            );
-          })}
+          {budgetOpts.map((o) => (
+            <FilterChip
+              key={o.value}
+              name="max"
+              value={o.value}
+              inputType="radio"
+              active={o.value === '' ? state.max == null : state.max === Number(o.value)}
+            >
+              {o.label}
+            </FilterChip>
+          ))}
         </div>
       </CatalogFilterSection>
 
       {/* Players — matches marketplace flex row */}
       <CatalogFilterSection title={t.players}>
         <div className="flex flex-wrap gap-1.5">
-          {playerOpts.map((o) => {
-            const isActive = o.value === '' ? state.players == null : state.players === Number(o.value);
-            return (
-              <label
-                key={o.value}
-                className={`mobile-filter-choice h-8 cursor-pointer rounded-lg border px-2 text-xs font-semibold transition-colors inline-flex items-center justify-center min-w-8
-                  ${isActive
-                    ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
-                    : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-              >
-                <input type="radio" name="players" value={o.value} defaultChecked={isActive} className="sr-only" />
-                {o.label}
-              </label>
-            );
-          })}
+          {playerOpts.map((o) => (
+            <FilterChip
+              key={o.value}
+              name="players"
+              value={o.value}
+              inputType="radio"
+              shape="compact"
+              active={o.value === '' ? state.players == null : state.players === Number(o.value)}
+            >
+              {o.label}
+            </FilterChip>
+          ))}
         </div>
       </CatalogFilterSection>
 
       {/* Complexity — matches apps/marketplace's complexity band chips */}
       <CatalogFilterSection title={t.complexity}>
         <div className="flex flex-wrap gap-1.5">
-          {COMPLEXITY_OPTIONS.map((o) => {
-            const isActive = state.complexity === o.value;
-            return (
-              <label
-                key={o.value}
-                data-filter="chip"
-                className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
-                  ${isActive
-                    ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
-                    : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-              >
-                <input type="radio" name="complexity" value={o.value} defaultChecked={isActive} className="sr-only" />
-                {o[locale]}
-              </label>
-            );
-          })}
+          {COMPLEXITY_OPTIONS.map((o) => (
+            <FilterChip
+              key={o.value}
+              name="complexity"
+              value={o.value}
+              inputType="radio"
+              active={state.complexity === o.value}
+            >
+              {o[locale]}
+            </FilterChip>
+          ))}
         </div>
       </CatalogFilterSection>
 

@@ -15,6 +15,7 @@ import {
   CatalogFilterPanel,
   CatalogFilterSection,
   CatalogSearch,
+  FilterChip,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -212,19 +213,13 @@ export default function SearchPage({
           <CatalogFilterSection title={intl.formatMessage({ id: 'home.budget' })}>
             <div className="grid grid-cols-2 gap-1.5">
               {PRICE_OPTIONS.map((option) => (
-                <button
+                <FilterChip
                   key={option.value ?? 'none'}
-                  type="button"
+                  active={maxPrice === option.value}
                   onClick={() => setMaxPrice(maxPrice === option.value ? undefined : option.value)}
-                  className={cn(
-                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                    maxPrice === option.value
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                  )}
                 >
                   {intl.formatMessage({ id: option.labelId })}
-                </button>
+                </FilterChip>
               ))}
             </div>
           </CatalogFilterSection>
@@ -232,19 +227,14 @@ export default function SearchPage({
           <CatalogFilterSection title={intl.formatMessage({ id: 'home.players' })}>
             <div className="flex flex-wrap gap-1.5">
               {PLAYER_OPTIONS.map((p) => (
-                <button
+                <FilterChip
                   key={p ?? 'any'}
-                  type="button"
+                  shape="compact"
+                  active={players === p}
                   onClick={() => setPlayers(players === p ? undefined : p)}
-                  className={cn(
-                    'h-8 min-w-8 rounded-lg border px-2 text-xs font-semibold transition-colors',
-                    players === p
-                      ? 'border-emerald-600 bg-emerald-700 text-white'
-                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                  )}
                 >
                   {p === undefined ? intl.formatMessage({ id: 'search.playersAny' }) : p === 5 ? '5+' : p}
-                </button>
+                </FilterChip>
               ))}
             </div>
           </CatalogFilterSection>
@@ -252,19 +242,13 @@ export default function SearchPage({
           <CatalogFilterSection title={intl.formatMessage({ id: 'product.complexity' })}>
             <div className="flex flex-wrap gap-1.5">
               {COMPLEXITY_OPTIONS.map((option) => (
-                <button
+                <FilterChip
                   key={option.value}
-                  type="button"
+                  active={complexity === option.value}
                   onClick={() => setComplexity(complexity === option.value ? undefined : option.value)}
-                  className={cn(
-                    'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                    complexity === option.value
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                      : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                  )}
                 >
                   {intl.formatMessage({ id: option.labelId })}
-                </button>
+                </FilterChip>
               ))}
             </div>
           </CatalogFilterSection>
@@ -275,21 +259,15 @@ export default function SearchPage({
                 {mechanicsData.slice(0, 15).map(({ mechanic }) => {
                   const active = mechanics.includes(mechanic);
                   return (
-                    <button
+                    <FilterChip
                       key={mechanic}
-                      type="button"
+                      active={active}
                       onClick={() => setMechanics((current) => (
                         active ? current.filter((m) => m !== mechanic) : [...current, mechanic]
                       ))}
-                      className={cn(
-                        'rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
-                        active
-                          ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                          : 'border-[--border] bg-[--bg-subtle] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
-                      )}
                     >
                       {mechanic}
-                    </button>
+                    </FilterChip>
                   );
                 })}
               </div>
