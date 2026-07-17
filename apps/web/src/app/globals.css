@@ -67,7 +67,10 @@ button, input, select { font: inherit; }
 .menu-trigger:active { transform: scale(.94); }
 
 .mobile-nav-root { position: fixed; inset: 0; z-index: 80; }
-.mobile-nav-scrim { position: absolute; inset: 0; background: color-mix(in srgb, #100b08 55%, transparent); backdrop-filter: blur(3px); animation: scrim-in .2s ease both; }
+/* Both dismissible overlays wear the same scrim. The nav's sits inside a fixed
+   root; the filter sheet's can't (it stays in the <form>) so it fixes itself. */
+.mobile-nav-scrim, .mobile-filter-scrim { background: color-mix(in srgb, #100b08 55%, transparent); backdrop-filter: blur(3px); animation: scrim-in .2s ease both; }
+.mobile-nav-scrim { position: absolute; inset: 0; }
 .mobile-nav-panel {
   position: absolute; top: 0; right: 0; bottom: 0;
   width: min(88vw, 380px);
@@ -210,7 +213,7 @@ button, input, select { font: inherit; }
 
 .search-layout { display: grid; grid-template-columns: 16.5rem minmax(0, 1fr); gap: 1.75rem; margin-top: 1.25rem; align-items: start; }
 .responsive-filter-panel { min-width: 0; }
-.mobile-filter-trigger, .mobile-filter-header, .mobile-filter-footer { display: none; }
+.mobile-filter-trigger, .mobile-filter-header, .mobile-filter-footer, .mobile-filter-scrim { display: none; }
 .mobile-filter-modal { display: block; }
 .filters { position: sticky; top: 80px; padding: 1.1rem; border: 1px solid var(--sidebar-border); border-radius: 14px; background: var(--sidebar); box-shadow: 0 1px 2px rgb(43 38 34 / .04); }
 .filters h2 { display: flex; align-items: center; gap: .45rem; margin: 0 0 .9rem; color: var(--foreground); font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
@@ -286,12 +289,21 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
     box-shadow: 0 1px 2px rgb(43 38 34 / .06); font-size: .88rem; font-weight: 700; cursor: pointer; }
   .mobile-filter-count { display: grid; min-width: 20px; height: 20px; place-items: center; padding: 0 5px; border-radius: 999px;
     background: var(--primary); color: var(--primary-foreground); font-size: 11px; }
-  .mobile-filter-modal { position: fixed; z-index: 100; inset: 0; width: 100%; height: 100dvh; flex-direction: column;
-    background: var(--background); color: var(--foreground); visibility: hidden; opacity: 0; pointer-events: none;
-    transform: translateY(12px); transition: opacity .18s ease, transform .18s ease, visibility .18s; }
+  .mobile-filter-scrim { display: block; position: fixed; z-index: 99; inset: 0; }
+  /* A bottom sheet, not a full-bleed page: it stops short of the top so the
+     scrim shows the results still sitting underneath. That gap is also a
+     dismiss target, so the sheet must never grow into it — hence max-height. */
+  .mobile-filter-modal { position: fixed; z-index: 100; inset: auto 0 0 0; width: 100%; height: auto; max-height: 88dvh;
+    flex-direction: column; border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; overflow: hidden;
+    background: var(--background); color: var(--foreground); box-shadow: 0 -24px 60px -30px rgb(20 14 10 / .55);
+    visibility: hidden; opacity: 0; pointer-events: none;
+    transform: translateY(100%); transition: opacity .18s ease, transform .26s cubic-bezier(.22, 1, .36, 1), visibility .26s; }
   .mobile-filter-modal.is-open { display: flex; visibility: visible; opacity: 1; pointer-events: auto; transform: none; }
-  .mobile-filter-header { display: flex; min-height: 60px; flex: none; align-items: center; justify-content: space-between; gap: 1rem;
-    padding: max(.6rem, env(safe-area-inset-top)) 1rem .6rem; border-bottom: 1px solid var(--border); background: var(--card); }
+  .mobile-filter-header { display: flex; position: relative; min-height: 60px; flex: none; align-items: center; justify-content: space-between;
+    gap: 1rem; padding: .9rem 1rem .6rem; border-bottom: 1px solid var(--border); background: var(--card); }
+  /* Grab handle — signals the sheet is dismissible without adding a control. */
+  .mobile-filter-header::before { content: ''; position: absolute; top: 7px; left: 50%; width: 34px; height: 4px;
+    transform: translateX(-50%); border-radius: 999px; background: var(--border-strong); }
   .mobile-filter-header > span { display: inline-flex; align-items: center; gap: .55rem; }
   .mobile-filter-header button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border);
     border-radius: 11px; background: var(--surface); color: var(--foreground); cursor: pointer; }

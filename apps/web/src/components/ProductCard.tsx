@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Clock3, Users } from 'lucide-react';
 import type { ProductSummary } from '@/lib/api';
@@ -31,8 +32,11 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
     <Link className="card-link" href={href}>
       <div className="card-media">
         {product.images?.[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} width={300} height={300} loading="lazy" />
+          // Covers arrive as PNG/JPEG from the catalog host; the optimizer
+          // re-encodes to WebP (~60% lighter) and caches to disk. It never
+          // upscales past the source (~246px), so the 2x srcset candidate
+          // costs no extra bytes — it resolves to the same file.
+          <Image src={product.images[0]} alt={product.name} width={300} height={300} loading="lazy" />
         ) : (
           <div className="card-noimg" aria-hidden="true">🎲</div>
         )}

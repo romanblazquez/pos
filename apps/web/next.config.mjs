@@ -15,10 +15,21 @@ const nextConfig = {
   // SEO content correctness is enforced by the dedicated CI checks (Phase 5),
   // not by failing the production build on a lint/type nit during early phases.
   eslint: { ignoreDuringBuilds: true },
-  // Remote product imagery comes from seller/catalog CDNs; allow https hosts.
-  // Tighten to an explicit allowlist once the set of real image hosts is known.
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    // Every image across the catalogue resolves to one of these two hosts
+    // (checked against all 436 products: 316 self-hosted, 2 straight from BGG).
+    // `hostname: '**'` would let anyone transcode arbitrary images through our
+    // optimizer at our CPU's expense. A new seller CDN will 400 loudly here —
+    // that's the intended failure: add the host rather than reopen the wildcard.
+    remotePatterns: [
+      { protocol: 'https', hostname: 'api.juegospedia.com' },
+      { protocol: 'https', hostname: 'cf.geekdo-images.com' },
+    ],
+    // AVIF is deliberately NOT enabled. Covers are ~246px, so AVIF saves only
+    // ~6KB each but costs 573ms to encode vs 18ms for WebP (measured on this
+    // Pi) — a 48-cover shelf page would burn ~27 CPU-seconds on the same box
+    // that serves the API. WebP already takes a 43KB PNG down to 17KB.
+    formats: ['image/webp'],
   },
   // The shared design-system lib (@retail-os/ui-react) uses NodeNext-style `.js`
   // import specifiers that actually point at `.ts`/`.tsx` source. Vite resolves

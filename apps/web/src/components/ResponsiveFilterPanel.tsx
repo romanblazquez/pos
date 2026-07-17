@@ -54,6 +54,11 @@ export function ResponsiveFilterPanel({ children, locale, activeCount }: {
         {activeCount > 0 && <span className="mobile-filter-count">{activeCount}</span>}
       </button>
 
+      {/* Scrim stays a plain sibling rather than a portal (see MobileMenu): the
+          panel must remain inside the <form> for the no-JS GET submit to work,
+          and a fixed sibling escapes the layout just as well. */}
+      {open && <div className="mobile-filter-scrim" aria-hidden="true" onClick={() => setOpen(false)} />}
+
       <div
         ref={modalRef}
         className={`mobile-filter-modal${open ? ' is-open' : ''}`}
