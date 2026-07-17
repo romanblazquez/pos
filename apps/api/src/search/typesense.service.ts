@@ -32,6 +32,11 @@ export interface ProductDocument {
 
 const COLLECTION = 'mkt_products';
 
+// Sanity ceiling for the storefront index. The catalogue is hundreds of
+// products; anything past this means the raw BGG pool leaked in (see
+// ensureCollection). Well clear of realistic growth, well under the ~178k pool.
+const STOREFRONT_MAX = 5000;
+
 const COLLECTION_SCHEMA = {
   name: COLLECTION,
   fields: [
@@ -94,10 +99,17 @@ export class TypesenseService implements OnModuleInit {
       const sortOk = (existing as { default_sorting_field?: string }).default_sorting_field === 'inStockListings';
       // `name` must be sortable for sortBy=name; older collections predate it.
       const nameSortable = fields.some((f) => f.name === 'name' && f.sort === true);
-      if (!hasBilingual || !sortOk || !nameSortable) {
+      // The storefront catalogue is only hundreds of products. A doc count in
+      // the thousands means the raw BGG discovery pool (~178k rows in
+      // mkt_product) leaked into the index; recreate so the boot pass rebuilds
+      // the storefront set cleanly. STOREFRONT_MAX is a generous ceiling — raise
+      // it if the real catalogue ever approaches it.
+      const docCount = (existing as { num_documents?: number }).num_documents ?? 0;
+      const polluted = docCount > STOREFRONT_MAX;
+      if (!hasBilingual || !sortOk || !nameSortable || polluted) {
         await this.client.collections(COLLECTION).delete();
         await this.client.collections().create(COLLECTION_SCHEMA);
-        this.log.log('Typesense collection recreated (schema updated)');
+        this.log.log(`Typesense collection recreated (${polluted ? `pollution: ${docCount} docs` : 'schema updated'})`);
       } else {
         this.log.log('Typesense collection ready');
       }
