@@ -6,6 +6,7 @@ export interface CatalogFilterPanelProps extends React.HTMLAttributes<HTMLElemen
   subtitle?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  footer?: React.ReactNode;
   sticky?: boolean;
 }
 
@@ -14,6 +15,7 @@ export function CatalogFilterPanel({
   subtitle,
   icon,
   action,
+  footer,
   sticky = true,
   className,
   children,
@@ -22,13 +24,13 @@ export function CatalogFilterPanel({
   return (
     <aside
       className={cn(
-        'catalog-filter-panel rounded-[14px] border border-(--border) bg-(--bg-raised) p-3 shadow-sm',
-        sticky && 'sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto',
+        'catalog-filter-panel flex flex-col overflow-hidden rounded-[14px] border border-(--border) bg-(--bg-raised) p-3 shadow-sm',
+        sticky && 'sticky top-20 max-h-[calc(100dvh-6rem)]',
         className,
       )}
       {...props}
     >
-      <div className="catalog-filter-header flex items-start justify-between gap-3 border-b border-(--border) px-2 pb-3">
+      <div className="catalog-filter-header flex shrink-0 items-start justify-between gap-3 border-b border-(--border) bg-(--bg-raised) px-2 pb-3">
         <div className="flex min-w-0 items-center gap-2">
           {/* --accent is a light parchment *surface* (#f1e8d6), not an accent
               colour — on --accent-bg it renders invisible. The icon takes the
@@ -45,7 +47,14 @@ export function CatalogFilterPanel({
         </div>
         {action}
       </div>
-      {children}
+      <div className="catalog-filter-body min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {children}
+      </div>
+      {footer ? (
+        <div className="catalog-filter-footer shrink-0 border-t border-(--border) bg-(--bg-raised) px-1 pt-3">
+          {footer}
+        </div>
+      ) : null}
     </aside>
   );
 }

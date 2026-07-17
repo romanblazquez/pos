@@ -163,6 +163,7 @@ export function SearchFilters({
           {t.clear}
         </a>
       ) : undefined}
+      footer={<Button type="submit" className="w-full js-hidden">{t.apply}</Button>}
     >
       {/* Sort — a native select, not the Radix one: this panel is a no-JS GET
           form (see FormAutoSubmit), so the control has to work unhydrated. */}
@@ -294,8 +295,6 @@ export function SearchFilters({
       </CatalogFilterSection>
 
       <FormAutoSubmit />
-      {/* Fallback submit for no-JS environments */}
-      <Button type="submit" className="mt-3 w-full js-hidden">{t.apply}</Button>
     </CatalogFilterPanel>
   );
 }

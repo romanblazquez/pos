@@ -90,8 +90,10 @@
   .mobile-filter-header button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border);
     border-radius: 11px; background: var(--surface); color: var(--foreground); cursor: pointer; }
   .mobile-filter-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: .85rem 1rem 1.25rem; }
-  .mobile-filter-scroll .catalog-filter-panel { display: block; position: static !important; max-height: none !important; padding: 0;
+  .mobile-filter-scroll .catalog-filter-panel { display: block; position: static !important; max-height: none !important; overflow: visible; padding: 0;
     border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .mobile-filter-scroll .catalog-filter-body { overflow: visible; }
+  .mobile-filter-scroll .catalog-filter-footer { display: none; }
   /* Live selection state — load-bearing, not decoration.
      Only the SEO app needs it, and only because its modal deliberately BATCHES
      (FormAutoSubmit bails below 861px): tapping doesn't submit, React never
