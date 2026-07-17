@@ -104,7 +104,8 @@ export function SearchFilters({
     return (
       <label
         key={m.mechanic}
-        className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
+        data-filter="chip"
+                className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
           ${isActive
             ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
             : 'border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
@@ -148,7 +149,8 @@ export function SearchFilters({
 
       {/* Availability — styled to match ToggleFilter in marketplace */}
       <CatalogFilterSection title={t.avail}>
-        <label className={`mobile-filter-choice flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors
+        <label data-filter="row"
+          className={`mobile-filter-choice flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors
           ${state.inStock
             ? 'border-(--primary) bg-(--accent-bg)'
             : 'border-(--border) bg-(--bg-subtle) hover:bg-(--bg-hover)'}`}
@@ -174,6 +176,7 @@ export function SearchFilters({
             return (
               <label
                 key={o.value}
+                data-filter="chip"
                 className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
                   ${isActive
                     ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
@@ -216,6 +219,7 @@ export function SearchFilters({
             return (
               <label
                 key={o.value}
+                data-filter="chip"
                 className={`mobile-filter-choice cursor-pointer rounded-full border px-3.5 py-1.5 text-center text-[13px] font-semibold transition-colors
                   ${isActive
                     ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)'
@@ -274,6 +278,7 @@ export function SearchFilters({
           ].map((c) => (
             <label
               key={c.value}
+              data-filter="row"
               className={`mobile-filter-choice mb-1 block w-full cursor-pointer rounded-lg px-2.5 py-2 text-left transition-colors
                 ${c.isActive
                   ? 'border border-(--primary) bg-(--accent-bg) text-(--tx)'

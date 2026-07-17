@@ -298,11 +298,34 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   .mobile-filter-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: .85rem 1rem 1.25rem; }
   .mobile-filter-scroll .catalog-filter-panel { display: block; position: static !important; max-height: none !important; padding: 0;
     border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  /* The chips used to need forcing here: their Tailwind classes were the dead
-     v3 `-[--var]` syntax, so nothing landed and the modal repainted them by
-     hand. The tokens reach the components now, so these overrides only served
-     to make mobile disagree with desktop (pale tint vs solid clay). Deleted —
-     one chip, one look. */
+  /* Live selection state — load-bearing, not decoration.
+     Desktop auto-submits on change, so the server recomputes each chip's active
+     class and React re-renders. The modal deliberately BATCHES (FormAutoSubmit
+     bails below 861px): tapping doesn't submit, React never re-renders, and the
+     server-computed class goes stale the moment you touch anything. Without a
+     live selector you tap a chip and nothing visibly happens.
+     `:has(input:checked)` reads the real DOM state, so it tracks every tap with
+     no JS. Both directions are needed — a radio you tap *away* from must drop
+     its stale active class too.
+     These mirror the desktop tokens exactly; if you change one, change both. */
+  .mobile-filter-modal.is-open [data-filter="chip"]:has(input:checked) {
+    border-color: var(--primary) !important; background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="chip"]:not(:has(input:checked)) {
+    border-color: var(--border) !important; background: var(--bg-subtle) !important;
+    color: var(--tx-muted) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="row"]:has(input:checked) {
+    border-color: var(--primary) !important; background: var(--accent-bg) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="row"]:not(:has(input:checked)) {
+    border-color: var(--border) !important; background: var(--bg-subtle) !important;
+  }
+  /* The in-stock tick box follows its row. */
+  .mobile-filter-modal.is-open [data-filter="row"]:has(input:checked) .h-5 {
+    border-color: var(--primary); background: var(--primary); color: var(--primary-foreground);
+  }
   .mobile-filter-footer { display: block; flex: none; padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border); background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: 0 -8px 24px rgb(0 0 0 / .08); }
   .mobile-filter-apply { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--primary);
