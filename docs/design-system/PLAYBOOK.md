@@ -184,11 +184,13 @@ condition grade. Do not invent them — that data arrives with the BO.
    that was removed from the SEO site. It imports the shared `commerce-state`, so
    it picked up `hot`/`expansion` automatically, but has its own local
    `CommerceBadge`, so it does **not** get the emphasis tiers and is now subtly
-   out of sync. **Its search filters are migrated** (they use the shared
-   `FilterChip` and the brand `--primary`); the rest of the page is not. Note
-   `tsc -p apps/marketplace/tsconfig.json` has a **pre-existing** error in its
-   local `ProductCard` (`Record<CommerceState, string>` missing `hot`/
-   `expansion`) — it is this same drift, not your diff. Vite builds green.
+   out of sync — though `hot`/`expansion` styles were since added there
+   (`055b5b2`), so `tsc -p apps/marketplace/tsconfig.json` is now clean.
+   **Its search rail is fully migrated:** it renders the same
+   `CatalogFilterPanel`/`CatalogFilterSection`/`FilterChip`/`FilterToggle`/
+   `FilterCategoryButton` as the SEO app, plus Sort and the mechanics
+   disclosure, and its `@theme` now carries the design system's radius scale.
+   `HomePage` and the product page are still un-migrated.
 4. Tint/accent for the five `derived` shelves, once the design system covers them.
 5. Design system sections not yet implemented: GameStatPills, the collector
    profile, SellerOfferComparisonTable styling, the command palette.
@@ -245,6 +247,25 @@ condition grade. Do not invent them — that data arrives with the BO.
   `.catalog-filter-section` at 390×844 and asserts the background changes on
   tap; it **skips already-checked chips**, which otherwise produce a false
   failure. Run it against a dev server after touching the filter panel.
+- **The two apps do not share a stylesheet, and that hides token drift.**
+  `apps/web` imports `ui-react/src/styles.css` (tokens + `@theme inline`);
+  `apps/marketplace` declares its **own** `@theme` and cannot import that file —
+  it carries `@import "tailwindcss"` and the full token set, so importing it
+  there double-imports Tailwind and clashes tokens. Consequence: a token the
+  shared sheet maps can be silently missing on the SPA. It had `--radius` but
+  never mapped `--radius-sm/md/lg/xl`, so every `rounded-md/lg` there used
+  Tailwind's stock 6px/8px while the SEO app used 12px/14px — invisible until
+  one shared component (`FilterToggle`) rendered a square checkbox on one app
+  and a circle on the other. **When adding a shared component, render it in
+  both apps and compare**; don't assume the same class means the same value.
+  Chrome that must match lives in `ui-react/src/filter-panel.css`, a
+  token-agnostic partial both apps import.
+- **The SPA's `-[--var]` utilities are NOT dead — it hand-shims them.**
+  `apps/marketplace/src/styles.css` re-implements them under `@layer utilities`
+  (`.text-\[--tx-muted\] { color: var(--tx-muted) !important; }`), and its
+  `@theme` re-points Tailwind's whole `emerald` ramp at the brand clay
+  (`--color-emerald-500: #b4502e`). So `bg-emerald-700` and `text-[--tx-muted]`
+  both render on-brand there. Verify against the built CSS before "fixing" them.
 - **Never print any portion of `OPENAI_API_KEY`** (in `/home/pi/pos/.env`).
 - Screenshots need `sudo npx playwright install-deps` on the Pi (already done).
   Verify UI by *rendering* it — the unwired `solo`/`campaign` art and the hero
