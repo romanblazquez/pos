@@ -310,6 +310,7 @@ export default async function DetailPage({
 
 async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
   const path = entityPath('guides', locale, guide.slug);
+  const editorialCover = guide.ogImage ?? (await guideCover(guide, locale));
   // Resolve each pick to a live product so the guide links into shoppable pages
   // (and silently drops any pick whose product is no longer in the catalogue).
   const picks = (await Promise.all(
@@ -344,7 +345,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
             path,
             datePublished: guide.publishedAt,
             dateModified: guide.updatedAt,
-            image: picks[0]?.product.images?.[0],
+            image: editorialCover ?? picks[0]?.product.images?.[0],
             author: author ? { name: author.name } : undefined,
           }),
           ...(guide.faq?.length ? [faqLd(guide.faq)] : []),
@@ -353,6 +354,12 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
 
       <article className="prose" style={{ maxWidth: 760 }}>
         <h1 className="product-h1">{guide.title}</h1>
+        {editorialCover ? (
+          <figure className="guide-article-cover">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={editorialCover} alt={guide.title} width={1600} height={900} />
+          </figure>
+        ) : null}
         {author ? (
           <div className="guide-byline" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 4px' }}>
             <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, background: 'var(--bg-raised, var(--card))', border: '1px solid var(--border)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14 }}>

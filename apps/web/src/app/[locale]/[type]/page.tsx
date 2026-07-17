@@ -423,7 +423,8 @@ export default async function ListingPage({
       new Date(iso).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
         year: 'numeric', month: 'short', day: 'numeric',
       });
-    // Resolve a cover image per guide (cheap, ISR-cached) alongside byline/date.
+    // Prefer the supplied editorial banner everywhere the guide is represented;
+    // retain the live-product cover only as a defensive fallback.
     const cards: GuideCardData[] = await Promise.all(
       guides.map(async (g) => {
         const author = g.authorId ? AUTHORS_BY_ID[g.authorId] : undefined;
@@ -436,7 +437,7 @@ export default async function ListingPage({
           author: author ? { name: author.name, from: author.from } : undefined,
           dateISO: g.updatedAt,
           dateLabel: dateFmt(g.updatedAt),
-          cover: await guideCover(g, locale),
+          cover: g.ogImage ?? (await guideCover(g, locale)),
           kicker: guideKicker(g.title, locale),
           autoTranslated: g.autoTranslated,
         };
@@ -475,6 +476,10 @@ export default async function ListingPage({
         />
         <h1 className="page-title">{hubName}</h1>
         <p className="lede">{hubDesc}</p>
+        <figure className="guides-hub-hero">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={GUIDE_OG_DEFAULT} alt={hubName} width={1600} height={900} />
+        </figure>
         <GuidesExplorer guides={cards} locale={locale} />
       </main>
     );
