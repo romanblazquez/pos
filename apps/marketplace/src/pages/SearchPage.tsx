@@ -16,6 +16,7 @@ import {
   CatalogFilterSection,
   CatalogSearch,
   FilterChip,
+  ResponsiveFilterPanel,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -163,6 +164,10 @@ export default function SearchPage({
     );
   };
 
+  const activeFilterCount =
+    Number(inStockOnly) + Number(maxPrice !== undefined) + Number(players !== undefined)
+    + Number(complexity !== undefined) + Number(sortBy !== undefined) + mechanics.length;
+
   const results = data?.results ?? [];
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const categoryOptions = getCategoryOptions(categoriesData?.map((c) => c.category), intl.locale as 'es' | 'en');
@@ -178,7 +183,7 @@ export default function SearchPage({
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[17rem_1fr] lg:py-8">
+    <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 min-[861px]:grid-cols-[17rem_1fr] min-[861px]:py-8">
       <SeoHead
         title={`${title} | Juegospedia`}
         description={category
@@ -195,7 +200,18 @@ export default function SearchPage({
           [categoryLabel(category, intl.locale as 'es' | 'en'), `https://juegospedia.com/search?category=${encodeURIComponent(category)}`],
         ]) : undefined}
       />
-      <aside className="order-2 lg:order-1">
+      <aside>
+        <ResponsiveFilterPanel
+          labels={{
+            open: intl.formatMessage({ id: 'home.filterCatalog' }),
+            title: intl.formatMessage({ id: 'home.filters' }),
+            close: intl.formatMessage({ id: 'home.closeFilters' }),
+            apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
+          }}
+          activeCount={activeFilterCount}
+          // Filters apply on change here; the sheet only has to close.
+          onApply={() => undefined}
+        >
         <CatalogFilterPanel
           title={intl.formatMessage({ id: 'home.explore' })}
           subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
@@ -327,9 +343,10 @@ export default function SearchPage({
             </div>
           </CatalogFilterSection>
         </CatalogFilterPanel>
+        </ResponsiveFilterPanel>
       </aside>
 
-      <main className="order-1 min-w-0 lg:order-2">
+      <main className="min-w-0">
         <Breadcrumbs items={[
           { label: intl.formatMessage({ id: 'search.home' }), href: '/', onClick: onHome },
           ...(category

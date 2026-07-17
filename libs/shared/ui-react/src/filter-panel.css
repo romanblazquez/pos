@@ -44,3 +44,76 @@
 .filter-more[open] .filter-more-summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
 .filter-more-summary:hover { text-decoration: underline; }
 .filter-more-summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; border-radius: 4px; }
+
+/* ── Mobile filter sheet (ResponsiveFilterPanel) ─────────────────────────────
+   Desktop: the panel is the rail and the sheet chrome is hidden. Below 861px it
+   becomes a trigger button + a dismissible bottom sheet.
+   861px, not Tailwind's lg (1024px), because FormAutoSubmit bails at the same
+   breakpoint — the sheet and the batching must switch together. */
+.responsive-filter-panel { min-width: 0; }
+.mobile-filter-trigger, .mobile-filter-header, .mobile-filter-footer, .mobile-filter-scrim { display: none; }
+.mobile-filter-modal { display: block; }
+.mobile-filter-scrim { background: color-mix(in srgb, #100b08 55%, transparent); backdrop-filter: blur(3px); animation: filter-scrim-in .2s ease both; }
+@keyframes filter-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 860px) {
+  .responsive-filter-panel { order: -1; }
+  .mobile-filter-trigger { display: inline-flex; min-height: 44px; align-items: center; gap: .55rem; padding: .65rem .85rem;
+    border: 1px solid var(--input); border-radius: 11px; background: var(--card); color: var(--foreground);
+    box-shadow: 0 1px 2px rgb(43 38 34 / .06); font-size: .88rem; font-weight: 700; cursor: pointer; }
+  .mobile-filter-count { display: grid; min-width: 20px; height: 20px; place-items: center; padding: 0 5px; border-radius: 999px;
+    background: var(--primary); color: var(--primary-foreground); font-size: 11px; }
+  .mobile-filter-scrim { display: block; position: fixed; z-index: 99; inset: 0; }
+  /* A bottom sheet, not a full-bleed page: it stops short of the top so the
+     scrim shows the results still sitting underneath. That gap is also a
+     dismiss target, so the sheet must never grow into it — hence max-height. */
+  .mobile-filter-modal { position: fixed; z-index: 100; inset: auto 0 0 0; width: 100%; height: auto; max-height: 88dvh;
+    flex-direction: column; border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; overflow: hidden;
+    background: var(--background); color: var(--foreground); box-shadow: 0 -24px 60px -30px rgb(20 14 10 / .55);
+    visibility: hidden; opacity: 0; pointer-events: none;
+    transform: translateY(100%); transition: opacity .18s ease, transform .26s cubic-bezier(.22, 1, .36, 1), visibility .26s; }
+  .mobile-filter-modal.is-open { display: flex; visibility: visible; opacity: 1; pointer-events: auto; transform: none; }
+  .mobile-filter-header { display: flex; position: relative; min-height: 60px; flex: none; align-items: center; justify-content: space-between;
+    gap: 1rem; padding: .9rem 1rem .6rem; border-bottom: 1px solid var(--border); background: var(--card); }
+  /* Grab handle — signals the sheet is dismissible without adding a control. */
+  .mobile-filter-header::before { content: ''; position: absolute; top: 7px; left: 50%; width: 34px; height: 4px;
+    transform: translateX(-50%); border-radius: 999px; background: var(--border-strong); }
+  .mobile-filter-header > span { display: inline-flex; align-items: center; gap: .55rem; }
+  .mobile-filter-header button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border);
+    border-radius: 11px; background: var(--surface); color: var(--foreground); cursor: pointer; }
+  .mobile-filter-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: .85rem 1rem 1.25rem; }
+  .mobile-filter-scroll .catalog-filter-panel { display: block; position: static !important; max-height: none !important; padding: 0;
+    border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  /* Live selection state — load-bearing, not decoration.
+     Only the SEO app needs it, and only because its modal deliberately BATCHES
+     (FormAutoSubmit bails below 861px): tapping doesn't submit, React never
+     re-renders, and the server-computed active class goes stale the moment you
+     touch anything. Without a live selector you tap a chip and nothing happens.
+     `:has(input:checked)` reads the real DOM, so it tracks every tap with no JS.
+     Both directions are needed — a radio you tap *away* from must drop its stale
+     class too. Inert in the SPA, where chips are buttons with no input and the
+     `active` prop is already truthful.
+     These mirror the desktop tokens exactly; if you change one, change both. */
+  .mobile-filter-modal.is-open [data-filter="chip"]:has(input:checked) {
+    border-color: var(--primary) !important; background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="chip"]:not(:has(input:checked)):has(input) {
+    border-color: var(--border) !important; background: var(--bg-subtle) !important;
+    color: var(--tx-muted) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="row"]:has(input:checked) {
+    border-color: var(--primary) !important; background: var(--accent-bg) !important;
+  }
+  .mobile-filter-modal.is-open [data-filter="row"]:not(:has(input:checked)):has(input) {
+    border-color: var(--border) !important; background: var(--bg-subtle) !important;
+  }
+  /* The in-stock tick box follows its row. */
+  .mobile-filter-modal.is-open [data-filter="row"]:has(input:checked) .h-5 {
+    border-color: var(--primary); background: var(--primary); color: var(--primary-foreground);
+  }
+  .mobile-filter-footer { display: block; flex: none; padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border); background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: 0 -8px 24px rgb(0 0 0 / .08); }
+  .mobile-filter-apply { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--primary);
+    color: var(--primary-foreground); font-size: .95rem; font-weight: 800; cursor: pointer; }
+}

@@ -6,7 +6,6 @@ import {
   BadgePercent,
   ChevronLeft,
   ChevronRight,
-  Filter,
   PackageCheck,
   RotateCcw,
   ShieldCheck,
@@ -23,6 +22,7 @@ import {
   CatalogFilterSection,
   CatalogSearch,
   FilterChip,
+  ResponsiveFilterPanel,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -117,7 +117,6 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string | undefined>();
   const [filters, setFilters] = useState<CatalogFilters>(DEFAULT_FILTERS);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
@@ -245,40 +244,35 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[16rem_1fr]">
-        <aside className="hidden lg:block">
-          <MarketplaceCatalogFilters
-            activeCategory={activeCategory}
-            activeFilterCount={activeFilterCount}
-            categories={categoryOptions}
-            categoryCounts={categoryCounts}
-            mechanics={mechanicsData ?? []}
-            filters={filters}
-            total={data?.total}
-            onCategory={selectCategory}
-            onFilters={updateFilters}
-            onReset={resetFilters}
-          />
+      <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 min-[861px]:grid-cols-[16rem_1fr]">
+        <aside>
+          <ResponsiveFilterPanel
+            labels={{
+              open: intl.formatMessage({ id: 'home.filterCatalog' }),
+              title: intl.formatMessage({ id: 'home.filters' }),
+              close: intl.formatMessage({ id: 'home.closeFilters' }),
+              apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
+            }}
+            activeCount={activeFilterCount}
+            // Filters apply on change here; the sheet only has to close.
+            onApply={() => undefined}
+          >
+            <MarketplaceCatalogFilters
+              activeCategory={activeCategory}
+              activeFilterCount={activeFilterCount}
+              categories={categoryOptions}
+              categoryCounts={categoryCounts}
+              mechanics={mechanicsData ?? []}
+              filters={filters}
+              total={data?.total}
+              onCategory={selectCategory}
+              onFilters={updateFilters}
+              onReset={resetFilters}
+            />
+          </ResponsiveFilterPanel>
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-3 flex items-center justify-between lg:hidden">
-            <Button variant="outline" onClick={() => setMobileFiltersOpen(true)}>
-              <Filter className="h-4 w-4" aria-hidden="true" />
-              {intl.formatMessage({ id: 'home.filters' })}
-              {activeFilterCount > 0 && (
-                <span className="rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
-            {activeFilterCount > 0 && (
-              <button onClick={resetFilters} className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                {intl.formatMessage({ id: 'home.clearAll' })}
-              </button>
-            )}
-          </div>
-
           <div className="mb-5 flex flex-col justify-between gap-3 rounded-lg border border-[--border] bg-[--bg-raised] p-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
@@ -419,40 +413,6 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
         </div>
       </section>
 
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setMobileFiltersOpen(false)}>
-          <div
-            className="absolute inset-y-0 left-0 w-[min(90vw,22rem)] overflow-y-auto bg-[--bg] p-4 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-[--tx]">{intl.formatMessage({ id: 'home.filterCatalog' })}</p>
-                <p className="text-xs text-[--tx-muted]">{intl.formatMessage({ id: 'home.filterCatalogHint' })}</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setMobileFiltersOpen(false)} aria-label={intl.formatMessage({ id: 'home.closeFilters' })}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <MarketplaceCatalogFilters
-              activeCategory={activeCategory}
-              activeFilterCount={activeFilterCount}
-              categories={categoryOptions}
-              categoryCounts={categoryCounts}
-              mechanics={mechanicsData ?? []}
-              filters={filters}
-              total={data?.total}
-              mobile
-              onCategory={selectCategory}
-              onFilters={updateFilters}
-              onReset={resetFilters}
-            />
-            <Button className="mt-4 w-full" onClick={() => setMobileFiltersOpen(false)}>
-              {intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' })}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -543,7 +503,6 @@ function MarketplaceCatalogFilters({
   mechanics,
   filters,
   total,
-  mobile = false,
   onCategory,
   onFilters,
   onReset,
@@ -555,7 +514,6 @@ function MarketplaceCatalogFilters({
   mechanics: { mechanic: string; count: number }[];
   filters: CatalogFilters;
   total?: number;
-  mobile?: boolean;
   onCategory: (category?: string) => void;
   onFilters: (filters: Partial<CatalogFilters>) => void;
   onReset: () => void;
@@ -584,7 +542,6 @@ function MarketplaceCatalogFilters({
       title={intl.formatMessage({ id: 'home.explore' })}
       subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: total?.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
       icon={<SlidersHorizontal className="h-4 w-4" aria-hidden="true" />}
-      sticky={!mobile}
       action={(activeCategory || activeFilterCount > 0) ? (
           <button
             onClick={onReset}

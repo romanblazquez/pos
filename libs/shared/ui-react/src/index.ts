@@ -3,6 +3,7 @@
 export * from './lib/utils.js';
 export * from './components/ui/index.js';
 export * from './components/catalog-filter.js';
+export * from './components/responsive-filter-panel.js';
 export * from './components/catalog-search.js';
 export * from './components/breadcrumbs.js';
 export * from './components/locale-switcher.js';

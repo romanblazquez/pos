@@ -70,6 +70,19 @@
     --primary:         var(--accent);
     --primary-foreground: var(--brand-mark);
 
+    /* Aliases for the SEO app's token vocabulary.
+       The two apps name the same things differently — this file says --bg/--tx,
+       ui-react/styles.css says --background/--foreground (shadcn-style) — and
+       apps/web already aliases *this* file's names in its globals.css. These are
+       the mirror image, so shared CSS (filter-panel.css) resolves under either
+       vocabulary and neither app has to be rewritten. Aliases only; no new
+       values. */
+    --background: var(--bg);
+    --foreground: var(--tx);
+    --card:       var(--bg-raised);
+    --surface:    var(--bg-raised);
+    --input:      var(--border);
+
     /* Radius scale */
     --radius: 0.875rem;
   }
@@ -150,5 +163,15 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-.animate-fade-in    { animation: fade-in 0.2s ease-out both; }
-.animate-slide-right { animation: slide-right 0.2s ease-out both; }
+/* `backwards`, not `both`.
+   `both` retains the final keyframe after the animation ends, so these elements
+   kept `transform: translateY(0)` forever — and a transformed element becomes
+   the containing block for any `position: fixed` descendant. <main> wears
+   .animate-fade-in, which silently broke fixed positioning for the whole page:
+   the mobile filter sheet anchored ~5000px down its own <main> instead of the
+   viewport. `backwards` still applies the `from` styles before the animation
+   starts (so there's no flash), but drops the transform once it finishes. The
+   end state is opacity 1 / no offset — identical to the resting style — so
+   nothing changes visually. */
+.animate-fade-in    { animation: fade-in 0.2s ease-out backwards; }
+.animate-slide-right { animation: slide-right 0.2s ease-out backwards; }

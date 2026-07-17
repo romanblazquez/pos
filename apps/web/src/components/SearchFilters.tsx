@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
+import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle, ResponsiveFilterPanel } from '@retail-os/ui-react';
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
-import { ResponsiveFilterPanel } from './ResponsiveFilterPanel';
 
 // Same bggWeight bands as apps/marketplace/src/pages/ProductPage.tsx's
 // ComplexityMeter and the API's complexity-bands.ts — keeps the filter and
@@ -64,8 +63,10 @@ export function SearchFilters({
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más` }
-      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more` };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más`,
+          sheetOpen: 'Abrir filtros', sheetClose: 'Cerrar filtros', sheetApply: 'Ver resultados' }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more`,
+          sheetOpen: 'Open filters', sheetClose: 'Close filters', sheetApply: 'View results' };
 
   // Every one of these already worked end-to-end (FilterState.sort -> API
   // sortBy) but had no control — `sort` was a hidden input, so the only way to
@@ -116,7 +117,10 @@ export function SearchFilters({
     .filter(Boolean).length + state.mechanics.length;
 
   return (
-    <ResponsiveFilterPanel locale={locale} activeCount={activeCount}>
+    <ResponsiveFilterPanel
+      labels={{ open: t.sheetOpen, title: t.filters, close: t.sheetClose, apply: t.sheetApply }}
+      activeCount={activeCount}
+    >
     <CatalogFilterPanel
       title={locale === 'es' ? 'Explorar' : 'Explore'}
       subtitle={`${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${locale === 'es' ? 'resultados' : 'results'}`}
