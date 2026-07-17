@@ -5,6 +5,10 @@
 > cold** — it captures the data architecture, the decisions already made, the writing
 > standards, and a resumable execution ledger. Read this top-to-bottom before writing
 > a single description. Last updated: 2026-07-15.
+>
+> **Scope.** This doc covers *copy* — descriptions, personas, translation. The
+> *look* (shelf identity, promo banners, badges, shelf art) is a separate domain:
+> see **`docs/design-system/PLAYBOOK.md`**.
 
 ---
 
