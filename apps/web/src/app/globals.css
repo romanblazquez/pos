@@ -214,6 +214,11 @@ button, input, select { font: inherit; }
 .search-layout { display: grid; grid-template-columns: 16.5rem minmax(0, 1fr); gap: 1.75rem; margin-top: 1.25rem; align-items: start; }
 /* .responsive-filter-panel / .mobile-filter-* live in the shared
    filter-panel.css partial (imported at the top) — apps/marketplace uses them. */
+
+/* Listing pages have no search field for the filter trigger to sit beside, so it
+   gets its own row above the grid. Hidden on desktop, where the rail is visible;
+   the trigger inside is itself display:none until the sheet breakpoint. */
+.listing-filter-bar { display: none; }
 .filters { position: sticky; top: 80px; padding: 1.1rem; border: 1px solid var(--sidebar-border); border-radius: 14px; background: var(--sidebar); box-shadow: 0 1px 2px rgb(43 38 34 / .04); }
 .filters h2 { display: flex; align-items: center; gap: .45rem; margin: 0 0 .9rem; color: var(--foreground); font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
 .filter-group { padding: .9rem 0; border-top: 1px solid var(--sidebar-border); }
@@ -283,6 +288,7 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 @media (max-width: 860px) {
   .search-layout { grid-template-columns: 1fr; }
   .filters { position: static; }
+  .listing-filter-bar { display: block; margin-bottom: .9rem; }
   /* The mobile filter sheet itself is styled in the shared filter-panel.css. */
 }
 @media (max-width: 768px) {

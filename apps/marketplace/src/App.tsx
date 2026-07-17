@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, LogOut, Menu, Moon, Search, ShoppingCart, Store, Sun, User, Wallet, X } from 'lucide-react';
+import { ChevronRight, LogOut, Menu, Moon, ShoppingCart, Store, Sun, User, Wallet, X } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
@@ -20,7 +20,7 @@ import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
-import { CatalogSearch, LocaleSwitcher } from '@retail-os/ui-react';
+import { CatalogSearchBar, LocaleSwitcher } from '@retail-os/ui-react';
 import { formatMoney } from './marketplace-meta.js';
 import { trackPageView } from './analytics.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
@@ -460,10 +460,10 @@ function Header({
         </div>
 
         <form
-          className="relative flex w-full min-w-0 flex-1 gap-2 lg:max-w-2xl"
+          className="relative w-full min-w-0 flex-1 lg:max-w-2xl"
           onSubmit={submitSearch}
         >
-          <CatalogSearch
+          <CatalogSearchBar
             endpoint={`${API_BASE}/api/v1/products/suggestions`}
             value={q}
             onValueChange={setQ}
@@ -471,11 +471,8 @@ function Header({
             onProduct={onProduct}
             placeholder={intl.formatMessage({ id: 'header.searchPlaceholder' })}
             globalShortcut
+            submitLabel={intl.formatMessage({ id: 'header.search' })}
           />
-          <Button type="submit" aria-label={intl.formatMessage({ id: 'header.search' })} className="min-w-10 shrink-0 px-3 sm:px-4">
-            <Search className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">{intl.formatMessage({ id: 'header.search' })}</span>
-          </Button>
         </form>
 
         <nav className="hidden shrink-0 items-center gap-1 lg:ml-auto lg:flex">

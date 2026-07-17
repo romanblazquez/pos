@@ -20,9 +20,11 @@ import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
-  CatalogSearch,
+  CatalogSearchBar,
   FilterChip,
-  ResponsiveFilterPanel,
+  FilterSheet,
+  FilterSheetPanel,
+  FilterSheetTrigger,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -194,24 +196,21 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
                 </div>
 
                 <form
-                  className="flex flex-col gap-2 rounded-[13px] border border-[--border] bg-[--bg-subtle] p-2 shadow-sm sm:flex-row"
+                  className="rounded-[13px] border border-[--border] bg-[--bg-subtle] p-2 shadow-sm"
                   onSubmit={(e) => {
                     e.preventDefault();
                     onSearch(q.trim(), activeCategory);
                   }}
                 >
-                  <CatalogSearch
+                  <CatalogSearchBar
                     endpoint={`${API}/api/v1/products/suggestions`}
                     value={q}
                     onValueChange={setQ}
                     onSearch={(term) => onSearch(term, activeCategory)}
                     onProduct={onProduct}
                     placeholder={intl.formatMessage({ id: 'home.searchPlaceholder' })}
+                    submitLabel={intl.formatMessage({ id: 'home.search' })}
                   />
-                  <Button type="submit" className="h-10 shrink-0">
-                    {intl.formatMessage({ id: 'home.search' })}
-                    <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                  </Button>
                 </form>
 
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -245,18 +244,19 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 min-[861px]:grid-cols-[16rem_1fr]">
+        <FilterSheet
+          labels={{
+            open: intl.formatMessage({ id: 'home.filterCatalog' }),
+            title: intl.formatMessage({ id: 'home.filters' }),
+            close: intl.formatMessage({ id: 'home.closeFilters' }),
+            apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
+          }}
+          activeCount={activeFilterCount}
+          // Filters apply on change here; the sheet only has to close.
+          onApply={() => undefined}
+        >
         <aside>
-          <ResponsiveFilterPanel
-            labels={{
-              open: intl.formatMessage({ id: 'home.filterCatalog' }),
-              title: intl.formatMessage({ id: 'home.filters' }),
-              close: intl.formatMessage({ id: 'home.closeFilters' }),
-              apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
-            }}
-            activeCount={activeFilterCount}
-            // Filters apply on change here; the sheet only has to close.
-            onApply={() => undefined}
-          >
+          <FilterSheetPanel>
             <MarketplaceCatalogFilters
               activeCategory={activeCategory}
               activeFilterCount={activeFilterCount}
@@ -269,7 +269,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               onFilters={updateFilters}
               onReset={resetFilters}
             />
-          </ResponsiveFilterPanel>
+          </FilterSheetPanel>
         </aside>
 
         <div className="min-w-0">
@@ -288,6 +288,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <FilterSheetTrigger />
               <label className="text-xs font-medium text-[--tx-muted]" htmlFor="catalog-sort">{intl.formatMessage({ id: 'home.sort' })}</label>
               <select
                 id="catalog-sort"
@@ -411,6 +412,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
             </>
           )}
         </div>
+        </FilterSheet>
       </section>
 
     </div>

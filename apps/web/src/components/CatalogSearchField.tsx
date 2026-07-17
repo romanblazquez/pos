@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { CatalogSearch } from '@retail-os/ui-react';
+import { CatalogSearchBar } from '@retail-os/ui-react';
 import type { Locale } from '@/lib/segments';
 
 export function CatalogSearchField({
@@ -13,6 +13,7 @@ export function CatalogSearchField({
   className,
   inputClassName,
   placeholder,
+  trailing,
 }: {
   locale: Locale;
   initialValue?: string;
@@ -21,12 +22,13 @@ export function CatalogSearchField({
   className?: string;
   inputClassName?: string;
   placeholder: string;
+  trailing?: ReactNode;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(initialValue);
 
   return (
-    <CatalogSearch
+    <CatalogSearchBar
       endpoint="/api/search-suggestions"
       value={value}
       onValueChange={setValue}
@@ -36,8 +38,10 @@ export function CatalogSearchField({
       placeholder={placeholder}
       inputName="q"
       globalShortcut
-      className={className}
-      inputClassName={inputClassName}
+      className={inputClassName}
+      barClassName={className}
+      submitLabel={locale === 'es' ? 'Buscar' : 'Search'}
+      trailing={trailing}
     />
   );
 }

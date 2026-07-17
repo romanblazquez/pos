@@ -1,19 +1,39 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '../lib/utils.js';
 
-export interface ResponsiveFilterPanelLabels {
-  /** Accessible name of the sheet, and of the trigger button. */
+export interface FilterSheetLabels {
+  /** Accessible name of the trigger and the sheet. */
   open: string;
-  /** Heading shown in the sheet, and the trigger's visible text. */
+  /** Heading inside the sheet. */
   title: string;
   close: string;
   apply: string;
 }
 
-export interface ResponsiveFilterPanelProps {
+interface FilterSheetContextValue {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  labels: FilterSheetLabels;
+  activeCount: number;
+  apply: () => void;
+  modalRef: React.RefObject<HTMLDivElement>;
+  closeRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+}
+
+const FilterSheetContext = React.createContext<FilterSheetContextValue | null>(null);
+
+function useFilterSheet(component: string) {
+  const ctx = React.useContext(FilterSheetContext);
+  if (!ctx) throw new Error(`<${component}> must be rendered inside <FilterSheet>.`);
+  return ctx;
+}
+
+export interface FilterSheetProps {
   children: React.ReactNode;
-  labels: ResponsiveFilterPanelLabels;
+  labels: FilterSheetLabels;
   /** Drives the badge on the trigger. 0 hides it. */
   activeCount: number;
   /**
@@ -24,21 +44,21 @@ export interface ResponsiveFilterPanelProps {
    * deliberately batches (FormAutoSubmit bails below 861px), so apply is what
    * actually runs the query.
    *
-   * Pass a no-op (or a scroll) in the SPA, where filters apply on change and
-   * there is no form to submit.
+   * Pass a no-op in the SPA, where filters apply on change and there is no form.
    */
   onApply?: () => void;
 }
 
 /**
- * Desktop: renders `children` as the filter rail, untouched.
- * Mobile (<861px): collapses them behind a trigger button into a dismissible
- * bottom sheet.
+ * Holds the sheet's state. Renders no markup of its own, so it can wrap a whole
+ * page: the trigger belongs beside the search field while the panel belongs in
+ * the sidebar, and they are not nestable.
  *
- * 861px rather than Tailwind's lg (1024px) because FormAutoSubmit uses the same
- * breakpoint — the sheet and the submit-batching have to switch together.
+ * It is a client component, but its children are just slots — server components
+ * pass straight through, which is what keeps the SEO app's filter rail
+ * server-rendered.
  */
-export function ResponsiveFilterPanel({ children, labels, activeCount, onApply }: ResponsiveFilterPanelProps) {
+export function FilterSheet({ children, labels, activeCount, onApply }: FilterSheetProps) {
   const [open, setOpen] = React.useState(false);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -60,30 +80,56 @@ export function ResponsiveFilterPanel({ children, labels, activeCount, onApply }
     };
   }, [open]);
 
-  const applyFilters = () => {
+  const apply = React.useCallback(() => {
     setOpen(false);
     if (onApply) {
       onApply();
       return;
     }
     modalRef.current?.closest('form')?.requestSubmit();
-  };
+  }, [onApply]);
 
+  const value = React.useMemo<FilterSheetContextValue>(
+    () => ({ open, setOpen, labels, activeCount, apply, modalRef, closeRef, triggerRef }),
+    [open, labels, activeCount, apply],
+  );
+
+  return <FilterSheetContext.Provider value={value}>{children}</FilterSheetContext.Provider>;
+}
+
+/**
+ * Icon-only button that opens the sheet. Hidden above 861px, where the rail is
+ * always visible. Place it next to the search field's submit button.
+ */
+export function FilterSheetTrigger({ className }: { className?: string }) {
+  const { open, setOpen, labels, activeCount, triggerRef } = useFilterSheet('FilterSheetTrigger');
+  return (
+    <button
+      ref={triggerRef}
+      type="button"
+      className={cn('mobile-filter-trigger', className)}
+      onClick={() => setOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-label={labels.open}
+    >
+      <SlidersIcon />
+      {activeCount > 0 && <span className="mobile-filter-count">{activeCount}</span>}
+    </button>
+  );
+}
+
+/**
+ * Wraps the filter rail. Desktop: renders `children` untouched as the sidebar.
+ * Below 861px: hides them behind the trigger in a dismissible bottom sheet.
+ *
+ * 861px rather than Tailwind's lg (1024px) because FormAutoSubmit uses the same
+ * breakpoint — the sheet and the submit-batching have to switch together.
+ */
+export function FilterSheetPanel({ children }: { children: React.ReactNode }) {
+  const { open, setOpen, labels, apply, modalRef, closeRef } = useFilterSheet('FilterSheetPanel');
   return (
     <div className="responsive-filter-panel">
-      <button
-        ref={triggerRef}
-        type="button"
-        className="mobile-filter-trigger"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <SlidersIcon />
-        <span>{labels.title}</span>
-        {activeCount > 0 && <span className="mobile-filter-count">{activeCount}</span>}
-      </button>
-
       {/* A plain sibling rather than a portal (cf. the nav drawer): in the SEO
           app the panel must stay inside the <form> for the no-JS submit to
           work, and a fixed sibling escapes the layout just as well. */}
@@ -104,7 +150,7 @@ export function ResponsiveFilterPanel({ children, labels, activeCount, onApply }
         </header>
         <div className="mobile-filter-scroll">{children}</div>
         <footer className="mobile-filter-footer">
-          <button type="button" className="mobile-filter-apply" onClick={applyFilters}>{labels.apply}</button>
+          <button type="button" className="mobile-filter-apply" onClick={apply}>{labels.apply}</button>
         </footer>
       </div>
     </div>

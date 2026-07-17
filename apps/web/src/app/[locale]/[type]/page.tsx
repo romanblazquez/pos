@@ -14,7 +14,8 @@ import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
 import { CatalogSearchField } from '@/components/CatalogSearchField';
 import { Pager } from '@/components/Pager';
-import { SearchFilters, categoryFromParam, type FilterState } from '@/components/SearchFilters';
+import { SearchFilters, categoryFromParam, filterActiveCount, filterSheetLabels, type FilterState } from '@/components/SearchFilters';
+import { FilterSheet, FilterSheetPanel, FilterSheetTrigger } from '@retail-os/ui-react';
 import {
   entityPath,
   homePath,
@@ -225,6 +226,7 @@ export default async function ListingPage({
             : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
         </h1>
         <form method="get" action={listingPath('search', locale)}>
+          <FilterSheet labels={filterSheetLabels(locale)} activeCount={filterActiveCount(state)}>
           <CatalogSearchField
             locale={locale}
             initialValue={q}
@@ -232,16 +234,19 @@ export default async function ListingPage({
             productBase={listingPath('games', locale)}
             placeholder={locale === 'es' ? 'Catan, estrategia, 2 jugadores…' : 'Catan, strategy, 2 players…'}
             className="search-command"
+            trailing={<FilterSheetTrigger />}
           />
           <div className="search-layout">
-            <SearchFilters
-              locale={locale}
-              categories={categories}
-              mechanics={mechanics}
-              state={state}
-              total={total}
-              clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
-            />
+            <FilterSheetPanel>
+              <SearchFilters
+                locale={locale}
+                categories={categories}
+                mechanics={mechanics}
+                state={state}
+                total={total}
+                clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
+              />
+            </FilterSheetPanel>
             <div>
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'resultados' : 'results'}
@@ -255,6 +260,7 @@ export default async function ListingPage({
               )}
             </div>
           </div>
+          </FilterSheet>
         </form>
       </main>
     );
@@ -307,15 +313,21 @@ export default async function ListingPage({
         )}
         <h1 className="page-title">{locale === 'es' ? 'Juegos de mesa' : 'Board games'}</h1>
         <form method="get" action={base}>
+          <FilterSheet labels={filterSheetLabels(locale)} activeCount={filterActiveCount(state)}>
+          {/* No search field on a listing page, so the trigger has no lens to sit
+              beside — it gets its own row above the grid. */}
+          <div className="listing-filter-bar"><FilterSheetTrigger /></div>
           <div className="search-layout">
-            <SearchFilters
-              locale={locale}
-              categories={categories}
-              mechanics={mechanics}
-              state={state}
-              total={total}
-              clearHref={base}
-            />
+            <FilterSheetPanel>
+              <SearchFilters
+                locale={locale}
+                categories={categories}
+                mechanics={mechanics}
+                state={state}
+                total={total}
+                clearHref={base}
+              />
+            </FilterSheetPanel>
             <div>
               <p className="muted" style={{ marginBottom: '1rem' }}>
                 {total} {locale === 'es' ? 'juegos en el catálogo' : 'games in the catalogue'}
@@ -330,6 +342,7 @@ export default async function ListingPage({
               <Pager base={base} page={page} total={total} locale={locale} pageSize={PAGE_SIZE} query={filterQuery(searchParams)} />
             </div>
           </div>
+          </FilterSheet>
         </form>
       </main>
     );

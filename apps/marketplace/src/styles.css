@@ -5,6 +5,8 @@
 @import "../../../libs/shared/ui-react/src/filter-panel.css";
 @source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
 @source "../../../libs/shared/ui-react/src/components/catalog-search.tsx";
+@source "../../../libs/shared/ui-react/src/components/catalog-search-bar.tsx";
+@source "../../../libs/shared/ui-react/src/components/responsive-filter-panel.tsx";
 @source "../../../libs/shared/ui-react/src/components/breadcrumbs.tsx";
 @source "../../../libs/shared/ui-react/src/components/locale-switcher.tsx";
 

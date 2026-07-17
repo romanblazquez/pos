@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle, ResponsiveFilterPanel } from '@retail-os/ui-react';
+import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
@@ -43,6 +43,23 @@ export interface FilterState {
   complexity?: string;
 }
 
+
+/** Badge count for the filter sheet trigger. Lives here so the rule that decides
+ *  "how many filters are on" stays next to the controls that set them. */
+export function filterActiveCount(state: FilterState) {
+  return [state.category, state.inStock, state.max, state.players, state.complexity]
+    .filter(Boolean).length + state.mechanics.length;
+}
+
+/** Labels for the filter sheet. The page owns <FilterSheet> (the trigger sits by
+ *  the search field, the rail inside the panel), so the strings live here beside
+ *  the rest of the filter copy rather than being reinvented at the call site. */
+export function filterSheetLabels(locale: Locale) {
+  return locale === 'es'
+    ? { open: 'Abrir filtros', title: 'Filtros', close: 'Cerrar filtros', apply: 'Ver resultados' }
+    : { open: 'Open filters', title: 'Filters', close: 'Close filters', apply: 'View results' };
+}
+
 // Server-rendered faceted filters (no client JS): the whole search view is one
 // GET <form>, so changing any control and pressing "Aplicar" reloads with the
 // combined query — crawlable, shareable, and works without hydration.
@@ -63,10 +80,8 @@ export function SearchFilters({
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más`,
-          sheetOpen: 'Abrir filtros', sheetClose: 'Cerrar filtros', sheetApply: 'Ver resultados' }
-      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more`,
-          sheetOpen: 'Open filters', sheetClose: 'Close filters', sheetApply: 'View results' };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más` }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more` };
 
   // Every one of these already worked end-to-end (FilterState.sort -> API
   // sortBy) but had no control — `sort` was a hidden input, so the only way to
@@ -113,14 +128,8 @@ export function SearchFilters({
   );
 
   const active = Boolean(state.category || state.inStock || state.max || state.players || state.mechanics.length > 0 || state.complexity);
-  const activeCount = [state.category, state.inStock, state.max, state.players, state.complexity]
-    .filter(Boolean).length + state.mechanics.length;
 
   return (
-    <ResponsiveFilterPanel
-      labels={{ open: t.sheetOpen, title: t.filters, close: t.sheetClose, apply: t.sheetApply }}
-      activeCount={activeCount}
-    >
     <CatalogFilterPanel
       title={locale === 'es' ? 'Explorar' : 'Explore'}
       subtitle={`${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${locale === 'es' ? 'resultados' : 'results'}`}
@@ -269,7 +278,6 @@ export function SearchFilters({
       {/* Fallback submit for no-JS environments */}
       <Button type="submit" className="mt-3 w-full js-hidden">{t.apply}</Button>
     </CatalogFilterPanel>
-    </ResponsiveFilterPanel>
   );
 }
 

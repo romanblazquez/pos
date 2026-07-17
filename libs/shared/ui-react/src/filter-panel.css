@@ -58,11 +58,19 @@
 
 @media (max-width: 860px) {
   .responsive-filter-panel { order: -1; }
-  .mobile-filter-trigger { display: inline-flex; min-height: 44px; align-items: center; gap: .55rem; padding: .65rem .85rem;
-    border: 1px solid var(--input); border-radius: 11px; background: var(--card); color: var(--foreground);
-    box-shadow: 0 1px 2px rgb(43 38 34 / .06); font-size: .88rem; font-weight: 700; cursor: pointer; }
-  .mobile-filter-count { display: grid; min-width: 20px; height: 20px; place-items: center; padding: 0 5px; border-radius: 999px;
-    background: var(--primary); color: var(--primary-foreground); font-size: 11px; }
+  /* Icon-only, and sized to the search bar's submit button (h-[46px]) so it sits
+     flush beside it. The count badge is the only label — an icon with a number
+     reads faster than a word, and the row has no space for both. */
+  .mobile-filter-trigger { display: inline-flex; position: relative; width: 46px; height: 46px; flex: none;
+    align-items: center; justify-content: center; padding: 0;
+    border: 1px solid var(--input); border-radius: 12px; background: var(--card); color: var(--foreground);
+    box-shadow: 0 1px 2px rgb(43 38 34 / .06); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mobile-filter-trigger:active { transform: scale(.94); }
+  /* Badge rides the corner rather than sitting inline — there is no room beside
+     the icon, and it has to stay legible against the sheet trigger. */
+  .mobile-filter-count { display: grid; position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px;
+    place-items: center; padding: 0 5px; border-radius: 999px; border: 2px solid var(--card);
+    background: var(--primary); color: var(--primary-foreground); font-size: 10px; font-weight: 800; line-height: 1; }
   .mobile-filter-scrim { display: block; position: fixed; z-index: 99; inset: 0; }
   /* A bottom sheet, not a full-bleed page: it stops short of the top so the
      scrim shows the results still sitting underneath. That gap is also a

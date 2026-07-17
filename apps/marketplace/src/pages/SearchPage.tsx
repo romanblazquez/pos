@@ -14,9 +14,11 @@ import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
-  CatalogSearch,
+  CatalogSearchBar,
   FilterChip,
-  ResponsiveFilterPanel,
+  FilterSheet,
+  FilterSheetPanel,
+  FilterSheetTrigger,
   FilterToggle,
   FilterCategoryButton,
 } from '@retail-os/ui-react';
@@ -184,6 +186,17 @@ export default function SearchPage({
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 min-[861px]:grid-cols-[17rem_1fr] min-[861px]:py-8">
+      <FilterSheet
+        labels={{
+          open: intl.formatMessage({ id: 'home.filterCatalog' }),
+          title: intl.formatMessage({ id: 'home.filters' }),
+          close: intl.formatMessage({ id: 'home.closeFilters' }),
+          apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
+        }}
+        activeCount={activeFilterCount}
+        // Filters apply on change here; the sheet only has to close.
+        onApply={() => undefined}
+      >
       <SeoHead
         title={`${title} | Juegospedia`}
         description={category
@@ -201,17 +214,7 @@ export default function SearchPage({
         ]) : undefined}
       />
       <aside>
-        <ResponsiveFilterPanel
-          labels={{
-            open: intl.formatMessage({ id: 'home.filterCatalog' }),
-            title: intl.formatMessage({ id: 'home.filters' }),
-            close: intl.formatMessage({ id: 'home.closeFilters' }),
-            apply: intl.formatMessage({ id: 'home.viewResults' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '' }),
-          }}
-          activeCount={activeFilterCount}
-          // Filters apply on change here; the sheet only has to close.
-          onApply={() => undefined}
-        >
+        <FilterSheetPanel>
         <CatalogFilterPanel
           title={intl.formatMessage({ id: 'home.explore' })}
           subtitle={intl.formatMessage({ id: 'home.resultsCount' }, { count: data?.total.toLocaleString(numberLocale(intl.locale)) ?? '—' })}
@@ -343,7 +346,7 @@ export default function SearchPage({
             </div>
           </CatalogFilterSection>
         </CatalogFilterPanel>
-        </ResponsiveFilterPanel>
+        </FilterSheetPanel>
       </aside>
 
       <main className="min-w-0">
@@ -371,7 +374,7 @@ export default function SearchPage({
             </div>
 
             <form
-              className="flex min-w-0 gap-2 md:w-[26rem]"
+              className="min-w-0 md:w-[26rem]"
               onSubmit={(e) => {
                 e.preventDefault();
                 trackEvent('search', {
@@ -381,18 +384,16 @@ export default function SearchPage({
                 onSearch(draft.trim(), category);
               }}
             >
-              <CatalogSearch
+              <CatalogSearchBar
                 endpoint={`${API}/api/v1/products/suggestions`}
                 value={draft}
                 onValueChange={setDraft}
                 onSearch={(term) => onSearch(term, category)}
                 onProduct={onProduct}
                 placeholder={intl.formatMessage({ id: 'search.refine' })}
+                submitLabel={intl.formatMessage({ id: 'search.search' })}
+                trailing={<FilterSheetTrigger />}
               />
-              <Button type="submit">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{intl.formatMessage({ id: 'search.search' })}</span>
-              </Button>
             </form>
           </div>
 
@@ -527,6 +528,7 @@ export default function SearchPage({
           </>
         )}
       </main>
+      </FilterSheet>
     </div>
   );
 }
