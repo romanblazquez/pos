@@ -217,7 +217,7 @@ export default async function ListingPage({
       { name: locale === 'es' ? 'Buscar' : 'Search', path: listingPath('search', locale) },
     ];
     return (
-      <main className="container">
+      <main className="container-wide">
         <Breadcrumbs crumbs={crumbs} />
         <h1 className="page-title">
           {q
@@ -295,7 +295,7 @@ export default async function ListingPage({
       { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: base },
     ];
     return (
-      <main className="container">
+      <main className="container-wide">
         <Breadcrumbs crumbs={crumbs} />
         {page === 1 && !filtered && (
           <JsonLd
