@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { Check, RotateCcw, SlidersHorizontal } from 'lucide-react';
-import { Button, CatalogFilterPanel, CatalogFilterSection, FilterChip } from '@retail-os/ui-react';
+import { RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
 import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
@@ -142,25 +142,14 @@ export function SearchFilters({
         </select>
       </CatalogFilterSection>
 
-      {/* Availability — styled to match ToggleFilter in marketplace */}
       <CatalogFilterSection title={t.avail}>
-        <label data-filter="row"
-          className={`mobile-filter-choice flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors
-          ${state.inStock
-            ? 'border-(--primary) bg-(--accent-bg)'
-            : 'border-(--border) bg-(--bg-subtle) hover:bg-(--bg-hover)'}`}
-        >
-          <span>
-            <span className="block text-sm font-semibold text-(--tx)">{t.inStock}</span>
-            <span className="mt-0.5 block text-xs text-(--tx-muted)">{t.inStockHint}</span>
-          </span>
-          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border
-            ${state.inStock ? 'border-(--primary) bg-(--primary) text-(--primary-foreground)' : 'border-(--border-strong)'}`}
-          >
-            {state.inStock && <Check size={12} aria-hidden="true" />}
-          </span>
-          <input type="checkbox" name="inStock" value="true" defaultChecked={state.inStock} className="sr-only" />
-        </label>
+        <FilterToggle
+          name="inStock"
+          checked={state.inStock}
+          label={t.inStock}
+          description={t.inStockHint}
+          className="mobile-filter-choice"
+        />
       </CatalogFilterSection>
 
       {/* Budget chips — matches marketplace 2-col grid */}
@@ -258,21 +247,16 @@ export function SearchFilters({
               isActive: state.category === c.category,
             })),
           ].map((c) => (
-            <label
+            <FilterCategoryButton
               key={c.value}
-              data-filter="row"
-              className={`mobile-filter-choice mb-1 block w-full cursor-pointer rounded-lg px-2.5 py-2 text-left transition-colors
-                ${c.isActive
-                  ? 'border border-(--primary) bg-(--accent-bg) text-(--tx)'
-                  : 'border border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'}`}
-            >
-              <input type="radio" name="category" value={c.value} defaultChecked={c.isActive} className="sr-only" />
-              <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-                <span>{c.label}</span>
-                <span className="rounded-full border border-current/15 px-1.5 py-0.5 text-[10px] font-medium opacity-70">{c.count}</span>
-              </span>
-              <span className="mt-0.5 line-clamp-2 block text-xs text-(--tx-muted)">{c.description}</span>
-            </label>
+              name="category"
+              value={c.value}
+              active={c.isActive}
+              label={c.label}
+              description={c.description}
+              count={c.count}
+              className="mobile-filter-choice"
+            />
           ))}
         </div>
       </CatalogFilterSection>

@@ -154,28 +154,45 @@ export function FilterChip(props: FilterChipProps) {
   );
 }
 
-export function FilterToggle({
-  checked,
-  label,
-  description,
-  onClick,
-}: {
+// Availability toggle. Same two modes as FilterChip — see that comment for why.
+// `data-filter="row"` is the row-level twin of `data-filter="chip"`: the web
+// app's globals.css paints [data-filter="row"]:has(input:checked), and targets
+// the .h-5 indicator inside it, so that class must survive any restyle here.
+interface FilterToggleBaseProps {
   checked: boolean;
   label: string;
   description: string;
+  className?: string;
+}
+
+interface FilterToggleFormProps extends FilterToggleBaseProps {
+  /** Submitted field name. Presence of `name` selects form mode. */
+  name: string;
+  value?: string;
+  onClick?: never;
+}
+
+interface FilterToggleButtonProps extends FilterToggleBaseProps {
   onClick: () => void;
-}) {
+  name?: never;
+  value?: never;
+}
+
+export type FilterToggleProps = FilterToggleFormProps | FilterToggleButtonProps;
+
+function filterToggleClass(checked: boolean, className?: string) {
+  return cn(
+    'flex w-full items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors',
+    checked
+      ? 'border-(--primary) bg-(--accent-bg)'
+      : 'border-(--border) bg-(--bg-subtle) hover:bg-(--bg-hover)',
+    className,
+  );
+}
+
+function FilterToggleBody({ checked, label, description }: FilterToggleBaseProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors',
-        checked
-          ? 'border-(--primary) bg-(--accent-bg)'
-          : 'border-(--border) bg-(--bg-subtle) hover:bg-(--bg-hover)',
-      )}
-    >
+    <>
       <span>
         <span className="block text-sm font-semibold text-(--tx)">{label}</span>
         <span className="mt-0.5 block text-xs text-(--tx-muted)">{description}</span>
@@ -192,34 +209,74 @@ export function FilterToggle({
           </svg>
         )}
       </span>
+    </>
+  );
+}
+
+export function FilterToggle(props: FilterToggleProps) {
+  const { checked, label, description, className } = props;
+
+  if (props.name !== undefined) {
+    return (
+      <label data-filter="row" className={cn('cursor-pointer', filterToggleClass(checked, className))}>
+        <input
+          type="checkbox"
+          name={props.name}
+          value={props.value ?? 'true'}
+          defaultChecked={checked}
+          className="sr-only"
+        />
+        <FilterToggleBody checked={checked} label={label} description={description} />
+      </label>
+    );
+  }
+
+  return (
+    <button type="button" data-filter="row" onClick={props.onClick} className={filterToggleClass(checked, className)}>
+      <FilterToggleBody checked={checked} label={label} description={description} />
     </button>
   );
 }
 
-export function FilterCategoryButton({
-  active,
-  label,
-  description,
-  count,
-  onClick,
-}: {
+// Category row. Same two modes as FilterChip; carries data-filter="row" so the
+// mobile live-state rules paint it (see FilterToggle).
+interface FilterCategoryBaseProps {
   active: boolean;
   label: string;
   description: string;
   count?: number;
+  className?: string;
+}
+
+interface FilterCategoryFormProps extends FilterCategoryBaseProps {
+  /** Submitted field name. Presence of `name` selects form mode. */
+  name: string;
+  /** Empty string is a real value here — the "all categories" row. */
+  value: string;
+  onClick?: never;
+}
+
+interface FilterCategoryButtonModeProps extends FilterCategoryBaseProps {
   onClick: () => void;
-}) {
+  name?: never;
+  value?: never;
+}
+
+export type FilterCategoryButtonProps = FilterCategoryFormProps | FilterCategoryButtonModeProps;
+
+function filterCategoryClass(active: boolean, className?: string) {
+  return cn(
+    'mb-1 block w-full rounded-lg px-2.5 py-2 text-left transition-colors',
+    active
+      ? 'border border-(--primary) bg-(--accent-bg) text-(--tx)'
+      : 'border border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)',
+    className,
+  );
+}
+
+function FilterCategoryBody({ label, description, count }: FilterCategoryBaseProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'mb-1 w-full rounded-lg px-2.5 py-2 text-left transition-colors',
-        active
-          ? 'border border-(--primary) bg-(--accent-bg) text-(--tx)'
-          : 'border border-(--border) bg-(--bg-subtle) text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)',
-      )}
-    >
+    <>
       <span className="flex items-center justify-between gap-2 text-sm font-semibold">
         <span>{label}</span>
         {count !== undefined && (
@@ -227,6 +284,25 @@ export function FilterCategoryButton({
         )}
       </span>
       <span className="mt-0.5 line-clamp-2 block text-xs text-(--tx-muted)">{description}</span>
+    </>
+  );
+}
+
+export function FilterCategoryButton(props: FilterCategoryButtonProps) {
+  const { active, label, description, count, className } = props;
+
+  if (props.name !== undefined) {
+    return (
+      <label data-filter="row" className={cn('cursor-pointer', filterCategoryClass(active, className))}>
+        <input type="radio" name={props.name} value={props.value} defaultChecked={active} className="sr-only" />
+        <FilterCategoryBody active={active} label={label} description={description} count={count} />
+      </label>
+    );
+  }
+
+  return (
+    <button type="button" data-filter="row" onClick={props.onClick} className={filterCategoryClass(active, className)}>
+      <FilterCategoryBody active={active} label={label} description={description} count={count} />
     </button>
   );
 }

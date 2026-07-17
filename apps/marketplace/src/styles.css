@@ -23,6 +23,16 @@
   --color-emerald-800: #76351f;
   --color-emerald-900: #5f2d1c;
   --color-emerald-950: #35150c;
+
+  /* Radius scale, mapped off --radius exactly as ui-react/styles.css does for
+     apps/web. Without these, rounded-md/lg here silently fell back to
+     Tailwind's stock 6px/8px while the SEO app used the design system's
+     12px/14px — so shared components rendered visibly differently in each app
+     (the FilterToggle checkbox read as a square here, a circle there). */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Dark mode: triggered by [data-theme="dark"] on <html> */
