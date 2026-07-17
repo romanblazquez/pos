@@ -184,7 +184,11 @@ condition grade. Do not invent them — that data arrives with the BO.
    that was removed from the SEO site. It imports the shared `commerce-state`, so
    it picked up `hot`/`expansion` automatically, but has its own local
    `CommerceBadge`, so it does **not** get the emphasis tiers and is now subtly
-   out of sync.
+   out of sync. **Its search filters are migrated** (they use the shared
+   `FilterChip` and the brand `--primary`); the rest of the page is not. Note
+   `tsc -p apps/marketplace/tsconfig.json` has a **pre-existing** error in its
+   local `ProductCard` (`Record<CommerceState, string>` missing `hot`/
+   `expansion`) — it is this same drift, not your diff. Vite builds green.
 4. Tint/accent for the five `derived` shelves, once the design system covers them.
 5. Design system sections not yet implemented: GameStatPills, the collector
    profile, SellerOfferComparisonTable styling, the command palette.
@@ -226,6 +230,21 @@ condition grade. Do not invent them — that data arrives with the BO.
 - **A parallel Codex agent shares this worktree** and commits directly to `main`.
   Verify tree-clean and `git fetch` before any ref surgery; stage explicit paths,
   never `git add -A`.
+- **Add filter chips with `FilterChip` (`@retail-os/ui-react`), never by hand.**
+  The chip is a `<label>` + hidden input + `data-filter="chip"` + a long class
+  string, and it was hand-copied at eight call sites. One copy (Players) lost
+  the attribute, which silently killed its mobile selection feedback — the
+  filter still worked, it just looked dead, so it survived review. `FilterChip`
+  owns the attribute; two modes (`name`+`inputType` for the SEO app's no-JS GET
+  form, `onClick` for the SPA). **Why the attribute is load-bearing:**
+  `FormAutoSubmit` bails below 861px so the mobile sheet can batch, so the
+  server-computed active classes go stale on tap and only
+  `[data-filter="chip"]:has(input:checked)` in the web app's `globals.css`
+  paints selection. Regression test:
+  `node tools/scripts/check-filter-chips.mjs [baseUrl]` walks every
+  `.catalog-filter-section` at 390×844 and asserts the background changes on
+  tap; it **skips already-checked chips**, which otherwise produce a false
+  failure. Run it against a dev server after touching the filter panel.
 - **Never print any portion of `OPENAI_API_KEY`** (in `/home/pi/pos/.env`).
 - Screenshots need `sudo npx playwright install-deps` on the Pi (already done).
   Verify UI by *rendering* it — the unwired `solo`/`campaign` art and the hero
