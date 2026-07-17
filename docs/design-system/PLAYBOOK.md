@@ -186,11 +186,12 @@ condition grade. Do not invent them — that data arrives with the BO.
    `CommerceBadge`, so it does **not** get the emphasis tiers and is now subtly
    out of sync — though `hot`/`expansion` styles were since added there
    (`055b5b2`), so `tsc -p apps/marketplace/tsconfig.json` is now clean.
-   **Its search rail is fully migrated:** it renders the same
-   `CatalogFilterPanel`/`CatalogFilterSection`/`FilterChip`/`FilterToggle`/
-   `FilterCategoryButton` as the SEO app, plus Sort and the mechanics
-   disclosure, and its `@theme` now carries the design system's radius scale.
-   `HomePage` and the product page are still un-migrated.
+   **Both its rails are fully migrated** — `SearchPage` *and* `HomePage` render
+   the same `CatalogFilterPanel`/`CatalogFilterSection`/`FilterChip`/
+   `FilterToggle`/`FilterCategoryButton`/`ResponsiveFilterPanel` as the SEO app,
+   share one `catalog-filter-options.ts`, and its `@theme` now carries the
+   design system's radius scale plus aliases for the SEO token vocabulary. The
+   product page is still un-migrated.
 4. Tint/accent for the five `derived` shelves, once the design system covers them.
 5. Design system sections not yet implemented: GameStatPills, the collector
    profile, SellerOfferComparisonTable styling, the command palette.
@@ -266,6 +267,21 @@ condition grade. Do not invent them — that data arrives with the BO.
   `@theme` re-points Tailwind's whole `emerald` ramp at the brand clay
   (`--color-emerald-500: #b4502e`). So `bg-emerald-700` and `text-[--tx-muted]`
   both render on-brand there. Verify against the built CSS before "fixing" them.
+- **`animation-fill-mode: both` silently kills `position: fixed`.** The SPA's
+  `.animate-fade-in` (worn by `<main>`) animated `translateY(6px) -> 0` with
+  `both`, which **retains the final keyframe forever** — so `<main>` kept a
+  `transform` at rest, and a transformed element is the containing block for
+  every fixed descendant. The mobile filter sheet anchored ~5,000px down its own
+  `<main>` instead of the viewport, with correct CSS (`position: fixed` was
+  right there in the bundle). Use `backwards` for entrance animations: it still
+  applies the `from` styles before the animation starts, so no flash, but drops
+  the transform once it ends. **If a `position: fixed` element lands in the
+  wrong place, walk its ancestors for `transform`/`filter`/`backdrop-filter`/
+  `perspective`/`contain`/`will-change` before touching the fixed element.**
+- **Filter breakpoint is 861px, not Tailwind's `lg`.** `FormAutoSubmit` bails
+  below 861px and `filter-panel.css` swaps rail↔sheet at the same width, so the
+  grids use `min-[861px]:` rather than `lg:` (1024px). They drifted once, and
+  861-1023px rendered the full rail stacked above the results.
 - **Never print any portion of `OPENAI_API_KEY`** (in `/home/pi/pos/.env`).
 - Screenshots need `sudo npx playwright install-deps` on the Pi (already done).
   Verify UI by *rendering* it — the unwired `solo`/`campaign` art and the hero
