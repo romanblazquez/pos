@@ -68,6 +68,15 @@ function guideToken(title: string): string {
   return '⬡';
 }
 
+function guideTokenTone(title: string): 'clay' | 'forest' | 'ochre' | 'ink' | 'parchment' {
+  const value = title.toLowerCase();
+  if (/cooperativ|cooperative|co-op|famil/.test(value)) return 'forest';
+  if (/estrateg|strategy|abstract/.test(value)) return 'ink';
+  if (/principiante|beginner|2 jugador|2 player|dos jugador/.test(value)) return 'ochre';
+  if (/solitario|\bsolo\b/.test(value)) return 'parchment';
+  return 'clay';
+}
+
 function pageOf(searchParams: { page?: string }): number {
   const n = parseInt(searchParams.page ?? '1', 10);
   return Number.isFinite(n) && n > 1 ? n : 1;
@@ -455,6 +464,7 @@ export default async function ListingPage({
           cover: g.ogImage ?? (await guideCover(g, locale)),
           kicker: guideKicker(g.title, locale),
           token: guideToken(g.title),
+          tokenTone: guideTokenTone(g.title),
           autoTranslated: g.autoTranslated,
         };
       }),

@@ -380,11 +380,16 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   letter-spacing: .04em; color: #fff; background: rgba(20,14,10,.72); backdrop-filter: blur(3px); }
 .guide-hit-token { position: absolute; z-index: 1; left: 50%; bottom: 0; display: grid; width: 66px; height: 66px;
   place-items: center; translate: -50% 42%; clip-path: polygon(50% 0, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
-  background: color-mix(in srgb, var(--primary) 88%, #1c130e); color: var(--primary-foreground); box-shadow: 0 9px 18px rgb(0 0 0 / .3);
+  --token-bg: #b4502e; --token-fg: #fff8eb; --token-edge: #78321e;
+  background: var(--token-bg); color: var(--token-fg); filter: drop-shadow(0 9px 8px rgb(0 0 0 / .28));
   transition: translate .28s cubic-bezier(.2,.8,.2,1), rotate .35s cubic-bezier(.2,.8,.2,1), scale .28s ease; }
-.guide-hit-token::before { content: ''; position: absolute; inset: 5px; border: 1px solid color-mix(in srgb, currentColor 58%, transparent);
+.guide-hit-token[data-tone="forest"] { --token-bg: #2c6b43; --token-fg: #f5efe3; --token-edge: #1e4930; }
+.guide-hit-token[data-tone="ochre"] { --token-bg: #d39a32; --token-fg: #2b2622; --token-edge: #8f641d; }
+.guide-hit-token[data-tone="ink"] { --token-bg: #2b2622; --token-fg: #f5efe3; --token-edge: #151210; }
+.guide-hit-token[data-tone="parchment"] { --token-bg: #e9dbc2; --token-fg: #2b2622; --token-edge: #9a8e79; }
+.guide-hit-token::before { content: ''; position: absolute; inset: 5px; border: 2px solid var(--token-edge);
   clip-path: inherit; }
-.guide-hit-token-ring { position: absolute; inset: 13px; border: 2px solid currentColor; border-radius: 50%; opacity: .88; }
+.guide-hit-token-ring { position: absolute; inset: 13px; border: 2px solid currentColor; border-radius: 50%; opacity: .92; }
 .guide-hit-token-ring::after { content: ''; position: absolute; inset: 4px; border: 1px dashed currentColor; border-radius: 50%; opacity: .55; }
 .guide-hit-token-mark { position: relative; z-index: 1; font-family: var(--font-display); font-size: 22px; font-weight: 900; line-height: 1; text-shadow: 0 1px 0 rgb(0 0 0 / .2); }
 .guide-hit:hover .guide-hit-token { translate: -50% 34%; rotate: 8deg; scale: 1.08; }

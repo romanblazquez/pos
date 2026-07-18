@@ -16,6 +16,7 @@ export interface GuideCardData {
   cover?: string;
   kicker?: string;
   token?: string;
+  tokenTone?: 'clay' | 'forest' | 'ochre' | 'ink' | 'parchment';
   autoTranslated?: boolean;
 }
 
@@ -109,7 +110,7 @@ export function GuidesExplorer({
                   <span className="guide-hit-glyph" aria-hidden="true">🎲</span>
                 )}
                 {g.kicker && <span className="guide-hit-kicker">{g.kicker}</span>}
-                <span className="guide-hit-token" aria-hidden="true">
+                <span className="guide-hit-token" data-tone={g.tokenTone ?? 'clay'} aria-hidden="true">
                   <span className="guide-hit-token-ring" />
                   <span className="guide-hit-token-mark">{g.token ?? '⬡'}</span>
                 </span>
