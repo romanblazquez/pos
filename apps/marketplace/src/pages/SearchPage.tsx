@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
 import {
+  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
@@ -14,7 +15,6 @@ import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
   CatalogFilterSection,
-  CatalogSearchBar,
   FilterChip,
   FilterSheet,
   FilterSheetPanel,
@@ -25,7 +25,6 @@ import {
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
-import { trackEvent } from '../analytics.js';
 import {
   categoryDescription,
   categoryLabel,
@@ -119,7 +118,6 @@ export default function SearchPage({
   onHome: () => void;
 }) {
   const intl = useIntl();
-  const [draft, setDraft] = useState(query);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [players, setPlayers] = useState<number | undefined>(undefined);
@@ -130,10 +128,9 @@ export default function SearchPage({
   const { data: platformCfg } = usePlatformConfig();
   const cashbackPct = platformCfg?.platformCashbackPct ?? 0.01;
 
-  useEffect(() => setDraft(query), [query]);
   useEffect(() => setPage(1), [query, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy]);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isPlaceholderData } = useQuery({
     queryKey: ['search', query, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy, page, intl.locale],
     queryFn: () => searchProducts(query, page, intl.locale, category, inStockOnly, maxPrice, players, mechanics, complexity, sortBy),
     placeholderData: (previous) => previous,
@@ -359,47 +356,48 @@ export default function SearchPage({
               ]
             : [{ label: query ? intl.formatMessage({ id: 'search.searchCrumb' }, { query }) : intl.formatMessage({ id: 'home.catalog' }) }]),
         ]} />
-        <section className="mb-6 rounded-lg border border-[--border] bg-[--bg-raised] p-4 sm:p-5">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                {category ? categoryLabel(category, intl.locale as 'es' | 'en') : intl.formatMessage({ id: 'search.marketplace' })}
-              </p>
-              <h1 className="mt-1 text-2xl font-bold text-[--tx]">{title}</h1>
-              <p className="mt-1 text-sm text-[--tx-muted]">
-                {data
-                  ? intl.formatMessage({ id: 'search.resultsSummary' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), page, totalPages })
-                  : categoryDescription(category, intl.locale as 'es' | 'en')}
-              </p>
-            </div>
+        {/* Compact results header — no card, so the first product sits much
+            higher on mobile. The single search lives in the global header; here
+            we surface only context + count + the primary Sort/Filter actions.
+            The desktop rail (>=861px) already carries sort and filters, so the
+            control row is mobile-only. */}
+        <div className="mb-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[--accent]">
+            {category ? categoryLabel(category, intl.locale as 'es' | 'en') : intl.formatMessage({ id: 'search.marketplace' })}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold leading-[1.15] tracking-tight text-[--tx] break-words">
+            {title}
+          </h1>
+          <p className="mt-1 min-h-[1.25rem] text-sm text-[--tx-muted]" aria-live="polite">
+            {!data
+              ? categoryDescription(category, intl.locale as 'es' | 'en')
+              : isPlaceholderData
+              ? intl.formatMessage({ id: 'search.searching' })
+              : totalPages > 1
+              ? intl.formatMessage({ id: 'search.resultsSummary' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), page, totalPages })
+              : intl.formatMessage({ id: 'search.gamesFound' }, { count: data.total.toLocaleString(numberLocale(intl.locale)) })}
+          </p>
 
-            <form
-              className="min-w-0 md:w-[26rem]"
-              onSubmit={(e) => {
-                e.preventDefault();
-                trackEvent('search', {
-                  search_term: draft.trim(),
-                  category: category ?? 'all',
-                });
-                onSearch(draft.trim(), category);
-              }}
-            >
-              <CatalogSearchBar
-                endpoint={`${API}/api/v1/products/suggestions`}
-                value={draft}
-                onValueChange={setDraft}
-                onSearch={(term) => onSearch(term, category)}
-                onClear={() => onSearch('', category)}
-                onProduct={onProduct}
-                placeholder={intl.formatMessage({ id: 'search.refine' })}
-                submitLabel={intl.formatMessage({ id: 'search.search' })}
-                trailing={<FilterSheetTrigger />}
-              />
-            </form>
+          <div className="mt-3 flex items-center gap-2 min-[861px]:hidden">
+            <label className="inline-flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[--border] bg-[--bg-raised] px-3 text-sm font-medium text-[--tx] focus-within:ring-2 focus-within:ring-[--accent]">
+              <ArrowUpDown className="h-4 w-4 shrink-0 text-[--tx-muted]" aria-hidden="true" />
+              <span className="sr-only">{intl.formatMessage({ id: 'home.sort' })}</span>
+              <select
+                aria-label={intl.formatMessage({ id: 'home.sort' })}
+                value={sortBy ?? 'rank_score'}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className="min-w-0 flex-1 truncate bg-transparent outline-none"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{intl.formatMessage({ id: o.labelId })}</option>
+                ))}
+              </select>
+            </label>
+            <FilterSheetTrigger />
           </div>
 
           {(category || inStockOnly || maxPrice !== undefined || players !== undefined || mechanics.length > 0 || complexity !== undefined) && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {category && (
                 <ActiveChip label={categoryLabel(category, intl.locale as 'es' | 'en')} onClear={() => onSearch(query, undefined)} />
               )}
@@ -430,7 +428,7 @@ export default function SearchPage({
               ))}
             </div>
           )}
-        </section>
+        </div>
 
         {isLoading && <SearchSkeleton />}
 
@@ -454,7 +452,9 @@ export default function SearchPage({
           <EmptyState
             icon={<SearchX className="h-9 w-9" aria-hidden="true" />}
             title={intl.formatMessage({ id: 'search.noResultsTitle' })}
-            body={intl.formatMessage({ id: 'search.noResultsBody' })}
+            body={query
+              ? intl.formatMessage({ id: 'search.noResultsForQuery' }, { query })
+              : intl.formatMessage({ id: 'search.noResultsBody' })}
           />
         )}
 
@@ -506,7 +506,7 @@ export default function SearchPage({
                         className={cn(
                           'h-9 min-w-9 rounded-lg border px-2 text-sm font-medium transition-colors',
                           item === page
-                            ? 'border-emerald-700 bg-emerald-700 text-white'
+                            ? 'border-[--accent] bg-[--accent] text-[--primary-foreground]'
                             : 'border-[--border] bg-[--bg-raised] text-[--tx-muted] hover:bg-[--bg-hover] hover:text-[--tx]',
                         )}
                       >
@@ -561,14 +561,16 @@ function breadcrumbJsonLd(items: Array<[string, string]>) {
 }
 
 function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) {
+  const intl = useIntl();
   return (
     <button
       onClick={onClear}
-      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold
-                 text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-800
-                 dark:bg-emerald-950 dark:text-emerald-200"
+      aria-label={intl.formatMessage({ id: 'search.removeFilter' }, { label })}
+      className="inline-flex items-center gap-1 rounded-full border border-[--accent] bg-[--accent-bg] px-3 py-1
+                 text-xs font-semibold text-[--accent] transition-colors hover:bg-[--bg-hover]"
     >
-      {label} x
+      {label}
+      <span aria-hidden="true">×</span>
     </button>
   );
 }

@@ -12,7 +12,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['libs/**/*.{spec,test}.ts', 'apps/api/src/**/*.{spec,test}.ts'],
+    include: ['libs/**/*.{spec,test}.ts', 'apps/api/src/**/*.{spec,test}.ts', 'apps/marketplace/src/**/*.{spec,test}.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/out/**'],
     coverage: {
       provider: 'v8',

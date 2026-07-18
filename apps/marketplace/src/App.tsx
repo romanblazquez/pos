@@ -22,7 +22,8 @@ import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
 import { CatalogSearchBar, LocaleSwitcher } from '@retail-os/ui-react';
 import { formatMoney } from './marketplace-meta.js';
-import { trackPageView } from './analytics.js';
+import { trackPageView, trackEvent } from './analytics.js';
+import { type Route, parseRoute, routePath } from './routing.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
 
 const MESSAGES: Record<'es' | 'en', Record<string, string>> = { es: esMessages, en: enMessages };
@@ -37,15 +38,6 @@ function AppIntlProvider({ children }: { children: ReactNode }) {
   );
 }
 
-
-type Route =
-  | { page: 'home' }
-  | { page: 'search'; q: string; category?: string }
-  | { page: 'product'; slug: string }
-  | { page: 'account' }
-  | { page: 'wallet' }
-  | { page: 'orders' }
-  | { page: 'addresses' };
 
 type Theme = 'light' | 'dark';
 
@@ -67,42 +59,6 @@ function persistSharedTheme(theme: Theme) {
     secure ? 'Secure' : '',
   ].filter(Boolean).join('; ');
   localStorage.setItem('jp-theme', theme);
-}
-
-function parseRoute(pathname: string, search: string): Route {
-  if (pathname.startsWith('/product/')) {
-    const slug = pathname.slice('/product/'.length);
-    if (slug) return { page: 'product', slug };
-  }
-  if (pathname === '/search') {
-    const params = new URLSearchParams(search);
-    return {
-      page: 'search',
-      q: params.get('q') ?? '',
-      category: params.get('category') ?? undefined,
-    };
-  }
-  if (pathname === '/account') return { page: 'account' };
-  if (pathname === '/account/wallet') return { page: 'wallet' };
-  if (pathname === '/account/orders') return { page: 'orders' };
-  if (pathname === '/account/addresses') return { page: 'addresses' };
-  return { page: 'home' };
-}
-
-function routePath(r: Route): string {
-  if (r.page === 'search') {
-    const params = new URLSearchParams();
-    if (r.q) params.set('q', r.q);
-    if (r.category) params.set('category', r.category);
-    const query = params.toString();
-    return query ? `/search?${query}` : '/search';
-  }
-  if (r.page === 'product') return `/product/${r.slug}`;
-  if (r.page === 'account') return '/account';
-  if (r.page === 'wallet') return '/account/wallet';
-  if (r.page === 'orders') return '/account/orders';
-  if (r.page === 'addresses') return '/account/addresses';
-  return '/';
 }
 
 export default function App() {
@@ -311,6 +267,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
       <Header
         theme={theme}
         onToggleTheme={toggleTheme}
+        searchQuery={route.page === 'search' ? route.q : ''}
         onSearch={(q) => navigate({ page: 'search', q })}
         onProduct={(slug) => navigate({ page: 'product', slug })}
         onHome={() => navigate({ page: 'home' })}
@@ -397,10 +354,12 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
 }
 
 function Header({
-  theme, onToggleTheme, onSearch, onProduct, onHome, onCartOpen, onAccountClick, onWalletClick, onAuthClick,
+  theme, onToggleTheme, searchQuery, onSearch, onProduct, onHome, onCartOpen, onAccountClick, onWalletClick, onAuthClick,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  /** Current query from the URL — the header search reflects it as single source of truth. */
+  searchQuery: string;
   onSearch: (q: string) => void;
   onProduct: (slug: string) => void;
   onHome: () => void;
@@ -409,16 +368,29 @@ function Header({
   onWalletClick: () => void;
   onAuthClick: () => void;
 }) {
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(searchQuery);
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
   const { uiLocale, setUiLocale } = useMarket();
   const intl = useIntl();
 
+  // Keep the input in sync with the URL (submits, links, browser back/forward).
+  useEffect(() => setQ(searchQuery), [searchQuery]);
+
   const walletTotal = walletSummary
     ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
     : 0;
+
+  // Single search-submission flow (Enter, icon, suggestion). Fires the `search`
+  // analytics that used to live in SearchPage's now-removed input, trims, skips
+  // empty queries, and avoids re-navigating when the query is unchanged.
+  function runSearch(term: string) {
+    const clean = term.trim();
+    if (!clean || clean === searchQuery) return;
+    trackEvent('search', { search_term: clean });
+    onSearch(clean);
+  }
 
   function submitSearch(e: FormEvent) {
     e.preventDefault();
@@ -426,7 +398,7 @@ function Header({
       e.currentTarget.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
       return;
     }
-    if (q.trim()) onSearch(q.trim());
+    runSearch(q);
   }
 
   return (
@@ -467,7 +439,7 @@ function Header({
             endpoint={`${API_BASE}/api/v1/products/suggestions`}
             value={q}
             onValueChange={setQ}
-            onSearch={onSearch}
+            onSearch={runSearch}
             onProduct={onProduct}
             placeholder={intl.formatMessage({ id: 'header.searchPlaceholder' })}
             globalShortcut
