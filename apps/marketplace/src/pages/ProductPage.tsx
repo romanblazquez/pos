@@ -218,7 +218,7 @@ export default function ProductPage({
 
         {/* Images */}
         <div className="flex flex-col gap-3">
-          <div className="aspect-square overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm">
+          <div className="aspect-square overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm lg:sticky lg:top-6 lg:self-start">
             {p.images[selectedImage] ? (
               <img src={p.images[selectedImage]} alt={p.name} className="h-full w-full object-cover" />
             ) : (
