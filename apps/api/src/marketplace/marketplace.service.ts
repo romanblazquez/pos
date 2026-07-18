@@ -452,6 +452,7 @@ export class MarketplaceService {
         sellerSlug: l.seller.slug,
         sellerScore: l.seller.score?.compositeScore ?? 0.5,
         priceMinorUnits: l.priceMinorUnits,
+        condition: l.condition,
         currency: l.currency,
         stock: l.stock,
         stockStatus: l.stockStatus,

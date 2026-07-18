@@ -9,6 +9,7 @@ export interface ListingDetail {
   sellerSlug: string;
   sellerScore: number;
   priceMinorUnits: number;
+  condition: string;
   currency: string;
   stock: number;
   stockStatus: string;
@@ -62,7 +63,6 @@ export function SellerOfferComparisonTable({
   allListings,
   inStockListings,
   outOfStockListings,
-  lowestPriceId,
   platformCashbackPct,
   cartItems,
   onAddToCart,
@@ -70,12 +70,15 @@ export function SellerOfferComparisonTable({
   allListings: ListingDetail[];
   inStockListings: ListingDetail[];
   outOfStockListings: ListingDetail[];
-  lowestPriceId: string | null;
   platformCashbackPct: number;
   cartItems: { listingId: string; quantity: number }[];
   onAddToCart: (listing: ListingDetail) => void;
 }) {
   const intl = useIntl();
+  const rankedInStock = [...inStockListings].sort((left, right) =>
+    offerTotal(left) - offerTotal(right) || right.sellerScore - left.sellerScore,
+  );
+  const lowestTotalId = rankedInStock[0]?.id ?? null;
   return (
     <section>
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
@@ -101,13 +104,13 @@ export function SellerOfferComparisonTable({
         <>
           {/* In-stock rows — single container */}
           <div className="rounded-[14px] border border-[--border] overflow-hidden shadow-sm bg-[--bg-raised]">
-            {inStockListings.map((listing, idx) => (
+            {rankedInStock.map((listing, idx) => (
               <ListingRow
                 key={listing.id}
                 listing={listing}
                 rank={idx + 1}
                 isBest={idx === 0}
-                isBestPrice={listing.id === lowestPriceId}
+                isLowestTotal={listing.id === lowestTotalId}
                 platformCashbackPct={platformCashbackPct}
                 inCartQuantity={cartItems.find((i) => i.listingId === listing.id)?.quantity ?? 0}
                 isFirst={idx === 0}
@@ -127,7 +130,7 @@ export function SellerOfferComparisonTable({
                     listing={listing}
                     rank={0}
                     isBest={false}
-                    isBestPrice={false}
+                    isLowestTotal={false}
                     platformCashbackPct={platformCashbackPct}
                     inCartQuantity={0}
                     isFirst={idx === 0}
@@ -146,7 +149,7 @@ export function SellerOfferComparisonTable({
 function ListingRow({
   listing: l,
   isBest,
-  isBestPrice,
+  isLowestTotal,
   onAddToCart,
   platformCashbackPct = 0.01,
   inCartQuantity = 0,
@@ -155,7 +158,7 @@ function ListingRow({
   listing: ListingDetail;
   rank: number;
   isBest: boolean;
-  isBestPrice: boolean;
+  isLowestTotal: boolean;
   platformCashbackPct?: number;
   inCartQuantity?: number;
   isFirst: boolean;
@@ -170,13 +173,17 @@ function ListingRow({
 
   const bestDelivery = l.deliveryOptions.length
     ? l.deliveryOptions.reduce(
-        (b, d) => (d.estimatedDaysMin < b.estimatedDaysMin ? d : b),
+        (best, option) => option.priceMinorUnits < best.priceMinorUnits
+          || (option.priceMinorUnits === best.priceMinorUnits && option.estimatedDaysMin < best.estimatedDaysMin)
+          ? option
+          : best,
         l.deliveryOptions[0],
       )
     : null;
 
   const totalMinor = l.priceMinorUnits + (bestDelivery?.priceMinorUnits ?? 0);
   const price = fmtPrice(l.priceMinorUnits, l.currency);
+  const shippingPrice = fmtTotal(bestDelivery?.priceMinorUnits ?? 0, l.currency);
   const totalCashback = platformCashbackPct + l.storeCashbackPct + l.promoBonus;
 
   const stockLabel =
@@ -233,19 +240,21 @@ function ListingRow({
               {intl.formatMessage({ id: 'offers.bestOffer' })}
             </span>
           )}
-          {isBestPrice && !isBest && (
-            <span className="inline-flex items-center bg-[--success-solid] text-[--success-fg] font-mono text-[9.5px] font-bold uppercase tracking-wide px-[7px] py-[2px] rounded-md">
-              {intl.formatMessage({ id: 'offers.lowestPrice' })}
-            </span>
-          )}
         </div>
         <p className="mt-[3px] break-words font-mono text-[11px] text-[--tx-muted]">
-          ★ {(l.sellerScore * 5).toFixed(1)}
-          {' · '}{stockLabel}
+          {stockLabel}
           {deliveryLabel && ` · ${deliveryLabel}`}
           {totalCashback > 0 && ` · ${intl.formatMessage({ id: 'offers.creditsPct' }, { pct: Math.round(totalCashback * 100) })}`}
           {l.promoLabel && ` · ${l.promoLabel}`}
         </p>
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+          <span className="rounded-md border border-[--border] bg-[--bg-subtle] px-2 py-1 text-[--tx-muted]">
+            {intl.formatMessage({ id: 'offers.sellerTrust' })}: {(l.sellerScore * 5).toFixed(1)}/5
+          </span>
+          <span className="rounded-md border border-[--border] bg-[--bg-subtle] px-2 py-1 text-[--tx-muted]">
+            {intl.formatMessage({ id: 'offers.condition' })}: {conditionLabel(l.condition, intl.locale)}
+          </span>
+        </div>
 
         {/* Score breakdown */}
         {!isOutOfStock && (
@@ -280,24 +289,11 @@ function ListingRow({
 
       {/* Price + CTA — full-width row on mobile, inline shrink-0 block from sm: up */}
       {!isOutOfStock && (
-        <div className="flex items-center justify-between gap-3 w-full sm:w-auto sm:shrink-0">
-          <div>
-            <div className="flex items-baseline gap-[1px] select-none">
-              <span className="text-[13px] text-[--tx-muted]">{price.prefix}</span>
-              <span
-                className={`font-display font-extrabold text-[23px] tabular-nums transition-[filter] duration-300
-                  ${showGlass ? 'blur-[5px]' : ''}
-                  ${isBestPrice ? 'text-[--success]' : 'text-[--tx]'}`}
-              >
-                {showGlass ? 'XXX' : price.integer}
-              </span>
-              {price.suffix && (
-                <span className="text-[13px] text-[--tx-muted]">{price.suffix}</span>
-              )}
-            </div>
-            <p className="font-mono text-[10px] text-[--tx-faint]">
-              {showGlass ? intl.formatMessage({ id: 'offers.total' }, { amount: '···' }) : intl.formatMessage({ id: 'offers.total' }, { amount: fmtTotal(totalMinor, l.currency) })}
-            </p>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:shrink-0">
+          <div className="grid grid-cols-3 gap-2 text-right">
+            <PriceCell label={intl.formatMessage({ id: 'offers.itemPrice' })} value={`${price.prefix}${price.integer}${price.suffix}`} />
+            <PriceCell label={intl.formatMessage({ id: 'offers.shipping' })} value={bestDelivery?.priceMinorUnits === 0 ? intl.formatMessage({ id: 'offers.free' }) : shippingPrice} />
+            <PriceCell label={intl.formatMessage({ id: 'offers.totalPrice' })} value={fmtTotal(totalMinor, l.currency)} emphasis={isLowestTotal} />
           </div>
 
           <button
@@ -306,7 +302,7 @@ function ListingRow({
             title={atStockLimit ? intl.formatMessage({ id: 'offers.maxStockTitle' }) : undefined}
             className={`flex-none inline-flex items-center gap-2 font-bold text-[13.5px] px-4 py-[10px] rounded-[9px]
               cursor-pointer border-0 transition-colors disabled:opacity-50 disabled:pointer-events-none
-              ${isBest
+              ${isLowestTotal
                 ? 'bg-[--success-solid] text-[--success-fg] hover:opacity-90'
                 : 'bg-[--bg-raised] text-[--tx] border border-[--border-strong] hover:border-[--success] hover:text-[--success]'
               }`}
@@ -316,6 +312,33 @@ function ListingRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function offerTotal(listing: ListingDetail): number {
+  const shipping = listing.deliveryOptions.length
+    ? Math.min(...listing.deliveryOptions.map((option) => option.priceMinorUnits))
+    : 0;
+  return listing.priceMinorUnits + shipping;
+}
+
+function conditionLabel(condition: string, locale: string): string {
+  const labels: Record<string, { es: string; en: string }> = {
+    new: { es: 'Nuevo', en: 'New' },
+    used: { es: 'Usado', en: 'Used' },
+    like_new: { es: 'Como nuevo', en: 'Like new' },
+    damaged: { es: 'Dañado', en: 'Damaged' },
+  };
+  return labels[condition]?.[locale.startsWith('es') ? 'es' : 'en']
+    ?? condition.replace(/_/g, ' ');
+}
+
+function PriceCell({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+  return (
+    <div className={`min-w-[72px] rounded-lg border px-2 py-1.5 ${emphasis ? 'border-[--success] bg-[--success-bg]' : 'border-[--border] bg-[--bg-subtle]'}`}>
+      <span className="block font-mono text-[9px] uppercase tracking-wide text-[--tx-faint]">{label}</span>
+      <strong className={`block whitespace-nowrap font-display text-sm tabular-nums ${emphasis ? 'text-[--success]' : 'text-[--tx]'}`}>{value}</strong>
     </div>
   );
 }

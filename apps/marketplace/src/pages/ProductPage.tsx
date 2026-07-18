@@ -108,9 +108,6 @@ export default function ProductPage({
   const activeListings = p.listings.filter(isAvailable);
   const inStockListings = activeListings;
   const outOfStockListings = p.listings.filter((l) => !isAvailable(l));
-  const lowestPriceId = activeListings.length
-    ? activeListings.reduce((best, l) => (l.priceMinorUnits < best.priceMinorUnits ? l : best), activeListings[0]).id
-    : null;
   const minPrice = activeListings.length ? Math.min(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
   const maxPrice = activeListings.length ? Math.max(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
   const currency = activeListings[0]?.currency ?? 'MXN';
@@ -142,16 +139,6 @@ export default function ProductPage({
         category: categoryLabel(p.category, intl.locale as 'es' | 'en'),
         ...(p.publisher ? { brand: { '@type': 'Brand', name: p.publisher } } : {}),
         ...(p.bggId ? { sku: `BGG-${p.bggId}` } : {}),
-        ...(p.bggRating && p.bggRating > 0 && p.listings.length > 0
-          ? {
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: p.bggRating.toFixed(1),
-                bestRating: '10',
-                ratingCount: Math.max(p.listings.length, 1),
-              },
-            }
-          : {}),
         offers: {
           '@type': 'AggregateOffer',
           url: canonicalUrl,
@@ -162,6 +149,38 @@ export default function ProductPage({
           availability: activeListings.length > 0
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock',
+          offers: activeListings.map((listing) => {
+            const shipping = listing.deliveryOptions.length
+              ? listing.deliveryOptions.reduce((best, option) => option.priceMinorUnits < best.priceMinorUnits ? option : best)
+              : null;
+            return {
+              '@type': 'Offer',
+              price: (listing.priceMinorUnits / 100).toFixed(2),
+              priceCurrency: listing.currency,
+              availability: 'https://schema.org/InStock',
+              itemCondition: schemaCondition(listing.condition),
+              seller: { '@type': 'Organization', name: listing.sellerName },
+              ...(shipping ? {
+                shippingDetails: {
+                  '@type': 'OfferShippingDetails',
+                  shippingRate: {
+                    '@type': 'MonetaryAmount',
+                    value: (shipping.priceMinorUnits / 100).toFixed(2),
+                    currency: listing.currency,
+                  },
+                  deliveryTime: {
+                    '@type': 'ShippingDeliveryTime',
+                    transitTime: {
+                      '@type': 'QuantitativeValue',
+                      minValue: shipping.estimatedDaysMin,
+                      maxValue: shipping.estimatedDaysMax,
+                      unitCode: 'DAY',
+                    },
+                  },
+                },
+              } : {}),
+            };
+          }),
         },
       },
     ],
@@ -290,7 +309,6 @@ export default function ProductPage({
         allListings={p.listings}
         inStockListings={inStockListings}
         outOfStockListings={outOfStockListings}
-        lowestPriceId={lowestPriceId}
         platformCashbackPct={platformCashback}
         cartItems={cartItems}
         onAddToCart={(listing) => {
@@ -341,6 +359,12 @@ export default function ProductPage({
       )}
     </div>
   );
+}
+
+function schemaCondition(condition: string): string {
+  if (condition === 'new') return 'https://schema.org/NewCondition';
+  if (condition === 'damaged') return 'https://schema.org/DamagedCondition';
+  return 'https://schema.org/UsedCondition';
 }
 
 function plainText(html?: string) {
