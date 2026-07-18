@@ -97,6 +97,12 @@ export class MarketplaceController {
     return this.svc.getMechanics();
   }
 
+  @Get('facets')
+  @ApiOperation({ summary: 'List catalog facet values and counts for filter controls' })
+  getFacets() {
+    return this.svc.getFacets();
+  }
+
   @Get('suggestions')
   @ApiOperation({ summary: 'Autocomplete catalog products, publishers, and categories' })
   @ApiQuery({ name: 'q', required: false, description: 'Typo-tolerant suggestion query; empty returns trending products' })

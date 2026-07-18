@@ -384,6 +384,23 @@ export class MarketplaceService {
       .sort((a, b) => b.count - a.count);
   }
 
+  /** Compact, cache-friendly facet vocabulary for the server-rendered filters. */
+  async getFacets() {
+    const active = { canonicalStatus: 'verified' as const, listings: { some: { active: true } } };
+    const [publishers, years, ages, durations] = await Promise.all([
+      this.prisma.mktProduct.groupBy({ by: ['publisher'], where: { ...active, publisher: { not: null } }, _count: { _all: true }, orderBy: { _count: { publisher: 'desc' } }, take: 100 }),
+      this.prisma.mktProduct.groupBy({ by: ['yearPublished'], where: { ...active, yearPublished: { not: null } }, _count: { _all: true }, orderBy: { yearPublished: 'desc' } }),
+      this.prisma.mktProduct.groupBy({ by: ['minAge'], where: { ...active, minAge: { not: null } }, _count: { _all: true }, orderBy: { minAge: 'asc' } }),
+      this.prisma.mktProduct.groupBy({ by: ['playTimeMinutes'], where: { ...active, playTimeMinutes: { not: null } }, _count: { _all: true }, orderBy: { playTimeMinutes: 'asc' } }),
+    ]);
+    return {
+      publishers: publishers.filter((row) => row.publisher).map((row) => ({ value: row.publisher!, count: row._count._all })),
+      years: years.filter((row) => row.yearPublished != null).map((row) => ({ value: row.yearPublished!, count: row._count._all })),
+      ages: ages.filter((row) => row.minAge != null).map((row) => ({ value: row.minAge!, count: row._count._all })),
+      durations: durations.filter((row) => row.playTimeMinutes != null).map((row) => ({ value: row.playTimeMinutes!, count: row._count._all })),
+    };
+  }
+
   async getProduct(slug: string, locale?: string) {
     const product = await this.prisma.mktProduct.findUnique({
       where: { slug },

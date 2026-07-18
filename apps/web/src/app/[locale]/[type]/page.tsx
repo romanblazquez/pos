@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCategories, getMechanics, listProducts } from '@/lib/api';
+import { getCatalogFacets, getCategories, getMechanics, listProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/seo';
 import { breadcrumbLd, itemListLd, blogLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
@@ -53,6 +53,19 @@ function guideKicker(title: string, locale: Locale): string {
   ];
   for (const [re, [es, en]] of map) if (re.test(t)) return locale === 'es' ? es : en;
   return locale === 'es' ? 'Guía' : 'Guide';
+}
+
+function guideToken(title: string): string {
+  const value = title.toLowerCase();
+  if (/estrateg|strategy/.test(value)) return '♟';
+  if (/famil/.test(value)) return '★';
+  if (/principiante|beginner/.test(value)) return '◆';
+  if (/2 jugador|2 player|dos jugador/.test(value)) return '♟♟';
+  if (/solitario|\bsolo\b/.test(value)) return '♙';
+  if (/cooperativ|cooperative|co-op/.test(value)) return '✦';
+  if (/miniatura|miniature/.test(value)) return '♜';
+  if (/abstract/.test(value)) return '⬢';
+  return '⬡';
 }
 
 function pageOf(searchParams: { page?: string }): number {
@@ -196,7 +209,7 @@ export default async function ListingPage({
   // ── Search (faceted) ───────────────────────────────────────────────────────
   if (kind === 'search') {
     const q = (searchParams.q ?? '').trim();
-    const [categories, mechanics] = await Promise.all([getCategories(), getMechanics()]);
+    const [categories, mechanics, facets] = await Promise.all([getCategories(), getMechanics(), getCatalogFacets()]);
     const state: FilterState = {
       q,
       category: categoryFromParam(searchParams.category, categories),
@@ -261,6 +274,7 @@ export default async function ListingPage({
                 locale={locale}
                 categories={categories}
                 mechanics={mechanics}
+                facets={facets}
                 state={state}
                 total={total}
                 clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
@@ -288,7 +302,7 @@ export default async function ListingPage({
   // ── Games catalog (faceted sidebar + paginated over the full catalogue) ─────
   if (kind === 'games') {
     const base = listingPath('games', locale);
-    const [categories, mechanics] = await Promise.all([getCategories(), getMechanics()]);
+    const [categories, mechanics, facets] = await Promise.all([getCategories(), getMechanics(), getCatalogFacets()]);
     const state: FilterState = {
       q: '',
       category: categoryFromParam(searchParams.category, categories),
@@ -351,6 +365,7 @@ export default async function ListingPage({
                 locale={locale}
                 categories={categories}
                 mechanics={mechanics}
+                facets={facets}
                 state={state}
                 total={total}
                 clearHref={base}
@@ -439,6 +454,7 @@ export default async function ListingPage({
           dateLabel: dateFmt(g.updatedAt),
           cover: g.ogImage ?? (await guideCover(g, locale)),
           kicker: guideKicker(g.title, locale),
+          token: guideToken(g.title),
           autoTranslated: g.autoTranslated,
         };
       }),

@@ -1,6 +1,6 @@
 import { RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
-import type { CategoryCount, MechanicCount, SortBy } from '@/lib/api';
+import type { CatalogFacets, CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
 import { FormAutoSubmit } from './FormAutoSubmit';
 
@@ -74,6 +74,7 @@ export function SearchFilters({
   locale,
   categories,
   mechanics,
+  facets,
   state,
   total,
   clearHref,
@@ -81,14 +82,15 @@ export function SearchFilters({
   locale: Locale;
   categories: CategoryCount[];
   mechanics: MechanicCount[];
+  facets: CatalogFacets;
   state: FilterState;
   total: number;
   clearHref: string;
 }) {
   const t =
     locale === 'es'
-      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', more: (n: number) => `Ver ${n} más` }
-      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', more: (n: number) => `Show ${n} more` };
+      ? { filters: 'Filtros', cat: 'Categorías', all: 'Todo el catálogo', avail: 'Disponibilidad', inStock: 'Solo con stock', inStockHint: 'Oculta productos agotados', price: 'Presupuesto', players: 'Jugadores', apply: 'Aplicar filtros', clear: 'Limpiar', allStores: 'Todas las tiendas conectadas', complexity: 'Complejidad', mechanics: 'Mecánicas', sort: 'Ordenar', publisher: 'Editorial', year: 'Año', age: 'Edad recomendada', duration: 'Duración', any: 'Cualquiera', more: (n: number) => `Ver ${n} más` }
+      : { filters: 'Filters', cat: 'Categories', all: 'Full catalogue', avail: 'Availability', inStock: 'In stock only', inStockHint: 'Hide sold-out products', price: 'Budget', players: 'Players', apply: 'Apply filters', clear: 'Clear', allStores: 'All connected stores', complexity: 'Complexity', mechanics: 'Mechanics', sort: 'Sort', publisher: 'Publisher', year: 'Year', age: 'Recommended age', duration: 'Duration', any: 'Any', more: (n: number) => `Show ${n} more` };
 
   // Every one of these already worked end-to-end (FilterState.sort -> API
   // sortBy) but had no control — `sort` was a hidden input, so the only way to
@@ -130,13 +132,6 @@ export function SearchFilters({
       inputType="checkbox"
       active={state.mechanics.includes(m.mechanic)}
     >
-      {/* Preserve deep-link facets that currently have attribute-card entry
-          points but no rail control. They remain visible in the URL and can be
-          cleared with the panel's Clear action. */}
-      {state.publisher ? <input type="hidden" name="publisher" value={state.publisher} /> : null}
-      {state.yearPublished ? <input type="hidden" name="year" value={state.yearPublished} /> : null}
-      {state.minAge ? <input type="hidden" name="age" value={state.minAge} /> : null}
-      {state.playTimeMinutes ? <input type="hidden" name="duration" value={state.playTimeMinutes} /> : null}
       {m.mechanic}
     </FilterChip>
   );
@@ -220,6 +215,41 @@ export function SearchFilters({
               {o.label}
             </FilterChip>
           ))}
+        </div>
+      </CatalogFilterSection>
+
+      <CatalogFilterSection title={locale === 'es' ? 'Detalles del juego' : 'Game details'}>
+        <div className="grid gap-2">
+          <label className="grid gap-1 text-[11px] font-semibold text-(--tx-muted)">
+            {t.publisher}
+            <select name="publisher" defaultValue={state.publisher ?? ''} className="filter-select" aria-label={t.publisher}>
+              <option value="">{t.any}</option>
+              {facets.publishers.map((item) => <option key={item.value} value={item.value}>{item.value} ({item.count})</option>)}
+            </select>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="grid gap-1 text-[11px] font-semibold text-(--tx-muted)">
+              {t.year}
+              <select name="year" defaultValue={state.yearPublished ?? ''} className="filter-select" aria-label={t.year}>
+                <option value="">{t.any}</option>
+                {facets.years.map((item) => <option key={item.value} value={item.value}>{item.value} ({item.count})</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-[11px] font-semibold text-(--tx-muted)">
+              {t.age}
+              <select name="age" defaultValue={state.minAge ?? ''} className="filter-select" aria-label={t.age}>
+                <option value="">{t.any}</option>
+                {facets.ages.map((item) => <option key={item.value} value={item.value}>{item.value}+ ({item.count})</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="grid gap-1 text-[11px] font-semibold text-(--tx-muted)">
+            {t.duration}
+            <select name="duration" defaultValue={state.playTimeMinutes ?? ''} className="filter-select" aria-label={t.duration}>
+              <option value="">{t.any}</option>
+              {facets.durations.map((item) => <option key={item.value} value={item.value}>{item.value} min ({item.count})</option>)}
+            </select>
+          </label>
         </div>
       </CatalogFilterSection>
 

@@ -82,6 +82,13 @@ export interface MechanicCount {
   count: number;
 }
 
+export interface CatalogFacets {
+  publishers: Array<{ value: string; count: number }>;
+  years: Array<{ value: number; count: number }>;
+  ages: Array<{ value: number; count: number }>;
+  durations: Array<{ value: number; count: number }>;
+}
+
 async function api<T>(path: string, revalidate: number): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -158,6 +165,12 @@ export async function getCategories(): Promise<CategoryCount[]> {
 
 export async function getMechanics(): Promise<MechanicCount[]> {
   return (await api<MechanicCount[]>(`/api/v1/products/mechanics`, REVALIDATE.category)) ?? [];
+}
+
+export async function getCatalogFacets(): Promise<CatalogFacets> {
+  return (await api<CatalogFacets>(`/api/v1/products/facets`, REVALIDATE.category)) ?? {
+    publishers: [], years: [], ages: [], durations: [],
+  };
 }
 
 // Best (lowest) in-stock price across listings, else lowest overall.

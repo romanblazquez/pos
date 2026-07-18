@@ -16,6 +16,7 @@ export class SemanticSearchService {
   private client: OpenAI | null = null;
   private readonly queryCache = new Map<string, { embedding: number[]; expiresAt: number }>();
   private readonly pendingQueries = new Map<string, Promise<number[]>>();
+  private vectorSearchAvailable: boolean | undefined;
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -51,6 +52,38 @@ export class SemanticSearchService {
   }
 
   private async rank(vector: number[], locale: string, limit: number, excludeId?: string): Promise<SemanticHit[]> {
+    const rawQuery = (this.prisma as unknown as { $queryRawUnsafe?: <T>(sql: string, ...values: unknown[]) => Promise<T> }).$queryRawUnsafe;
+    if (rawQuery && vector.length > 0) {
+      const capped = Math.min(Math.max(limit, 1), 50);
+      const pgArray = `{${vector.join(',')}}`;
+      try {
+        if (this.vectorSearchAvailable === undefined) {
+          const capability = await rawQuery.call(this.prisma,
+            `SELECT EXISTS (
+               SELECT 1 FROM pg_extension WHERE extname = 'vector'
+             ) AND EXISTS (
+               SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'search_document' AND column_name = 'embedding_vector'
+             ) AS available`);
+          this.vectorSearchAvailable = Boolean((capability as Array<{ available: boolean }>)[0]?.available);
+        }
+        const exclusion = excludeId ? `AND "canonicalId" <> $4` : '';
+        const sql = this.vectorSearchAvailable
+          ? `SELECT "canonicalId", 1 - (embedding_vector <=> $1::vector) AS score
+             FROM "search_document"
+             WHERE "documentType" = 'PRODUCT' AND locale = $2 AND embedding_vector IS NOT NULL ${exclusion}
+             ORDER BY embedding_vector <=> $1::vector LIMIT $3`
+          : `SELECT "canonicalId", cosine_similarity_float8(embedding, $1::float8[]) AS score
+             FROM "search_document"
+             WHERE "documentType" = 'PRODUCT' AND locale = $2 AND cardinality(embedding) > 0 ${exclusion}
+             ORDER BY cosine_similarity_float8(embedding, $1::float8[]) DESC NULLS LAST LIMIT $3`;
+        const rows = await rawQuery.call(this.prisma, sql, pgArray, normalizeLocale(locale), capped, ...(excludeId ? [excludeId] : [])) as Array<{ canonicalId: string; score: number }>;
+        return rows.map((row) => ({ canonicalId: row.canonicalId, score: Number(row.score) }));
+      } catch (error) {
+        this.logger.warn(`Database vector ranking unavailable; using in-process fallback: ${String(error)}`);
+        this.vectorSearchAvailable = false;
+      }
+    }
     const documents = await this.prisma.searchDocument.findMany({
       where: {
         documentType: 'PRODUCT',

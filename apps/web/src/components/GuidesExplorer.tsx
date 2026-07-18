@@ -15,6 +15,7 @@ export interface GuideCardData {
   dateLabel: string;
   cover?: string;
   kicker?: string;
+  token?: string;
   autoTranslated?: boolean;
 }
 
@@ -108,6 +109,10 @@ export function GuidesExplorer({
                   <span className="guide-hit-glyph" aria-hidden="true">🎲</span>
                 )}
                 {g.kicker && <span className="guide-hit-kicker">{g.kicker}</span>}
+                <span className="guide-hit-token" aria-hidden="true">
+                  <span className="guide-hit-token-ring" />
+                  <span className="guide-hit-token-mark">{g.token ?? '⬡'}</span>
+                </span>
               </Link>
               <div className="guide-hit-body">
                 <h2 className="guide-hit-title">

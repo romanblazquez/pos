@@ -1963,9 +1963,32 @@ model Category {
   children            Category[]            @relation("CategoryTree")
   games               MasterGameCategory[]
   marketplaceProducts MktProductCategory[]
+  rules               CategoryRule[]
 
   @@index([parentId])
   @@map("category")
+}
+
+/// Declarative rules used to materialize marketplace product membership.
+/// Keeping rules as data makes classification auditable and lets the database
+/// maintain the indexed M:N bridge transactionally as BGG enrichment changes.
+model CategoryRule {
+  id          String   @id @default(cuid())
+  categoryId  String
+  ruleType    String   // tag | player_count
+  stringValue String?
+  intValue    Int?
+  priority    Int      @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // A COALESCE-based unique expression index is managed in SQL because Prisma
+  // cannot represent NULLS-not-distinct across the two typed rule values.
+  @@index([ruleType, stringValue])
+  @@index([ruleType, intValue])
+  @@index([priority, categoryId])
+  @@map("category_rule")
 }
 
 /// Marketplace-product taxonomy bridge. A shoppable product may belong to

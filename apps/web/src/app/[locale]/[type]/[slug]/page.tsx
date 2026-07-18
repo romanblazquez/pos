@@ -209,7 +209,7 @@ export default async function DetailPage({
 
     const { results, total } = await listProducts(
       theme
-        ? { locale, mechanics: theme.tags, minPlayers: theme.players, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE }
+        ? { locale, category: theme.key, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE }
         : { locale, category: real!, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE },
     );
 
@@ -462,7 +462,10 @@ function productCrumbs(product: ProductDetail, locale: Locale, homeName: string,
   ];
 
   const primaryCategory = product.categories?.find((category) => category.isPrimary) ?? product.categories?.[0];
-  const theme = primaryTheme(product);
+  const persistedPrimary = product.categories?.find((category) => category.isPrimary);
+  const theme = persistedPrimary
+    ? THEMES.find((candidate) => candidate.key === persistedPrimary.slug)
+    : primaryTheme(product);
   if (primaryCategory) {
     crumbs.push({
       name: primaryCategory.name,

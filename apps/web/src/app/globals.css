@@ -60,7 +60,7 @@ button, input, select { font: inherit; }
 .theme-toggle { display: grid; width: 36px; height: 36px; flex: none; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--muted-foreground); cursor: pointer; }
 .theme-toggle:hover { border-color: var(--primary); color: var(--primary); }
 .header-controls { display: inline-flex; align-items: center; gap: .6rem; }
-.header-login { display: inline-flex; align-items: center; gap: .4rem; padding: .48rem .9rem; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); font-size: .82rem; font-weight: 700; }
+.header-login { display: inline-grid; width: 36px; height: 36px; flex: none; place-items: center; padding: 0; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); }
 .header-login:hover { background: color-mix(in srgb, var(--primary) 88%, #000); }
 
 /* Mobile navigation — hamburger trigger + slide-in drawer. The trigger is hidden
@@ -365,17 +365,31 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .guides-hub-hero img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
 
 .guide-hit { position: relative; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px;
-  overflow: hidden; background: var(--bg-raised, var(--card)); transition: transform .15s ease, box-shadow .15s ease; }
-.guide-hit:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -18px rgba(0,0,0,.5); }
+  overflow: hidden; background: var(--bg-raised, var(--card)); transform: translateZ(0); transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, border-color .22s ease; }
+.guide-hit:hover { transform: translateY(-5px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); box-shadow: 0 18px 34px -20px rgba(0,0,0,.58); }
+.guide-hit:active { transform: translateY(-1px) scale(.99); }
 .guide-hit-cover { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--accent-bg);
   overflow: hidden; }
-.guide-hit-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.guide-hit-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .3s ease; }
+.guide-hit:hover .guide-hit-cover img { transform: scale(1.045); filter: saturate(1.06) contrast(1.02); }
 .guide-article-cover { margin: 1.25rem 0 1rem; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-raised, var(--card)); box-shadow: 0 12px 30px -24px color-mix(in srgb, var(--foreground) 45%, transparent); }
 .guide-article-cover img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
 .guide-hit-glyph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.6rem; opacity: .5; }
 .guide-hit-kicker { position: absolute; left: 10px; top: 10px; padding: 3px 9px; border-radius: 7px;
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .04em; color: #fff; background: rgba(20,14,10,.72); backdrop-filter: blur(3px); }
+.guide-hit-token { position: absolute; z-index: 1; left: 50%; bottom: 0; display: grid; width: 66px; height: 66px;
+  place-items: center; translate: -50% 42%; clip-path: polygon(50% 0, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+  background: color-mix(in srgb, var(--primary) 88%, #1c130e); color: var(--primary-foreground); box-shadow: 0 9px 18px rgb(0 0 0 / .3);
+  transition: translate .28s cubic-bezier(.2,.8,.2,1), rotate .35s cubic-bezier(.2,.8,.2,1), scale .28s ease; }
+.guide-hit-token::before { content: ''; position: absolute; inset: 5px; border: 1px solid color-mix(in srgb, currentColor 58%, transparent);
+  clip-path: inherit; }
+.guide-hit-token-ring { position: absolute; inset: 13px; border: 2px solid currentColor; border-radius: 50%; opacity: .88; }
+.guide-hit-token-ring::after { content: ''; position: absolute; inset: 4px; border: 1px dashed currentColor; border-radius: 50%; opacity: .55; }
+.guide-hit-token-mark { position: relative; z-index: 1; font-family: var(--font-display); font-size: 22px; font-weight: 900; line-height: 1; text-shadow: 0 1px 0 rgb(0 0 0 / .2); }
+.guide-hit:hover .guide-hit-token { translate: -50% 34%; rotate: 8deg; scale: 1.08; }
+.guide-hit:active .guide-hit-token { translate: -50% 39%; rotate: -3deg; scale: .98; }
+.guide-hit-cover + .guide-hit-body, .guide-hit-body { padding-top: 1.45rem; }
 .guide-hit-body { display: flex; flex-direction: column; gap: .5rem; padding: 1rem 1.05rem 1.1rem; flex: 1; }
 .guide-hit-title { margin: 0; font-family: var(--font-display); font-size: 1.1rem; line-height: 1.25; letter-spacing: -.01em; }
 .guide-hit-title a { color: var(--foreground); }
@@ -391,6 +405,12 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .guide-hit-date { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; white-space: nowrap; text-align: right; }
 .guide-hit-auto { padding: 1px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--card);
   font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted-foreground); }
+@media (prefers-reduced-motion: reduce) {
+  .guide-hit, .guide-hit-cover img, .guide-hit-token { transition: none; }
+  .guide-hit:hover, .guide-hit:active { transform: none; }
+  .guide-hit:hover .guide-hit-cover img { transform: none; }
+  .guide-hit:hover .guide-hit-token, .guide-hit:active .guide-hit-token { translate: -50% 42%; rotate: 0deg; scale: 1; }
+}
 
 /* Share is a sibling of each card link, avoiding nested controls and accidental navigation. */
 .card-share-button { position: absolute; z-index: 2; top: 10px; right: 10px; display: grid; width: 40px; height: 40px;

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { CircleUserRound } from 'lucide-react';
 import { Bricolage_Grotesque, Hanken_Grotesk, Space_Mono } from 'next/font/google';
 import { APP_URL, SITE_NAME, SITE_URL } from '@/lib/site';
 import { organizationLd, webSiteLd } from '@/lib/jsonld';
@@ -138,7 +139,9 @@ export default function LocaleLayout({
             <div className="header-controls nav-desktop">
               <LocaleSwitcher locale={locale} />
               <ThemeToggle locale={locale} />
-              <a className="header-login" href={`${APP_URL}/account`}>{t.login}</a>
+              <a className="header-login" href={`${APP_URL}/account`} aria-label={t.login} title={t.login}>
+                <CircleUserRound size={18} aria-hidden="true" />
+              </a>
             </div>
             <MobileMenu locale={locale} />
           </div>
