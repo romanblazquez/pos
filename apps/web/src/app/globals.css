@@ -380,13 +380,13 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   letter-spacing: .04em; color: #fff; background: rgba(20,14,10,.72); backdrop-filter: blur(3px); }
 .guide-hit-token { position: absolute; z-index: 1; left: 50%; bottom: 0; display: grid; width: 66px; height: 66px;
   place-items: center; translate: -50% 42%; clip-path: polygon(50% 0, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
-  --token-bg: #b4502e; --token-fg: #fff8eb; --token-edge: #78321e;
-  background: var(--token-bg); color: var(--token-fg); filter: drop-shadow(0 9px 8px rgb(0 0 0 / .28));
+  --token-bg: var(--game-token-clay-bg); --token-fg: var(--game-token-clay-fg); --token-edge: var(--game-token-clay-edge);
+  background: var(--token-bg); color: var(--token-fg); filter: drop-shadow(0 9px 8px color-mix(in srgb, var(--foreground) 28%, transparent));
   transition: translate .28s cubic-bezier(.2,.8,.2,1), rotate .35s cubic-bezier(.2,.8,.2,1), scale .28s ease; }
-.guide-hit-token[data-tone="forest"] { --token-bg: #2c6b43; --token-fg: #f5efe3; --token-edge: #1e4930; }
-.guide-hit-token[data-tone="ochre"] { --token-bg: #d39a32; --token-fg: #2b2622; --token-edge: #8f641d; }
-.guide-hit-token[data-tone="ink"] { --token-bg: #2b2622; --token-fg: #f5efe3; --token-edge: #151210; }
-.guide-hit-token[data-tone="parchment"] { --token-bg: #e9dbc2; --token-fg: #2b2622; --token-edge: #9a8e79; }
+.guide-hit-token[data-tone="forest"] { --token-bg: var(--game-token-forest-bg); --token-fg: var(--game-token-forest-fg); --token-edge: var(--game-token-forest-edge); }
+.guide-hit-token[data-tone="ochre"] { --token-bg: var(--game-token-ochre-bg); --token-fg: var(--game-token-ochre-fg); --token-edge: var(--game-token-ochre-edge); }
+.guide-hit-token[data-tone="ink"] { --token-bg: var(--game-token-ink-bg); --token-fg: var(--game-token-ink-fg); --token-edge: var(--game-token-ink-edge); }
+.guide-hit-token[data-tone="parchment"] { --token-bg: var(--game-token-parchment-bg); --token-fg: var(--game-token-parchment-fg); --token-edge: var(--game-token-parchment-edge); }
 .guide-hit-token::before { content: ''; position: absolute; inset: 5px; border: 2px solid var(--token-edge);
   clip-path: inherit; }
 .guide-hit-token-ring { position: absolute; inset: 13px; border: 2px solid currentColor; border-radius: 50%; opacity: .92; }

@@ -12,6 +12,7 @@
  * Semantic tokens follow the shadcn/ui naming so components stay portable.
  * ──────────────────────────────────────────────────────────────────────────── */
 @import "tailwindcss";
+@import "./palette.css";
 
 @custom-variant dark (&:is(.dark *, .dark), &:where([data-theme=dark], [data-theme=dark] *));
 

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
+@import "../../../libs/shared/ui-react/src/palette.css";
 /* Filter-panel chrome (.filter-select, .filter-more) shared with apps/web. Only
    reads tokens this file already defines below — it declares none of its own. */
 @import "../../../libs/shared/ui-react/src/filter-panel.css";

@@ -1,0 +1,27 @@
+/* Juegospedia cross-app palette contracts.
+ *
+ * Components consume these semantic aliases; each application supplies the
+ * underlying surface/status tokens for its active theme. This keeps artwork,
+ * SEO, and marketplace UI synchronized without component-level color values.
+ */
+:root {
+  --game-token-clay-bg: var(--primary);
+  --game-token-clay-fg: var(--primary-foreground);
+  --game-token-clay-edge: color-mix(in srgb, var(--primary) 72%, var(--foreground));
+
+  --game-token-forest-bg: var(--success, var(--forest));
+  --game-token-forest-fg: var(--success-foreground, var(--success-fg, var(--background)));
+  --game-token-forest-edge: color-mix(in srgb, var(--success, var(--forest)) 72%, var(--foreground));
+
+  --game-token-ochre-bg: var(--warning, var(--gold));
+  --game-token-ochre-fg: var(--warning-foreground, var(--foreground));
+  --game-token-ochre-edge: color-mix(in srgb, var(--warning, var(--gold)) 72%, var(--foreground));
+
+  --game-token-ink-bg: var(--foreground);
+  --game-token-ink-fg: var(--background);
+  --game-token-ink-edge: color-mix(in srgb, var(--foreground) 82%, var(--background));
+
+  --game-token-parchment-bg: var(--secondary, var(--background));
+  --game-token-parchment-fg: var(--secondary-foreground, var(--foreground));
+  --game-token-parchment-edge: var(--subtle-foreground, var(--border));
+}
