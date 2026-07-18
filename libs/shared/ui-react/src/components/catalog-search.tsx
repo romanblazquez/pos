@@ -41,6 +41,8 @@ export interface CatalogSearchProps {
   value: string;
   onValueChange: (value: string) => void;
   onSearch: (value: string) => void;
+  /** Optional applied-query reset. Without it, clear only edits local input. */
+  onClear?: () => void;
   onProduct: (slug: string) => void;
   locale?: 'es' | 'en';
   placeholder?: string;
@@ -57,6 +59,7 @@ export function CatalogSearch({
   value,
   onValueChange,
   onSearch,
+  onClear,
   onProduct,
   locale = 'es',
   placeholder,
@@ -332,10 +335,31 @@ export function CatalogSearch({
           open
             ? 'border-[1.5px] border-[var(--search-accent,var(--accent))] shadow-[0_0_0_3px_color-mix(in_srgb,var(--search-accent,var(--accent))_14%,transparent)]'
             : 'border-[var(--border)]',
-          globalShortcut ? 'pr-[58px]' : 'pr-3.5',
+          globalShortcut ? 'pr-[88px]' : value ? 'pr-11' : 'pr-3.5',
           inputClassName,
         )}
       />
+      {value && (
+        <button
+          type="button"
+          aria-label={locale === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
+          title={locale === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
+          className={cn(
+            'absolute top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-[var(--tx-faint)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--tx)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]',
+            globalShortcut ? 'right-[52px]' : 'right-1.5',
+          )}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            onValueChange('');
+            setOpen(false);
+            setActiveIndex(-1);
+            onClear?.();
+            inputRef.current?.focus();
+          }}
+        >
+          <CloseSearchIcon />
+        </button>
+      )}
       {globalShortcut && (
         <kbd className="pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 rounded-md border border-[var(--border-strong,var(--border))] bg-[var(--bg-subtle)] px-[7px] py-[3px] font-mono text-[11px] font-normal leading-[14px] text-[var(--tx-faint)] sm:block">
           ⌘K
@@ -501,6 +525,14 @@ export function CatalogSearch({
           document.body,
         )}
     </div>
+  );
+}
+
+function CloseSearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden="true">
+      <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+    </svg>
   );
 }
 

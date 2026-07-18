@@ -389,6 +389,7 @@ export default function SearchPage({
                 value={draft}
                 onValueChange={setDraft}
                 onSearch={(term) => onSearch(term, category)}
+                onClear={() => onSearch('', category)}
                 onProduct={onProduct}
                 placeholder={intl.formatMessage({ id: 'search.refine' })}
                 submitLabel={intl.formatMessage({ id: 'search.search' })}

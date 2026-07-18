@@ -56,6 +56,16 @@
 .mobile-filter-scrim { background: color-mix(in srgb, #100b08 55%, transparent); backdrop-filter: blur(3px); animation: filter-scrim-in .2s ease both; }
 @keyframes filter-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* Desktop/tablet rail: stretch every structural wrapper to the grid row's full
+   height. A sticky descendant is bounded by its containing block; when these
+   wrappers shrink-wrap the panel, it has zero distance in which to travel and
+   appears non-sticky even though `position: sticky` is set correctly. */
+@media (min-width: 861px) {
+  .responsive-filter-panel,
+  .responsive-filter-panel > .mobile-filter-modal,
+  .responsive-filter-panel .mobile-filter-scroll { height: 100%; }
+}
+
 @media (max-width: 860px) {
   .responsive-filter-panel { order: -1; }
   /* Icon-only, and sized to the search bar's submit button (h-[46px]) so it sits
