@@ -234,7 +234,7 @@ export default function ProductPage({
                   key={i}
                   onClick={() => setSelectedImage(i)}
                   className={`w-14 h-14 rounded-lg overflow-hidden border-2 bg-[--bg-subtle] transition-colors
-                    ${selectedImage === i ? 'border-emerald-500' : 'border-[--border]'}`}
+                    ${selectedImage === i ? 'border-[--accent]' : 'border-[--border]'}`}
                 >
                   <img src={img} alt="" className="h-full w-full object-contain p-1" />
                 </button>
@@ -245,7 +245,7 @@ export default function ProductPage({
 
         {/* Info */}
         <div className="min-w-0 flex flex-col gap-4 lg:pt-2">
-          {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-700">{p.publisher}</p>}
+          {p.publisher && <p className="font-mono text-xs uppercase tracking-[0.16em] text-[--accent]">{p.publisher}</p>}
           <h1 className="max-w-[18ch] break-words font-display text-4xl font-extrabold leading-[0.98] tracking-[-0.035em] text-[--tx] sm:text-5xl">{p.name}</h1>
 
           <ProductStatsPanel
@@ -274,24 +274,24 @@ export default function ProductPage({
               (l) => platformCashback + l.storeCashbackPct + l.promoBonus,
             ));
             return (
-              <div className="flex flex-col gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
+              <div className="flex flex-col gap-2 rounded-[14px] border border-[--success-border] bg-[--success-bg] p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">{intl.formatMessage({ id: 'product.from' })}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                  <p className="text-sm text-[--success] font-medium">{intl.formatMessage({ id: 'product.from' })}</p>
+                  <p className="text-xs text-[--success]">
                     {intl.formatMessage({ id: 'product.storesWithStock' }, { count: activeListings.length })}
                   </p>
                 </div>
-                <p className="font-display text-4xl font-extrabold tracking-tight text-emerald-900 dark:text-emerald-200">
+                <p className="font-display text-4xl font-extrabold tracking-tight text-[--success]">
                   {fmt(Math.min(...activeListings.map((l) => l.priceMinorUnits)), activeListings[0].currency)}
                 </p>
                 {bestCashback > 0 && (
-                  <div className="flex items-start gap-2 pt-1 border-t border-emerald-200 dark:border-emerald-800">
-                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
+                  <div className="flex items-start gap-2 pt-1 border-t border-[--success-border]">
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-[--success]" aria-hidden="true" />
                     <div>
-                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                      <p className="text-sm font-semibold text-[--success]">
                         {intl.formatMessage({ id: 'product.upToCashback' }, { pct: Math.round(bestCashback * 100) })}
                       </p>
-                      <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                      <p className="text-xs text-[--success]">
                         {intl.formatMessage({ id: 'product.freeCashback' }, { pct: Math.round(platformCashback * 100) })}
                         {bestCashback > platformCashback && intl.formatMessage({ id: 'product.extraStoreCashback' }, { pct: Math.round((bestCashback - platformCashback) * 100) })}
                       </p>
@@ -351,8 +351,8 @@ export default function ProductPage({
       {/* Add-to-cart guardrail feedback */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2
-                        max-w-[90vw] rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/90
-                        backdrop-blur-md shadow-lg px-4 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+                        max-w-[90vw] rounded-xl border border-[--warning-border] bg-[--warning-bg]
+                        backdrop-blur-md shadow-lg px-4 py-2.5 text-sm text-[--warning]">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {toast}
         </div>

@@ -49,7 +49,7 @@ export function GameInfoBadges({
   return (
     <div className="flex flex-wrap gap-2 my-3">
       {playerStr && (
-        <Pill className="text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-200 dark:border-emerald-800 dark:bg-emerald-950">
+        <Pill className="text-[--success] bg-[--success-bg] border-transparent">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
           {playerStr}
         </Pill>

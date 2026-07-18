@@ -83,6 +83,10 @@
     --success-fg:      #ffffff;
     --warning:         #8a5a12;
     --warning-bg:      #f6ebd2;
+    /* Subtle status borders — defined once; color-mix re-resolves against the
+       themed --success/--warning at use time, so they track light and dark. */
+    --success-border:  color-mix(in srgb, var(--success) 30%, transparent);
+    --warning-border:  color-mix(in srgb, var(--warning) 34%, transparent);
     --error:           #93291f;
     --error-bg:        #f6e1dc;
     --error-solid:     #b23a2e;

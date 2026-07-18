@@ -710,7 +710,7 @@ function ComplexityMeter({ weight, locale }: { weight: number; locale: string })
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
           {locale === 'es' ? 'Complejidad' : 'Complexity'}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#8A5A12', background: '#F6EBD2', border: '1px solid #E7D3A6', padding: '3px 9px', borderRadius: 7 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--game-token-ochre-edge)', background: 'color-mix(in srgb, var(--game-token-ochre-bg) 16%, var(--bg-raised, var(--card)))', border: '1px solid color-mix(in srgb, var(--game-token-ochre-bg) 42%, transparent)', padding: '3px 9px', borderRadius: 7 }}>
           {weight.toFixed(1)} / 5 · {band}
         </span>
       </div>
@@ -718,7 +718,7 @@ function ComplexityMeter({ weight, locale }: { weight: number; locale: string })
         <div style={{ position: 'absolute', left: `${pct}%`, top: '50%', width: 3, height: 24, background: 'var(--foreground)', borderRadius: 3, transform: 'translateX(-50%) translateY(-50%)', boxShadow: '0 0 0 3px var(--bg-raised, var(--card))' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 10.5, textTransform: 'uppercase', color: 'var(--tx-faint, var(--subtle-foreground))' }}>
-        <span style={{ color: '#3E7C53', fontWeight: 700 }}>{locale === 'es' ? 'Ligero' : 'Light'}</span>
+        <span style={{ color: 'var(--game-token-forest-bg)', fontWeight: 700 }}>{locale === 'es' ? 'Ligero' : 'Light'}</span>
         <span>{locale === 'es' ? 'Medio' : 'Medium'}</span>
         <span>{locale === 'es' ? 'Pesado' : 'Heavy'}</span>
         <span>{locale === 'es' ? 'Experto' : 'Expert'}</span>
@@ -739,7 +739,7 @@ function PlayerCountFit({ minPlayers, maxPlayers, locale }: { minPlayers: number
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
           {locale === 'es' ? 'Jugadores' : 'Players'}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#2C6B43', background: '#E4EFE4', border: '1px solid #CBE0CD', padding: '3px 9px', borderRadius: 7 }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--game-token-forest-edge)', background: 'color-mix(in srgb, var(--game-token-forest-bg) 16%, var(--bg-raised, var(--card)))', border: '1px solid color-mix(in srgb, var(--game-token-forest-bg) 42%, transparent)', padding: '3px 9px', borderRadius: 7 }}>
           {badge}
         </span>
       </div>
@@ -747,11 +747,15 @@ function PlayerCountFit({ minPlayers, maxPlayers, locale }: { minPlayers: number
         {counts.map((n) => {
           const isMin = n === minPlayers && minPlayers < maxPlayers;
           const isSupported = n >= minPlayers && n <= maxPlayers;
-          const bg = !isSupported ? '#EDE4D2' : isMin ? '#F6EBD2' : '#3E7C53';
-          const border = !isSupported ? '1px dashed #D8CCB3' : isMin ? '1px solid #E7D3A6' : undefined;
-          const color = !isSupported ? '#B6A98C' : isMin ? '#8A5A12' : '#EAF3EC';
+          const bg = !isSupported
+            ? 'var(--bg-subtle, var(--muted))'
+            : isMin ? 'color-mix(in srgb, var(--game-token-ochre-bg) 18%, var(--bg-raised, var(--card)))' : 'var(--game-token-forest-bg)';
+          const border = !isSupported
+            ? '1px dashed var(--border-strong, var(--border))'
+            : isMin ? '1px solid color-mix(in srgb, var(--game-token-ochre-bg) 42%, transparent)' : undefined;
+          const color = !isSupported ? 'var(--tx-faint, var(--subtle-foreground))' : isMin ? 'var(--game-token-ochre-edge)' : 'var(--game-token-forest-fg)';
           const label = !isSupported ? 'No' : isMin ? 'OK' : locale === 'es' ? 'Bien' : 'Good';
-          const labelColor = !isSupported ? '#B6A98C' : isMin ? '#8A5A12' : '#2C6B43';
+          const labelColor = !isSupported ? 'var(--tx-faint, var(--subtle-foreground))' : isMin ? 'var(--game-token-ochre-edge)' : 'var(--game-token-forest-bg)';
           return (
             <div key={n} style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ height: 38, borderRadius: 9, background: bg, border, display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color, textDecoration: !isSupported ? 'line-through' : undefined }}>
