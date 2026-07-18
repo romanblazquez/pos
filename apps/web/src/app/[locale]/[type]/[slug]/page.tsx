@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import {
   bestOffer,
   getCategories,
@@ -202,6 +202,9 @@ export default async function DetailPage({
     const page = pageOf(searchParams);
     const basePath = entityPath('categories', locale, params.slug);
     const theme = getThemeBySlug(locale, params.slug);
+    if (theme && params.slug !== theme.slug[locale]) {
+      permanentRedirect(entityPath('categories', locale, theme.slug[locale]));
+    }
     // A curated theme (query by its BGG-tag / player-count rule) or, for legacy
     // links, the raw catalog category (base-game vs expansion).
     const real = theme ? null : await resolveCategory(params.slug);

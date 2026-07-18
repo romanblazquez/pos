@@ -238,5 +238,5 @@ export function primaryTheme(p: ThemeMatchable): Theme | undefined {
 }
 
 export function getThemeBySlug(locale: Locale, slug: string): Theme | undefined {
-  return THEMES.find((t) => t.slug[locale] === slug);
+  return THEMES.find((theme) => theme.slug[locale] === slug || theme.key === slug);
 }
