@@ -1975,7 +1975,7 @@ model Category {
 model CategoryRule {
   id          String   @id @default(cuid())
   categoryId  String
-  ruleType    String   // tag | player_count
+  ruleType    String // tag | player_count
   stringValue String?
   intValue    Int?
   priority    Int      @default(100)
@@ -3252,6 +3252,7 @@ model KnowledgeGraphEdge {
 model AnalyticsEvent {
   id                     BigInt   @default(autoincrement())
   occurredAt             DateTime @default(now())
+  tenantId               String   @default("tenant-demo")
   eventId                String
   eventType              String
   anonymousVisitorIdHash String?
@@ -3268,13 +3269,215 @@ model AnalyticsEvent {
   experiment             Json?
   metrics                Json?
   metadata               Json?
+  path                   String?
+  referrerHost           String?
+  consentPublicId        String?
+  source                 String   @default("browser")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @default(now())
 
   @@id([occurredAt, id])
+  @@unique([occurredAt, eventId])
+  @@index([tenantId, occurredAt])
   @@index([eventType, occurredAt])
   @@index([entityType, entityId, occurredAt])
   @@index([sellerId, occurredAt])
   @@index([eventId])
   @@map("analytics_event")
+}
+
+/// Pseudonymous first-party visitor. publicIdHash is an HMAC; the raw browser
+/// identifier never enters PostgreSQL. Account linking is explicit and audited.
+model AnalyticsVisitor {
+  id                    String                          @id @default(cuid())
+  tenantId              String                          @default("tenant-demo")
+  publicIdHash          String
+  accountPrincipalId    String?
+  firstSeenAt           DateTime                        @default(now())
+  lastSeenAt            DateTime                        @default(now())
+  linkedAt              DateTime?
+  countryCode           String?                         @db.Char(2)
+  locale                String?
+  timezone              String?
+  deletedAt             DateTime?
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+  sessions              AnalyticsSession[]
+  consentRecords        AnalyticsConsent[]
+  identityLinks         AnalyticsIdentityLink[]
+  attributions          AnalyticsAttribution[]
+  preferences           AnalyticsPreference[]
+  experimentAssignments AnalyticsExperimentAssignment[]
+
+  @@unique([tenantId, publicIdHash])
+  @@index([tenantId, accountPrincipalId, lastSeenAt])
+  @@index([tenantId, lastSeenAt])
+  @@map("analytics_visitor")
+}
+
+model AnalyticsSession {
+  id             String           @id @default(cuid())
+  tenantId       String           @default("tenant-demo")
+  sessionIdHash  String
+  visitorId      String
+  startedAt      DateTime         @default(now())
+  lastActivityAt DateTime         @default(now())
+  endedAt        DateTime?
+  entryPath      String?
+  exitPath       String?
+  landingSource  String?
+  eventCount     Int              @default(0)
+  pageViewCount  Int              @default(0)
+  visitor        AnalyticsVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sessionIdHash])
+  @@index([tenantId, startedAt])
+  @@index([visitorId, startedAt])
+  @@map("analytics_session")
+}
+
+/// Append-only consent evidence. No row is updated in place.
+model AnalyticsConsent {
+  id                 String            @id @default(cuid())
+  publicId           String            @unique
+  tenantId           String            @default("tenant-demo")
+  visitorId          String?
+  accountPrincipalId String?
+  policyVersion      String
+  consentVersion     String
+  regime             String
+  source             String
+  decisions          Json
+  tcfStringHash      String?
+  cmpName            String?
+  cmpVersion         String?
+  recordedAt         DateTime          @default(now())
+  withdrawnAt        DateTime?
+  visitor            AnalyticsVisitor? @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, visitorId, recordedAt])
+  @@index([tenantId, accountPrincipalId, recordedAt])
+  @@index([tenantId, recordedAt])
+  @@map("analytics_consent")
+}
+
+/// Auditable merge edge. It records the fact of a link without moving or
+/// rewriting immutable event rows.
+model AnalyticsIdentityLink {
+  id                 String           @id @default(cuid())
+  tenantId           String           @default("tenant-demo")
+  visitorId          String
+  accountPrincipalId String
+  method             String
+  linkedAt           DateTime         @default(now())
+  revokedAt          DateTime?
+  visitor            AnalyticsVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, visitorId, accountPrincipalId])
+  @@index([tenantId, accountPrincipalId, linkedAt])
+  @@map("analytics_identity_link")
+}
+
+model AnalyticsAttribution {
+  id            String           @id @default(cuid())
+  tenantId      String           @default("tenant-demo")
+  visitorId     String
+  sessionIdHash String?
+  touchType     String
+  provider      String?
+  source        String?
+  medium        String?
+  campaign      String?
+  term          String?
+  content       String?
+  clickIdHash   String?
+  affiliateId   String?
+  landingPath   String?
+  occurredAt    DateTime         @default(now())
+  expiresAt     DateTime
+  visitor       AnalyticsVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, visitorId, occurredAt])
+  @@index([tenantId, campaign, occurredAt])
+  @@map("analytics_attribution")
+}
+
+model AnalyticsPreference {
+  id         String           @id @default(cuid())
+  tenantId   String           @default("tenant-demo")
+  visitorId  String
+  key        String
+  value      Json
+  explicit   Boolean          @default(true)
+  source     String
+  confidence Float            @default(1)
+  expiresAt  DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  visitor    AnalyticsVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, visitorId, key])
+  @@index([tenantId, key, updatedAt])
+  @@map("analytics_preference")
+}
+
+model AnalyticsExperimentAssignment {
+  id            String           @id @default(cuid())
+  tenantId      String           @default("tenant-demo")
+  visitorId     String
+  experimentKey String
+  variant       String
+  assignedAt    DateTime         @default(now())
+  expiresAt     DateTime?
+  visitor       AnalyticsVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, visitorId, experimentKey])
+  @@index([tenantId, experimentKey, variant])
+  @@map("analytics_experiment_assignment")
+}
+
+model AnalyticsDailyAggregate {
+  id           String   @id @default(cuid())
+  tenantId     String   @default("tenant-demo")
+  date         DateTime @db.Date
+  dimension    String
+  dimensionKey String
+  metrics      Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, date, dimension, dimensionKey])
+  @@index([tenantId, dimension, date])
+  @@map("analytics_daily_aggregate")
+}
+
+model AnalyticsPrivacyRequest {
+  id                 String    @id @default(cuid())
+  tenantId           String    @default("tenant-demo")
+  accountPrincipalId String?
+  visitorHash        String?
+  requestType        String
+  status             String    @default("pending")
+  requestedAt        DateTime  @default(now())
+  completedAt        DateTime?
+  result             Json?
+  errorCode          String?
+
+  @@index([tenantId, status, requestedAt])
+  @@index([tenantId, accountPrincipalId, requestedAt])
+  @@map("analytics_privacy_request")
+}
+
+model AnalyticsSavedReport {
+  id               String   @id @default(cuid())
+  tenantId         String   @default("tenant-demo")
+  ownerPrincipalId String
+  name             String
+  reportType       String
+  definition       Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId, ownerPrincipalId, updatedAt])
+  @@map("analytics_saved_report")
 }

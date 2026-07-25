@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, API_BASE } from './auth/api-client.js';
 import { useAdminAuth } from './auth/AdminAuth.js';
+import { AnalyticsView } from './analytics/AnalyticsView.js';
 
 const API = API_BASE;
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
-type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets' | 'ai-usage';
+type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets' | 'ai-usage' | 'analytics';
 
 const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'sellers',   icon: '🏪', label: 'Vendedores' },
@@ -17,9 +18,10 @@ const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'ranking',   icon: '⭐', label: 'Ranking' },
   { id: 'markets',   icon: '🌎', label: 'Mercados' },
   { id: 'ai-usage',  icon: '✦',  label: 'Uso de IA' },
+  { id: 'analytics', icon: '📈', label: 'Visitor Intelligence' },
 ];
 
-const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets', 'ai-usage']);
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets', 'ai-usage', 'analytics']);
 
 function parseView(): AdminView {
   const segment = window.location.pathname.replace(/^\//, '') as AdminView;
@@ -115,6 +117,7 @@ export default function App() {
         {view === 'ranking'  && <RankingView />}
         {view === 'markets'  && <TenantMarketsView />}
         {view === 'ai-usage' && <AiUsageView />}
+        {view === 'analytics' && <AnalyticsView />}
       </main>
     </div>
   );

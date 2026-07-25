@@ -1,11 +1,18 @@
 'use client';
 
-import Script from 'next/script';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import {
+  ANALYTICS_CONSENT_EVENT,
+  BrowserAnalytics,
+  observeWebVitals,
+  updateGoogleAdapter,
+  type ConsentState,
+} from '@retail-os/analytics-contracts';
+import { ConsentBanner } from '@retail-os/ui-react';
 import { GA_MEASUREMENT_ID } from '@/lib/site';
 
-const GA_ENABLED = process.env.NODE_ENV === 'production';
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.juegospedia.com';
 
 declare global {
   interface Window {
@@ -14,48 +21,51 @@ declare global {
   }
 }
 
-// GA4 for the SSR storefront. Analytics is granted unconditionally for now (no
-// consent banner); ad signals stay off. The gtag `config` does NOT auto-send a
-// page_view — we emit them ourselves so client-side <Link> navigations (which
-// don't trigger a full page load) are counted too.
-export function Analytics() {
+export function Analytics({ locale = 'es' }: { locale?: 'es' | 'en' }) {
   const pathname = usePathname();
+  const analytics = useMemo(() => new BrowserAnalytics({
+    endpoint: API,
+    policyVersion: process.env.NEXT_PUBLIC_PRIVACY_POLICY_VERSION ?? '2026-07',
+    locale,
+  }), [locale]);
 
   useEffect(() => {
-    if (!GA_ENABLED || !GA_MEASUREMENT_ID || typeof window.gtag !== 'function') return;
-    window.gtag('event', 'page_view', {
-      page_path: pathname,
-      page_location: window.location.href,
-      page_title: document.title,
+    const apply = (state: ConsentState) => updateGoogleAdapter(state, {
+      measurementId: GA_MEASUREMENT_ID,
+      adsId: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
     });
-  }, [pathname]);
+    apply(analytics.getConsent());
+    const changed = (event: Event) => apply((event as CustomEvent<ConsentState>).detail);
+    window.addEventListener(ANALYTICS_CONSENT_EVENT, changed);
+    return () => window.removeEventListener(ANALYTICS_CONSENT_EVENT, changed);
+  }, [analytics]);
 
-  if (!GA_ENABLED || !GA_MEASUREMENT_ID) return null;
+  useEffect(() => observeWebVitals((metric) => analytics.track('web_vital', { ...metric })), [analytics]);
 
-  return (
-    <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-      <Script id="ga-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          window.gtag = gtag;
-          gtag('consent','default',{
-            analytics_storage:'granted',
-            ad_storage:'denied',
-            ad_user_data:'denied',
-            ad_personalization:'denied'
-          });
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            send_page_view: false,
-            allow_google_signals: false
-          });
-        `}
-      </Script>
-    </>
-  );
+  useEffect(() => {
+    analytics.page(pathname);
+    const state = analytics.getConsent();
+    if (state.decisions.analytics && GA_MEASUREMENT_ID && typeof window.gtag === 'function') {
+      window.gtag('event', 'page_view', {
+        page_path: pathname, page_location: window.location.href, page_title: document.title,
+      });
+    }
+  }, [analytics, pathname]);
+
+  useEffect(() => {
+    const error = (event: ErrorEvent) => analytics.track('client_error', {
+      errorType: 'window_error', component: event.filename?.split('/').at(-1), fatal: false,
+    });
+    const rejection = () => analytics.track('client_error', {
+      errorType: 'unhandled_rejection', fatal: false,
+    });
+    window.addEventListener('error', error);
+    window.addEventListener('unhandledrejection', rejection);
+    return () => {
+      window.removeEventListener('error', error);
+      window.removeEventListener('unhandledrejection', rejection);
+    };
+  }, [analytics]);
+
+  return <ConsentBanner analytics={analytics} locale={locale} />;
 }

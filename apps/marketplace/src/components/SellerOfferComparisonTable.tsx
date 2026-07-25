@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Award, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 import { useIntl } from 'react-intl';
+import { trackEvent } from '../analytics.js';
 
 export interface ListingDetail {
   id: string;
@@ -297,7 +298,13 @@ function ListingRow({
           </div>
 
           <button
-            onClick={onAddToCart}
+            onClick={() => {
+              trackEvent('select_item', {
+                entityType: 'game', offerId: l.id, sellerId: l.sellerId,
+                position: isFirst ? 0 : undefined, priceMinor: l.priceMinorUnits, currency: l.currency,
+              });
+              onAddToCart();
+            }}
             disabled={atStockLimit}
             title={atStockLimit ? intl.formatMessage({ id: 'offers.maxStockTitle' }) : undefined}
             className={`flex-none inline-flex items-center gap-2 font-bold text-[13.5px] px-4 py-[10px] rounded-[9px]

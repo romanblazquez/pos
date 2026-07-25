@@ -11,6 +11,7 @@ import { MeepleMark } from '@/components/MeepleMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { MobileMenu } from '@/components/MobileMenu';
+import { PrivacyPreferencesButton } from '@/components/PrivacyPreferencesButton';
 import { LOCALES, isLocale, listingPath, type Locale } from '@/lib/segments';
 import '../globals.css';
 
@@ -119,7 +120,7 @@ export default function LocaleLayout({
         ` }} />
       </head>
       <body>
-        <Analytics />
+        <Analytics locale={locale} />
         <JsonLd data={[organizationLd(), webSiteLd()]} />
         <header className="site-header">
           <div className="container">
@@ -159,6 +160,7 @@ export default function LocaleLayout({
             <span className="nav-spacer" />
             <Link href={listingPath('games', locale)}>{t.games}</Link>
             <Link href={listingPath('categories', locale)}>{t.cats}</Link>
+            <PrivacyPreferencesButton label={locale === 'es' ? 'Privacidad' : 'Privacy'} />
           </div>
         </footer>
       </body>

@@ -16,7 +16,8 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@retail-os/ui-react": ["../../libs/shared/ui-react/src/index.ts"]
+      "@retail-os/ui-react": ["../../libs/shared/ui-react/src/index.ts"],
+      "@retail-os/analytics-contracts": ["../../libs/shared/analytics-contracts/src/index.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

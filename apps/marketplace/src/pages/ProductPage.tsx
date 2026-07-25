@@ -87,13 +87,11 @@ export default function ProductPage({
     if (!data) return;
     const prices = data.listings.map((listing) => listing.priceMinorUnits);
     trackEvent('view_item', {
+      entityType: 'game',
+      entityId: data.id,
+      slug: data.slug,
       currency: data.listings[0]?.currency ?? 'MXN',
-      value: prices.length ? Math.min(...prices) / 100 : 0,
-      items: [{
-        item_id: data.id,
-        item_name: data.name,
-        item_category: data.category,
-      }],
+      priceMinor: prices.length ? Math.min(...prices) : 0,
     });
   }, [data]);
 

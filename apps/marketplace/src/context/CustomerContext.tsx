@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { useQueryClient } from '@tanstack/react-query';
 import type { BrowserSession } from '@retail-os/api-client';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
+import { firstPartyAnalytics, trackEvent } from '../analytics.js';
 
 export interface Customer {
   id: string;
@@ -48,6 +49,14 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     if (next?.customer) {
       marketplaceApi.acceptSession(next);
       setSession({ customer: next.customer });
+      const visitorId = firstPartyAnalytics.getVisitorIdForIdentityLink();
+      if (visitorId) {
+        void marketplaceApi.fetch(`${API_BASE}/api/v1/analytics/identity/link`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ visitorId, method: 'login' }),
+        }).catch(() => undefined);
+      }
     } else {
       marketplaceApi.clear();
       setSession(null);
@@ -66,6 +75,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       throw new Error(error.message ?? 'No se pudo iniciar sesión');
     }
     accept(await response.json() as BrowserSession);
+    trackEvent(path.endsWith('/register') ? 'sign_up' : 'login', { method: 'password' });
   }
 
   function login(email: string, password: string) {
@@ -88,6 +98,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       throw new Error(error.message ?? 'Google no pudo verificar la cuenta');
     }
     accept(await response.json() as BrowserSession);
+    trackEvent('login', { method: 'google' });
   }
 
   async function logout() {

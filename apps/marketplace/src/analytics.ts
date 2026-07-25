@@ -1,5 +1,21 @@
+import {
+  ANALYTICS_CONSENT_EVENT,
+  BrowserAnalytics,
+  observeWebVitals,
+  updateGoogleAdapter,
+  type AnalyticsEventType,
+  type ConsentState,
+} from '@retail-os/analytics-contracts';
+import { API_BASE } from './lib/api-client.js';
+
 const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
-const GA_ENABLED = !import.meta.env.DEV;
+const ADS_ID = import.meta.env.VITE_GOOGLE_ADS_ID?.trim();
+
+export const firstPartyAnalytics = new BrowserAnalytics({
+  endpoint: API_BASE,
+  policyVersion: import.meta.env.VITE_PRIVACY_POLICY_VERSION ?? '2026-07',
+  locale: document.documentElement.lang || 'es',
+});
 
 declare global {
   interface Window {
@@ -9,44 +25,53 @@ declare global {
 }
 
 export function analyticsConfigured() {
-  return GA_ENABLED && Boolean(MEASUREMENT_ID);
+  return Boolean(MEASUREMENT_ID);
 }
 
 export function initializeAnalytics() {
-  if (!GA_ENABLED || !MEASUREMENT_ID || document.querySelector(`script[data-ga-id="${MEASUREMENT_ID}"]`)) return;
+  const apply = (state: ConsentState) =>
+    updateGoogleAdapter(state, { measurementId: MEASUREMENT_ID, adsId: ADS_ID });
+  apply(firstPartyAnalytics.getConsent());
+  window.addEventListener(ANALYTICS_CONSENT_EVENT, (event) =>
+    apply((event as CustomEvent<ConsentState>).detail));
 
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = (...args: unknown[]) => window.dataLayer.push(args);
-  // Analytics is granted unconditionally for now (no consent banner). Ad
-  // signals stay off so we only collect first-party analytics.
-  window.gtag('consent', 'default', {
-    analytics_storage: 'granted',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
+  window.addEventListener('error', (event) => {
+    firstPartyAnalytics.track('client_error', {
+      errorType: 'window_error', component: event.filename?.split('/').at(-1), fatal: false,
+    });
   });
-  window.gtag('js', new Date());
-  window.gtag('config', MEASUREMENT_ID, {
-    send_page_view: false,
-    allow_google_signals: false,
+  window.addEventListener('unhandledrejection', () => {
+    firstPartyAnalytics.track('client_error', { errorType: 'unhandled_rejection', fatal: false });
   });
-
-  const script = document.createElement('script');
-  script.async = true;
-  script.dataset.gaId = MEASUREMENT_ID;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(MEASUREMENT_ID)}`;
-  document.head.appendChild(script);
+  observeWebVitals((metric) => firstPartyAnalytics.track('web_vital', { ...metric }));
 }
 
 export function trackPageView(path: string, title = document.title) {
-  trackEvent('page_view', {
-    page_location: new URL(path, window.location.origin).toString(),
-    page_path: path,
-    page_title: title,
-  });
+  firstPartyAnalytics.page(path);
+  if (firstPartyAnalytics.getConsent().decisions.analytics && window.gtag && MEASUREMENT_ID) {
+    window.gtag('event', 'page_view', {
+      page_location: new URL(path, window.location.origin).toString(),
+      page_path: path, page_title: title,
+    });
+  }
 }
 
+const EVENT_MAP: Record<string, AnalyticsEventType> = {
+  page_view: 'page_view',
+  search: 'search_submitted',
+  view_item: 'game_viewed',
+  select_item: 'offer_viewed',
+  affiliate_click: 'affiliate_click',
+  add_to_wishlist: 'wishlist_changed',
+  remove_from_wishlist: 'wishlist_changed',
+  login: 'login_completed',
+  sign_up: 'account_completed',
+};
+
 export function trackEvent(name: string, params: Record<string, unknown> = {}) {
-  if (!GA_ENABLED || !MEASUREMENT_ID || !window.gtag) return;
-  window.gtag('event', name, params);
+  const type = EVENT_MAP[name] ?? 'navigation';
+  firstPartyAnalytics.track(type, params);
+  if (firstPartyAnalytics.getConsent().decisions.analytics && MEASUREMENT_ID && window.gtag) {
+    window.gtag('event', name, params);
+  }
 }

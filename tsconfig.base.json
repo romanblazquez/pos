@@ -50,6 +50,7 @@
       "@retail-os/local-db": ["libs/data/local-db/src/index.ts"],
       "@retail-os/db-postgres": ["libs/data/db-postgres/src/index.ts"],
       "@retail-os/shared-types": ["libs/shared/shared-types/src/index.ts"],
+      "@retail-os/analytics-contracts": ["libs/shared/analytics-contracts/src/index.ts"],
       "@retail-os/observability": ["libs/shared/observability/src/index.ts"],
       "@retail-os/api-client": ["libs/shared/api-client/src/index.ts"],
       "@retail-os/ui-react": ["libs/shared/ui-react/src/index.ts"],

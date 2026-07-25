@@ -12,3 +12,5 @@ export * from './components/meeple-mark.js';
 export * from './money.js';
 export * from './commerce-state.js';
 export * from './components/google-sign-in-button.js';
+export * from './components/consent-banner.js';
+export * from './components/ad-placement.js';
