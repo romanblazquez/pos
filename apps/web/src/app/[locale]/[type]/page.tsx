@@ -233,13 +233,16 @@ export default async function ListingPage({
       minAge: searchParams.age ? Math.max(1, parseInt(searchParams.age, 10)) || undefined : undefined,
       playTimeMinutes: searchParams.duration ? Math.max(1, parseInt(searchParams.duration, 10)) || undefined : undefined,
     };
+    // Semantic retrieval returns a single relevance-ranked set and ignores offset,
+    // so it stays one page; keyword and filtered search paginate like the catalogue.
+    const semantic = isNaturalLanguageQuery(q) && !(
+      state.category || state.inStock || state.sort || state.max || state.players
+      || state.complexity || state.publisher || state.yearPublished || state.minAge
+      || state.playTimeMinutes || state.mechanics.length > 0
+    );
     const { results, total } = await listProducts({
       q,
-      semantic: isNaturalLanguageQuery(q) && !(
-        state.category || state.inStock || state.sort || state.max || state.players
-        || state.complexity || state.publisher || state.yearPublished || state.minAge
-        || state.playTimeMinutes || state.mechanics.length > 0
-      ),
+      semantic,
       locale,
       category: state.category,
       inStock: state.inStock,
@@ -252,7 +255,8 @@ export default async function ListingPage({
       yearPublished: state.yearPublished,
       minAge: state.minAge,
       playTimeMinutes: state.playTimeMinutes,
-      limit: 48,
+      limit: semantic ? 48 : PAGE_SIZE,
+      offset: semantic ? 0 : (page - 1) * PAGE_SIZE,
     });
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
@@ -299,6 +303,16 @@ export default async function ListingPage({
                 </div>
               ) : (
                 <CatalogEmpty locale={locale} clearHref={listingPath('search', locale)} />
+              )}
+              {!semantic && (
+                <Pager
+                  base={listingPath('search', locale)}
+                  page={page}
+                  total={total}
+                  locale={locale}
+                  pageSize={PAGE_SIZE}
+                  query={filterQuery(searchParams)}
+                />
               )}
             </div>
           </div>
