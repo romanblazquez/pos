@@ -58,9 +58,13 @@ const MASTERS = {
 // Tiles render 175px (mobile 2-up) to 286px (desktop 4-up), so 360/640 covers
 // every slot at 1x and 2x without over-serving. The hero spans the 1200px
 // container; 1100w is honest at 1x and acceptable at 2x for a decorative band.
+//
+// Tiles are 4:3, which is what the Category Cards spec asks for and what the
+// masters already are (1448x1086) — so the tile crop is the whole render, not a
+// centre slice of it. Only the hero actually crops.
 const VARIANTS = [
-  { suffix: '-360', w: 360, h: 360, webp: 76, avif: 50 },
-  { suffix: '', w: 640, h: 640, webp: 78, avif: 52 },
+  { suffix: '-360', w: 360, h: 270, webp: 76, avif: 50 },
+  { suffix: '', w: 640, h: 480, webp: 78, avif: 52 },
   { suffix: '-hero', w: 1100, h: 619, webp: 74, avif: 48 },
 ];
 

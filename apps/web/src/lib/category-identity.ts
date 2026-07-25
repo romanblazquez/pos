@@ -24,6 +24,13 @@ export interface CategoryIdentity {
   tint: string;
   /** Motif + rule colour. Must clear 4.5:1 against `tint`. */
   accent: string;
+  /**
+   * Fill of the shelf medal — the ficha stamped over the card art, carrying the
+   * motif in white. Defaults to `accent`, which clears 4.5:1 against white for
+   * every shelf except the two dark ones, whose accent is tuned to sit on a dark
+   * wash and would leave the glyph illegible. Those two override here.
+   */
+  seal?: string;
   /** Motif key — see `CategoryMotif`. */
   motif: string;
   /**
@@ -49,7 +56,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   euro:           { family: 'economic',    tint: '#e4dcec', accent: '#574079', motif: 'economic',    art: '/categories/euro.webp' },
   fantasy:        { family: 'fantasy',     tint: '#e3ece4', accent: '#2c6b43', motif: 'fantasy',     art: '/categories/fantasy.webp' },
   coop:           { family: 'cooperative', tint: '#f2e6c8', accent: '#8a5a12', motif: 'cooperative', art: '/categories/coop.webp' },
-  thematic:       { family: 'adventure',   tint: '#1e1712', accent: '#d7a654', motif: 'adventure',   art: '/categories/thematic.webp', dark: true },
+  thematic:       { family: 'adventure',   tint: '#1e1712', accent: '#d7a654', motif: 'adventure',   art: '/categories/thematic.webp', dark: true, seal: '#8f6520' },
   solo:           { family: 'solo',        tint: '#e9e3f0', accent: '#574079', motif: 'solo',      art: '/categories/solo.webp' },
   campaign:       { family: 'legacy',      tint: '#e3eaf1', accent: '#3a5a7d', motif: 'legacy',    art: '/categories/campaign.webp' },
 
@@ -59,7 +66,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   // commissioned art, so the tint only shows through as the motif wash on a card
   // that fails to load.
   deckbuilding:   { family: 'cards',       tint: '#dfe9e6', accent: '#31564a', motif: 'deckbuilding', art: '/categories/deckbuilding.webp', derived: true },
-  horror:         { family: 'adventure',   tint: '#1b1518', accent: '#d98a63', motif: 'horror', art: '/categories/horror.webp', dark: true, derived: true },
+  horror:         { family: 'adventure',   tint: '#1b1518', accent: '#d98a63', motif: 'horror', art: '/categories/horror.webp', dark: true, derived: true, seal: '#8f4426' },
   scifi:          { family: 'adventure',   tint: '#dce8ea', accent: '#2f6470', motif: 'scifi', art: '/categories/scifi.webp', derived: true },
   abstract:       { family: 'abstract',    tint: '#e8e6e0', accent: '#5f5648', motif: 'abstract', art: '/categories/abstract.webp', derived: true },
   wargame:        { family: 'strategy',    tint: '#e2e3d3', accent: '#4f5730', motif: 'wargame', art: '/categories/wargame.webp', derived: true },

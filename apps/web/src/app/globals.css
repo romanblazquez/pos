@@ -145,16 +145,21 @@ button, input, select { font: inherit; }
 .lede { max-width: 66ch; margin: .5rem 0 0; color: var(--muted-foreground); font-size: 1.03rem; line-height: 1.55; }
 
 /* Category index — visual journey. Cards mirror the product-card language
-   (rounded, bordered, cover image, hover lift) for one consistent system. */
-.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 1.75rem; }
-.category-card { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); transition: border-color 180ms, transform 180ms cubic-bezier(.2,0,0,1), box-shadow 180ms; }
+   (rounded, bordered, cover image, hover lift) for one consistent system.
+   The medal that sits over the art is styled with the identity block below. */
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 18px; margin-top: 1.75rem; }
+.category-card { position: relative; display: flex; min-width: 0; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(43 38 34 / .05); transition: border-color 180ms, transform 180ms cubic-bezier(.2,0,0,1), box-shadow 180ms; }
 .category-card-link { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.category-card:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); transform: translateY(-3px); box-shadow: 0 12px 26px rgb(43 38 34 / .13); }
-.category-card-media { position: relative; display: grid; aspect-ratio: 1 / 1; place-items: center; overflow: hidden; background: var(--accent-bg); }
-.category-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 240ms cubic-bezier(.2,0,0,1); }
-.category-card:hover .category-card-media img { transform: scale(1.04); }
+.category-card:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); transform: translateY(-3px); box-shadow: 0 18px 36px rgb(43 38 34 / .17); }
+/* The medal overhangs the foot of the media box, so this one cannot clip its
+   overflow — the image sits in its own rounded, clipping layer instead. */
+.category-card-media { position: relative; display: grid; aspect-ratio: 4 / 3; place-items: center; background: var(--accent-bg); border-radius: 13px 13px 0 0; }
+.category-card-media > picture { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.category-card-media img { width: 100%; height: 100%; object-fit: cover; transition: transform 350ms cubic-bezier(.2,0,0,1); }
+.category-card:hover .category-card-media img { transform: scale(1.06); }
 .category-card-glyph { font-size: 2.1rem; opacity: .55; }
-.category-card-body { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; padding: .8rem .9rem .85rem; }
+/* Clears the half of the medal that sinks into the body. */
+.category-card-body { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; padding: 24px .9rem .95rem; }
 .category-card-name { margin: 0; color: var(--foreground); font-family: var(--font-display); font-size: 1.02rem; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
 .category-card-count { flex: none; white-space: nowrap; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .66rem; }
 
@@ -213,7 +218,7 @@ button, input, select { font: inherit; }
 .card-price-label { display: block; margin-bottom: .12rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .56rem; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; }
 .card-price--na { color: var(--muted-foreground); font-family: var(--font-sans); font-size: .82rem; font-weight: 600; }
 .stock-pill { padding: .22rem .42rem; background: color-mix(in srgb, var(--success) 15%, var(--card)); color: var(--success); }
-.stock-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #3e7c53; }
+.stock-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
 .stock-pill.out { background: var(--muted); color: var(--muted-foreground); }
 .stock-pill.out::before { background: var(--subtle-foreground); }
 .card-stores { margin-top: .45rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .62rem; }
@@ -458,16 +463,32 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .category-card-media { color: var(--cat-accent, var(--primary)); background: var(--cat-tint, var(--accent-bg)); }
 .category-card-motif { width: 42%; max-width: 92px; height: auto; opacity: .92; transition: transform 240ms cubic-bezier(.2,0,0,1); }
 .category-card:hover .category-card-motif { transform: scale(1.06) rotate(-2deg); }
-/* The accent wash grounds the bare motif; commissioned art brings its own light,
-   so it only gets a whisper of accent at the foot to tie back to the rule. */
-.category-card-media::after { content: ''; position: absolute; inset: 0; pointer-events: none; background:
+/* The accent wash grounds the bare motif; over real art it becomes the scrim the
+   medal needs to hold its edge against a bright photo. */
+.category-card-media::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background:
   radial-gradient(120% 90% at 50% 115%, color-mix(in srgb, var(--cat-accent, var(--primary)) 16%, transparent), transparent 70%); }
 .category-card-media:has(img)::after { background:
-  linear-gradient(to top, color-mix(in srgb, var(--cat-accent, var(--primary)) 22%, transparent), transparent 42%); }
+  linear-gradient(to top, rgb(12 9 6 / .6), transparent 46%),
+  radial-gradient(rgb(255 255 255 / .055) 1px, transparent 1.4px) 0 0 / 8px 8px; }
 .category-card[data-dark="true"] .category-card-media { color: var(--cat-accent); }
-.category-card-rule { height: 3px; flex: none; background: var(--cat-accent, var(--primary)); opacity: .85; }
 .category-card-desc { margin: 0; padding: 0 .9rem .85rem; color: var(--muted-foreground); font-size: .8rem; line-height: 1.45; }
-.category-card-body { align-items: center; }
+
+/* The medal ("la ficha") — the token every board game shares, stamped over the
+   art and half-sunk into the body. Its fill is the shelf's seal colour and its
+   glyph is the same motif that stands in when there's no art, so the two states
+   of a card carry the same symbol. Sits above the scrim, below the share button. */
+.category-card-seal { position: absolute; left: 50%; bottom: -17px; z-index: 1; width: 56px; height: 60px;
+  display: grid; place-items: center; transform: translateX(-50%); pointer-events: none;
+  background: var(--cat-seal, var(--cat-accent, var(--primary)));
+  clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+  filter: drop-shadow(0 5px 11px rgb(20 16 10 / .42));
+  transition: transform 220ms cubic-bezier(.2,0,0,1); }
+.category-card:hover .category-card-seal { transform: translateX(-50%) scale(1.09); }
+/* Both children share the grid cell, so the ring is concentric with the glyph.
+   Offset up, since the clip-path's point steals the lower third. */
+.category-card-seal > * { grid-area: 1 / 1; transform: translateY(-5px); }
+.category-card-seal-ring { width: 38px; height: 38px; border: 1.4px dashed rgb(255 255 255 / .5); border-radius: 50%; }
+.category-card-seal-motif { color: #fff; }
 
 /* ── Promo banners — site hero / email header / paid social (§05) ────────────
    Four tones rotate clay → gold → forest → felt so no two stacked placements

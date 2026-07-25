@@ -1,9 +1,10 @@
-// Shelf card — one browse shelf (design system §06).
+// Shelf card — one browse shelf (design system §06, Category Cards spec).
 //
-// Art, when commissioned, fills the 1:1 `[shelf]` slot; shelves still awaiting it
-// fall back to their tint + motif, which is the designed placeholder rather than
-// a hole. Either way the accent rule under the art keeps the set reading as one
-// family.
+// Art fills the 4:3 `[shelf]` slot; shelves still awaiting it fall back to their
+// tint + motif, which is the designed placeholder rather than a hole. Over the
+// art sits the medal — a ficha in the shelf's seal colour carrying its motif in
+// white, half-sunk into the card body. That stamp is what keeps the set reading
+// as one family: same seal, same position, one motif per shelf.
 import Link from 'next/link';
 import { CategoryMotif } from './CategoryMotif';
 import { CardShareButton } from './CardShareButton';
@@ -43,7 +44,13 @@ export function ShelfCard({
     <article
       className="category-card"
       data-dark={id.dark ? 'true' : undefined}
-      style={{ '--cat-tint': id.tint, '--cat-accent': id.accent } as React.CSSProperties}
+      style={
+        {
+          '--cat-tint': id.tint,
+          '--cat-accent': id.accent,
+          '--cat-seal': id.seal ?? id.accent,
+        } as React.CSSProperties
+      }
     >
       <Link href={href} className="category-card-link" aria-label={label}>
         <div className="category-card-media">
@@ -56,13 +63,18 @@ export function ShelfCard({
               <source type="image/avif" srcSet={srcSet(id.art, 'avif')} sizes={TILE_SIZES} />
               <source type="image/webp" srcSet={srcSet(id.art, 'webp')} sizes={TILE_SIZES} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={id.art} alt="" width={640} height={640} loading="lazy" decoding="async" />
+              <img src={id.art} alt="" width={640} height={480} loading="lazy" decoding="async" />
             </picture>
           ) : (
             <CategoryMotif motif={id.motif} className="category-card-motif" size={96} />
           )}
+          {/* The medal reads as one object, so the whole stamp is aria-hidden —
+              the shelf name below is the accessible label. */}
+          <span className="category-card-seal" aria-hidden="true">
+            <span className="category-card-seal-ring" />
+            <CategoryMotif motif={id.motif} className="category-card-seal-motif" size={22} />
+          </span>
         </div>
-        <span className="category-card-rule" aria-hidden="true" />
         <div className="category-card-body">
           <h2 className="category-card-name">{label}</h2>
           <span className="category-card-count">
