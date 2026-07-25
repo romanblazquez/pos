@@ -63,11 +63,15 @@ yet migrated** — see §7.
 
 ---
 
-## 3. The sixteen shelves (§06)
+## 3. The shelves (§06)
 
 `THEMES` (taxonomy: slug, label, BGG tag rules) is joined to `CATEGORY_IDENTITY`
 (look: accent, tint, motif, art) **by `Theme.key`**. Adding a shelf means adding
-to both.
+to both — plus a motif in `CategoryMotif.tsx`, a rule set in the database
+migration that materializes membership, and a label in the SPA's
+`marketplace-meta.ts`. The design system named sixteen; there are now 21 plus a
+noindex catch-all (`other`), added so **every** product sits on a shelf — the
+five newest (`family, deduction, sports, trains, history`) still await art.
 
 Rules that are load-bearing:
 

@@ -2,6 +2,7 @@ import { RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button, CatalogFilterPanel, CatalogFilterSection, FilterCategoryButton, FilterChip, FilterToggle } from '@retail-os/ui-react';
 import type { CatalogFacets, CategoryCount, MechanicCount, SortBy } from '@/lib/api';
 import { slugify, type Locale } from '@/lib/segments';
+import { getThemeBySlug } from '@/lib/themes';
 import { FormAutoSubmit } from './FormAutoSubmit';
 
 // Same bggWeight bands as apps/marketplace/src/pages/ProductPage.tsx's
@@ -15,6 +16,9 @@ const COMPLEXITY_OPTIONS = [
   { value: 'expert', es: 'Experto', en: 'Expert' },
 ] as const;
 
+// Raw product types (the catalogue's own `category` column). Everything else the
+// API returns is a browse-taxonomy key, which already carries bilingual copy in
+// `lib/themes.ts` — so a chip reads "Para 2 jugadores", never "Two Player".
 const CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
   'board-game': { es: 'Juegos de mesa', en: 'Board games' },
   expansion: { es: 'Expansiones', en: 'Expansions' },
@@ -22,13 +26,16 @@ const CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
 };
 
 function categoryLabel(category: string, locale: Locale) {
-  return CATEGORY_LABELS[category]?.[locale] ?? category.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return CATEGORY_LABELS[category]?.[locale]
+    ?? getThemeBySlug(locale, category)?.label[locale]
+    ?? category.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function categoryDescription(category: string, locale: Locale) {
   if (category === 'board-game') return locale === 'es' ? 'Clásicos modernos, estrategia, familiares y party games.' : 'Modern classics, strategy, family and party games.';
   if (category === 'expansion') return locale === 'es' ? 'Amplía los juegos que ya están en tu mesa.' : 'Expand games already on your table.';
-  return locale === 'es' ? 'Colección curada del marketplace.' : 'Curated marketplace collection.';
+  return getThemeBySlug(locale, category)?.description[locale]
+    ?? (locale === 'es' ? 'Colección curada del marketplace.' : 'Curated marketplace collection.');
 }
 
 export interface FilterState {
@@ -302,7 +309,11 @@ export function SearchFilters({
               value: '',
               label: t.all,
               description: t.allStores,
-              count: categories.reduce((sum, c) => sum + c.count, 0),
+              // NOT the sum of the category counts — a game sits on several
+              // browse shelves, so summing them counts it once per shelf. With
+              // no category selected `total` IS the unfiltered catalogue; with
+              // one selected this view cannot know that number, so it shows none.
+              count: state.category ? undefined : total,
               isActive: !state.category,
             },
             ...categories.map((c) => ({

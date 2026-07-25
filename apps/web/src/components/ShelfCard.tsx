@@ -1,4 +1,4 @@
-// Shelf card — one of the sixteen shelves (design system §06).
+// Shelf card — one browse shelf (design system §06).
 //
 // Art, when commissioned, fills the 1:1 `[shelf]` slot; shelves still awaiting it
 // fall back to their tint + motif, which is the designed placeholder rather than

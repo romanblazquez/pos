@@ -17,7 +17,7 @@ import { getGuide, guideAlternates, guidesMentioning, type Guide, type GuidePick
 import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { editorTake } from '@/content/editorial/takes';
-import { THEMES, getThemeBySlug, primaryTheme } from '@/lib/themes';
+import { INDEXABLE_THEMES, THEMES, getThemeBySlug, primaryTheme } from '@/lib/themes';
 import { identityFor } from '@/lib/category-identity';
 import { CategoryMotif } from '@/components/CategoryMotif';
 import { ShelfHero } from '@/components/ShelfHero';
@@ -115,9 +115,11 @@ export async function generateMetadata({
         path,
         title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
         description: theme.description[locale],
-        noindex: page > 1,
+        // The catch-all shelf is noindex on every page: it holds the products no
+        // theme rule could place, i.e. exactly the thin ones.
+        noindex: page > 1 || Boolean(theme.noindex),
         // Themes have distinct per-locale slugs, so map hreflang explicitly.
-        alternates: page > 1
+        alternates: page > 1 || theme.noindex
           ? undefined
           : { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) },
       });
@@ -216,6 +218,10 @@ export default async function DetailPage({
         : { locale, category: real!, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE },
     );
 
+    // A paginated URL past the last page is a dead page, not an empty shelf —
+    // 404 rather than serve a bare "no results" body under a real category.
+    if (page > 1 && results.length === 0) notFound();
+
     const title = theme ? theme.label[locale] : real!;
     const lede = theme
       ? theme.description[locale]
@@ -224,19 +230,25 @@ export default async function DetailPage({
         : `Compare real prices and stock for ${real} board games across verified stores and find the best price for your next game night.`;
 
     // Lateral nav into sibling themes — denser internal linking + better journey.
-    const siblings = THEMES.filter((t) => t.slug[locale] !== params.slug);
+    // The catch-all shelf stays out: the category index and a product's own
+    // breadcrumb are the paths into it, and it is noindex.
+    const siblings = INDEXABLE_THEMES.filter((t) => t.slug[locale] !== params.slug);
 
     const crumbs: Crumb[] = [
       { name: homeName, path: homePath(locale) },
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
       { name: title, path: basePath },
     ];
+    // The noindex catch-all shelf advertises no hreflang pair, matching the
+    // metadata built in generateMetadata.
     const catAlternates = theme
-      ? { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) }
+      ? theme.noindex
+        ? undefined
+        : { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) }
       : entityAlternates('categories', params.slug);
     return (
       <main className="container">
-        <LocaleAlternates alternates={catAlternates} />
+        {catAlternates && <LocaleAlternates alternates={catAlternates} />}
         <Breadcrumbs crumbs={crumbs} />
         {page === 1 && (
           <JsonLd
@@ -464,18 +476,24 @@ function productCrumbs(product: ProductDetail, locale: Locale, homeName: string,
     { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
   ];
 
-  const primaryCategory = product.categories?.find((category) => category.isPrimary) ?? product.categories?.[0];
-  const persistedPrimary = product.categories?.find((category) => category.isPrimary);
+  // The API names a category by its canonical (English) name and key. Resolve it
+  // to the local theme so the crumb reads "Estrategia" and points at
+  // /es/categorias/juegos-de-estrategia — the canonical localized URL, not the
+  // key that only 301s there.
+  const persistedPrimary = product.categories?.find((category) => category.isPrimary)
+    ?? product.categories?.[0];
   const theme = persistedPrimary
     ? THEMES.find((candidate) => candidate.key === persistedPrimary.slug)
     : primaryTheme(product);
-  if (primaryCategory) {
-    crumbs.push({
-      name: primaryCategory.name,
-      path: entityPath('categories', locale, primaryCategory.slug),
-    });
-  } else if (theme) {
+  if (theme) {
     crumbs.push({ name: theme.label[locale], path: entityPath('categories', locale, theme.slug[locale]) });
+  } else if (persistedPrimary) {
+    // A category with no theme of its own (admin-created): its own name and key
+    // are all we have, and /categorias/<key> resolves for it.
+    crumbs.push({
+      name: persistedPrimary.name,
+      path: entityPath('categories', locale, persistedPrimary.slug),
+    });
   } else if (product.category) {
     const label = RAW_CATEGORY_LABELS[product.category]?.[locale] ?? product.category;
     crumbs.push({ name: label, path: entityPath('categories', locale, slugify(product.category)) });

@@ -1,7 +1,8 @@
-// Category identity system — "Sixteen shelves, one collection" (design system §06).
+// Category identity system — "One shelf, one collection" (design system §06).
 //
-// Each of the 16 browse themes carries a distinct accent + motif pair, legible at
-// a 280px card and a 30px favicon alike. This module holds ONLY the identity
+// Every browse theme carries a distinct accent + motif pair, legible at a 280px
+// card and a 30px favicon alike — the sixteen the design system named, plus the
+// shelves added since to keep every product on one. This module holds ONLY the identity
 // (colour + motif key + semantic family); the taxonomy rules live in `themes.ts`
 // and the two are joined by `Theme.key`.
 //
@@ -54,13 +55,26 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
 
   // ── Tint/accent derived in-family; art commissioned ─────────────────────
   // These five aren't named in the design system's swatch set, so their tint and
-  // accent are still derived — but all sixteen now carry commissioned art, so the
-  // tint only shows through as the motif wash on a card that fails to load.
+  // accent are still derived — but each of the original sixteen carries
+  // commissioned art, so the tint only shows through as the motif wash on a card
+  // that fails to load.
   deckbuilding:   { family: 'cards',       tint: '#dfe9e6', accent: '#31564a', motif: 'deckbuilding', art: '/categories/deckbuilding.webp', derived: true },
   horror:         { family: 'adventure',   tint: '#1b1518', accent: '#d98a63', motif: 'horror', art: '/categories/horror.webp', dark: true, derived: true },
   scifi:          { family: 'adventure',   tint: '#dce8ea', accent: '#2f6470', motif: 'scifi', art: '/categories/scifi.webp', derived: true },
   abstract:       { family: 'abstract',    tint: '#e8e6e0', accent: '#5f5648', motif: 'abstract', art: '/categories/abstract.webp', derived: true },
   wargame:        { family: 'strategy',    tint: '#e2e3d3', accent: '#4f5730', motif: 'wargame', art: '/categories/wargame.webp', derived: true },
+
+  // ── Shelves added after the original sixteen ─────────────────────────────
+  // Same low-chroma parchment discipline, each borrowing the semantic family of
+  // its nearest neighbour so art fallback stays coherent. No commissioned
+  // illustration yet, so these render as tint + motif — the designed placeholder.
+  family:         { family: 'party',       tint: '#f3e6cf', accent: '#96591b', motif: 'family', derived: true },
+  deduction:      { family: 'strategy',    tint: '#e5e2ec', accent: '#4a4270', motif: 'deduction', derived: true },
+  sports:         { family: 'party',       tint: '#e8e9dc', accent: '#4d6034', motif: 'sports', derived: true },
+  trains:         { family: 'economic',    tint: '#e6e3da', accent: '#6a5236', motif: 'trains', derived: true },
+  history:        { family: 'strategy',    tint: '#ece5d4', accent: '#7a5a2a', motif: 'history', derived: true },
+  // The catch-all shelf: deliberately the quietest card on the index.
+  other:          { family: 'abstract',    tint: '#eae7e0', accent: '#6b6357', motif: 'other', derived: true },
 };
 
 /** Identity for a theme, falling back to the neutral parchment wash. */

@@ -157,6 +157,63 @@ const MOTIFS: Record<string, React.ReactNode> = {
       <path d="M6.4 6.2 3.6 9l2.8 2.8M17.6 6.2 20.4 9l-2.8 2.8" opacity=".55" />
     </>
   ),
+
+  // Dos alturas en la misma mesa — el juego que cruza generaciones.
+  family: (
+    <>
+      <path d={MEEPLE} fill="currentColor" stroke="none" transform="translate(1.6 2.6) scale(.5)" />
+      <path d={MEEPLE} fill="currentColor" stroke="none" transform="translate(13.4 8.4) scale(.36)" />
+      <path d="M3.6 20.6h16.8" opacity=".55" />
+    </>
+  ),
+
+  // Una pista lleva a otra — lo que se deduce, no lo que se ve.
+  deduction: (
+    <>
+      <circle cx="10.4" cy="10.4" r="5.6" />
+      <path d="m14.6 14.6 5.4 5.4" />
+      <path d="M8 10.4h4.8M10.4 8v4.8" opacity=".5" />
+    </>
+  ),
+
+  // La última curva antes de meta — todo se decide en la línea.
+  sports: (
+    <>
+      <path d="M5.2 3.8v16.4" />
+      <path d="M5.2 4.6h13.6v7.2H5.2Z" />
+      <path d="M8.6 4.6v7.2M12 4.6v7.2M15.4 4.6v7.2" opacity=".45" />
+      <path d="M7.4 16.6h9.6" strokeDasharray="2 2.2" opacity=".7" />
+    </>
+  ),
+
+  // Vías que conectan ciudades — la red importa más que el vagón.
+  trains: (
+    <>
+      <rect x="6.2" y="4.6" width="11.6" height="9.6" rx="2" />
+      <path d="M9.4 7.8h5.2" opacity=".7" />
+      <circle cx="9.4" cy="17.2" r="1.6" />
+      <circle cx="14.6" cy="17.2" r="1.6" />
+      <path d="M3.4 20.8h17.2" strokeDasharray="2 2.4" opacity=".6" />
+    </>
+  ),
+
+  // Columnas de otra época — el pasado como escenario.
+  history: (
+    <>
+      <path d="M4.2 8.4 12 4.2l7.8 4.2" />
+      <path d="M7 10.4v7.2M12 10.4v7.2M17 10.4v7.2" />
+      <path d="M4.6 20h14.8" />
+    </>
+  ),
+
+  // Una ficha aún sin estante — el hueco es honesto, no decorativo.
+  other: (
+    <>
+      <circle cx="12" cy="12" r="8.2" strokeDasharray="2 2.6" opacity=".7" />
+      <path d="M12 15.6v.05" strokeWidth="2" />
+      <path d="M9.6 9.4a2.5 2.5 0 0 1 4.9.7c0 1.7-2.5 1.9-2.5 3.3" />
+    </>
+  ),
 };
 
 export function CategoryMotif({

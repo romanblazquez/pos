@@ -82,7 +82,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   // The home page browses by *shelf*, not by the catalogue's raw `category`
   // field — that field is only base-game vs expansion, so it produced chips
   // reading "board-game 26" that led to a thin `/categorias/board-game` page.
-  // The sixteen curated shelves are the real browse axis (see `lib/themes.ts`).
+  // The curated shelves are the real browse axis (see `lib/themes.ts`).
   const [{ results: featured }, shelves] = await Promise.all([
     listProducts({ inStock: true, limit: 18, locale }),
     listShelves(),

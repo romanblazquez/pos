@@ -15,16 +15,22 @@ export interface Shelf {
 /**
  * Every shelf that currently holds at least one game, busiest first.
  *
- * One indexed lookup per theme (~16), each `limit: 1` because the card art is
- * the shelf's own identity — we need the total, not the products. ISR caches the
+ * One indexed lookup per theme, each `limit: 1` because the card art is the
+ * shelf's own identity — we need the total, not the products. ISR caches the
  * result, so the cost is per-revalidation, not per-visit.
+ *
+ * The count comes from the SAME `category` filter the shelf's page uses, so the
+ * card never promises a number the page cannot show. (It used to count by BGG
+ * tags while the page filtered by category, and the two answered differently.)
+ *
+ * The catch-all shelf sorts last whatever its size: it exists so no product is
+ * unreachable, not to be featured on the home page's top shelves.
  */
 export async function listShelves(): Promise<Shelf[]> {
   const shelves = await Promise.all(
     THEMES.map(async (theme) => {
       const { total } = await listProducts({
-        mechanics: theme.tags,
-        minPlayers: theme.players,
+        category: theme.key,
         limit: 1,
         sortBy: 'rank_score',
       });
@@ -33,5 +39,5 @@ export async function listShelves(): Promise<Shelf[]> {
   );
   return shelves
     .filter((s) => s.count > 0) // a shelf with nothing on it is a dead end
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => Number(a.theme.noindex ?? false) - Number(b.theme.noindex ?? false) || b.count - a.count);
 }

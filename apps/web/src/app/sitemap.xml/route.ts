@@ -1,6 +1,6 @@
 import { listProducts, type ProductSummary } from '@/lib/api';
 import { listGuides } from '@/lib/guides';
-import { THEMES } from '@/lib/themes';
+import { INDEXABLE_THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
 import {
   INDEXABLE_LOCALES,
@@ -77,8 +77,9 @@ export async function GET(): Promise<Response> {
       entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
     }
 
-    // Curated theme landing pages (the real category SEO targets).
-    for (const theme of THEMES) {
+    // Curated theme landing pages (the real category SEO targets). The catch-all
+    // shelf is browsable but noindex, so it never enters the sitemap.
+    for (const theme of INDEXABLE_THEMES) {
       entries.push({
         loc: `${SITE_URL}${entityPath('categories', locale, theme.slug[locale])}`,
         changefreq: 'weekly',

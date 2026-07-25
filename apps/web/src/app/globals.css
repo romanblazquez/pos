@@ -451,7 +451,7 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   font-family: var(--font-display); font-weight: 700; font-size: 14px; }
 .editor-take-quote { margin: .7rem 0 .1rem; font-size: 1.02rem; line-height: 1.55; font-style: italic; }
 
-/* ── Category identity — "sixteen shelves, one collection" (design system §06) ─
+/* ── Category identity — "one shelf, one collection" (design system §06) ─
    Each shelf sets --cat-tint/--cat-accent inline (see CATEGORY_IDENTITY); the
    motif is the stand-in for commissioned per-category artwork ("Art TBD"), so
    the whole set reads as one family regardless of which covers exist. */
@@ -513,7 +513,7 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 }
 
 /* Home rail: the busiest shelves, four across — denser than the browse hub,
-   which lets all sixteen breathe. */
+   which lets the full set breathe. */
 .home-shelf-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 900px) { .home-shelf-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 680px) { .home-shelf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

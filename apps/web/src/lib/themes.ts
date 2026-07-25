@@ -6,11 +6,14 @@
 // "juegos para 2 jugadores", "cooperativos"…) onto rules over those signals.
 // Each theme is one indexable landing page under /{locale}/categorias/{slug}.
 //
-// Rules stay to a SINGLE dimension (tags OR minPlayers) so the index (which
-// derives counts/covers from one product batch) and the detail page (which
-// queries the API) agree exactly, and so counting needs no bggWeight (absent
-// from ProductSummary). `tags` matches ANY of the listed BGG tags (OR), which is
-// how the API's `mechanics` filter behaves.
+// The DATABASE is the authority on membership: `category_rule` drives the
+// materialized `mkt_product_category` bridge, and both the shelf counts and the
+// category pages query the API by `key`. The rules below MIRROR that migration
+// (libs/data/db-postgres/prisma/migrations/*_browse_taxonomy_full_coverage) and
+// exist for one job only — naming a product's theme client-side when the API
+// response predates the taxonomy. Keep the two in sync; the order of THEMES
+// mirrors rule priority, so `primaryTheme` picks the same shelf the database
+// marks primary. `tags` matches ANY of the listed BGG tags (OR).
 import type { ProductSummary } from './api';
 import type { Locale } from './segments';
 
@@ -25,6 +28,12 @@ export interface Theme {
   players?: number;
   /** Emoji shown when a theme has no representative product cover yet. */
   glyph: string;
+  /**
+   * Browsable but never a search landing page. Set on the catch-all shelf that
+   * exists so every product has a category: its games are un-enriched stubs, so
+   * the page stays out of the sitemap and carries a noindex.
+   */
+  noindex?: boolean;
 }
 
 // Themes mirror BoardGameGeek's own Categories and Mechanisms (the exact strings
@@ -52,7 +61,7 @@ export const THEMES: Theme[] = [
       es: 'Eurogames de economía y gestión de recursos: poca suerte, muchas decisiones y motores de puntos.',
       en: 'Economic, resource-management eurogames: low luck, high decision density and point engines.',
     },
-    tags: ['Economic', 'Income', 'Market', 'Industry / Manufacturing', 'End Game Bonuses'],
+    tags: ['Economic', 'Income', 'Market', 'Industry / Manufacturing', 'End Game Bonuses', 'Farming'],
     glyph: '🏭',
   },
   {
@@ -63,8 +72,19 @@ export const THEMES: Theme[] = [
       es: 'Juegos cooperativos para jugar en equipo contra el propio juego. Ganáis o perdéis juntos.',
       en: 'Cooperative games where you play as a team against the game itself. You win or lose together.',
     },
-    tags: ['Cooperative Game'],
+    tags: ['Cooperative Game', 'Semi-Cooperative Game', 'Team-Based Game'],
     glyph: '🤝',
+  },
+  {
+    key: 'family',
+    slug: { es: 'juegos-de-mesa-familiares', en: 'family-board-games' },
+    label: { es: 'Familiares y niños', en: 'Family & kids' },
+    description: {
+      es: 'Juegos de mesa familiares y para niños: se explican en cinco minutos y funcionan con toda la mesa, de los 6 a los 60.',
+      en: 'Family and children’s board games: five minutes to teach and they work for the whole table, from 6 to 60.',
+    },
+    tags: ["Children's Game", 'Animals', 'Educational', 'Memory', 'Maze', 'Number'],
+    glyph: '🧒',
   },
   {
     key: 'two-player',
@@ -85,7 +105,7 @@ export const THEMES: Theme[] = [
       es: 'Juegos de cartas: rápidos de sacar, fáciles de transportar y con enorme rejugabilidad.',
       en: 'Card games: quick to set up, easy to carry and endlessly replayable.',
     },
-    tags: ['Card Game'],
+    tags: ['Card Game', 'Trick-taking'],
     glyph: '🃏',
   },
   {
@@ -118,7 +138,11 @@ export const THEMES: Theme[] = [
       es: 'Juegos temáticos de aventura y exploración: inmersivos, narrativos y con miniaturas.',
       en: 'Thematic adventure and exploration games: immersive, narrative and miniatures-driven.',
     },
-    tags: ['Adventure', 'Exploration', 'Fighting', 'Miniatures', 'Novel-based'],
+    tags: [
+      'Adventure', 'Exploration', 'Fighting', 'Miniatures', 'Novel-based',
+      'Storytelling', 'Role Playing', 'Simulation', 'Pirates', 'Environmental', 'Medical',
+      'Movies / TV / Radio theme', 'Video Game Theme', 'Comic Book / Strip', 'Book',
+    ],
     glyph: '🗺️',
   },
   {
@@ -129,7 +153,7 @@ export const THEMES: Theme[] = [
       es: 'Juegos de mesa de terror: tensión, zombis y sustos para las noches más oscuras.',
       en: 'Horror board games: tension, zombies and scares for the darkest game nights.',
     },
-    tags: ['Horror', 'Zombies', 'Murder/Mystery'],
+    tags: ['Horror', 'Zombies', 'Murder / Mystery'],
     glyph: '👻',
   },
   {
@@ -173,7 +197,8 @@ export const THEMES: Theme[] = [
       es: 'Party games para grupos grandes: risas garantizadas y reglas que se explican en un minuto.',
       en: 'Party games for big groups: guaranteed laughs and rules you explain in a minute.',
     },
-    tags: ['Party Game', 'Humor', 'Word Game'],
+    // 'Real-time' and 'Real-Time' are both live BGG spellings — both are needed.
+    tags: ['Party Game', 'Humor', 'Word Game', 'Real-time', 'Real-Time', 'Trivia', 'Action / Dexterity', 'Take That', 'Music'],
     glyph: '🎉',
   },
   {
@@ -184,7 +209,7 @@ export const THEMES: Theme[] = [
       es: 'Juegos abstractos: sin azar ni tema, pura táctica sobre el tablero.',
       en: 'Abstract games: no luck, no theme — pure tactics on the board.',
     },
-    tags: ['Abstract Strategy'],
+    tags: ['Abstract Strategy', 'Puzzle', 'Pattern Building', 'Pattern Recognition', 'Tile Placement', 'Paper-and-Pencil'],
     glyph: '⬢',
   },
   {
@@ -209,6 +234,65 @@ export const THEMES: Theme[] = [
     tags: ['Scenario / Mission / Campaign Game', 'Legacy Game', 'Campaign / Battle Card Driven'],
     glyph: '📖',
   },
+  {
+    key: 'deduction',
+    slug: { es: 'juegos-de-deduccion', en: 'deduction-board-games' },
+    label: { es: 'Deducción y faroleo', en: 'Deduction & bluffing' },
+    description: {
+      es: 'Juegos de deducción, faroleo y roles ocultos: leer a los demás importa más que la tirada.',
+      en: 'Deduction, bluffing and hidden-role games: reading the table matters more than the roll.',
+    },
+    tags: ['Deduction', 'Bluffing', 'Betting and Bluffing', 'Murder / Mystery', 'Spies / Secret Agents', 'Hidden Movement', 'Negotiation', 'Voting', 'Mafia'],
+    glyph: '🕵️',
+  },
+  {
+    key: 'sports',
+    slug: { es: 'juegos-de-deportes-y-carreras', en: 'sports-and-racing-board-games' },
+    label: { es: 'Deportes y carreras', en: 'Sports & racing' },
+    description: {
+      es: 'Juegos de mesa de deportes y carreras: fútbol, ciclismo, motor y la última curva antes de meta.',
+      en: 'Sports and racing board games: football, cycling, motorsport and the final corner.',
+    },
+    tags: ['Sports', 'Racing', 'Race'],
+    glyph: '🏁',
+  },
+  {
+    key: 'trains',
+    slug: { es: 'juegos-de-trenes-y-transporte', en: 'train-and-transport-board-games' },
+    label: { es: 'Trenes y transporte', en: 'Trains & transport' },
+    description: {
+      es: 'Juegos de trenes, rutas y transporte: conecta ciudades, reparte mercancías y construye tu red.',
+      en: 'Train, route and transport games: connect cities, deliver goods and build your network.',
+    },
+    tags: ['Trains', 'Transportation', 'Network and Route Building', 'Pick-up and Deliver', 'Nautical', 'Aviation / Flight', 'Travel'],
+    glyph: '🚂',
+  },
+  {
+    key: 'history',
+    slug: { es: 'juegos-de-mesa-historicos', en: 'historical-board-games' },
+    label: { es: 'Históricos', en: 'Historical' },
+    description: {
+      es: 'Juegos de mesa históricos: Roma, el Renacimiento, el Oeste y otras épocas reales sobre la mesa.',
+      en: 'Historical board games: Rome, the Renaissance, the Old West and other real eras on the table.',
+    },
+    tags: ['Ancient', 'Renaissance', 'Prehistoric', 'American West', 'Napoleonic', 'Post-Napoleonic', 'Age of Reason', 'Pike and Shot', 'Arabian', 'Religious'],
+    glyph: '🏛️',
+  },
+  {
+    // The catch-all shelf. It has no rules of its own: the database assigns it
+    // when nothing else matches, which is what guarantees every product is
+    // browsable. Kept out of the index — its games are catalogue stubs awaiting
+    // enrichment, and thin content is not a landing page.
+    key: 'other',
+    slug: { es: 'otros-juegos-de-mesa', en: 'other-board-games' },
+    label: { es: 'Otros juegos', en: 'Other games' },
+    description: {
+      es: 'Juegos que aún no tienen ficha completa: sin datos de BGG no podemos colocarlos en su estante temático.',
+      en: 'Games without a complete record yet: with no BGG data we cannot place them on a themed shelf.',
+    },
+    glyph: '🎲',
+    noindex: true,
+  },
 ];
 
 // Only the three fields a theme rule reads, so both ProductSummary (index) and
@@ -228,10 +312,12 @@ export function productMatchesTheme(p: ThemeMatchable, theme: Theme): boolean {
 
 /**
  * The single best browse theme for a product, used as the middle breadcrumb
- * crumb. THEMES is ordered by BGG prominence, so genre themes (Estrategia,
- * Cooperativos…) win over the player-count theme when both apply — a genre
- * reads as a truer "category" than "Para N jugadores". Undefined when the
- * product carries no theme signal (e.g. a bare catalogue stub with no tags).
+ * crumb. THEMES follows the database's rule priority, so genre themes
+ * (Estrategia, Cooperativos, Familiares…) win over the player-count theme when
+ * both apply — a genre reads as a truer "category" than "Para N jugadores", and
+ * the crumb matches the membership the database marked primary. Undefined when
+ * the product carries no theme signal at all (a bare catalogue stub with no
+ * tags), which is precisely the case the database files under `other`.
  */
 export function primaryTheme(p: ThemeMatchable): Theme | undefined {
   return THEMES.find((theme) => productMatchesTheme(p, theme));
@@ -240,3 +326,6 @@ export function primaryTheme(p: ThemeMatchable): Theme | undefined {
 export function getThemeBySlug(locale: Locale, slug: string): Theme | undefined {
   return THEMES.find((theme) => theme.slug[locale] === slug || theme.key === slug);
 }
+
+/** Shelves that may be indexed — every theme except the catch-all. */
+export const INDEXABLE_THEMES: Theme[] = THEMES.filter((theme) => !theme.noindex);
