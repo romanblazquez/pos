@@ -8,7 +8,7 @@ import {
   listProducts,
   type ProductDetail,
 } from '@/lib/api';
-import { buildMetadata, entityAlternates } from '@/lib/seo';
+import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
 import { APP_URL, absoluteUrl } from '@/lib/site';
 import { buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
@@ -95,7 +95,7 @@ export async function generateMetadata({
       path: entityPath('games', locale, product.slug),
       title,
       description: productDescription(product, locale),
-      images: product.images,
+      images: [socialImageUrl('product', product.slug, locale)],
       alternates: entityAlternates('games', product.slug),
       type: 'product',
       noindex: thin,
@@ -115,6 +115,7 @@ export async function generateMetadata({
         path,
         title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
         description: theme.description[locale],
+        images: [socialImageUrl('category', theme.slug[locale], locale)],
         // The catch-all shelf is noindex on every page: it holds the products no
         // theme rule could place, i.e. exactly the thin ones.
         noindex: page > 1 || Boolean(theme.noindex),
@@ -135,6 +136,7 @@ export async function generateMetadata({
         locale === 'es'
           ? `Juegos de mesa de la categoría ${real}, con precios comparados entre tiendas.`
           : `${real} board games with prices compared across stores.`,
+      images: [socialImageUrl('category', params.slug, locale)],
       noindex: page > 1,
       alternates: page > 1 ? undefined : entityAlternates('categories', params.slug),
     });

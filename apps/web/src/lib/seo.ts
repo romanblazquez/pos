@@ -45,6 +45,16 @@ const DEFAULT_OG_IMAGE = absoluteUrl('/og-default.png');
 const DEFAULT_TWITTER_IMAGE = absoluteUrl('/twitter-card.png');
 const DEFAULT_SOCIAL_ALT = 'Juegospedia — El mejor juego al mejor precio';
 
+/** Branded 1200×630 card rendered by our first-party OG endpoint. */
+export function socialImageUrl(
+  kind: 'product' | 'category',
+  slug: string,
+  locale: Locale,
+): string {
+  const params = new URLSearchParams({ kind, slug, locale });
+  return absoluteUrl(`/api/og?${params.toString()}`);
+}
+
 export function buildMetadata(input: SeoInput): Metadata {
   const canonical = absoluteUrl(input.path);
   const indexable = isIndexable(input.locale) && !input.noindex;
@@ -62,7 +72,13 @@ export function buildMetadata(input: SeoInput): Metadata {
 
   const suppliedImages = (input.images ?? []).filter(Boolean).map(absoluteUrl).slice(0, 4);
   const openGraphImages = suppliedImages.length
-    ? suppliedImages
+    ? suppliedImages.map((url) => ({
+        url,
+        width: 1200,
+        height: 630,
+        alt: input.title,
+        type: 'image/png',
+      }))
     : [
         {
           url: DEFAULT_OG_IMAGE,
@@ -73,7 +89,7 @@ export function buildMetadata(input: SeoInput): Metadata {
         },
       ];
   const twitterImages = suppliedImages.length
-    ? suppliedImages.slice(0, 1)
+    ? [{ url: suppliedImages[0], alt: input.title }]
     : [{ url: DEFAULT_TWITTER_IMAGE, alt: DEFAULT_SOCIAL_ALT }];
 
   return {

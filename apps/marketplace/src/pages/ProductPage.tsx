@@ -11,6 +11,7 @@ import { GameInfoBadges } from '../components/GameInfoBadges.js';
 import { ShelfButtons } from '../components/ShelfButtons.js';
 import { ProductStatsPanel } from '../components/ProductStatsPanel.js';
 import { SimilarProducts } from '../components/SimilarProducts.js';
+import { ProductShareButton } from '../components/ProductShareButton.js';
 import { categoryLabel } from '../marketplace-meta.js';
 import { trackEvent } from '../analytics.js';
 
@@ -109,7 +110,9 @@ export default function ProductPage({
   const minPrice = activeListings.length ? Math.min(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
   const maxPrice = activeListings.length ? Math.max(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
   const currency = activeListings[0]?.currency ?? 'MXN';
-  const canonicalUrl = `https://juegospedia.com/product/${p.slug}`;
+  const shareLocale = intl.locale === 'en' ? 'en' : 'es';
+  const canonicalUrl = `https://juegospedia.com/${shareLocale}/${shareLocale === 'es' ? 'juegos-de-mesa' : 'board-games'}/${p.slug}`;
+  const socialImage = `https://juegospedia.com/api/og?kind=product&slug=${encodeURIComponent(p.slug)}&locale=${shareLocale}`;
   const description = plainText(p.description) ||
     `${p.name}: compara precios, stock, envío y tiendas disponibles en México.`;
   const productJsonLd = {
@@ -189,8 +192,8 @@ export default function ProductPage({
       <SeoHead
         title={`${p.name} — precio y disponibilidad | Juegospedia`}
         description={description.slice(0, 160)}
-        path={`/product/${p.slug}`}
-        image={p.images[0]}
+        path={new URL(canonicalUrl).pathname}
+        image={socialImage}
         type="product"
         jsonLd={productJsonLd}
       />
@@ -341,7 +344,10 @@ export default function ProductPage({
       {/* Shelf */}
       <div className="border-t border-[--border] pt-4 mt-6">
         <p className="font-mono text-xs uppercase tracking-wide text-[--tx-faint] mb-2">{intl.formatMessage({ id: 'product.myShelf' })}</p>
-        <ShelfButtons slug={p.slug} name={p.name} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ShelfButtons slug={p.slug} name={p.name} />
+          <ProductShareButton slug={p.slug} name={p.name} locale={shareLocale} />
+        </div>
       </div>
 
       <SimilarProducts slug={p.slug} onSelect={onProduct} />
