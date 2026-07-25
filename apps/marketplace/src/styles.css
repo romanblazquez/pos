@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
+@import "../../../libs/shared/ui-react/src/swatches.css";
 @import "../../../libs/shared/ui-react/src/palette.css";
 /* Filter-panel chrome (.filter-select, .filter-more) shared with apps/web. Only
    reads tokens this file already defines below — it declares none of its own. */
@@ -48,28 +49,28 @@
 @layer base {
   :root {
     /* Backgrounds */
-    --bg:        #f5efe3;
-    --bg-raised: #fffdf8;
+    --bg:        var(--jp-parchment);
+    --bg-raised: var(--jp-card);
     --bg-subtle: #f1e8d6;
-    --bg-input:  #fffdf8;
+    --bg-input:  var(--jp-card);
     --search-input: #ffffff;
-    --bg-hover:  #ede4d2;
+    --bg-hover:  var(--jp-muted);
 
     /* Borders */
-    --border:       #e6dbc4;
-    --border-strong: #d8ccb3;
+    --border:       var(--jp-line);
+    --border-strong: var(--jp-line-strong);
 
     /* Typography */
-    --tx:       #2b2622;
-    --tx-muted: #6f6557;
-    --tx-faint: #9a8e79;
+    --tx:       var(--jp-ink);
+    --tx-muted: var(--jp-ink-muted);
+    --tx-faint: var(--jp-ink-faint);
 
     /* Brand accent */
-    --accent:          #b4502e;
-    --accent-bg:       #f6e4da;
-    --brand-tile:      #b4502e;
+    --accent:          var(--jp-clay);
+    --accent-bg:       var(--jp-clay-tint);
+    --brand-tile:      var(--jp-clay);
     --brand-mark:      #fbf6ec;
-    --brand-word:      #b4502e;
+    --brand-word:      var(--jp-clay);
     --primary:         var(--accent);
     --primary-foreground: var(--brand-mark);
 
@@ -77,22 +78,22 @@
        best-offer + in-stock emphasis. -solid is the fill (buttons, bars) that
        carries -fg text; plain --success is the readable text/icon/border shade;
        --success-bg is the tinted surface. */
-    --success:         #2c6b43;
-    --success-solid:   #2c6b43;
-    --success-bg:      #e4efe4;
+    --success:         var(--jp-success-text);
+    --success-solid:   var(--jp-success-text);
+    --success-bg:      var(--jp-success-tint);
     --success-fg:      #ffffff;
-    --warning:         #8a5a12;
-    --warning-bg:      #f6ebd2;
+    --warning:         var(--jp-warning-text);
+    --warning-bg:      var(--jp-warning-tint);
     /* Subtle status borders — defined once; color-mix re-resolves against the
        themed --success/--warning at use time, so they track light and dark. */
     --success-border:  color-mix(in srgb, var(--success) 30%, transparent);
     --warning-border:  color-mix(in srgb, var(--warning) 34%, transparent);
-    --error:           #93291f;
-    --error-bg:        #f6e1dc;
-    --error-solid:     #b23a2e;
+    --error:           var(--jp-danger-text);
+    --error-bg:        var(--jp-danger-tint);
+    --error-solid:     var(--jp-danger-mark);
     --error-fg:        #fbf1ed;
-    --info:            #3a5876;
-    --info-bg:         #e3eaf1;
+    --info:            var(--jp-info-text);
+    --info-bg:         var(--jp-info-tint);
 
     /* Aliases for the SEO app's token vocabulary.
        The two apps name the same things differently — this file says --bg/--tx,
@@ -112,38 +113,40 @@
   }
 
   [data-theme="dark"] {
-    --bg:        #16130d;
-    --bg-raised: #28231a;
-    --bg-subtle: #201c14;
-    --bg-input:  #201c14;
-    --search-input: #201c14;
-    --bg-hover:  #312b20;
+    --bg:        var(--jp-parchment);
+    --bg-raised: var(--jp-card);
+    --bg-subtle: var(--jp-surface);
+    --bg-input:  var(--jp-surface);
+    --search-input: var(--jp-surface);
+    --bg-hover:  var(--jp-muted);
 
-    --border:       #3a3428;
-    --border-strong: #4a4233;
+    --border:       var(--jp-line);
+    --border-strong: var(--jp-line-strong);
 
-    --tx:       #f0e8d8;
-    --tx-muted: #b6ab94;
-    --tx-faint: #8c8270;
+    --tx:       var(--jp-ink);
+    --tx-muted: var(--jp-ink-muted);
+    --tx-faint: var(--jp-ink-faint);
 
-    --accent:          #ce6a41;
-    --accent-bg:       #3d2117;
-    --brand-tile:      #ce6a41;
+    --accent:          var(--jp-clay);
+    --accent-bg:       var(--jp-clay-tint);
+    --brand-tile:      var(--jp-clay);
     --brand-mark:      #1a140e;
-    --brand-word:      #ce6a41;
+    --brand-word:      var(--jp-clay);
 
-    --success:         #8cc49c;
+    --success:         var(--jp-success-text);
+    /* Stays the deep light-mode fill on purpose: --jp-success-mark is too
+       bright in dark to carry --success-fg as a solid. */
     --success-solid:   #3e7c53;
-    --success-bg:      #203528;
+    --success-bg:      var(--jp-success-tint);
     --success-fg:      #eaf3ec;
-    --warning:         #e0bc72;
-    --warning-bg:      #33290f;
-    --error:           #e68a7c;
-    --error-bg:        #3d2117;
-    --error-solid:     #d06152;
+    --warning:         var(--jp-warning-text);
+    --warning-bg:      var(--jp-warning-tint);
+    --error:           var(--jp-danger-text);
+    --error-bg:        var(--jp-danger-tint);
+    --error-solid:     var(--jp-danger-mark);
     --error-fg:        #fff1ed;
-    --info:            #8eb1d3;
-    --info-bg:         #26384a;
+    --info:            var(--jp-info-text);
+    --info-bg:         var(--jp-info-tint);
   }
 
   * { box-sizing: border-box; margin: 0; }

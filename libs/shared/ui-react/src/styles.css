@@ -12,6 +12,7 @@
  * Semantic tokens follow the shadcn/ui naming so components stay portable.
  * ──────────────────────────────────────────────────────────────────────────── */
 @import "tailwindcss";
+@import "./swatches.css";
 @import "./palette.css";
 
 @custom-variant dark (&:is(.dark *, .dark), &:where([data-theme=dark], [data-theme=dark] *));
@@ -20,42 +21,42 @@
   --radius: 0.875rem;
 
   /* Surfaces */
-  --background: #f5efe3;
-  --surface: #fbf6ec;
-  --foreground: #2b2622;
-  --card: #fffdf8;
+  --background: var(--jp-parchment);
+  --surface: var(--jp-surface);
+  --foreground: var(--jp-ink);
+  --card: var(--jp-card);
   --card-foreground: #2b2622;
   --popover: #fffdf8;
   --popover-foreground: #2b2622;
 
   /* Brand */
-  --primary: #b4502e;
+  --primary: var(--jp-clay);
   --primary-foreground: #fbf6ec;
-  --forest: #3f5a4a;
-  --gold: #b5852f;
+  --forest: var(--jp-forest);
+  --gold: var(--jp-brass);
 
   /* Neutrals */
   --secondary: #efe7d6;
   --secondary-foreground: #2b2622;
-  --muted: #ede4d2;
-  --muted-foreground: #6f6557;
-  --subtle-foreground: #9a8e79;
+  --muted: var(--jp-muted);
+  --muted-foreground: var(--jp-ink-muted);
+  --subtle-foreground: var(--jp-ink-faint);
   --accent: #f1e8d6;
   --accent-foreground: #2b2622;
 
   /* Status */
-  --destructive: #b23a2e;
+  --destructive: var(--jp-danger-mark);
   --destructive-foreground: #fbf1ed;
-  --success: #3e7c53;
+  --success: var(--jp-success-mark);
   --success-foreground: #eaf3ec;
-  --warning: #c0852f;
+  --warning: var(--jp-warning-mark);
   --warning-foreground: #8a5a12;
-  --info: #46688a;
+  --info: var(--jp-info-mark);
 
   /* Lines & focus */
-  --border: #e6dbc4;
-  --input: #dccfb4;
-  --ring: #b4502e;
+  --border: var(--jp-line);
+  --input: var(--jp-line-input);
+  --ring: var(--jp-clay);
 
   /* Charts */
   --chart-1: #b4502e;
@@ -77,37 +78,37 @@
 
 .dark,
 [data-theme="dark"] {
-  --background: #16130d;
-  --surface: #201c14;
-  --foreground: #f0e8d8;
-  --card: #28231a;
+  --background: var(--jp-parchment);
+  --surface: var(--jp-surface);
+  --foreground: var(--jp-ink);
+  --card: var(--jp-card);
   --card-foreground: #f0e8d8;
   --popover: #28231a;
   --popover-foreground: #f0e8d8;
 
-  --primary: #ce6a41;
+  --primary: var(--jp-clay);
   --primary-foreground: #1a140e;
-  --forest: #5ca877;
-  --gold: #d7a654;
+  --forest: var(--jp-forest);
+  --gold: var(--jp-brass);
 
   --secondary: #312b20;
   --secondary-foreground: #f0e8d8;
-  --muted: #312b20;
-  --muted-foreground: #b6ab94;
-  --subtle-foreground: #8c8270;
+  --muted: var(--jp-muted);
+  --muted-foreground: var(--jp-ink-muted);
+  --subtle-foreground: var(--jp-ink-faint);
   --accent: #1e3a2e;
   --accent-foreground: #f0e8d8;
 
-  --destructive: #d06152;
+  --destructive: var(--jp-danger-mark);
   --destructive-foreground: #fff1ed;
-  --success: #5ca877;
+  --success: var(--jp-success-mark);
   --success-foreground: #eaf3ec;
-  --warning: #d7a654;
+  --warning: var(--jp-warning-mark);
   --warning-foreground: #f0d79d;
 
-  --border: #3a3428;
-  --input: #4a4233;
-  --ring: #ce6a41;
+  --border: var(--jp-line);
+  --input: var(--jp-line-input);
+  --ring: var(--jp-clay);
 
   --chart-1: oklch(0.696 0.143 163);
   --chart-2: oklch(0.696 0.17 162);

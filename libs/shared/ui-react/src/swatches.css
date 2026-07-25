@@ -1,0 +1,101 @@
+/* Juegospedia raw swatches — the design system's Foundations values, once.
+ *
+ * This file holds the *values*. It deliberately holds no semantic names: each
+ * app keeps its own vocabulary (`apps/web` + ui-react speak shadcn's
+ * `--background/--foreground/--success`; `apps/marketplace` speaks
+ * `--bg/--tx/--success`) and maps it onto these. See `palette.css` for the
+ * cross-app component contracts, which sit one layer above.
+ *
+ * ── Why status colours come in three shades ─────────────────────────────────
+ * A status colour does three different jobs and cannot use one hex for all of
+ * them. The design system already distinguishes them in the badge spec, where
+ * in-stock is `--commerce-fg: #2c6b43` (the label) over `--commerce-bg:
+ * #e4efe4` (the tint) with `--commerce-mark: #3e7c53` (the dot):
+ *
+ *   -text   readable body/label colour. Must clear 4.5:1 on -tint.
+ *   -mark   dots, bars, fills, icons — large shapes. 3:1 on -tint is enough.
+ *   -tint   the surface those two sit on.
+ *
+ * This distinction is why the two apps disagreed on `--success` for so long:
+ * ui-react pointed it at the mark shade, marketplace at the text shade, and
+ * "unifying" them by picking one would have pushed success labels to 4.22:1 and
+ * warning labels to 2.67:1 — both below AA. Point each app at the shade that
+ * matches the job instead.
+ *
+ * Dark mode inverts the relationship: -text becomes the *lighter* shade,
+ * because it now sits on a dark tint.
+ */
+:root {
+  /* Surfaces & ink */
+  --jp-parchment: #f5efe3;
+  --jp-surface: #fbf6ec;
+  --jp-card: #fffdf8;
+  --jp-muted: #ede4d2;
+  --jp-line: #e6dbc4;
+  --jp-line-strong: #d8ccb3;
+  /* Input borders run a hair warmer than -strong. Near-identical, genuinely
+     distinct: collapsing the two shifts every field outline. */
+  --jp-line-input: #dccfb4;
+  --jp-ink: #2b2622;
+  --jp-ink-muted: #6f6557;
+  --jp-ink-faint: #9a8e79;
+
+  /* Brand */
+  --jp-clay: #b4502e;
+  --jp-clay-tint: #f6e4da;
+  --jp-forest: #3f5a4a;
+  --jp-brass: #b5852f;
+
+  /* Status — see the note above before changing any of these. */
+  --jp-success-text: #2c6b43;
+  --jp-success-mark: #3e7c53;
+  --jp-success-tint: #e4efe4;
+
+  --jp-warning-text: #8a5a12;
+  --jp-warning-mark: #c0852f;
+  --jp-warning-tint: #f6ebd2;
+
+  --jp-info-text: #3a5876;
+  --jp-info-mark: #46688a;
+  --jp-info-tint: #e3eaf1;
+
+  --jp-danger-text: #93291f;
+  --jp-danger-mark: #b23a2e;
+  --jp-danger-tint: #f6e1dc;
+}
+
+.dark,
+[data-theme="dark"] {
+  --jp-parchment: #16130d;
+  --jp-surface: #201c14;
+  --jp-card: #28231a;
+  --jp-muted: #312b20;
+  --jp-line: #3a3428;
+  --jp-line-strong: #4a4233;
+  --jp-line-input: #4a4233;
+  --jp-ink: #f0e8d8;
+  --jp-ink-muted: #b6ab94;
+  --jp-ink-faint: #8c8270;
+
+  --jp-clay: #ce6a41;
+  --jp-clay-tint: #3d2117;
+  --jp-forest: #5ca877;
+  --jp-brass: #d7a654;
+
+  /* -text is now the lighter shade of each pair: it sits on a dark tint. */
+  --jp-success-text: #8cc49c;
+  --jp-success-mark: #5ca877;
+  --jp-success-tint: #203528;
+
+  --jp-warning-text: #e0bc72;
+  --jp-warning-mark: #d7a654;
+  --jp-warning-tint: #33290f;
+
+  --jp-info-text: #8eb1d3;
+  --jp-info-mark: #46688a;
+  --jp-info-tint: #26384a;
+
+  --jp-danger-text: #e68a7c;
+  --jp-danger-mark: #d06152;
+  --jp-danger-tint: #3d2117;
+}
