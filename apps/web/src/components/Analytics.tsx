@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ANALYTICS_CONSENT_EVENT,
   BrowserAnalytics,
@@ -23,11 +23,16 @@ declare global {
 
 export function Analytics({ locale = 'es' }: { locale?: 'es' | 'en' }) {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const analytics = useMemo(() => new BrowserAnalytics({
     endpoint: API,
     policyVersion: process.env.NEXT_PUBLIC_PRIVACY_POLICY_VERSION ?? '2026-07',
     locale,
   }), [locale]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const apply = (state: ConsentState) => updateGoogleAdapter(state, {
@@ -67,5 +72,5 @@ export function Analytics({ locale = 'es' }: { locale?: 'es' | 'en' }) {
     };
   }, [analytics]);
 
-  return <ConsentBanner analytics={analytics} locale={locale} />;
+  return mounted ? <ConsentBanner analytics={analytics} locale={locale} /> : null;
 }
