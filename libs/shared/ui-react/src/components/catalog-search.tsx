@@ -41,7 +41,19 @@ export interface CatalogSearchProps {
   value: string;
   onValueChange: (value: string) => void;
   onSearch: (value: string) => void;
-  /** Optional applied-query reset. Without it, clear only edits local input. */
+  /**
+   * Resets the *applied* query behind the field — the results, not the textbox.
+   *
+   * Clearing only calls `onValueChange('')`, which empties the input and leaves
+   * whatever the page is already showing. On a results view that reads as
+   * broken: the box is empty but the list is still filtered. Pass this wherever
+   * the field reflects an applied query so clear puts the full listing back.
+   *
+   * Deliberately opt-in, and it should be conditional on there being something
+   * to restore. A field that leads *into* search (a home hero) has no applied
+   * query, so navigating on clear would teleport the user to a results page
+   * they never asked for.
+   */
   onClear?: () => void;
   onProduct: (slug: string) => void;
   locale?: 'es' | 'en';

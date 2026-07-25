@@ -44,6 +44,11 @@ export function CatalogSearchField({
       value={value}
       onValueChange={setValue}
       onSearch={runSearch}
+      // Clearing the box has to put the unfiltered listing back, or the field
+      // reads empty while the page still shows results for the old term. Guarded
+      // on initialValue: that is only set where a query is actually applied, so
+      // clearing the home hero stays a local edit instead of a navigation.
+      onClear={initialValue.trim() ? () => runSearch('') : undefined}
       onProduct={(slug) => router.push(`${productBase}/${slug}`)}
       locale={locale}
       placeholder={placeholder}

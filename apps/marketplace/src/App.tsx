@@ -440,6 +440,12 @@ function Header({
             value={q}
             onValueChange={setQ}
             onSearch={runSearch}
+            // Goes straight to onSearch rather than through runSearch, which
+            // drops empty terms so Enter on a blank box doesn't navigate.
+            // Clearing is the opposite intent: an empty term *is* the reset, and
+            // q:'' renders the full catalogue. Only offered while a search is
+            // actually applied.
+            onClear={searchQuery ? () => onSearch('') : undefined}
             onProduct={onProduct}
             placeholder={intl.formatMessage({ id: 'header.searchPlaceholder' })}
             globalShortcut
