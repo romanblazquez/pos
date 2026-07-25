@@ -9,8 +9,9 @@ import {
 } from '@retail-os/ui-react';
 import { AlertCircle, BarChart3, Download, Search, ShieldCheck, Users } from 'lucide-react';
 import { adminApi, API_BASE } from '../auth/api-client.js';
+import { GovernanceCatalog } from './GovernanceCatalog.js';
 
-type AnalyticsTab = 'overview' | 'visitors' | 'search' | 'ux' | 'consent' | 'advertising';
+type AnalyticsTab = 'overview' | 'visitors' | 'search' | 'ux' | 'consent' | 'advertising' | 'governance';
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await adminApi.fetch(`${API_BASE}/api/v1/analytics/admin${path}`);
@@ -57,6 +58,7 @@ const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'ux', label: 'UX' },
   { id: 'consent', label: 'Consentimiento' },
   { id: 'advertising', label: 'Publicidad' },
+  { id: 'governance', label: 'Gobernanza de datos' },
 ];
 
 export function AnalyticsView() {
@@ -94,6 +96,7 @@ export function AnalyticsView() {
         <TabsContent value="ux"><EventPanel query={query} title="Diagnóstico UX" filters={['web_vital', 'client_error']} /></TabsContent>
         <TabsContent value="consent"><ConsentPanel query={query} /></TabsContent>
         <TabsContent value="advertising"><EventPanel query={query} title="Publicidad y afiliación" filters={['affiliate_click', 'ad_impression', 'ad_click']} /></TabsContent>
+        <TabsContent value="governance"><GovernanceCatalog /></TabsContent>
       </Tabs>
     </div>
   );
