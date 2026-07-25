@@ -87,7 +87,9 @@ Rules that are load-bearing:
 - Ratios come from §02: `[shelf] 1:1` for tiles, `[hero] 16:9` for the landing
   banner. Not negotiable — they're why the grid is CLS-free.
 - A shelf with no art falls back to tint + motif. That is the **designed
-  placeholder**, not a bug — but see the trap in §5.
+  placeholder**, not a bug — but see the trap in §5. As of the family/deduction/
+  sports/trains/history/other batch, no shelf is on the fallback; it now only
+  covers a shelf added before its art.
 
 ---
 
@@ -106,13 +108,19 @@ fallback), wired up via `<picture>`:
 
 **The masters are not in the repo.** They're ~2.3 MB PNGs (1448×1086) that
 arrived as chat uploads; `~/.claude/uploads/…` is ephemeral. The `MASTERS` map in
-the script is the only record of which render belongs to which shelf — **archive
-the masters next to the design project**, or re-rendering a single shelf means
-regenerating the whole set from scratch.
+the script is the only record of which render belongs to which shelf. All 22 are
+archived on the Pi at `~/design-masters/category-art/` — **that copy is not
+backed up anywhere**; keep it, or re-rendering one shelf means regenerating the
+whole set from scratch.
 
 Sizing was measured, not guessed: tiles render 175 px (mobile 2-up) to 286 px
 (desktop 4-up). A flat 640w over-served every slot ~2.2x. Current cost:
-**16 tiles ≈ 196 KB AVIF** on the category page (~12 KB/tile).
+**22 tiles ≈ 316 KB AVIF** at 360w on the category page (~14 KB/tile), and the
+tiles below the fold are `loading="lazy"`.
+
+Re-running the script over the full masters set reproduces the committed
+derivatives byte-for-byte, so a rebuild for one new shelf leaves the rest
+untouched in the diff.
 
 If you add art, the script **fails** when a built master isn't referenced in
 `CATEGORY_IDENTITY`. That guard exists because `solo` and `campaign` shipped with

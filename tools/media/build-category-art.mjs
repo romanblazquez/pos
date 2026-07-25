@@ -45,6 +45,14 @@ const MASTERS = {
   '9961ad91-1000021453.png': 'deckbuilding', // faction decks + market row
   '0d21513e-1000021454.png': 'solo',         // one position, one warm light
   'a88a3d4c-1000021455.png': 'campaign',     // sealed envelopes, campaign log, chapters
+  // The six shelves added after the original sixteen. Rendered in a later batch
+  // and named by shelf key rather than by export hash.
+  'family.png':     'family',     // bright cottages and flowers, a table for all ages
+  'deduction.png':  'deduction',  // hidden roles behind screens, keyhole tokens
+  'history.png':    'history',    // antique map, compass, hourglass, monuments
+  'trains.png':     'trains',     // rail network across stations and freight
+  'sports.png':     'sports',     // stadium track, runners, event tiles
+  'other.png':      'other',      // no single theme — components as their own subject
 };
 
 // Tiles render 175px (mobile 2-up) to 286px (desktop 4-up), so 360/640 covers

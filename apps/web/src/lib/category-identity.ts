@@ -11,10 +11,10 @@
 // is deliberately never rendered to players.
 //
 // Tints/accents for the eleven categories the design system specifies are copied
-// verbatim. The remaining five (deckbuilding, horror, scifi, abstract, wargame)
-// predate the art direction and are derived here in the same low-chroma
-// parchment family — marked `derived` so they can be replaced when the design
-// system covers them.
+// verbatim. The other eleven fall outside its swatch set and are derived here in
+// the same low-chroma parchment family — marked `derived` so they can be
+// replaced when the design system covers them. Every shelf carries commissioned
+// art, so a derived tint only surfaces as the wash behind the card body.
 import type { Theme } from './themes';
 
 export interface CategoryIdentity {
@@ -66,15 +66,17 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
 
   // ── Shelves added after the original sixteen ─────────────────────────────
   // Same low-chroma parchment discipline, each borrowing the semantic family of
-  // its nearest neighbour so art fallback stays coherent. No commissioned
-  // illustration yet, so these render as tint + motif — the designed placeholder.
-  family:         { family: 'party',       tint: '#f3e6cf', accent: '#96591b', motif: 'family', derived: true },
-  deduction:      { family: 'strategy',    tint: '#e5e2ec', accent: '#4a4270', motif: 'deduction', derived: true },
-  sports:         { family: 'party',       tint: '#e8e9dc', accent: '#4d6034', motif: 'sports', derived: true },
-  trains:         { family: 'economic',    tint: '#e6e3da', accent: '#6a5236', motif: 'trains', derived: true },
-  history:        { family: 'strategy',    tint: '#ece5d4', accent: '#7a5a2a', motif: 'history', derived: true },
-  // The catch-all shelf: deliberately the quietest card on the index.
-  other:          { family: 'abstract',    tint: '#eae7e0', accent: '#6b6357', motif: 'other', derived: true },
+  // its nearest neighbour so art fallback stays coherent. Tint and accent are
+  // still derived, but each now carries commissioned art in the same register as
+  // the original sixteen, so no shelf on the index is left on its motif.
+  family:         { family: 'party',       tint: '#f3e6cf', accent: '#96591b', motif: 'family', art: '/categories/family.webp', derived: true },
+  deduction:      { family: 'strategy',    tint: '#e5e2ec', accent: '#4a4270', motif: 'deduction', art: '/categories/deduction.webp', derived: true },
+  sports:         { family: 'party',       tint: '#e8e9dc', accent: '#4d6034', motif: 'sports', art: '/categories/sports.webp', derived: true },
+  trains:         { family: 'economic',    tint: '#e6e3da', accent: '#6a5236', motif: 'trains', art: '/categories/trains.webp', derived: true },
+  history:        { family: 'strategy',    tint: '#ece5d4', accent: '#7a5a2a', motif: 'history', art: '/categories/history.webp', derived: true },
+  // The catch-all shelf. Its art is the only one with no theme to depict, so it
+  // shows components as their own subject — still the quietest card on the index.
+  other:          { family: 'abstract',    tint: '#eae7e0', accent: '#6b6357', motif: 'other', art: '/categories/other.webp', derived: true },
 };
 
 /** Identity for a theme, falling back to the neutral parchment wash. */
