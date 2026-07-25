@@ -27,7 +27,10 @@ function setup() {
     language: { findFirst: vi.fn() },
     entityLocalization: { findMany: vi.fn() },
   };
-  const search = { search: vi.fn().mockResolvedValue({ hits: [], total: 0 }) };
+  const search = {
+    search: vi.fn().mockResolvedValue({ hits: [], total: 0 }),
+    categoryCounts: vi.fn().mockResolvedValue(new Map()),
+  };
   const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
   const service = new MarketplaceService(prisma as never, search as never, semantic as never);
   return { service, prisma, search, semantic };
@@ -103,6 +106,34 @@ describe('MarketplaceService search filters', () => {
     expect(prisma.language.findFirst).toHaveBeenCalledWith({
       where: { OR: [{ code: 'es' }, { iso6391: 'es' }] },
     });
+  });
+
+  it('resolves a browse category through the search index, not the narrower DB path', async () => {
+    const { service, prisma, search } = setup();
+    search.search.mockResolvedValue({
+      total: 466,
+      hits: [{ ...product, categorySlugs: ['coop'], language: 'es', bggWeight: 2.3, totalListings: 0, inStockListings: 0 }],
+    });
+
+    const result = await service.searchProducts({ category: 'coop', limit: 48, offset: 96 });
+
+    expect(search.search).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'coop', limit: 48, offset: 96,
+    }));
+    // The Prisma path only sees verified products with an active listing, so
+    // taking it would shrink the category and collapse its pagination.
+    expect(prisma.mktProduct.findMany).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ total: 466, source: 'search' });
+  });
+
+  it('serves a page past the end as empty instead of falling back to the DB', async () => {
+    const { service, prisma, search } = setup();
+    search.search.mockResolvedValue({ total: 466, hits: [] });
+
+    const result = await service.searchProducts({ category: 'coop', limit: 48, offset: 4800 });
+
+    expect(prisma.mktProduct.findMany).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ results: [], total: 466 });
   });
 
   it('uses semantic retrieval only for an unfiltered natural-language query', async () => {

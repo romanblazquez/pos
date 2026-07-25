@@ -14,6 +14,13 @@ export interface ProductDocument {
   /** Spanish (es-MX) curated body, so Spanish queries match. Falls back to `description`. */
   descriptionEs?: string;
   category: string;
+  /**
+   * Normalized browse-category slugs from the materialized taxonomy
+   * (mkt_product_category → category.normalizedName), e.g. ['strategy','euro'].
+   * Indexed so a category page filters the SAME set the storefront searches
+   * instead of falling back to a Prisma query with narrower visibility rules.
+   */
+  categorySlugs?: string[];
   tags: string[];
   language: string;
   minPlayers: number;
@@ -50,6 +57,7 @@ const COLLECTION_SCHEMA = {
     { name: 'description',     type: 'string'  as const, optional: true },
     { name: 'descriptionEs',   type: 'string'  as const, optional: true },
     { name: 'category',        type: 'string'  as const, facet: true },
+    { name: 'categorySlugs',   type: 'string[]' as const, facet: true, optional: true },
     { name: 'tags',            type: 'string[]' as const, facet: true },
     { name: 'language',        type: 'string'  as const, facet: true, optional: true },
     { name: 'minPlayers',      type: 'int32'   as const, facet: true, optional: true },
@@ -110,9 +118,21 @@ export class TypesenseService implements OnModuleInit {
         await this.client.collections(COLLECTION).delete();
         await this.client.collections().create(COLLECTION_SCHEMA);
         this.log.log(`Typesense collection recreated (${polluted ? `pollution: ${docCount} docs` : 'schema updated'})`);
-      } else {
-        this.log.log('Typesense collection ready');
+        return;
       }
+      // An added optional field is applied in place — recreating for it would
+      // drop every indexed product the boot reindex does not cover (it reindexes
+      // the verified catalogue only), silently shrinking the storefront. Existing
+      // docs simply carry no slugs until their next sync; the ranking scheduler's
+      // `reconcileBrowseCategories` pass backfills them.
+      if (!fields.some((f) => f.name === 'categorySlugs')) {
+        await this.client.collections(COLLECTION).update({
+          fields: [{ name: 'categorySlugs', type: 'string[]', facet: true, optional: true }],
+        } as never);
+        this.log.log('Typesense collection extended with categorySlugs');
+        return;
+      }
+      this.log.log('Typesense collection ready');
     } catch {
       try {
         await this.client.collections().create(COLLECTION_SCHEMA);
@@ -151,6 +171,78 @@ export class TypesenseService implements OnModuleInit {
     }
   }
 
+  /**
+   * How many indexed products each category holds — browse-taxonomy slugs and
+   * raw product types alike, keyed by the value a `category` filter accepts.
+   * Taken from the index so a category's advertised count matches what its page
+   * actually lists. Empty when Typesense is unreachable, so callers can fall
+   * back to counting in the database.
+   */
+  async categoryCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    try {
+      const result = await this.client.collections(COLLECTION).documents().search({
+        q: '*',
+        query_by: 'name',
+        per_page: 1,
+        facet_by: 'category,categorySlugs',
+        // Default is 10 — far short of the browse taxonomy.
+        max_facet_values: 200,
+      });
+      for (const facet of result.facet_counts ?? []) {
+        for (const value of facet.counts ?? []) counts.set(value.value, value.count);
+      }
+    } catch (err) {
+      this.log.warn(`Could not read category counts: ${String(err)}`);
+    }
+    return counts;
+  }
+
+  /**
+   * Every indexed document's browse-category slugs, keyed by product id (a
+   * document that predates the field maps to an empty array). Lets a caller
+   * reconcile the index against the database's taxonomy without re-reading the
+   * whole catalogue. Empty when Typesense is unreachable.
+   */
+  async allCategorySlugs(): Promise<Map<string, string[]>> {
+    const slugsById = new Map<string, string[]>();
+    const perPage = 250;
+    try {
+      for (let page = 1; page <= Math.ceil(STOREFRONT_MAX / perPage); page += 1) {
+        const result = await this.client.collections(COLLECTION).documents().search({
+          q: '*',
+          include_fields: 'id,categorySlugs',
+          per_page: perPage,
+          page,
+        });
+        const hits = result.hits ?? [];
+        for (const hit of hits) {
+          const doc = hit.document as { id: string; categorySlugs?: string[] };
+          slugsById.set(doc.id, doc.categorySlugs ?? []);
+        }
+        if (hits.length < perPage) break;
+      }
+    } catch (err) {
+      this.log.warn(`Could not read indexed categories: ${String(err)}`);
+    }
+    return slugsById;
+  }
+
+  /**
+   * Patch one field on a document that is ALREADY indexed. Unlike an upsert this
+   * cannot add a product to the storefront index (Typesense 404s on a missing
+   * document), which is exactly what a backfill wants: refresh what is there,
+   * never widen what is searchable.
+   */
+  async updateCategorySlugs(id: string, categorySlugs: string[]): Promise<boolean> {
+    try {
+      await this.client.collections(COLLECTION).documents(id).update({ categorySlugs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async deleteProduct(id: string): Promise<void> {
     try {
       await this.client.collections(COLLECTION).documents(id).delete();
@@ -185,7 +277,10 @@ export class TypesenseService implements OnModuleInit {
     const perPage = Math.min(Math.max(Math.trunc(limit), 1), 250);
 
     const filterParts: string[] = [];
-    if (category)    filterParts.push(`category:=${category}`);
+    // `category` accepts either a browse-taxonomy slug ('strategy', 'two-player')
+    // or the raw product type ('board-game', 'expansion'), because both back a
+    // real category URL. Values can contain spaces/dashes, so backtick-quote them.
+    if (category)    filterParts.push(`(category:=\`${category}\` || categorySlugs:=\`${category}\`)`);
     if (minPlayers)  filterParts.push(`minPlayers:<=${minPlayers} && maxPlayers:>=${minPlayers}`);
     if (minPrice)    filterParts.push(`minPriceMinor:>=${minPrice}`);
     if (maxPrice)    filterParts.push(`minPriceMinor:<=${maxPrice}`);
@@ -207,7 +302,7 @@ export class TypesenseService implements OnModuleInit {
         sort_by: sortBy,
         per_page: perPage,
         page: Math.floor(offset / perPage) + 1,
-        facet_by: 'category,tags,language,minPlayers',
+        facet_by: 'category,categorySlugs,tags,language,minPlayers',
         highlight_full_fields: 'name',
       });
 

@@ -209,6 +209,7 @@ export class MktCatalogService {
           where: { active: true },
           select: { priceMinorUnits: true, stockStatus: true },
         },
+        categories: { select: { category: { select: { normalizedName: true } } } },
       },
     });
     if (!product) return;
@@ -235,6 +236,7 @@ export class MktCatalogService {
       description: en?.description ?? product.description ?? '',
       descriptionEs: es?.description ?? product.description ?? '',
       category: product.category,
+      categorySlugs: product.categories.map((link) => link.category.normalizedName),
       tags: product.tags,
       language: product.language ?? '',
       minPlayers: product.minPlayers ?? 0,

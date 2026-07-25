@@ -502,6 +502,11 @@ export class BggEnrichmentWorker {
           where: { active: true },
           select: { priceMinorUnits: true, stockStatus: true },
         },
+        // Browse-category membership, which the enrichment we just wrote may have
+        // changed (the DB trigger re-derives it from tags/player counts). Category
+        // pages filter the index on these slugs, so a document written without
+        // them would leave the product missing from its own category page.
+        categories: { select: { category: { select: { normalizedName: true } } } },
       },
     });
     if (!product) return;
@@ -513,6 +518,7 @@ export class BggEnrichmentWorker {
       publisher: product.publisher ?? '',
       description: product.description ?? '',
       category: product.category,
+      categorySlugs: product.categories.map((link) => link.category.normalizedName),
       tags: product.tags,
       language: product.language ?? '',
       minPlayers: product.minPlayers ?? 0,

@@ -81,10 +81,42 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
       if (indexed >= 0 && indexed < verified) {
         this.log.log(`Search index has ${indexed}/${verified} verified products — reindexing the verified catalogue`);
         void this.reindexVerifiedCatalog();
+      } else if (indexed > 0) {
+        void this.reconcileBrowseCategories();
       }
     } catch (error) {
       this.log.warn(`Could not check search index on boot: ${String(error)}`);
     }
+  }
+
+  /**
+   * Bring every indexed document's `categorySlugs` in line with the database's
+   * materialized taxonomy. Needed because category pages filter on that field:
+   * documents indexed before it existed, or whose membership changed while the
+   * API was down, would otherwise be missing from their own category page.
+   *
+   * Patches documents in place, so it can never add a product to the storefront
+   * index, and no-ops once the index agrees with the database — safe on boot.
+   */
+  private async reconcileBrowseCategories(): Promise<void> {
+    const indexedSlugs = await this.search.allCategorySlugs();
+    if (indexedSlugs.size === 0) return;
+
+    const ids = [...indexedSlugs.keys()];
+    let patched = 0;
+    for (let i = 0; i < ids.length; i += 500) {
+      const products = await this.prisma.mktProduct.findMany({
+        where: { id: { in: ids.slice(i, i + 500) } },
+        select: { id: true, categories: { select: { category: { select: { normalizedName: true } } } } },
+      });
+      for (const product of products) {
+        const expected = product.categories.map((link) => link.category.normalizedName).sort();
+        const current = [...(indexedSlugs.get(product.id) ?? [])].sort();
+        const same = expected.length === current.length && expected.every((slug, at) => slug === current[at]);
+        if (!same && await this.search.updateCategorySlugs(product.id, expected)) patched += 1;
+      }
+    }
+    if (patched > 0) this.log.log(`Browse categories reconciled for ${patched}/${ids.length} indexed products`);
   }
 
   /**
@@ -231,6 +263,12 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
     // After updating all listings, reindex changed products in Typesense
     await this.reindexProducts();
 
+    // The hourly pass only reindexes products WITH an active listing, so an
+    // offer-less product whose taxonomy changed (enrichment gave it tags) would
+    // keep stale `categorySlugs` until the next API restart. This closes that
+    // window; it is a no-op when the index already agrees with the database.
+    await this.reconcileBrowseCategories();
+
     const ms = Date.now() - startedAt;
     this.log.log(`Ranking pass complete: ${processed} ok, ${failed} failed, ${ms}ms`);
   }
@@ -281,6 +319,9 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
             stockStatus: true,
           },
         },
+        // Browse-category membership, so a category page filters the index
+        // rather than dropping to a narrower Prisma query.
+        categories: { select: { category: { select: { normalizedName: true } } } },
       },
     });
 
@@ -311,6 +352,7 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
       description: en?.description ?? product.description ?? '',
       descriptionEs: es?.description ?? product.description ?? '',
       category: product.category,
+      categorySlugs: product.categories.map((link) => link.category.normalizedName),
       tags: product.tags,
       language: product.language ?? '',
       minPlayers: product.minPlayers ?? 0,

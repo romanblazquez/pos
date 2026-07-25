@@ -139,11 +139,15 @@ export class MarketplaceService {
       return this.semanticSearchProducts(q, locale, limit);
     }
 
-    // Typesense does not index the normalized taxonomy or the long-tail SEO
-    // facets yet. Route those filters through Prisma so a requested facet is
-    // never silently ignored; the ordinary query remains fast and ranked.
+    // Typesense does not index the long-tail SEO facets yet. Route those filters
+    // through Prisma so a requested facet is never silently ignored; the ordinary
+    // query remains fast and ranked. `category` is NOT one of them any more — the
+    // index carries `categorySlugs`, so a category page pages over the same
+    // catalogue the rest of the storefront searches (the Prisma path sees only
+    // verified products with an active listing, which made a category of 466
+    // games render as 11 and its pagination collapse to a single page).
     const databaseOnlyFilters = Boolean(
-      params.category || params.publisher || params.yearPublished || params.minAge || params.playTimeMinutes,
+      params.publisher || params.yearPublished || params.minAge || params.playTimeMinutes,
     );
     const { hits, total } = databaseOnlyFilters ? { hits: [], total: 0 } : await this.search.search({
       q,
@@ -159,7 +163,11 @@ export class MarketplaceService {
       offset,
     });
 
-    if (hits.length > 0) {
+    // `total > 0` rather than `hits.length > 0`: a page past the end of a real
+    // result set has no hits but is still a correct, empty page. Handing it to
+    // the Prisma fallback instead would answer the last+1 page of a category
+    // with a different, much narrower set — and a different total.
+    if (total > 0) {
       const localizations = await this.getProductLocalizations(hits.map((hit) => hit.id), locale);
       const localizedHits = hits.map((hit) => {
         const localized = localizations.get(hit.id);
@@ -338,8 +346,23 @@ export class MarketplaceService {
     return { products, mechanics, publishers, categories };
   }
 
-  /** Distinct categories with at least one active listing — backs the marketplace's category-browse tiles. */
+  /**
+   * Categories that currently hold products, with counts — backs the browse
+   * tiles and filter chips.
+   *
+   * Counted from the search index, because that is the set a category page
+   * paginates over: counting verified-with-active-listing products instead made
+   * a chip read "11" and its page then list 886. The database aggregation stays
+   * as the fallback for an empty or unreachable index.
+   */
   async getCategories(): Promise<{ category: string; count: number }[]> {
+    const indexed = await this.search.categoryCounts();
+    if (indexed.size > 0) {
+      return [...indexed.entries()]
+        .map(([category, count]) => ({ category, count }))
+        .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category));
+    }
+
     const [normalized, legacy] = await Promise.all([
       this.prisma.category.findMany({
         where: { marketplaceProducts: { some: { product: { canonicalStatus: 'verified', listings: { some: { active: true } } } } } },
