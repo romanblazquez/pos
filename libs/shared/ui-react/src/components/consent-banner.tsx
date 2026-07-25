@@ -22,8 +22,9 @@ export function ConsentBanner({
     // Next renders without browser storage, so its server snapshot is always
     // undecided. Reconcile once hydrated instead of reopening over a stored
     // decision.
-    setDecisions(analytics.getConsent().decisions);
-    setOpen(!hasDecided(analytics.getConsent()));
+    const restored = analytics.restoreConsent();
+    setDecisions(restored.decisions);
+    setOpen(!hasDecided(restored));
   }, [analytics]);
 
   React.useEffect(() => {

@@ -60,6 +60,11 @@ export class BrowserAnalytics {
   }
 
   getConsent(): ConsentState { return this.consent; }
+  restoreConsent(): ConsentState {
+    this.consent = loadConsent(this.options.policyVersion, this.options.regime);
+    if (allows(this.consent, 'visitorId')) this.ensureIdentifiers();
+    return this.consent;
+  }
   /** Available only after analytics consent, solely for the authenticated link endpoint. */
   getVisitorIdForIdentityLink(): string | undefined { return this.visitorId; }
 
