@@ -33,6 +33,12 @@ export function ConsentBanner({
     void analytics.setConsent(applyDecisions(analytics.getConsent(), next, 'explicit'));
     setOpen(false);
   };
+  const dismiss = () => {
+    // Closing is a real privacy choice: persist necessary-only rather than
+    // hiding an undecided banner that immediately returns on navigation.
+    void analytics.setConsent(withdrawAll(analytics.getConsent()));
+    setOpen(false);
+  };
   const labels: [(Exclude<keyof ConsentDecisions, 'necessary' | 'sessionReplay'> & string), string][] = [
     ['functional', es ? 'Funcionalidad' : 'Functionality'],
     ['analytics', es ? 'Analítica de uso' : 'Usage analytics'],
@@ -51,7 +57,17 @@ export function ConsentBanner({
         zIndex: 100, maxWidth: '42rem', marginInline: 'auto',
       }}
       role="dialog" aria-modal="false" aria-label={es ? 'Privacidad' : 'Privacy'}>
-      <h2 className="font-display text-lg font-bold">{es ? 'Tu privacidad, tus reglas' : 'Your privacy, your rules'}</h2>
+      <button
+        type="button"
+        aria-label={es ? 'Cerrar y usar solo cookies necesarias' : 'Close and use necessary cookies only'}
+        title={es ? 'Cerrar' : 'Close'}
+        onClick={dismiss}
+        className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg border border-[var(--border)] text-xl leading-none"
+        style={{ position: 'absolute', right: '0.75rem', top: '0.75rem' }}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+      <h2 className="pr-10 font-display text-lg font-bold">{es ? 'Tu privacidad, tus reglas' : 'Your privacy, your rules'}</h2>
       <p className="mt-2 text-sm text-[var(--muted-foreground)]">
         {es
           ? 'Usamos analítica propia para mejorar Juegospedia. Lo opcional permanece apagado hasta que tú lo aceptes.'
@@ -74,7 +90,7 @@ export function ConsentBanner({
         <button type="button" className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)]"
           onClick={() => save(grantAll())}>{es ? 'Aceptar opcionales' : 'Accept optional'}</button>
         <button type="button" className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold"
-          onClick={() => { void analytics.setConsent(withdrawAll(analytics.getConsent())); setOpen(false); }}>
+          onClick={dismiss}>
           {es ? 'Solo necesarias' : 'Necessary only'}
         </button>
         <button type="button" className="px-3 py-2 text-sm underline"
