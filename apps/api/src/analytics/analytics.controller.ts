@@ -18,8 +18,12 @@ export class AnalyticsController {
   @Post('collect')
   @Public()
   @ApiOperation({ summary: 'Consent-gated first-party browser event collector' })
-  collect(@Body() body: CollectAnalyticsDto) {
-    return this.service.collect(body);
+  collect(@Body() body: CollectAnalyticsDto, @Req() request: Request) {
+    return this.service.collect(body, {
+      countryCode: request.header('cf-ipcountry'),
+      regionCode: request.header('cf-region-code'),
+      userAgent: request.header('user-agent'),
+    });
   }
 
   @Post('consent')

@@ -32,7 +32,9 @@ interface Visitor {
   lastSeenAt: string;
   linkedAt?: string;
   countryCode?: string;
+  regionCode?: string;
   locale?: string;
+  sessions: { deviceClass?: string; browserFamily?: string; osFamily?: string }[];
   _count: { sessions: number; consentRecords: number };
 }
 
@@ -156,12 +158,19 @@ function VisitorsPanel() {
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,.8fr)]">
       <Card className="overflow-hidden py-0"><Table>
         <TableHeader><TableRow>
-          <TableHead>Visitante</TableHead><TableHead>Última actividad</TableHead><TableHead>Sesiones</TableHead><TableHead>Cuenta</TableHead>
+          <TableHead>Visitante</TableHead><TableHead>Ubicación</TableHead><TableHead>Dispositivo</TableHead><TableHead>Última actividad</TableHead><TableHead>Sesiones</TableHead><TableHead>Cuenta</TableHead>
         </TableRow></TableHeader>
         <TableBody>{(data ?? []).map((visitor) => (
           <TableRow key={visitor.id} onClick={() => setSelected(visitor.id)}
             data-state={selected === visitor.id ? 'selected' : undefined} className="cursor-pointer">
             <TableCell className="font-mono text-xs">{visitor.id.slice(0, 12)}…</TableCell>
+            <TableCell>{visitor.countryCode
+              ? <Badge variant="outline">{[visitor.regionCode, visitor.countryCode].filter(Boolean).join(' · ')}</Badge>
+              : <span className="text-muted-foreground">No disponible</span>}</TableCell>
+            <TableCell>
+              <div className="text-xs font-medium">{visitor.sessions[0]?.deviceClass ?? 'Desconocido'}</div>
+              <div className="text-xs text-muted-foreground">{[visitor.sessions[0]?.browserFamily, visitor.sessions[0]?.osFamily].filter(Boolean).join(' · ') || '—'}</div>
+            </TableCell>
             <TableCell>{new Date(visitor.lastSeenAt).toLocaleString('es')}</TableCell>
             <TableCell><Badge variant="secondary">{visitor._count.sessions}</Badge></TableCell>
             <TableCell><Badge variant={visitor.accountPrincipalId ? 'default' : 'outline'}>{visitor.accountPrincipalId ? 'Vinculada' : 'Anónimo'}</Badge></TableCell>

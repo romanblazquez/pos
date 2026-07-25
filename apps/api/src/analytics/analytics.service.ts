@@ -10,6 +10,40 @@ const TENANT_ID = process.env.ANALYTICS_TENANT_ID ?? 'tenant-demo';
 const RETENTION_DAYS = Number(process.env.ANALYTICS_RETENTION_DAYS ?? 395);
 const CONSENT_RETENTION_DAYS = Number(process.env.ANALYTICS_CONSENT_RETENTION_DAYS ?? 2190);
 
+export interface RequestContext {
+  countryCode?: string;
+  regionCode?: string;
+  userAgent?: string;
+}
+
+export function requestDimensions(context?: RequestContext) {
+  const rawCountry = context?.countryCode ?? '';
+  const countryCode = /^[A-Z]{2}$/.test(rawCountry) && rawCountry !== 'XX'
+    ? rawCountry
+    : undefined;
+  const regionCode = /^[A-Za-z0-9-]{1,16}$/.test(context?.regionCode ?? '')
+    ? context?.regionCode?.toUpperCase()
+    : undefined;
+  const ua = (context?.userAgent ?? '').slice(0, 512);
+  const deviceClass = /bot|crawler|spider/i.test(ua) ? 'bot'
+    : /ipad|tablet|kindle|silk/i.test(ua) ? 'tablet'
+      : /mobi|iphone|android/i.test(ua) ? 'mobile'
+        : ua ? 'desktop' : 'unknown';
+  const browserFamily = /edg\//i.test(ua) ? 'Edge'
+    : /opr\/|opera/i.test(ua) ? 'Opera'
+      : /firefox\/|fxios\//i.test(ua) ? 'Firefox'
+        : /crios\/|chrome\//i.test(ua) ? 'Chrome'
+          : /safari\//i.test(ua) ? 'Safari'
+            : ua ? 'Other' : 'Unknown';
+  const osFamily = /windows/i.test(ua) ? 'Windows'
+    : /android/i.test(ua) ? 'Android'
+      : /iphone|ipad|ipod/i.test(ua) ? 'iOS'
+        : /mac os|macintosh/i.test(ua) ? 'macOS'
+          : /linux/i.test(ua) ? 'Linux'
+            : ua ? 'Other' : 'Unknown';
+  return { countryCode, regionCode, deviceClass, browserFamily, osFamily };
+}
+
 function analyticsSecret(): string {
   const secret = process.env.ANALYTICS_HMAC_SECRET
     ?? process.env.CREDENTIAL_ENCRYPTION_KEY
@@ -46,18 +80,25 @@ export class AnalyticsService {
     }
   }
 
-  private async visitor(rawVisitorId: string, context?: AnalyticsBatch['context']): Promise<AnalyticsVisitor> {
+  private async visitor(
+    rawVisitorId: string,
+    context?: AnalyticsBatch['context'],
+    requestContext?: RequestContext,
+  ): Promise<AnalyticsVisitor> {
     if (!validOpaqueId(rawVisitorId)) throw new BadRequestException('Invalid visitor id');
     const publicIdHash = hashIdentifier(rawVisitorId);
+    const request = requestDimensions(requestContext);
     return this.prisma.analyticsVisitor.upsert({
       where: { tenantId_publicIdHash: { tenantId: TENANT_ID, publicIdHash } },
       create: {
         tenantId: TENANT_ID, publicIdHash, locale: context?.locale?.slice(0, 12),
         timezone: context?.timezone?.slice(0, 64),
+        countryCode: request.countryCode, regionCode: request.regionCode,
       },
       update: {
         lastSeenAt: new Date(), locale: context?.locale?.slice(0, 12),
         timezone: context?.timezone?.slice(0, 64),
+        countryCode: request.countryCode, regionCode: request.regionCode,
       },
     });
   }
@@ -82,7 +123,7 @@ export class AnalyticsService {
     });
   }
 
-  async collect(batch: AnalyticsBatch) {
+  async collect(batch: AnalyticsBatch, requestContext?: RequestContext) {
     this.assertConsentShape(batch.consent);
     if (byteSize(batch) > LIMITS.maxPayloadBytes) throw new BadRequestException('Batch too large');
     if (!Array.isArray(batch.events) || batch.events.length > LIMITS.maxBatchEvents) {
@@ -95,7 +136,8 @@ export class AnalyticsService {
       throw new BadRequestException('Visitor and session identifiers are required');
     }
 
-    const visitor = await this.visitor(batch.visitorId, batch.context);
+    const visitor = await this.visitor(batch.visitorId, batch.context, requestContext);
+    const request = requestDimensions(requestContext);
     const sessionIdHash = hashIdentifier(batch.sessionId);
     const accepted = batch.events
       .map((event) => ({ input: event, validation: validateEvent(event) }))
@@ -146,12 +188,16 @@ export class AnalyticsService {
           tenantId: TENANT_ID, sessionIdHash, visitorId: visitor.id,
           entryPath: first.path, exitPath: accepted.at(-1)?.validation.event?.path,
           eventCount: inserted.count, pageViewCount: insertedPageViews,
+          deviceClass: request.deviceClass, browserFamily: request.browserFamily,
+          osFamily: request.osFamily,
         },
         update: {
           lastActivityAt: new Date(),
           exitPath: accepted.at(-1)?.validation.event?.path,
           eventCount: { increment: inserted.count },
           pageViewCount: { increment: insertedPageViews },
+          deviceClass: request.deviceClass, browserFamily: request.browserFamily,
+          osFamily: request.osFamily,
         },
       });
       if (inserted.count === 0) return;
@@ -299,7 +345,11 @@ export class AnalyticsService {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: {
         id: true, accountPrincipalId: true, firstSeenAt: true, lastSeenAt: true,
-        linkedAt: true, countryCode: true, locale: true,
+        linkedAt: true, countryCode: true, regionCode: true, locale: true,
+        sessions: {
+          orderBy: { lastActivityAt: 'desc' }, take: 1,
+          select: { deviceClass: true, browserFamily: true, osFamily: true },
+        },
         _count: { select: { sessions: true, consentRecords: true } },
       },
     });
