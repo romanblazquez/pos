@@ -68,7 +68,7 @@ class CircuitOpenError extends Error {
   }
 }
 
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
+export function sleep(ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(done, ms);
@@ -211,6 +211,22 @@ export class BggEnrichmentWorker {
   async openCircuit(record: CircuitRecord): Promise<void> {
     await this.writeJsonAtomic(this.circuitPath, record);
     await this.setStatus('circuit_open', record.reason);
+  }
+
+  /** Clears the on-disk breaker so the next initialize() starts a half-open attempt. */
+  async closeCircuit(): Promise<void> {
+    await rm(this.circuitPath, { force: true });
+  }
+
+  /**
+   * Milliseconds left before an open breaker may be retried. Returns 0 once the
+   * cooldown has elapsed, and also when `openedAt` is unparseable — a corrupt
+   * timestamp should not strand the worker forever.
+   */
+  circuitCooldownRemainingMs(record: CircuitRecord): number {
+    const openedAt = Date.parse(record.openedAt);
+    if (!Number.isFinite(openedAt)) return 0;
+    return Math.max(0, openedAt + this.config.circuitCooldownMs - Date.now());
   }
 
   async close(): Promise<void> {

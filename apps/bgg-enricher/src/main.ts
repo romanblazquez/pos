@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { loadConfig } from './config.js';
-import { BggEnrichmentWorker, isCircuitOpenError } from './worker.js';
+import { BggEnrichmentWorker, isCircuitOpenError, sleep } from './worker.js';
 
 const config = loadConfig();
 const shutdown = new AbortController();
@@ -30,23 +30,38 @@ async function main(): Promise<void> {
     console.log(`[bgg-enricher] health endpoint listening on ${config.healthPort}`);
   });
 
-  const existingCircuit = await worker.initialize();
-  if (existingCircuit) {
-    console.error(`[bgg-enricher] outbound work remains halted: ${existingCircuit.reason}`);
-    return;
-  }
-
+  // Supervision loop: an open breaker parks the worker for a cooldown rather than
+  // ending the process. BGG's 403s clear on their own, so retrying half-open is what
+  // lets enrichment resume without someone noticing and deleting the state file.
   try {
-    await worker.run();
-  } catch (error) {
-    if (isCircuitOpenError(error)) {
-      await worker.openCircuit(error.record);
-      console.error(`[bgg-enricher] circuit opened: ${error.record.reason}`);
-      return;
+    while (!shutdown.signal.aborted) {
+      const existingCircuit = await worker.initialize();
+
+      if (existingCircuit) {
+        const waitMs = worker.circuitCooldownRemainingMs(existingCircuit);
+        if (waitMs > 0) {
+          console.error(
+            `[bgg-enricher] circuit open (${existingCircuit.reason}); half-open retry in ${Math.round(waitMs / 60_000)} min`,
+          );
+          await sleep(waitMs, shutdown.signal);
+          continue;
+        }
+        console.log('[bgg-enricher] circuit cooldown elapsed; attempting half-open retry');
+        await worker.closeCircuit();
+        continue;
+      }
+
+      try {
+        await worker.run();
+      } catch (error) {
+        if (!isCircuitOpenError(error)) throw error;
+        // Re-open and loop; the next pass reads the fresh openedAt and waits it out.
+        await worker.openCircuit(error.record);
+        console.error(`[bgg-enricher] circuit opened: ${error.record.reason}`);
+      }
     }
-    throw error;
   } finally {
-    if (shutdown.signal.aborted) await worker.close();
+    await worker.close();
   }
 }
 

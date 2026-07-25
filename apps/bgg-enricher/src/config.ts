@@ -15,6 +15,7 @@ export interface EnricherConfig {
   stateDir: string;
   healthPort: number;
   resetCircuit: boolean;
+  circuitCooldownMs: number;
   translateEnabled: boolean;
   translateTargetIso: string;
   translateTargetLocale: string;
@@ -76,6 +77,10 @@ export function loadConfig(): EnricherConfig {
     stateDir: process.env.BGG_ENRICHER_STATE_DIR ?? './data/bgg-enricher',
     healthPort: integer('BGG_ENRICHER_HEALTH_PORT', 3002, 1, 65_535),
     resetCircuit: boolean('BGG_ENRICHER_RESET_CIRCUIT', false),
+    // BGG's 403s are transient rate-limiting, but the breaker persists to disk and
+    // used to latch until someone deleted the file by hand — four times it silently
+    // halted enrichment for days. After this cooldown the worker retries on its own.
+    circuitCooldownMs: integer('BGG_CIRCUIT_COOLDOWN_MINUTES', 120, 5, 10_080) * 60_000,
     translateEnabled: boolean('GOOGLE_TRANSLATE_ENABLED', true),
     translateTargetIso: process.env.GOOGLE_TRANSLATE_TARGET_ISO ?? 'es',
     translateTargetLocale: process.env.GOOGLE_TRANSLATE_TARGET_LOCALE ?? 'es-MX',
