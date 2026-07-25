@@ -44,7 +44,12 @@ export function ConsentBanner({
   ];
 
   return (
-    <section className="fixed inset-x-3 bottom-3 z-[100] mx-auto max-w-2xl rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-[var(--foreground)] shadow-2xl"
+    <section
+      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-[var(--foreground)] shadow-2xl"
+      style={{
+        position: 'fixed', left: '0.75rem', right: '0.75rem', bottom: '0.75rem',
+        zIndex: 100, maxWidth: '42rem', marginInline: 'auto',
+      }}
       role="dialog" aria-modal="false" aria-label={es ? 'Privacidad' : 'Privacy'}>
       <h2 className="font-display text-lg font-bold">{es ? 'Tu privacidad, tus reglas' : 'Your privacy, your rules'}</h2>
       <p className="mt-2 text-sm text-[var(--muted-foreground)]">
