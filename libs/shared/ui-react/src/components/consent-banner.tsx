@@ -60,10 +60,13 @@ export function ConsentBanner({
 
   return (
     <section
-      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-[var(--foreground)] shadow-2xl"
+      className="rounded-2xl border border-[var(--border)] p-5 text-[var(--foreground)] shadow-2xl"
       style={{
         position: 'fixed', left: '0.75rem', right: '0.75rem', bottom: '0.75rem',
         zIndex: 100, maxWidth: '42rem', marginInline: 'auto',
+        background: 'color-mix(in srgb, var(--card) 60%, transparent)',
+        backdropFilter: 'blur(18px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(140%)',
       }}
       role="dialog" aria-modal="false" aria-label={es ? 'Privacidad' : 'Privacy'}>
       <button
