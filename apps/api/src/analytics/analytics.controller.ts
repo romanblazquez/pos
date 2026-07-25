@@ -63,6 +63,12 @@ export class AnalyticsController {
     return this.service.journey(id, Number(limit ?? 100));
   }
 
+  @Get('admin/visitors/:id')
+  @Roles('admin')
+  visitor(@Param('id') id: string) {
+    return this.service.visitorDetail(id);
+  }
+
   @Get('admin/visitors/:id/export')
   @Roles('admin')
   exportVisitor(@Param('id') id: string) {

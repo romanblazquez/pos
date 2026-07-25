@@ -364,10 +364,30 @@ export class AnalyticsService {
       where: { tenantId: TENANT_ID, anonymousVisitorIdHash: visitor.publicIdHash },
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }], take: Math.min(limit, 250),
       select: {
-        eventId: true, eventType: true, occurredAt: true, path: true,
-        entityType: true, entityId: true, sellerId: true, offerId: true, metadata: true,
+        eventId: true, eventType: true, occurredAt: true, tenantId: true,
+        anonymousVisitorIdHash: true, sessionIdHash: true, customerId: true,
+        entityType: true, entityId: true, sellerId: true, offerId: true,
+        countryCode: true, locale: true, pageType: true, position: true,
+        experiment: true, metrics: true, metadata: true, path: true,
+        referrerHost: true, consentPublicId: true, source: true, createdAt: true,
       },
     });
+  }
+
+  async visitorDetail(visitorId: string) {
+    const visitor = await this.prisma.analyticsVisitor.findFirst({
+      where: { id: visitorId, tenantId: TENANT_ID, deletedAt: null },
+      include: {
+        sessions: { orderBy: { startedAt: 'desc' }, take: 100 },
+        consentRecords: { orderBy: { recordedAt: 'desc' }, take: 100 },
+        identityLinks: { orderBy: { linkedAt: 'desc' }, take: 100 },
+        attributions: { orderBy: { occurredAt: 'desc' }, take: 100 },
+        preferences: { orderBy: { updatedAt: 'desc' }, take: 100 },
+        experimentAssignments: { orderBy: { assignedAt: 'desc' }, take: 100 },
+      },
+    });
+    if (!visitor) throw new NotFoundException('Visitor not found');
+    return visitor;
   }
 
   async exportVisitor(visitorId: string) {

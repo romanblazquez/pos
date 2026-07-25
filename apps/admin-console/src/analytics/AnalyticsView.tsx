@@ -43,12 +43,40 @@ interface JourneyEvent {
   eventId: string;
   eventType: string;
   occurredAt: string;
+  tenantId?: string;
+  anonymousVisitorIdHash?: string;
+  sessionIdHash?: string;
+  customerId?: string;
   path?: string;
+  countryCode?: string;
+  locale?: string;
+  pageType?: string;
   entityType?: string;
   entityId?: string;
   sellerId?: string;
   offerId?: string;
+  position?: number;
+  referrerHost?: string;
+  consentPublicId?: string;
+  source?: string;
+  experiment?: Record<string, unknown>;
+  metrics?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+interface VisitorDetail extends Omit<Visitor, '_count'> {
+  tenantId: string;
+  publicIdHash: string;
+  timezone?: string;
+  createdAt: string;
+  updatedAt: string;
+  sessions: Record<string, unknown>[];
+  consentRecords: Record<string, unknown>[];
+  identityLinks: Record<string, unknown>[];
+  attributions: Record<string, unknown>[];
+  preferences: Record<string, unknown>[];
+  experimentAssignments: Record<string, unknown>[];
 }
 
 const TABS: { id: AnalyticsTab; label: string }[] = [
@@ -156,6 +184,11 @@ function VisitorsPanel() {
     queryFn: () => getJson<JourneyEvent[]>(`/visitors/${selected}/journey?limit=200`),
     enabled: Boolean(selected),
   });
+  const detail = useQuery({
+    queryKey: ['analytics-visitor-detail', selected],
+    queryFn: () => getJson<VisitorDetail>(`/visitors/${selected}`),
+    enabled: Boolean(selected),
+  });
   if (isLoading) return <Loading />;
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,.8fr)]">
@@ -166,7 +199,7 @@ function VisitorsPanel() {
         <TableBody>{(data ?? []).map((visitor) => (
           <TableRow key={visitor.id} onClick={() => setSelected(visitor.id)}
             data-state={selected === visitor.id ? 'selected' : undefined} className="cursor-pointer">
-            <TableCell className="font-mono text-xs">{visitor.id.slice(0, 12)}…</TableCell>
+            <TableCell className="max-w-56 break-all font-mono text-xs">{visitor.id}</TableCell>
             <TableCell>{visitor.countryCode
               ? <Badge variant="outline">{[visitor.regionCode, visitor.countryCode].filter(Boolean).join(' · ')}</Badge>
               : <span className="text-muted-foreground">No disponible</span>}</TableCell>
@@ -197,19 +230,57 @@ function VisitorsPanel() {
         </CardHeader>
         <CardContent>
         {!selected && <p className="text-sm text-muted-foreground">Selecciona un visitante.</p>}
-        {journey.isLoading && <Loading />}
+        {(journey.isLoading || detail.isLoading) && <Loading />}
+        {detail.data && <div className="mb-5 space-y-3">
+          <DataDisclosure title="Registro completo del visitante" value={visitorCore(detail.data)} open />
+          <DataDisclosure title={`Sesiones (${detail.data.sessions.length})`} value={detail.data.sessions} />
+          <DataDisclosure title={`Consentimientos (${detail.data.consentRecords.length})`} value={detail.data.consentRecords} />
+          <DataDisclosure title={`Vínculos de identidad (${detail.data.identityLinks.length})`} value={detail.data.identityLinks} />
+          <DataDisclosure title={`Atribución (${detail.data.attributions.length})`} value={detail.data.attributions} />
+          <DataDisclosure title={`Preferencias (${detail.data.preferences.length})`} value={detail.data.preferences} />
+          <DataDisclosure title={`Experimentos (${detail.data.experimentAssignments.length})`} value={detail.data.experimentAssignments} />
+        </div>}
         <ol className="max-h-[60vh] space-y-3 overflow-y-auto">
           {(journey.data ?? []).map((event) => (
             <li key={event.eventId} className="border-l-2 border-primary pl-3">
               <div className="flex justify-between gap-3"><code className="text-xs font-semibold">{event.eventType}</code>
                 <time className="text-[11px] text-muted-foreground">{new Date(event.occurredAt).toLocaleString('es')}</time></div>
               <p className="mt-1 break-all text-xs text-muted-foreground">{event.path ?? event.entityId ?? '—'}</p>
+              <DataDisclosure title="Todos los campos del evento" value={event} />
             </li>
           ))}
         </ol>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function visitorCore(visitor: VisitorDetail) {
+  const {
+    sessions: _sessions,
+    consentRecords: _consentRecords,
+    identityLinks: _identityLinks,
+    attributions: _attributions,
+    preferences: _preferences,
+    experimentAssignments: _experimentAssignments,
+    ...core
+  } = visitor;
+  return core;
+}
+
+function DataDisclosure({ title, value, open = false }: {
+  title: string;
+  value: unknown;
+  open?: boolean;
+}) {
+  return (
+    <details open={open} className="rounded-lg border bg-muted/25">
+      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold hover:bg-muted/50">{title}</summary>
+      <pre className="max-h-80 overflow-auto border-t p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </details>
   );
 }
 
