@@ -13,6 +13,9 @@ import { ConsentBanner } from '@retail-os/ui-react';
 import { GA_MEASUREMENT_ID } from '@/lib/site';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.juegospedia.com';
+// Temporary operator switch. Defaults off until the consent experience is put
+// back; optional collection and Google tags remain governed by denied consent.
+const CONSENT_UI_ENABLED = (process.env.NEXT_PUBLIC_CONSENT_UI_ENABLED ?? 'false') === 'true';
 
 declare global {
   interface Window {
@@ -72,5 +75,7 @@ export function Analytics({ locale = 'es' }: { locale?: 'es' | 'en' }) {
     };
   }, [analytics]);
 
-  return mounted ? <ConsentBanner analytics={analytics} locale={locale} /> : null;
+  return mounted && CONSENT_UI_ENABLED
+    ? <ConsentBanner analytics={analytics} locale={locale} />
+    : null;
 }

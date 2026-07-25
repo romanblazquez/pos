@@ -39,11 +39,6 @@ export interface ProductDocument {
 
 const COLLECTION = 'mkt_products';
 
-// Sanity ceiling for the storefront index. The catalogue is hundreds of
-// products; anything past this means the raw BGG pool leaked in (see
-// ensureCollection). Well clear of realistic growth, well under the ~178k pool.
-const STOREFRONT_MAX = 5000;
-
 const COLLECTION_SCHEMA = {
   name: COLLECTION,
   fields: [
@@ -75,6 +70,20 @@ const COLLECTION_SCHEMA = {
   default_sorting_field: 'inStockListings',
 };
 
+type ExistingCollectionShape = {
+  fields?: Array<{ name: string; sort?: boolean }>;
+  default_sorting_field?: string;
+  num_documents?: number;
+};
+
+/** Cardinality is intentionally absent: catalogue growth is not schema drift. */
+export function collectionNeedsRecreation(existing: ExistingCollectionShape): boolean {
+  const fields = existing.fields ?? [];
+  return !fields.some((field) => field.name === 'nameEs')
+    || existing.default_sorting_field !== 'inStockListings'
+    || !fields.some((field) => field.name === 'name' && field.sort === true);
+}
+
 @Injectable()
 export class TypesenseService implements OnModuleInit {
   private readonly log = new Logger(TypesenseService.name);
@@ -102,22 +111,17 @@ export class TypesenseService implements OnModuleInit {
       // Recreate when the schema drifts: wrong sort field, or missing the
       // bilingual search fields (nameEs/descriptionEs). The hourly ranking job
       // repopulates the empty collection; the Prisma fallback covers the gap.
-      const fields = (existing as { fields?: Array<{ name: string; sort?: boolean }> }).fields ?? [];
-      const hasBilingual = fields.some((f) => f.name === 'nameEs');
-      const sortOk = (existing as { default_sorting_field?: string }).default_sorting_field === 'inStockListings';
-      // `name` must be sortable for sortBy=name; older collections predate it.
-      const nameSortable = fields.some((f) => f.name === 'name' && f.sort === true);
-      // The storefront catalogue is only hundreds of products. A doc count in
-      // the thousands means the raw BGG discovery pool (~178k rows in
-      // mkt_product) leaked into the index; recreate so the boot pass rebuilds
-      // the storefront set cleanly. STOREFRONT_MAX is a generous ceiling — raise
-      // it if the real catalogue ever approaches it.
-      const docCount = (existing as { num_documents?: number }).num_documents ?? 0;
-      const polluted = docCount > STOREFRONT_MAX;
-      if (!hasBilingual || !sortOk || !nameSortable || polluted) {
+      const shape = existing as ExistingCollectionShape;
+      const fields = shape.fields ?? [];
+      // Collection cardinality is never evidence of corruption. The enriched
+      // catalogue grows continuously and previously crossed a hard-coded 5,000
+      // document ceiling: startup deleted 7,135 valid documents and rebuilt only
+      // the reviewed subset. Eligibility belongs in the database reindex query,
+      // not in a destructive Typesense size heuristic.
+      if (collectionNeedsRecreation(shape)) {
         await this.client.collections(COLLECTION).delete();
         await this.client.collections().create(COLLECTION_SCHEMA);
-        this.log.log(`Typesense collection recreated (${polluted ? `pollution: ${docCount} docs` : 'schema updated'})`);
+        this.log.log('Typesense collection recreated (schema updated)');
         return;
       }
       // An added optional field is applied in place — recreating for it would
@@ -208,7 +212,7 @@ export class TypesenseService implements OnModuleInit {
     const slugsById = new Map<string, string[]>();
     const perPage = 250;
     try {
-      for (let page = 1; page <= Math.ceil(STOREFRONT_MAX / perPage); page += 1) {
+      for (let page = 1; ; page += 1) {
         const result = await this.client.collections(COLLECTION).documents().search({
           q: '*',
           include_fields: 'id,categorySlugs',

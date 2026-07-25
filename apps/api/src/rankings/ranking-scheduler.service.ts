@@ -64,23 +64,28 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     this.log.log('Ranking scheduler initialized — hourly ranking and six-hour semantic refresh registered');
 
-    // Keep the search index covering the whole verified catalogue. The hourly
+    // Keep the search index covering the whole storefront catalogue. The hourly
     // ranking pass only reindexes products with an active listing, so a freshly
     // recreated (or under-populated) collection would drop every offer-less
     // verified product — yet they are searchable, shown as "no offer".
     //
-    // Compare the index size to the count of *verified* products only — NEVER
-    // to mkt_product.count(), which includes the ~178k raw BGG discovery pool.
-    // If the index is short, reindex the verified catalogue once. Self-healing:
-    // once indexed == verified it no-ops; a schema recreation (0 docs) trips it.
+    // Storefront eligibility is explicit: reviewed products plus products whose
+    // durable BGG enrichment completed. This preserves the useful enriched
+    // catalogue without exposing the ~178k raw discovery rows.
     try {
-      const [indexed, verified] = await Promise.all([
+      const storefrontWhere = {
+        OR: [
+          { canonicalStatus: 'verified' },
+          { bggEnrichment: { is: { status: 'succeeded' } } },
+        ],
+      };
+      const [indexed, eligible] = await Promise.all([
         this.search.documentCount(),
-        this.prisma.mktProduct.count({ where: { canonicalStatus: 'verified' } }),
+        this.prisma.mktProduct.count({ where: storefrontWhere }),
       ]);
-      if (indexed >= 0 && indexed < verified) {
-        this.log.log(`Search index has ${indexed}/${verified} verified products — reindexing the verified catalogue`);
-        void this.reindexVerifiedCatalog();
+      if (indexed >= 0 && indexed < eligible) {
+        this.log.log(`Search index has ${indexed}/${eligible} storefront products — restoring the enriched catalogue`);
+        void this.reindexStorefrontCatalog();
       } else if (indexed > 0) {
         void this.reconcileBrowseCategories();
       }
@@ -120,14 +125,20 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Reindex every verified product, offer-less ones included — unlike
+   * Reindex every storefront-eligible product, offer-less ones included — unlike
    * reindexProducts, which is scoped to active listings for the hourly ranking
    * pass. Repopulates a freshly recreated collection at full search coverage
-   * without pulling in the raw BGG discovery pool (canonicalStatus != verified).
+   * without pulling in the raw BGG discovery pool. Completed enrichment is a
+   * durable quality boundary; review status remains independent.
    */
-  private async reindexVerifiedCatalog(): Promise<void> {
+  private async reindexStorefrontCatalog(): Promise<void> {
     const products = await this.prisma.mktProduct.findMany({
-      where: { canonicalStatus: 'verified' },
+      where: {
+        OR: [
+          { canonicalStatus: 'verified' },
+          { bggEnrichment: { is: { status: 'succeeded' } } },
+        ],
+      },
       select: { id: true },
     });
     let ok = 0;
@@ -139,7 +150,7 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
         // Non-fatal — the next hourly pass or a manual reindex will catch it.
       }
     }
-    this.log.log(`Boot reindex of the verified catalogue complete: ${ok}/${products.length} products`);
+    this.log.log(`Boot restore of the storefront catalogue complete: ${ok}/${products.length} products`);
   }
 
   async onModuleDestroy() {
