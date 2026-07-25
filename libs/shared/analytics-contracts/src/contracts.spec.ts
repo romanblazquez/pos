@@ -47,6 +47,18 @@ describe('analytics privacy contracts', () => {
     expect(sanitizeSearchQuery('person@example.com')).toMatchObject({
       normalized: null, redactedReason: 'email', wordCount: 1,
     });
+    const event = validateEvent({
+      eventId: 'event_private_123',
+      type: 'search_submitted',
+      occurredAt: new Date().toISOString(),
+      properties: { query: 'person@example.com', surface: 'header' },
+    });
+    expect(event.event?.properties).toMatchObject({
+      query: null,
+      queryRedacted: true,
+      queryRedactionReason: 'email',
+      queryWordCount: 1,
+    });
   });
 
   it('rejects malformed events and sanitizes accepted events', () => {

@@ -49,8 +49,8 @@ const COMMON = ['pageType', 'locale', 'countryCode', 'entityType', 'entityId'] a
 export const EVENT_PROPERTIES: Record<AnalyticsEventType, readonly string[]> = {
   page_view: [...COMMON, 'title'],
   navigation: [...COMMON, 'navigationType'],
-  search_submitted: [...COMMON, 'query', 'queryLength', 'queryWordCount', 'queryRedacted', 'surface'],
-  search_results: [...COMMON, 'query', 'queryLength', 'resultCount', 'latencyMs', 'zeroResults'],
+  search_submitted: [...COMMON, 'query', 'queryLength', 'queryWordCount', 'queryRedacted', 'queryRedactionReason', 'surface'],
+  search_results: [...COMMON, 'query', 'queryLength', 'queryWordCount', 'queryRedacted', 'queryRedactionReason', 'resultCount', 'latencyMs', 'zeroResults'],
   filter_changed: [...COMMON, 'filter', 'value', 'activeCount'],
   game_viewed: [...COMMON, 'slug', 'position'],
   category_viewed: [...COMMON, 'slug', 'position'],
@@ -132,6 +132,7 @@ export function validateEvent(input: AnalyticsEventInput, selfHost?: string): Ev
     sanitized.value.queryLength = query.length;
     sanitized.value.queryWordCount = query.wordCount;
     sanitized.value.queryRedacted = Boolean(query.redactedReason);
+    if (query.redactedReason) sanitized.value.queryRedactionReason = query.redactedReason;
   }
   const event: SanitizedEvent = {
     eventId: input.eventId,
@@ -147,4 +148,3 @@ export function validateEvent(input: AnalyticsEventInput, selfHost?: string): Ev
   }
   return { accepted: true, event, issues: sanitized.issues };
 }
-

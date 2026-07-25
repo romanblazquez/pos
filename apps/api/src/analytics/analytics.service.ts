@@ -333,16 +333,32 @@ export class AnalyticsService {
       where: { tenantId: TENANT_ID, occurredAt: this.range(from, to), eventType: { in: ['search_submitted', 'search_results'] } },
       select: { occurredAt: true, metadata: true }, orderBy: { occurredAt: 'desc' }, take: 5000,
     });
-    const counts = new Map<string, { count: number; zeroResults: number }>();
+    const counts = new Map<string, {
+      query: string | null;
+      protected: boolean;
+      protectedReason?: string;
+      count: number;
+      zeroResults: number;
+    }>();
     for (const row of rows) {
       const m = row.metadata as Record<string, unknown> | null;
-      const query = typeof m?.query === 'string' ? m.query : '(redacted)';
-      const current = counts.get(query) ?? { count: 0, zeroResults: 0 };
+      const query = typeof m?.query === 'string' ? m.query : null;
+      const protectedReason = typeof m?.queryRedactionReason === 'string'
+        ? m.queryRedactionReason
+        : 'sensitive-input';
+      const key = query ?? `protected:${protectedReason}`;
+      const current = counts.get(key) ?? {
+        query,
+        protected: query === null,
+        ...(query === null ? { protectedReason } : {}),
+        count: 0,
+        zeroResults: 0,
+      };
       current.count += 1;
       if (m?.zeroResults === true) current.zeroResults += 1;
-      counts.set(query, current);
+      counts.set(key, current);
     }
-    return [...counts.entries()].map(([query, value]) => ({ query, ...value }))
+    return [...counts.values()]
       .sort((a, b) => b.count - a.count).slice(0, 100);
   }
 
