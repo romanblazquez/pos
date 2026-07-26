@@ -72,7 +72,7 @@ export class MarketplaceService {
     return { results, total: results.length, source: 'semantic' as const };
   }
 
-  private async hydrateSemanticHits(ids: string[], locale?: string) {
+  private async hydrateSemanticHits(ids: string[], locale?: string, market?: string) {
     if (ids.length === 0) return [];
     const products = await this.prisma.mktProduct.findMany({
       where: { id: { in: ids }, canonicalStatus: 'verified', listings: { some: { active: true } } },
@@ -110,7 +110,9 @@ export class MarketplaceService {
         totalListings: product.listings.length,
         inStockListings: product.listings.filter((listing) => listing.stockStatus !== 'out_of_stock').length,
       };
-    }).sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+    })
+      .map((product) => withMarketPricing(product, market))
+      .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
   }
 
   /**
@@ -560,13 +562,13 @@ export class MarketplaceService {
    * product out client-side instead of adding an "exclude id" filter to
    * TypesenseService, since this is the only caller that needs it.
    */
-  async getSimilarProducts(slug: string, limit = 8, locale?: string) {
+  async getSimilarProducts(slug: string, limit = 8, locale?: string, market?: string) {
     const source = await this.prisma.mktProduct.findUnique({ where: { slug } });
     if (!source) return [];
 
     const semanticHits = await this.semantic.similar(source.id, locale, limit);
     if (semanticHits.length > 0) {
-      return this.hydrateSemanticHits(semanticHits.map((hit) => hit.canonicalId), locale);
+      return this.hydrateSemanticHits(semanticHits.map((hit) => hit.canonicalId), locale, market);
     }
 
     const complexity = source.bggWeight ? bandForWeight(source.bggWeight) : undefined;
@@ -580,7 +582,9 @@ export class MarketplaceService {
     });
 
     const filtered = hits.filter((h) => h.id !== source.id);
-    if (filtered.length > 0) return filtered.slice(0, limit);
+    if (filtered.length > 0) {
+      return filtered.slice(0, limit).map((hit) => withMarketPricing(hit, market));
+    }
 
     // Prisma fallback — mirrors searchProducts()'s fallback for an empty/unavailable index.
     const products = await this.prisma.mktProduct.findMany({

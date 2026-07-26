@@ -156,8 +156,13 @@ export class MarketplaceController {
   })
   @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
   @ApiResponse({ status: 200, description: 'Array of up to 8 similar products.' })
-  getSimilar(@Param('slug') slug: string, @Query('locale') locale?: string) {
-    return this.svc.getSimilarProducts(slug, 8, locale);
+  @ApiQuery({ name: 'market', required: false, description: 'Market whose offers may be priced; others show as unavailable locally.', example: 'MX' })
+  getSimilar(
+    @Param('slug') slug: string,
+    @Query('locale') locale?: string,
+    @Query('market') market?: string,
+  ) {
+    return this.svc.getSimilarProducts(slug, 8, locale, market);
   }
 
   @Get(':slug/sales-by-year')

@@ -1,3 +1,4 @@
+import { withMarket } from '../lib/api-client.js';
 import { useQuery } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
 import { ProductCard, type Product } from './ProductCard.js';
@@ -5,7 +6,7 @@ import { ProductCard, type Product } from './ProductCard.js';
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function fetchSimilar(slug: string): Promise<Product[]> {
-  const res = await fetch(`${API}/api/v1/products/${slug}/similar`);
+  const res = await fetch(`${API}/api/v1/products/${slug}/similar?${withMarket(new URLSearchParams())}`);
   if (!res.ok) return [];
   return res.json() as Promise<Product[]>;
 }

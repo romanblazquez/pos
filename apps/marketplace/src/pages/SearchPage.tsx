@@ -1,3 +1,4 @@
+import { withMarket } from '../lib/api-client.js';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
@@ -83,7 +84,7 @@ async function searchProducts(
   const hasFilters = Boolean(category || inStockOnly || maxPrice || players || mechanics.length || complexity || sortBy);
   if (!hasFilters && isNaturalLanguageQuery(q)) params.set('semantic', 'true');
 
-  const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
+  const res = await fetch(`${API}/api/v1/products?${withMarket(params).toString()}`);
   if (!res.ok) throw new Error('Search failed');
   return res.json() as Promise<{ results: Product[]; total: number }>;
 }

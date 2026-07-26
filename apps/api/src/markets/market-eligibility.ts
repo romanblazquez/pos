@@ -24,6 +24,14 @@ export interface MarketCommerceConfig {
   canonicalCurrency: string;
 }
 
+/**
+ * Seller statuses whose offers may be shown publicly.
+ *
+ * `pending` sellers have not been reviewed, `suspended` are banned and
+ * `churned` have left — none of them should appear in a price comparison.
+ */
+export const SELLER_VISIBLE_STATUS = 'active';
+
 export const MARKET_COMMERCE: Readonly<Record<string, MarketCommerceConfig>> = {
   MX: { code: 'MX', countryCode: 'MX', canonicalCurrency: 'MXN' },
 };
@@ -58,6 +66,10 @@ export function eligibleListingWhere(marketCode?: string | null) {
     active: true,
     currency: marketCurrency(marketCode),
     seller: {
+      // A suspended seller disappears from comparison entirely. Without this,
+      // "ban this seller" changed a status column and nothing else — their
+      // offers kept competing on every product page.
+      status: SELLER_VISIBLE_STATUS,
       canonicalMarkets: {
         some: {
           active: true,

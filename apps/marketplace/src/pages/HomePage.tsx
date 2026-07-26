@@ -1,3 +1,4 @@
+import { withMarket } from '../lib/api-client.js';
 import { useState, type ReactNode } from 'react';
 import { useMarket } from '../context/MarketContext.js';
 import { useQuery } from '@tanstack/react-query';
@@ -92,7 +93,7 @@ async function fetchProducts(page: number, category: string | undefined, filters
   if (filters.complexity) params.set('complexity', filters.complexity);
   for (const mechanic of filters.mechanics) params.append('mechanics', mechanic);
 
-  const res = await fetch(`${API}/api/v1/products?${params.toString()}`);
+  const res = await fetch(`${API}/api/v1/products?${withMarket(params).toString()}`);
   if (!res.ok) throw new Error('fetch failed');
   return res.json() as Promise<ProductsResponse>;
 }

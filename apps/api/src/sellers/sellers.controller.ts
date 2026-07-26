@@ -421,6 +421,52 @@ export class SellersController {
     return this.svc.updateProfile(id, dto);
   }
 
+  // ── Admin: seller lifecycle ────────────────────────────────────────────────
+
+  @Post(':id/suspend')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Suspend (ban) a seller',
+    description:
+      'Hides the seller and every one of their offers from public comparison immediately, ' +
+      'and reindexes their products so cached cards stop showing their prices. Reversible.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiResponse({ status: 200, description: 'Seller suspended.' })
+  @ApiResponse({ status: 404, description: 'Seller not found.' })
+  suspend(@Param('id') id: string) {
+    return this.svc.setStatus(id, 'suspended');
+  }
+
+  @Post(':id/reactivate')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Reactivate a suspended seller',
+    description: 'Restores the seller and their offers to public comparison, and reindexes their products.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiResponse({ status: 200, description: 'Seller reactivated.' })
+  @ApiResponse({ status: 404, description: 'Seller not found.' })
+  reactivate(@Param('id') id: string) {
+    return this.svc.setStatus(id, 'active');
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Permanently delete a seller',
+    description:
+      'Irreversible. Refused when the seller has orders, because an order is a financial record ' +
+      'and a customer purchase history — suspend instead.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID' })
+  @ApiResponse({ status: 200, description: 'Seller deleted.' })
+  @ApiResponse({ status: 404, description: 'Seller not found.' })
+  @ApiResponse({ status: 409, description: 'Seller has orders; suspend instead of deleting.' })
+  remove(@Param('id') id: string) {
+    return this.svc.deleteSeller(id);
+  }
+
   // ── Per-listing promos ─────────────────────────────────────────────────────
 
   @Get(':id/listings/:listingId/promos')

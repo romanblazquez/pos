@@ -1,3 +1,4 @@
+import { withMarket } from '../lib/api-client.js';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -43,7 +44,8 @@ interface ProductDetail {
 }
 
 async function fetchProduct(slug: string, locale: string): Promise<ProductDetail> {
-  const res = await fetch(`${API}/api/v1/products/${slug}?locale=${locale}`);
+  const params = withMarket(new URLSearchParams({ locale }));
+  const res = await fetch(`${API}/api/v1/products/${slug}?${params}`);
   if (!res.ok) throw new Error('Product not found');
   return res.json() as Promise<ProductDetail>;
 }

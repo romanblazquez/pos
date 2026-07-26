@@ -1,5 +1,6 @@
 import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
+import { ProductIndexerService } from '../search/product-indexer.service.js';
 import type { CreateSellerDto } from './sellers.dto.js';
 
 function slugify(name: string): string {
@@ -13,7 +14,102 @@ function slugify(name: string): string {
 
 @Injectable()
 export class SellersService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
+  ) {}
+
+  /**
+   * Change a seller's lifecycle status and make it take effect immediately.
+   *
+   * Flipping the column is not enough: product cards are served from the search
+   * index, whose price aggregates were built from this seller's listings. Without
+   * reindexing, a banned seller's prices keep appearing on every card until the
+   * next scheduled pass. Reindex synchronously so "suspend" means suspended now.
+   */
+  async setStatus(id: string, status: 'active' | 'suspended', actorId?: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true },
+    });
+    if (!seller) throw new NotFoundException(`Seller "${id}" not found`);
+
+    const updated = await this.prisma.seller.update({
+      where: { id },
+      data: { status },
+      select: { id: true, name: true, slug: true, status: true, updatedAt: true },
+    });
+
+    await this.reindexSellerProducts(id);
+
+    await this.prisma.auditEvent.create({
+      data: {
+        targetType: 'seller',
+        targetId: id,
+        action: status === 'suspended' ? 'seller.suspended' : 'seller.reactivated',
+        actorPrincipalId: actorId ?? null,
+        metadata: { from: seller.status, to: status, sellerName: seller.name },
+      },
+    }).catch(() => undefined);
+
+    return updated;
+  }
+
+  /**
+   * Permanently delete a seller.
+   *
+   * Refuses while the seller has orders: an order is a financial record and a
+   * customer's purchase history, and deleting one to tidy up a seller list would
+   * destroy both. Suspension is the reversible tool; deletion is for sellers who
+   * never traded.
+   */
+  async deleteSeller(id: string, actorId?: string) {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id },
+      select: { id: true, name: true, _count: { select: { orders: true, listings: true } } },
+    });
+    if (!seller) throw new NotFoundException(`Seller "${id}" not found`);
+
+    if (seller._count.orders > 0) {
+      throw new ConflictException(
+        `Seller "${seller.name}" has ${seller._count.orders} order(s) and cannot be deleted. ` +
+        'Suspend the seller instead — deleting would destroy financial records and customer purchase history.',
+      );
+    }
+
+    const productIds = await this.sellerProductIds(id);
+    await this.prisma.seller.delete({ where: { id } });
+
+    // Reindex AFTER deletion so the aggregates no longer see those listings.
+    for (const productId of productIds) await this.indexer.syncProductQuietly(productId);
+
+    await this.prisma.auditEvent.create({
+      data: {
+        targetType: 'seller',
+        targetId: id,
+        action: 'seller.deleted',
+        actorPrincipalId: actorId ?? null,
+        metadata: { name: seller.name, listings: seller._count.listings },
+      },
+    }).catch(() => undefined);
+
+    return { id, deleted: true };
+  }
+
+  private async sellerProductIds(sellerId: string): Promise<string[]> {
+    const rows = await this.prisma.listing.findMany({
+      where: { sellerId },
+      select: { productId: true },
+      distinct: ['productId'],
+    });
+    return rows.map((row) => row.productId);
+  }
+
+  private async reindexSellerProducts(sellerId: string) {
+    for (const productId of await this.sellerProductIds(sellerId)) {
+      await this.indexer.syncProductQuietly(productId);
+    }
+  }
 
   async create(dto: CreateSellerDto) {
     const existing = await this.prisma.seller.findUnique({
