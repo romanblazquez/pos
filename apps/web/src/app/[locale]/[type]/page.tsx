@@ -24,7 +24,7 @@ import {
   resolveKind,
   type Locale,
 } from '@/lib/segments';
-import { listEditorialAuthors, listGuides, GUIDE_OG_DEFAULT } from '@/lib/guides';
+import { listGuides, GUIDE_OG_DEFAULT } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
 import { listShelves } from '@/lib/shelves';
 import { ShelfCard } from '@/components/ShelfCard';
@@ -457,7 +457,6 @@ export default async function ListingPage({
   // ── Guides index (editorial hub: searchable, paginated, magazine cards) ─────
   if (kind === 'guides') {
     const guides = await listGuides(locale);
-    const editors = await listEditorialAuthors(locale);
     const dateFmt = (iso: string) =>
       new Date(iso).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
         year: 'numeric', month: 'short', day: 'numeric',
@@ -521,37 +520,6 @@ export default async function ListingPage({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={GUIDE_OG_DEFAULT} alt={hubName} width={1600} height={900} />
         </figure>
-        <section className="editorial-team" aria-labelledby="editorial-team-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">{locale === 'es' ? 'Criterio editorial' : 'Editorial standards'}</p>
-              <h2 id="editorial-team-title" className="section-title">
-                {locale === 'es' ? 'Conoce a nuestros editores' : 'Meet our editors'}
-              </h2>
-            </div>
-          </div>
-          <div className="editorial-team-grid">
-            {editors.map((editor) => (
-              <article id={`editor-${editor.id}`} key={editor.id} className="editor-profile-card">
-                <div className="editor-profile-heading">
-                  <span className="editor-profile-avatar" aria-hidden="true">
-                    {editor.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}
-                  </span>
-                  <div><h3>{editor.name}</h3><p>{editor.from}</p></div>
-                </div>
-                <strong>{editor.role}</strong>
-                <p>{editor.bio}</p>
-                <div className="editor-profile-tags">
-                  {editor.expertise.map((item) => <span className="chip" key={item}>{item}</span>)}
-                </div>
-                <p className="editor-profile-method">
-                  <b>{locale === 'es' ? 'Evalúa:' : 'Reviews for:'}</b>{' '}
-                  {editor.reviewPrinciples.join(' · ')}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
         <GuidesExplorer guides={cards} locale={locale} />
       </main>
     );

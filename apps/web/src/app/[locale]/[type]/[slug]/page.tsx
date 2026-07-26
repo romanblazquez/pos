@@ -349,7 +349,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
 
   const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
   const authorPath = author
-    ? `${listingPath('guides', locale)}#editor-${author.id}`
+    ? listingPath('guides', locale)
     : undefined;
   const wordCount = [
     ...guide.intro,
