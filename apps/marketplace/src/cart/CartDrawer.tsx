@@ -1,21 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useIntl } from 'react-intl';
+import { formatMoney } from '../marketplace-meta.js';
 import { useCart } from './CartContext.js';
 import { useCustomer } from '../context/CustomerContext.js';
 import { useAddresses } from '../hooks/useAddresses.js';
 import { useWallet, storeCreditFor } from '../hooks/useWallet.js';
 import { Button, inputCls, fmtExact } from '../components/ui/index.js';
 import { API_BASE, marketplaceApi } from '../lib/api-client.js';
-import { formatMoney as sharedFormatMoney } from '@retail-os/ui-react';
-
-function fmt(minor: number, currency = 'MXN') {
-  return sharedFormatMoney({ minorUnits: minor, currency }, undefined, 0);
-}
 
 type Step = 'cart' | 'form' | 'processing' | 'success' | 'error';
 
 export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => void; onRequireAuth: () => void }) {
-  const { items, remove, clear, total } = useCart();
+  const { items, remove, clear, total, currency: cartCurrency } = useCart();
   const { session } = useCustomer();
   const intl = useIntl();
   const { addresses, create: createAddress } = useAddresses(session?.customer.id);
@@ -263,7 +259,7 @@ export default function CartDrawer({ onClose, onRequireAuth }: { onClose: () => 
           <div className="px-5 py-4 border-t border-[--border] flex flex-col gap-3 shrink-0">
             <div className="flex justify-between text-sm font-semibold text-[--tx]">
               <span>{intl.formatMessage({ id: 'cart.total' })}</span>
-              <span>{fmt(total, items[0]?.currency)}</span>
+              <span>{cartCurrency ? formatMoney(total, cartCurrency) : null}</span>
             </div>
             <Button className="w-full justify-center py-3" onClick={() => {
               if (!session) { onClose(); onRequireAuth(); return; }
@@ -328,7 +324,7 @@ function CartItems({ items, onRemove }: { items: ReturnType<typeof useCart>['ite
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm text-[--tx] truncate">{item.productName}</p>
             <p className="text-xs text-[--tx-muted]">{item.sellerName} · ×{item.quantity}</p>
-            <p className="text-sm font-semibold text-[--tx] mt-0.5">{fmt(item.priceMinorUnits * item.quantity, item.currency)}</p>
+            <p className="text-sm font-semibold text-[--tx] mt-0.5">{formatMoney(item.priceMinorUnits * item.quantity, item.currency)}</p>
           </div>
           <button
             onClick={() => onRemove(item.listingId)}

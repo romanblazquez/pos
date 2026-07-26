@@ -12,7 +12,7 @@ export interface CartItem {
   imageUrl?: string;
 }
 
-export type AddResult = 'ok' | 'out_of_stock' | 'different_seller';
+export type AddResult = 'ok' | 'out_of_stock' | 'different_seller' | 'different_currency';
 
 interface CartCtx {
   items: CartItem[];
@@ -20,6 +20,8 @@ interface CartCtx {
   remove: (listingId: string) => void;
   clear: () => void;
   total: number;
+  /** Currency the total is denominated in; undefined for an empty cart. */
+  currency?: string;
   count: number;
 }
 
@@ -46,6 +48,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (cartSellerId && cartSellerId !== item.sellerId && !alreadyInCart) {
       return 'different_seller';
     }
+    // A cart total is a single number, so it can only be denominated in one
+    // currency. Adding an ARS listing to an MXN cart would sum unlike amounts
+    // and label the result with whichever happened to be added first.
+    const cartCurrency = items[0]?.currency;
+    if (cartCurrency && cartCurrency !== item.currency && !alreadyInCart) {
+      return 'different_currency';
+    }
     setItems((prev) => {
       const existing = prev.find((i) => i.listingId === item.listingId);
       if (existing) {
@@ -67,10 +76,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clear = useCallback(() => setItems([]), []);
 
   const total = items.reduce((s, i) => s + i.priceMinorUnits * i.quantity, 0);
+  // Guaranteed single-currency by the add() guard above, so the total is a
+  // number the buyer can actually be charged.
+  const currency = items[0]?.currency;
   const count = items.reduce((s, i) => s + i.quantity, 0);
 
   return (
-    <Ctx.Provider value={{ items, add, remove, clear, total, count }}>
+    <Ctx.Provider value={{ items, add, remove, clear, total, currency, count }}>
       {children}
     </Ctx.Provider>
   );

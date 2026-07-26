@@ -337,6 +337,10 @@ export default function ProductPage({
             setToast(intl.formatMessage({ id: 'product.differentSellerToast' }, { sellerName: listing.sellerName }));
             return;
           }
+          if (result === 'different_currency') {
+            setToast(intl.formatMessage({ id: 'product.differentCurrencyToast' }, { currency: listing.currency }));
+            return;
+          }
           onCartOpen();
         }}
       />

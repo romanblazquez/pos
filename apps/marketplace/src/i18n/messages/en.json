@@ -274,5 +274,6 @@
   "productCard.addToWishlist": "Add to wishlist",
   "productCard.removeFromWishlist": "Remove from wishlist",
   "productCard.noOffer": "No offer",
-  "productCard.availableElsewhere": "Available in other countries"
+  "productCard.availableElsewhere": "Available in other countries",
+  "product.differentCurrencyToast": "Your cart is in another currency. Complete that purchase before adding a {currency} offer."
 }
