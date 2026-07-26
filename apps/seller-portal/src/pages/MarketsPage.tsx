@@ -28,6 +28,7 @@ export function MarketsPage({ session }: { session: SellerSession }) {
   const [showNew, setShowNew] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   function refresh() {
     sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets`)
@@ -63,6 +64,28 @@ export function MarketsPage({ session }: { session: SellerSession }) {
       refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
+    }
+  }
+
+  async function saveMarket(id: string, patch: Partial<SellerMarket>) {
+    setBusyId(id);
+    setError('');
+    try {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${session.seller.id}/markets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message ?? 'No se pudo guardar el mercado');
+      }
+      setEditingId(null);
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error desconocido');
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -132,7 +155,8 @@ export function MarketsPage({ session }: { session: SellerSession }) {
           ) : (
             <div className="divide-y divide-slate-100">
               {markets.map((m) => (
-                <div key={m.id} className="flex flex-col gap-3 py-4 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
+                <div key={m.id} className="py-4">
+                <div className="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold text-slate-900">{m.countryName} ({m.countryCode})</p>
@@ -148,6 +172,13 @@ export function MarketsPage({ session }: { session: SellerSession }) {
                   </div>
                   <div className="flex shrink-0 items-center gap-4 text-xs min-[480px]:flex-col min-[480px]:items-end min-[480px]:gap-1.5">
                     <button
+                      onClick={() => setEditingId(editingId === m.id ? null : m.id)}
+                      disabled={busyId === m.id}
+                      className="text-slate-500 hover:text-slate-900"
+                    >
+                      {editingId === m.id ? 'Cancelar' : 'Editar'}
+                    </button>
+                    <button
                       onClick={() => toggleActive(m)}
                       disabled={busyId === m.id}
                       className="text-slate-500 hover:text-slate-900"
@@ -162,6 +193,14 @@ export function MarketsPage({ session }: { session: SellerSession }) {
                       Eliminar
                     </button>
                   </div>
+                </div>
+                {editingId === m.id && (
+                  <SellerMarketEditor
+                    market={m}
+                    busy={busyId === m.id}
+                    onSave={(patch) => saveMarket(m.id, patch)}
+                  />
+                )}
                 </div>
               ))}
             </div>
@@ -285,5 +324,96 @@ function SellerMarketForm({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Inline editor for one seller market.
+ *
+ * These fields decide where a seller's offers appear and in what money, so they
+ * are the seller's to set — the backfill only ever seeded the minimum implied by
+ * selling in a market (domestic delivery, the market's own languages). Widening
+ * that, especially shipping abroad, is a claim only the seller can make.
+ *
+ * Comma-separated text rather than a country multi-select: the destination list
+ * is short today and a free-text field beats a picker nobody has data to fill.
+ */
+function SellerMarketEditor({
+  market,
+  busy,
+  onSave,
+}: {
+  market: SellerMarket;
+  busy: boolean;
+  onSave: (patch: Record<string, unknown>) => void;
+}) {
+  const [languages, setLanguages] = useState(market.languageCodes.join(', '));
+  const [shipping, setShipping] = useState(market.shippingCountries.join(', '));
+  const [shipsFrom, setShipsFrom] = useState(market.shipsFromCountryCode ?? '');
+  const [pickup, setPickup] = useState(market.localPickup);
+
+  const list = (value: string) =>
+    value.split(',').map((part) => part.trim()).filter(Boolean);
+
+  return (
+    <form
+      className="mt-3 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave({
+          languageCodes: list(languages),
+          shippingCountries: list(shipping).map((code) => code.toUpperCase()),
+          shipsFromCountryCode: shipsFrom.trim().toUpperCase() || undefined,
+          localPickup: pickup,
+        });
+      }}
+    >
+      <label className="flex flex-col gap-1 text-xs">
+        <span className="font-medium text-slate-600">Idiomas (separados por coma)</span>
+        <input
+          value={languages}
+          onChange={(event) => setLanguages(event.target.value)}
+          placeholder="es-MX, en-MX"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs">
+        <span className="font-medium text-slate-600">Envíos a (códigos de país)</span>
+        <input
+          value={shipping}
+          onChange={(event) => setShipping(event.target.value)}
+          placeholder="MX, AR"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs">
+        <span className="font-medium text-slate-600">Envía desde</span>
+        <input
+          value={shipsFrom}
+          onChange={(event) => setShipsFrom(event.target.value)}
+          placeholder="MX"
+          maxLength={2}
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm uppercase"
+        />
+      </label>
+
+      <label className="flex items-center gap-2 self-end text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={pickup}
+          onChange={(event) => setPickup(event.target.checked)}
+          className="h-4 w-4"
+        />
+        Retiro en tienda disponible
+      </label>
+
+      <div className="sm:col-span-2">
+        <Button type="submit" disabled={busy} className="w-full sm:w-auto">
+          {busy ? 'Guardando…' : 'Guardar cambios'}
+        </Button>
+      </div>
+    </form>
   );
 }
