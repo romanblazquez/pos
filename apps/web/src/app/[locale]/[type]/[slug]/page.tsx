@@ -106,7 +106,8 @@ export async function generateMetadata({
     const thin = product.listings.length === 0 && !product.description;
     return buildMetadata({
       locale,
-      path: entityPath('games', locale, product.slug),
+      market,
+      path: entityPath('games', locale, product.slug, market),
       title,
       description: productDescription(product, locale),
       images: [socialImageUrl('product', product.slug, locale)],
@@ -117,7 +118,7 @@ export async function generateMetadata({
   }
 
   if (kind === 'categories') {
-    const basePath = entityPath('categories', locale, params.slug);
+    const basePath = entityPath('categories', locale, params.slug, market);
     // Page 2+ is navigational: self-canonical to the paged URL and noindex so only
     // the clean category page competes (spec §9); deeper products stay in the sitemap.
     const path = page > 1 ? `${basePath}?page=${page}` : basePath;
@@ -126,6 +127,7 @@ export async function generateMetadata({
       const baseTitle = locale === 'es' ? `${theme.label.es} — Juegos de mesa` : `${theme.label.en} — Board games`;
       return buildMetadata({
         locale,
+        market,
         path,
         title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
         description: theme.description[locale],
@@ -144,6 +146,7 @@ export async function generateMetadata({
     const baseTitle = locale === 'es' ? `${real} — Juegos de mesa` : `${real} — Board games`;
     return buildMetadata({
       locale,
+      market,
       path,
       title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
       description:
@@ -165,7 +168,8 @@ export async function generateMetadata({
     const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
     return buildMetadata({
       locale,
-      path: entityPath('guides', locale, guide.slug),
+      market,
+      path: entityPath('guides', locale, guide.slug, market),
       title: guide.title,
       description: guide.description,
       alternates: guideAlternates(guide),
@@ -185,6 +189,7 @@ export async function generateMetadata({
     if (!editor) return {};
     return buildMetadata({
       locale,
+      market,
       path: editorPath(editor, locale),
       title: `${editor.name} — ${editor.role}`,
       description: editor.bio,
@@ -232,10 +237,10 @@ export default async function DetailPage({
 
   if (kind === 'categories') {
     const page = pageOf(searchParams);
-    const basePath = entityPath('categories', locale, params.slug);
+    const basePath = entityPath('categories', locale, params.slug, market);
     const theme = getThemeBySlug(locale, params.slug);
     if (theme && params.slug !== theme.slug[locale]) {
-      permanentRedirect(entityPath('categories', locale, theme.slug[locale]));
+      permanentRedirect(entityPath('categories', locale, theme.slug[locale], market));
     }
     // A curated theme (query by its BGG-tag / player-count rule) or, for legacy
     // links, the raw catalog category (base-game vs expansion).
@@ -265,8 +270,8 @@ export default async function DetailPage({
     const siblings = INDEXABLE_THEMES.filter((t) => t.slug[locale] !== params.slug);
 
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale, market) },
       { name: title, path: basePath },
     ];
     // The noindex catch-all shelf advertises no hreflang pair, matching the
@@ -285,7 +290,7 @@ export default async function DetailPage({
             data={[
               breadcrumbLd(crumbs),
               itemListLd(
-                results.map((p) => ({ name: p.name, path: `${listingPath('games', locale)}/${p.slug}` })),
+                results.map((p) => ({ name: p.name, path: `${listingPath('games', locale, market)}/${p.slug}` })),
               ),
             ]}
           />
@@ -319,7 +324,7 @@ export default async function DetailPage({
             <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
           </>
         ) : (
-          <CatalogEmpty locale={locale} clearHref={listingPath('categories', locale)} />
+          <CatalogEmpty locale={locale} clearHref={listingPath('categories', locale, market)} />
         )}
         <section aria-label={locale === 'es' ? 'Explora por tema' : 'Explore by theme'}>
           <h2 className="section-title">{locale === 'es' ? 'Explora por tema' : 'Explore by theme'}</h2>
@@ -330,7 +335,7 @@ export default async function DetailPage({
                 <Link
                   key={t.key}
                   className="chip chip-shelf"
-                  href={entityPath('categories', locale, t.slug[locale])}
+                  href={entityPath('categories', locale, t.slug[locale], market)}
                   style={{ '--cat-accent': sid.accent } as React.CSSProperties}
                 >
                   <CategoryMotif motif={sid.motif} size={14} className="chip-shelf-motif" />
@@ -347,13 +352,13 @@ export default async function DetailPage({
   if (kind === 'guides') {
     const guide = await getGuide(params.slug, locale);
     if (!guide) notFound();
-    return renderGuide(guide, locale, homeName);
+    return renderGuide(guide, locale, homeName, market);
   }
 
   if (kind === 'editors') {
     const editor = await getEditorialAuthor(params.slug);
     if (!editor) notFound();
-    return renderEditor(editor, locale, homeName);
+    return renderEditor(editor, locale, homeName, market);
   }
 
   notFound();
@@ -362,12 +367,12 @@ export default async function DetailPage({
 // Editor profile — the accountability page behind every byline. Everything here
 // is drawn from the stored profile (beat, expertise, review criteria) plus the
 // guides actually bylined to them; nothing is invented per-request.
-async function renderEditor(editor: Author, locale: Locale, homeName: string) {
+async function renderEditor(editor: Author, locale: Locale, homeName: string, market: string) {
   const path = editorPath(editor, locale);
   const guides = await guidesByAuthor(editor.id, locale);
   const crumbs: Crumb[] = [
-    { name: homeName, path: homePath(locale) },
-    { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale) },
+    { name: homeName, path: homePath(locale, market) },
+    { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale, market) },
     { name: editor.name, path },
   ];
   const writesIn = editor.locale === 'es' ? 'español' : locale === 'es' ? 'inglés' : 'English';
@@ -387,7 +392,7 @@ async function renderEditor(editor: Author, locale: Locale, homeName: string) {
             knowsAbout: editor.expertise,
             authored: guides.map((guide) => ({
               title: guide.title,
-              path: entityPath('guides', locale, guide.slug),
+              path: entityPath('guides', locale, guide.slug, market),
             })),
           }),
         ]}
@@ -437,7 +442,7 @@ async function renderEditor(editor: Author, locale: Locale, homeName: string) {
           <ul className="editor-profile-guides">
             {guides.map((guide) => (
               <li key={guide.slug}>
-                <Link href={entityPath('guides', locale, guide.slug)}>{guide.title}</Link>
+                <Link href={entityPath('guides', locale, guide.slug, market)}>{guide.title}</Link>
                 <p className="muted">{guide.description}</p>
               </li>
             ))}
@@ -454,8 +459,8 @@ async function renderEditor(editor: Author, locale: Locale, homeName: string) {
   );
 }
 
-async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
-  const path = entityPath('guides', locale, guide.slug);
+async function renderGuide(guide: Guide, locale: Locale, homeName: string, market: string) {
+  const path = entityPath('guides', locale, guide.slug, market);
   const editorialCover = guide.ogImage ?? (await guideCover(guide, locale));
   // Resolve each pick to a live product so the guide links into shoppable pages
   // (and silently drops any pick whose product is no longer in the catalogue).
@@ -467,8 +472,8 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
   )).filter((x): x is { pick: GuidePick; product: ProductDetail } => x !== null);
 
   const crumbs: Crumb[] = [
-    { name: homeName, path: homePath(locale) },
-    { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+    { name: homeName, path: homePath(locale, market) },
+    { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale, market) },
     { name: guide.title, path },
   ];
 
@@ -567,7 +572,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
                 )}
                 <div style={{ flex: 1 }}>
                   <h2 style={{ margin: 0, fontSize: '1.05rem' }}>
-                    <Link href={entityPath('games', locale, product.slug)}>{product.name}</Link>
+                    <Link href={entityPath('games', locale, product.slug, market)}>{product.name}</Link>
                     {range && <span className="muted" style={{ fontWeight: 400 }}> · {locale === 'es' ? 'desde' : 'from'} {range.split('–')[0].trim()}</span>}
                   </h2>
                   <p style={{ margin: '0.4rem 0 0' }}>{pick.blurb}</p>
@@ -576,7 +581,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
                     data-guide-product-cta={product.slug}
                     aria-label={`${locale === 'es' ? 'Ver ofertas de' : 'See offers for'} ${product.name}`}
                     style={{ marginTop: 8, display: 'inline-block' }}
-                    href={entityPath('games', locale, product.slug)}
+                    href={entityPath('games', locale, product.slug, market)}
                   >
                     {locale === 'es' ? 'Ver ofertas' : 'See offers'} →
                   </Link>
@@ -640,10 +645,16 @@ const RAW_CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
 // search-relevant hub for bots; it falls back to the labelled raw category, and
 // finally to just the catalogue. Every crumb links to a page that resolves, so
 // the BreadcrumbList stays valid (no dead links, no fabricated levels).
-function productCrumbs(product: ProductDetail, locale: Locale, homeName: string, path: string): Crumb[] {
+function productCrumbs(
+  product: ProductDetail,
+  locale: Locale,
+  homeName: string,
+  path: string,
+  market: string,
+): Crumb[] {
   const crumbs: Crumb[] = [
-    { name: homeName, path: homePath(locale) },
-    { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale) },
+    { name: homeName, path: homePath(locale, market) },
+    { name: locale === 'es' ? 'Categorías' : 'Categories', path: listingPath('categories', locale, market) },
   ];
 
   // The API names a category by its canonical (English) name and key. Resolve it
@@ -656,13 +667,13 @@ function productCrumbs(product: ProductDetail, locale: Locale, homeName: string,
     ? THEMES.find((candidate) => candidate.key === persistedPrimary.slug)
     : primaryTheme(product);
   if (theme) {
-    crumbs.push({ name: theme.label[locale], path: entityPath('categories', locale, theme.slug[locale]) });
+    crumbs.push({ name: theme.label[locale], path: entityPath('categories', locale, theme.slug[locale], market) });
   } else if (persistedPrimary) {
     // A category with no theme of its own (admin-created): its own name and key
     // are all we have, and /categorias/<key> resolves for it.
     crumbs.push({
       name: persistedPrimary.name,
-      path: entityPath('categories', locale, persistedPrimary.slug),
+      path: entityPath('categories', locale, persistedPrimary.slug, market),
     });
   } else if (product.category) {
     const label = RAW_CATEGORY_LABELS[product.category]?.[locale] ?? product.category;
@@ -679,8 +690,8 @@ async function renderProduct(
   homeName: string,
   market: string,
 ) {
-  const path = entityPath('games', locale, product.slug);
-  const crumbs = productCrumbs(product, locale, homeName, path);
+  const path = entityPath('games', locale, product.slug, market);
+  const crumbs = productCrumbs(product, locale, homeName, path, market);
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
@@ -691,9 +702,9 @@ async function renderProduct(
   // from any fact to "more like this". Publisher/year/player/age/duration use
   // explicit structured filters; designer remains lexical until it gains a
   // normalized relation of its own.
-  const searchFor = (term: string) => `${listingPath('search', locale)}?q=${encodeURIComponent(term)}`;
+  const searchFor = (term: string) => `${listingPath('search', locale, market)}?q=${encodeURIComponent(term)}`;
   const gamesWith = (key: string, value: string | number) =>
-    `${listingPath('games', locale)}?${key}=${encodeURIComponent(String(value))}`;
+    `${listingPath('games', locale, market)}?${key}=${encodeURIComponent(String(value))}`;
   const attrs: Array<{ label: string; value: string | number | undefined; wide?: boolean; href?: string }> = [
     { label: locale === 'es' ? 'Editorial' : 'Publisher', value: product.publisher, wide: true, href: product.publisher ? gamesWith('publisher', product.publisher) : undefined },
     { label: locale === 'es' ? 'Diseñador' : 'Designer', value: product.designer, wide: true, href: product.designer ? searchFor(product.designer) : undefined },
@@ -858,7 +869,7 @@ async function renderProduct(
         <section>
           {product.category && (
             <p style={{ margin: '1.75rem 0 0.75rem' }}>
-              <Link className="chip" href={`${listingPath('categories', locale)}/${slugify(product.category)}`}>
+              <Link className="chip" href={`${listingPath('categories', locale, market)}/${slugify(product.category)}`}>
                 {locale === 'es' ? 'Ver más en' : 'See more in'} {product.category} →
               </Link>
             </p>
@@ -868,7 +879,7 @@ async function renderProduct(
               {/* Mechanic landing pages need a new API filter; until then tags
                   link to real search results rather than a 404. */}
               {product.tags.map((tag) => (
-                <Link key={tag} className="chip" href={`${listingPath('search', locale)}?q=${encodeURIComponent(tag)}`}>
+                <Link key={tag} className="chip" href={`${listingPath('search', locale, market)}?q=${encodeURIComponent(tag)}`}>
                   {tag}
                 </Link>
               ))}
@@ -883,7 +894,7 @@ async function renderProduct(
             <h2 className="section-title">{locale === 'es' ? 'Aparece en estas guías' : 'Featured in these guides'}</h2>
             <div className="taglist">
               {relatedGuides.map((g) => (
-                <Link key={g.slug} className="chip" href={entityPath('guides', locale, g.slug)}>
+                <Link key={g.slug} className="chip" href={entityPath('guides', locale, g.slug, market)}>
                   {g.title} →
                 </Link>
               ))}

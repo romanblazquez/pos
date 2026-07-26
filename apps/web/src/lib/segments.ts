@@ -104,8 +104,15 @@ export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
 }
 
-export function isIndexable(locale: Locale): boolean {
-  return INDEXABLE_LOCALES.includes(locale);
+/**
+ * A page is indexable only when BOTH its language and its market are.
+ *
+ * Market matters independently: Argentina serves real shoppers at /es-ar in an
+ * indexable language, but is not open to crawlers. Checking the language alone
+ * let those pages advertise `index, follow`.
+ */
+export function isIndexable(locale: Locale, market: string = DEFAULT_MARKET): boolean {
+  return INDEXABLE_LOCALES.includes(locale) && INDEXABLE_MARKETS.includes(market.toLowerCase());
 }
 
 // Entity kinds and their localized path segments.

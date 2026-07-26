@@ -61,7 +61,7 @@ export function socialImageUrl(
 
 export function buildMetadata(input: SeoInput): Metadata {
   const canonical = absoluteUrl(input.path);
-  const indexable = isIndexable(input.locale) && !input.noindex;
+  const indexable = isIndexable(input.locale, input.market) && !input.noindex;
 
   // hreflang cluster: only indexable locales that have a known alternate path.
   // Keys are full BCP-47 language-region tags (es-MX, not es) — the whole point

@@ -120,7 +120,8 @@ export async function generateMetadata({
   if (kind === 'search') {
     return buildMetadata({
       locale,
-      path: listingPath('search', locale),
+      market,
+      path: listingPath('search', locale, market),
       title: locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games',
       description:
         locale === 'es'
@@ -133,27 +134,29 @@ export async function generateMetadata({
   if (kind === 'guides') {
     return buildMetadata({
       locale,
-      path: listingPath('guides', locale),
+      market,
+      path: listingPath('guides', locale, market),
       title: locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides',
       description:
         locale === 'es'
           ? 'Guías, comparativas y listas de los mejores juegos de mesa, con precios comparados entre tiendas.'
           : 'Guides, comparisons and best-of lists for board games, with prices compared across stores.',
       images: [GUIDE_OG_DEFAULT],
-      alternates: { es: listingPath('guides', 'es'), en: listingPath('guides', 'en') },
+      alternates: { es: listingPath('guides', 'es', market), en: listingPath('guides', 'en', market) },
     });
   }
 
   if (kind === 'editors') {
     return buildMetadata({
       locale,
-      path: listingPath('editors', locale),
+      market,
+      path: listingPath('editors', locale, market),
       title: locale === 'es' ? 'Equipo editorial' : 'Editorial team',
       description:
         locale === 'es'
           ? 'Quién escribe las guías de Juegospedia: su especialidad, su criterio de evaluación y las guías que firman.'
           : 'Who writes the Juegospedia guides: their beat, the criteria they review against and the guides they sign.',
-      alternates: { es: listingPath('editors', 'es'), en: listingPath('editors', 'en') },
+      alternates: { es: listingPath('editors', 'es', market), en: listingPath('editors', 'en', market) },
     });
   }
 
@@ -169,7 +172,7 @@ export async function generateMetadata({
   );
   const navigational = page > 1 || filtered;
 
-  const path = page > 1 ? `${listingPath(kind, locale)}?page=${page}` : listingPath(kind, locale);
+  const path = page > 1 ? `${listingPath(kind, locale, market)}?page=${page}` : listingPath(kind, locale, market);
   const isGames = kind === 'games';
   const base = isGames
     ? locale === 'es' ? 'Juegos de mesa' : 'Board games'
@@ -185,13 +188,14 @@ export async function generateMetadata({
 
   return buildMetadata({
     locale,
+    market,
     path,
     title,
     description,
     noindex: navigational,
     alternates: navigational
       ? undefined
-      : { es: listingPath(kind, 'es'), en: listingPath(kind, 'en') },
+      : { es: listingPath(kind, 'es', market), en: listingPath(kind, 'en', market) },
   });
 }
 
@@ -280,8 +284,8 @@ export default async function ListingPage({
       offset: semantic ? 0 : (page - 1) * PAGE_SIZE,
     });
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Buscar' : 'Search', path: listingPath('search', locale) },
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Buscar' : 'Search', path: listingPath('search', locale, market) },
     ];
     return (
       <main className="container">
@@ -291,13 +295,13 @@ export default async function ListingPage({
             ? locale === 'es' ? `Resultados para “${q}”` : `Results for “${q}”`
             : locale === 'es' ? 'Buscar juegos de mesa' : 'Search board games'}
         </h1>
-        <form method="get" action={listingPath('search', locale)}>
+        <form method="get" action={listingPath('search', locale, market)}>
           <FilterSheet labels={filterSheetLabels(locale, total)} activeCount={filterActiveCount(state)}>
           <CatalogSearchField
             locale={locale}
             initialValue={q}
-            searchPath={listingPath('search', locale)}
-            productBase={listingPath('games', locale)}
+            searchPath={listingPath('search', locale, market)}
+            productBase={listingPath('games', locale, market)}
             placeholder={locale === 'es' ? 'Catan, estrategia, 2 jugadores…' : 'Catan, strategy, 2 players…'}
             className="search-command"
             trailing={<FilterSheetTrigger />}
@@ -311,7 +315,7 @@ export default async function ListingPage({
                 facets={facets}
                 state={state}
                 total={total}
-                clearHref={q ? `${listingPath('search', locale)}?q=${encodeURIComponent(q)}` : listingPath('search', locale)}
+                clearHref={q ? `${listingPath('search', locale, market)}?q=${encodeURIComponent(q)}` : listingPath('search', locale, market)}
               />
             </FilterSheetPanel>
             <div className="search-results">
@@ -323,11 +327,11 @@ export default async function ListingPage({
                   {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
                 </div>
               ) : (
-                <CatalogEmpty locale={locale} clearHref={listingPath('search', locale)} />
+                <CatalogEmpty locale={locale} clearHref={listingPath('search', locale, market)} />
               )}
               {!semantic && (
                 <Pager
-                  base={listingPath('search', locale)}
+                  base={listingPath('search', locale, market)}
                   page={page}
                   total={total}
                   locale={locale}
@@ -345,7 +349,7 @@ export default async function ListingPage({
 
   // ── Games catalog (faceted sidebar + paginated over the full catalogue) ─────
   if (kind === 'games') {
-    const base = listingPath('games', locale);
+    const base = listingPath('games', locale, market);
     const [categories, mechanics, facets] = await Promise.all([getCategories(), getMechanics(), getCatalogFacets()]);
     const state: FilterState = {
       q: '',
@@ -385,7 +389,7 @@ export default async function ListingPage({
       offset: (page - 1) * PAGE_SIZE,
     });
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
+      { name: homeName, path: homePath(locale, market) },
       { name: locale === 'es' ? 'Juegos de mesa' : 'Board games', path: base },
     ];
     return (
@@ -439,10 +443,10 @@ export default async function ListingPage({
 
   // ── Category index (curated BGG-aligned themes) ────────────────────────────
   if (kind === 'categories') {
-    const catBase = listingPath('categories', locale);
+    const catBase = listingPath('categories', locale, market);
     const cards = await listShelves();
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
+      { name: homeName, path: homePath(locale, market) },
       { name: locale === 'es' ? 'Categorías' : 'Categories', path: catBase },
     ];
     return (
@@ -451,7 +455,7 @@ export default async function ListingPage({
         <JsonLd
           data={[
             breadcrumbLd(crumbs),
-            itemListLd(cards.map((s) => ({ name: s.theme.label[locale], path: entityPath('categories', locale, s.theme.slug[locale]) }))),
+            itemListLd(cards.map((s) => ({ name: s.theme.label[locale], path: entityPath('categories', locale, s.theme.slug[locale], market) }))),
           ]}
         />
         <h1 className="page-title">{locale === 'es' ? 'Categorías de juegos de mesa' : 'Board game categories'}</h1>
@@ -470,7 +474,7 @@ export default async function ListingPage({
             ))}
           </div>
         ) : (
-          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale)} />
+          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
         )}
         <PromoStrip locale={locale} />
       </main>
@@ -491,8 +495,8 @@ export default async function ListingPage({
         const author = g.author ?? (g.authorId ? AUTHORS_BY_ID[g.authorId] : undefined);
         return {
           slug: g.slug,
-          href: entityPath('guides', locale, g.slug),
-          shareUrl: absoluteUrl(entityPath('guides', locale, g.slug)),
+          href: entityPath('guides', locale, g.slug, market),
+          shareUrl: absoluteUrl(entityPath('guides', locale, g.slug, market)),
           title: g.title,
           excerpt: g.description,
           author: author ? { name: author.name, from: author.from } : undefined,
@@ -507,8 +511,8 @@ export default async function ListingPage({
       }),
     );
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale) },
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Guías' : 'Guides', path: listingPath('guides', locale, market) },
     ];
     const hubName = locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides';
     const hubDesc = locale === 'es'
@@ -516,19 +520,19 @@ export default async function ListingPage({
       : 'Comparisons, reviews and best-of lists for board games, written by our editorial team and with prices compared across stores.';
     return (
       <main className="container">
-        <LocaleAlternates alternates={{ es: listingPath('guides', 'es'), en: listingPath('guides', 'en') }} />
+        <LocaleAlternates alternates={{ es: listingPath('guides', 'es', market), en: listingPath('guides', 'en', market) }} />
         <Breadcrumbs crumbs={crumbs} />
         <JsonLd
           data={[
             breadcrumbLd(crumbs),
-            itemListLd(guides.map((g) => ({ name: g.title, path: entityPath('guides', locale, g.slug) }))),
+            itemListLd(guides.map((g) => ({ name: g.title, path: entityPath('guides', locale, g.slug, market) }))),
             blogLd({
               name: hubName,
               description: hubDesc,
-              path: listingPath('guides', locale),
+              path: listingPath('guides', locale, market),
               posts: guides.map((g) => ({
                 title: g.title,
-                path: entityPath('guides', locale, g.slug),
+                path: entityPath('guides', locale, g.slug, market),
                 datePublished: g.publishedAt,
                 dateModified: g.updatedAt,
                 author: g.author?.name ?? (g.authorId ? AUTHORS_BY_ID[g.authorId]?.name : undefined),
@@ -540,7 +544,7 @@ export default async function ListingPage({
         <h1 className="page-title">{hubName}</h1>
         <p className="lede">
           {hubDesc}{' '}
-          <Link href={listingPath('editors', locale)}>
+          <Link href={listingPath('editors', locale, market)}>
             {locale === 'es' ? 'Conoce al equipo editorial' : 'Meet the editorial team'}
           </Link>.
         </p>
@@ -559,8 +563,8 @@ export default async function ListingPage({
     const guideCount = (authorId: string) =>
       guides.filter((guide) => guide.authorId === authorId).length;
     const crumbs: Crumb[] = [
-      { name: homeName, path: homePath(locale) },
-      { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale) },
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale, market) },
     ];
     const title = locale === 'es' ? 'Equipo editorial' : 'Editorial team';
     const lede = locale === 'es'
@@ -568,7 +572,7 @@ export default async function ListingPage({
       : 'Every guide is signed by someone with a beat and a fixed set of review criteria. Here is who writes what, and the rules they judge a game by.';
     return (
       <main className="container">
-        <LocaleAlternates alternates={{ es: listingPath('editors', 'es'), en: listingPath('editors', 'en') }} />
+        <LocaleAlternates alternates={{ es: listingPath('editors', 'es', market), en: listingPath('editors', 'en', market) }} />
         <Breadcrumbs crumbs={crumbs} />
         <JsonLd
           data={[

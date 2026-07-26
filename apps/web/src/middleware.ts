@@ -4,6 +4,7 @@ import {
   DEFAULT_MARKET,
   LOCALES,
   localePrefix,
+  MARKETS,
   parseLocalePrefix,
   segmentFor,
   type Locale,
@@ -77,11 +78,25 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
-  // Unknown or missing prefix: send to the default language×market.
+  // Unknown or missing prefix: send the visitor to their remembered market
+  // rather than always to the default one, so a shopper who chose Argentina
+  // stays in Argentina when they hit a bare URL.
+  //
+  // 307 and never cached: the destination depends on a cookie, so a shared
+  // cache must not pin one visitor's market onto everyone else's. Crawlers send
+  // no cookie and therefore always land on the default market — content served
+  // at a given URL stays deterministic for them.
   if (!parseLocalePrefix(first)) {
+    const remembered = req.cookies.get('jp-market')?.value?.toLowerCase();
+    const market = remembered && MARKETS[remembered] ? remembered : DEFAULT_MARKET;
+    const language = req.cookies.get('jp-locale')?.value;
+    const locale = language && LOCALES.includes(language as Locale) ? (language as Locale) : DEFAULT_LOCALE;
+
     const url = req.nextUrl.clone();
-    url.pathname = `/${localePrefix(DEFAULT_LOCALE, DEFAULT_MARKET)}${pathname === '/' ? '' : pathname}`;
-    return NextResponse.redirect(url, 307);
+    url.pathname = `/${localePrefix(locale, market)}${pathname === '/' ? '' : pathname}`;
+    const res = NextResponse.redirect(url, 307);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
   }
 
   return NextResponse.next();

@@ -6,6 +6,7 @@ import {
   bcp47,
   entityPath,
   homePath,
+  isIndexable,
   listingPath,
   localePrefix,
   parseLocalePrefix,
@@ -68,5 +69,25 @@ describe('language × market URLs', () => {
       canonicalCurrency: 'MXN',
     });
     expect(MARKETS[DEFAULT_MARKET].languages).toContain('es');
+  });
+});
+
+describe('indexability', () => {
+  // Argentina serves real shoppers at /es-ar in an indexable language, but is
+  // not open to crawlers. Checking only the language let those pages advertise
+  // `index, follow` while the sitemap correctly omitted them — a contradiction
+  // Google resolves by trusting neither.
+  it('requires the market to be indexable, not just the language', () => {
+    expect(isIndexable('es', 'mx')).toBe(true);
+    expect(isIndexable('es', 'ar')).toBe(false);
+  });
+
+  it('keeps a non-indexable language non-indexable in every market', () => {
+    expect(isIndexable('en', 'mx')).toBe(false);
+    expect(isIndexable('en', 'ar')).toBe(false);
+  });
+
+  it('defaults to the default market when none is given', () => {
+    expect(isIndexable('es')).toBe(isIndexable('es', DEFAULT_MARKET));
   });
 });

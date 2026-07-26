@@ -68,7 +68,8 @@ export async function generateMetadata({
   const t = T[locale];
   return buildMetadata({
     locale,
-    path: homePath(locale),
+    market,
+    path: homePath(locale, market),
     title: t.title,
     description: t.desc,
     alternates: { es: homePath('es'), en: homePath('en') },
@@ -100,11 +101,11 @@ export default async function HomePage({ params }: { params: { locale: string } 
             {locale === 'es' ? <>La enciclopedia de juegos de mesa, <em>con el mejor precio.</em></> : <>The board-game encyclopedia, <em>at the best price.</em></>}
           </h1>
           <p>{t.lead}</p>
-          <form className="hero-search" action={listingPath('search', locale)} method="get">
+          <form className="hero-search" action={listingPath('search', locale, market)} method="get">
             <CatalogSearchField
               locale={locale}
-              searchPath={listingPath('search', locale)}
-              productBase={listingPath('games', locale)}
+              searchPath={listingPath('search', locale, market)}
+              productBase={listingPath('games', locale, market)}
               placeholder={t.searchPlaceholder}
               className="search-command"
             />
@@ -131,7 +132,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
               ))}
             </div>
             <p style={{ marginTop: '1.5rem' }}>
-              <Link className="chip" href={listingPath('categories', locale)}>
+              <Link className="chip" href={listingPath('categories', locale, market)}>
                 {t.allCats} →
               </Link>
             </p>
@@ -152,7 +153,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
               ))}
             </div>
             <p style={{ marginTop: '1.5rem' }}>
-              <Link className="chip" href={listingPath('games', locale)}>
+              <Link className="chip" href={listingPath('games', locale, market)}>
                 {t.all} →
               </Link>
             </p>
