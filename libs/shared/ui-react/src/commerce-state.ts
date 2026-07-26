@@ -34,6 +34,51 @@ export function commerceStateEmphasis(state: CommerceState): BadgeEmphasis {
   return EMPHASIS[state] ?? 'soft';
 }
 
+/**
+ * Colour family a state is drawn in.
+ *
+ * Named for the palette, not for the state, because several states share one
+ * family: "in stock" and "best price" are both good news and both read forest.
+ * ProductCard used to spell out fifteen palettes inline — light and dark, six
+ * hex values each — of which three pairs were byte-identical and the rest were
+ * the swatch tokens copied by hand. Copying a token defeats it: the swatch can
+ * then change without the badge following.
+ *
+ * Status families (forest/ochre/danger) carry a verdict, so merchandising
+ * states that are neither good nor bad — pre-order, second-hand — get families
+ * of their own rather than borrowing one that would editorialise them.
+ */
+export type BadgeTone =
+  | 'forest'
+  | 'ochre'
+  | 'danger'
+  | 'parchment'
+  | 'violet'
+  | 'teal'
+  | 'clay';
+
+const TONES: Record<CommerceState, BadgeTone> = {
+  'in-stock': 'forest',
+  'best-price': 'forest',
+  'community-pick': 'forest',
+  'low-stock': 'ochre',
+  rare: 'ochre',
+  'top-ranked': 'ochre',
+  sale: 'danger',
+  'out-of-stock': 'parchment',
+  'out-of-print': 'parchment',
+  preorder: 'violet',
+  expansion: 'violet',
+  used: 'teal',
+  backorder: 'clay',
+  new: 'clay',
+  hot: 'clay',
+};
+
+export function commerceStateTone(state: CommerceState): BadgeTone {
+  return TONES[state];
+}
+
 const TAG_STATES: Array<[CommerceState, RegExp]> = [
   ['hot', /\b(hot|trending|en tendencia)\b/],
   ['preorder', /\b(pre[ -]?order|preventa)\b/],

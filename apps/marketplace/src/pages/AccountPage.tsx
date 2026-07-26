@@ -267,7 +267,7 @@ export default function AccountPage({
               </div>
               <span
                 className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 font-mono text-xs font-bold"
-                style={{ background: '#E4EFE4', color: '#2C6B43' }}
+                style={{ background: 'var(--jp-success-tint)', color: 'var(--jp-success-text)' }}
               >
                 +{action.xp} XP
               </span>
@@ -285,7 +285,7 @@ export default function AccountPage({
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
                 <span
                   className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold"
-                  style={{ background: '#E4EFE4', color: '#2C6B43' }}
+                  style={{ background: 'var(--jp-success-tint)', color: 'var(--jp-success-text)' }}
                 >
                   +{event.xp}
                 </span>
@@ -302,7 +302,10 @@ export default function AccountPage({
         role="button"
         onClick={() => onNavigate('wallet')}
         className="relative overflow-hidden rounded-2xl cursor-pointer group p-6 shadow-lg"
-        style={{ background: 'linear-gradient(135deg, #1E3A2E 0%, #2C6B43 100%)' }}
+        style={{
+          background:
+            'linear-gradient(135deg, color-mix(in srgb, var(--jp-success-mark) 55%, #000) 0%, var(--jp-success-text) 100%)',
+        }}
       >
         <div
           className="absolute inset-0"

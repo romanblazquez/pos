@@ -18,10 +18,10 @@ const LANGUAGE_FLAGS: Record<string, string> = {
 };
 
 function weightLabel(weight: number): { label: string; color: string; bg: string } {
-  if (weight <= 2.0) return { label: 'Ligero', color: '#2C6B43', bg: '#E4EFE4' };
-  if (weight <= 3.0) return { label: 'Medio', color: '#8A5A12', bg: '#F6EBD2' };
-  if (weight <= 4.0) return { label: 'Pesado', color: '#8A2A12', bg: '#F6E1DC' };
-  return { label: 'Experto', color: '#5A0A0A', bg: '#F3D6D6' };
+  if (weight <= 2.0) return { label: 'Ligero', color: 'var(--jp-success-text)', bg: 'var(--jp-success-tint)' };
+  if (weight <= 3.0) return { label: 'Medio', color: 'var(--jp-warning-text)', bg: 'var(--jp-warning-tint)' };
+  if (weight <= 4.0) return { label: 'Pesado', color: 'var(--jp-danger-text)', bg: 'var(--jp-danger-tint)' };
+  return { label: 'Experto', color: 'var(--jp-danger-mark)', bg: 'var(--jp-danger-tint)' };
 }
 
 function Pill({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -70,8 +70,8 @@ export function GameInfoBadges({
 
       {bggRating && bggRating > 0 && (
         <span
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#E7D3A6] bg-[#F6EBD2] px-3 py-1 font-mono text-xs font-semibold"
-          style={{ color: '#B5852F' }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[--jp-warning-mark]/40 bg-[--jp-warning-tint] px-3 py-1 font-mono text-xs font-semibold"
+          style={{ color: 'var(--jp-warning-text)' }}
         >
           ★ {bggRating.toFixed(1)}
           <span className="text-[--tx-faint] font-normal">BGG</span>

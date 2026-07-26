@@ -5,6 +5,9 @@
 /* Filter-panel chrome (.filter-select, .filter-more) shared with apps/web. Only
    reads tokens this file already defines below — it declares none of its own. */
 @import "../../../libs/shared/ui-react/src/filter-panel.css";
+/* Commerce badge tones — one rule per colour family, driven by data-tone, so
+   badges read the swatch tokens instead of hex values in a component. */
+@import "../../../libs/shared/ui-react/src/commerce-badge.css";
 /* Every shared component, by glob rather than by name. The list used to be
    enumerated file by file, so adding a shared component shipped it with none of
    its utility classes generated — visibly broken, with nothing failing at build

@@ -137,7 +137,7 @@ function ComplexityMeter({ weight }: { weight: number }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.complexity' })}</span>
         <span className="max-w-full font-mono text-[11px] sm:text-[12px] rounded-[7px] border px-2 py-0.5
-                         border-[#E7D3A6] bg-[#F6EBD2] text-[#8A5A12] dark:border-[#D7A654]/30 dark:bg-[#D7A654]/15 dark:text-[#E0BC72]">
+                         border-[--jp-warning-mark]/30 bg-[--jp-warning-tint] text-[--jp-warning-text]">
           {weight.toFixed(1)} / 5 · {band}
         </span>
       </div>
@@ -183,15 +183,15 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
     }
     if (n === minPlayers && minPlayers < maxPlayers) {
       return {
-        cellClass: 'bg-[#F6EBD2] border border-[#E7D3A6] text-[#8A5A12] dark:bg-[#D7A654]/15 dark:border-[#D7A654]/30 dark:text-[#E0BC72]',
-        labelClass: 'text-[#8A5A12] dark:text-[#E0BC72]',
+        cellClass: 'bg-[--jp-warning-tint] border border-[--jp-warning-mark]/30 text-[--jp-warning-text]',
+        labelClass: 'text-[--jp-warning-text]',
         label: 'OK',
       };
     }
     if (n <= maxPlayers) {
       return {
         cellClass: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950',
-        labelClass: 'font-bold text-[#2C6B43] dark:text-[#7FC79A]',
+        labelClass: 'font-bold text-[--jp-success-text]',
         label: 'Best',
       };
     }
@@ -207,7 +207,7 @@ function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPla
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
         <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
-                         border-[#CBE0CD] bg-[#E4EFE4] text-[#2C6B43] dark:border-[#5CA877]/30 dark:bg-[#5CA877]/15 dark:text-[#7FC79A]">
+                         border-[--jp-success-mark]/30 bg-[--jp-success-tint] text-[--jp-success-text]">
           {badge}
         </span>
       </div>

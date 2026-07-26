@@ -1,0 +1,107 @@
+/* Commerce badges — the stock/merchandising pills on product cards.
+ *
+ * One rule per tone, driven by `data-tone`, so a badge's colour comes from the
+ * swatch tokens rather than from hex values written into a component. The tokens
+ * already switch with the theme, which is why no rule here mentions dark mode:
+ * the fifteen palettes this replaced each carried a hand-written `dark:` variant
+ * that had to be kept in step by hand.
+ *
+ * `data-emphasis` is the design system's weight tier (commerce-state.ts):
+ *   soft    — tinted background, coloured text. The default.
+ *   solid   — filled. Reserved for states that must interrupt scanning.
+ *   outline — border only. Informative, never a selling point.
+ */
+.commerce-badge {
+  display: inline-flex;
+  max-width: 82%;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0.25rem 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  /* Each tone sets these three; the emphasis rules below decide how they are
+     used, so a tone never has to know which weight it is being drawn at. */
+  --badge-tint: var(--jp-muted);
+  --badge-ink: var(--jp-ink);
+  --badge-mark: var(--jp-ink);
+}
+
+.commerce-badge[data-tone='forest'] {
+  --badge-tint: var(--jp-success-tint);
+  --badge-ink: var(--jp-success-text);
+  --badge-mark: var(--jp-success-mark);
+}
+.commerce-badge[data-tone='ochre'] {
+  --badge-tint: var(--jp-warning-tint);
+  --badge-ink: var(--jp-warning-text);
+  --badge-mark: var(--jp-warning-mark);
+}
+.commerce-badge[data-tone='danger'] {
+  --badge-tint: var(--jp-danger-tint);
+  --badge-ink: var(--jp-danger-text);
+  --badge-mark: var(--jp-danger-mark);
+}
+.commerce-badge[data-tone='violet'] {
+  --badge-tint: var(--jp-violet-tint);
+  --badge-ink: var(--jp-violet-text);
+  --badge-mark: var(--jp-violet-mark);
+}
+.commerce-badge[data-tone='teal'] {
+  --badge-tint: var(--jp-teal-tint);
+  --badge-ink: var(--jp-teal-text);
+  --badge-mark: var(--jp-teal-mark);
+}
+.commerce-badge[data-tone='clay'] {
+  --badge-tint: var(--jp-clay-tint);
+  --badge-ink: var(--jp-clay);
+  --badge-mark: var(--jp-clay);
+}
+.commerce-badge[data-tone='parchment'] {
+  --badge-tint: var(--jp-muted);
+  --badge-ink: var(--jp-ink-muted);
+  --badge-mark: var(--jp-ink-faint);
+}
+
+.commerce-badge[data-emphasis='soft'] {
+  border-color: color-mix(in srgb, var(--badge-mark) 30%, transparent);
+  background: var(--badge-tint);
+  color: var(--badge-ink);
+}
+
+.commerce-badge[data-emphasis='solid'] {
+  border-color: var(--badge-mark);
+  background: var(--badge-mark);
+  /* Against a filled mark, not the page — so this is the one place a light
+     value is correct in both themes. */
+  color: var(--jp-surface);
+}
+
+.commerce-badge[data-emphasis='outline'] {
+  border-color: color-mix(in srgb, var(--badge-mark) 45%, transparent);
+  background: transparent;
+  color: var(--badge-ink);
+}
+
+/* The leading dot, diamond or star. Inherits the text colour so it never needs
+   a tone rule of its own. */
+.commerce-badge-mark {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.commerce-badge-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

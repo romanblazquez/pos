@@ -109,4 +109,15 @@
   --jp-danger-text: #e68a7c;
   --jp-danger-mark: #d06152;
   --jp-danger-tint: #3d2117;
+
+  /* Merchandising hues, same inversion as the status pairs above: -text becomes
+     the lighter shade because it sits on a dark tint. Without these the light
+     tints (#ece6f3, #deeeea) would glare out of a dark card. */
+  --jp-violet-text: #c9b6ec;
+  --jp-violet-mark: #a88ad0;
+  --jp-violet-tint: #2b2340;
+
+  --jp-teal-text: #83c9b8;
+  --jp-teal-mark: #5ca895;
+  --jp-teal-tint: #1c332f;
 }

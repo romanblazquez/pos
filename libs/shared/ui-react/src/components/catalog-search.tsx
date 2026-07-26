@@ -736,7 +736,13 @@ function CommandRow({
           {item.image ? (
             <img src={item.image} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="block h-full w-full bg-[repeating-linear-gradient(45deg,#E7D3A6,#E7D3A6_5px,#DEC691_5px,#DEC691_10px)] dark:bg-[repeating-linear-gradient(45deg,#594C32,#594C32_5px,#463B28_5px,#463B28_10px)]" />
+            <span
+              className="block h-full w-full"
+              style={{
+                background:
+                  'repeating-linear-gradient(45deg, var(--jp-line-strong) 0 5px, var(--jp-line) 5px 10px)',
+              }}
+            />
           )}
         </span>
         <span className="min-w-0 flex-1">
@@ -763,7 +769,7 @@ function CommandRow({
                 className={cn(
                   'rounded-md px-1.5 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[.4px]',
                   item.inStock
-                    ? 'bg-[#E4EFE4] text-[#2C6B43] dark:bg-[#203528] dark:text-[#8CC49C]'
+                    ? 'bg-[--jp-success-tint] text-[--jp-success-text]'
                     : 'bg-[var(--bg-subtle)] text-[var(--tx-faint)]',
                 )}
               >
