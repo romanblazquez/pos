@@ -34,7 +34,8 @@ import { ShelfHero } from '@/components/ShelfHero';
 import { JsonLd } from '@/components/JsonLd';
 import { LocaleAlternates } from '@/components/LocaleAlternates';
 import { ShareBar } from '@/components/ShareBar';
-import { ForeignAvailabilityNotice } from '@/components/ForeignAvailabilityNotice';
+import { AvailabilityNotice } from '@/components/AvailabilityNotice';
+import { availabilityState } from '@/lib/availability';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
@@ -693,6 +694,9 @@ async function renderProduct(
   const path = entityPath('games', locale, product.slug, market);
   const crumbs = productCrumbs(product, locale, homeName, path, market);
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);
+  // One derivation of "can this be bought here", shared by the copy above the
+  // fold, the notice below it and the buy button.
+  const availability = availabilityState(product);
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
   const relatedGuides = await guidesMentioning(product.slug, locale);
@@ -754,7 +758,7 @@ async function renderProduct(
               <span className="product-price-lead">{range.split('–')[0].trim()}</span>
             </p>
           )}
-          {sorted.length > 0 && (
+          {availability === 'available' && (
             // Purchase completes in the transactional SPA on app.juegospedia.com.
             // buttonVariants() styles the anchor without Radix Slot (RSC-safe).
             <a className={buttonVariants({ size: 'lg' })} href={`${APP_URL}/product/${product.slug}`}>
@@ -817,14 +821,14 @@ async function renderProduct(
         );
       })()}
 
-      {/* Market has no offers, but the game is stocked elsewhere. Never a dead end. */}
-      {sorted.length === 0 && product.foreignAvailability && (
-        <ForeignAvailabilityNotice
-          foreign={product.foreignAvailability}
-          marketName={MARKETS[market]?.name ?? market.toUpperCase()}
-          locale={locale}
-        />
-      )}
+      {/* Nothing to buy here — say which kind of "nothing" it is. Never a dead end. */}
+      <AvailabilityNotice
+        state={availability}
+        foreign={product.foreignAvailability}
+        marketName={MARKETS[market]?.name ?? market.toUpperCase()}
+        productName={product.name}
+        locale={locale}
+      />
 
       {sorted.length > 0 && (
         <section>
