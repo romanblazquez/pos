@@ -187,7 +187,10 @@ function AdminSidebarContent({
 // ─── Sellers ──────────────────────────────────────────────────────────────────
 
 function SellersView() {
+  const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['admin-sellers', statusFilter],
     queryFn: async () => {
@@ -198,6 +201,28 @@ function SellersView() {
   });
 
   const sellers = data ?? [];
+
+  // Suspend/reactivate/delete all reindex on the server, so the seller list and
+  // anything derived from it must be refetched rather than optimistically patched.
+  const act = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: 'suspend' | 'reactivate' | 'delete' }) => {
+      const url = `${API}/api/v1/sellers/${id}${action === 'delete' ? '' : `/${action}`}`;
+      const res = await adminApi.fetch(url, { method: action === 'delete' ? 'DELETE' : 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        // The API refuses to delete a seller with orders; surface its reason
+        // verbatim rather than a generic failure, because the reason is the point.
+        throw new Error(body.message ?? `No se pudo completar la acción (${res.status})`);
+      }
+      return res.json().catch(() => ({}));
+    },
+    onMutate: ({ id }) => { setActionError(''); setPendingId(id); },
+    onError: (err: Error) => setActionError(err.message),
+    onSettled: () => {
+      setPendingId(null);
+      qc.invalidateQueries({ queryKey: ['admin-sellers'] });
+    },
+  });
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -220,6 +245,12 @@ function SellersView() {
         </div>
       </div>
 
+      {actionError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {actionError}
+        </p>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {isLoading ? (
           <Loading />
@@ -227,7 +258,7 @@ function SellersView() {
           <Empty icon="🏪" msg="No hay vendedores registrados aún." />
         ) : (
           <table className="w-full min-w-[760px] text-sm">
-            <Thead cols={['Nombre', 'Email', 'Estado', 'Conector', 'Comisión', 'Onboarding']} />
+            <Thead cols={['Nombre', 'Email', 'Estado', 'Conector', 'Comisión', 'Onboarding', 'Acciones']} />
             <tbody className="divide-y divide-slate-100">
               {sellers.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50">
@@ -237,6 +268,41 @@ function SellersView() {
                   <td className="px-4 py-3 text-slate-500 capitalize">{s.connectorType ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{(Number(s.commissionRate) * 100).toFixed(1)}%</td>
                   <td className="px-4 py-3 text-xs text-slate-400">{s.onboardingStep ?? 'complete'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {s.status === 'suspended' ? (
+                        <button
+                          type="button"
+                          disabled={pendingId === s.id}
+                          onClick={() => act.mutate({ id: s.id, action: 'reactivate' })}
+                          className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                        >
+                          Reactivar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={pendingId === s.id}
+                          onClick={() => act.mutate({ id: s.id, action: 'suspend' })}
+                          className="rounded-lg border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                        >
+                          Suspender
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={pendingId === s.id}
+                        onClick={() => {
+                          // Irreversible and it removes a storefront, so it asks.
+                          if (!window.confirm(`Eliminar definitivamente a "${s.name}"? Esta acción no se puede deshacer. Si el vendedor tiene pedidos, suspéndelo en su lugar.`)) return;
+                          act.mutate({ id: s.id, action: 'delete' });
+                        }}
+                        className="rounded-lg border border-red-300 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
