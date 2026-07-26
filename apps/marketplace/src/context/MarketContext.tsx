@@ -48,16 +48,65 @@ function persistSharedLocale(locale: UiLocale) {
   ].filter(Boolean).join('; ');
 }
 
-interface MarketCtx extends Market {
-  uiLocale: UiLocale;
-  setUiLocale: (locale: UiLocale) => void;
+/**
+ * Persist the shopper's market to the SAME cookie the apex switcher writes, so
+ * choosing a market on either host carries to the other. Mirrors
+ * `persistSharedLocale` above and `persistMarket` in
+ * apps/web/src/components/MarketSwitcher.tsx.
+ */
+function persistSharedMarket(marketCode: string) {
+  const sharedDomain =
+    location.hostname === 'juegospedia.com' || location.hostname.endsWith('.juegospedia.com');
+  document.cookie = [
+    `jp-market=${marketCode.toUpperCase()}`,
+    'Path=/',
+    'Max-Age=31536000',
+    'SameSite=Lax',
+    sharedDomain ? 'Domain=.juegospedia.com' : '',
+    location.protocol === 'https:' ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
 }
 
-const Ctx = createContext<MarketCtx>({ ...FALLBACK_MARKET, uiLocale: 'es', setUiLocale: () => {} });
+interface MarketCtx extends Market {
+  /** Markets the shopper may switch to. Empty until loaded, or if unreachable. */
+  markets: Market[];
+  uiLocale: UiLocale;
+  setUiLocale: (locale: UiLocale) => void;
+  /** Switch market: writes the shared cookie and reloads prices in the new one. */
+  setMarketCode: (code: string) => void;
+}
+
+const Ctx = createContext<MarketCtx>({
+  ...FALLBACK_MARKET,
+  markets: [],
+  uiLocale: 'es',
+  setUiLocale: () => {},
+  setMarketCode: () => {},
+});
 
 export function MarketProvider({ children }: { children: ReactNode }) {
   const [market, setMarket] = useState<Market>(FALLBACK_MARKET);
+  const [markets, setMarkets] = useState<Market[]>([]);
   const [uiLocale, setUiLocaleState] = useState<UiLocale>(() => readSharedLocale() ?? 'es');
+
+  // The markets a shopper may switch to. /markets/commerce, not /markets: the
+  // latter lists every configured country, and offering France would let
+  // someone select a market where nothing is for sale.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE}/api/v1/markets/commerce`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Market[]) => {
+        if (!cancelled && Array.isArray(data)) setMarkets(data);
+      })
+      .catch(() => {
+        // No list means the switcher hides itself — better than a control that
+        // offers markets we cannot confirm are open.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Resolve the shopper's market from the SHARED cookie the switcher on
   // juegospedia.com writes, falling back to the platform default only when they
@@ -118,7 +167,22 @@ export function MarketProvider({ children }: { children: ReactNode }) {
     setUiLocaleState(locale);
   }
 
-  return <Ctx.Provider value={{ ...market, uiLocale, setUiLocale }}>{children}</Ctx.Provider>;
+  function setMarketCode(code: string) {
+    const next = code.trim().toUpperCase();
+    if (!next || next === market.countryCode) return;
+    persistSharedMarket(next);
+    // A full reload rather than a state update: every price, offer list and
+    // cart line was fetched for the previous market, and re-rendering with a
+    // new currency label over old amounts is exactly the mixed-currency display
+    // this whole market split exists to prevent.
+    location.reload();
+  }
+
+  return (
+    <Ctx.Provider value={{ ...market, markets, uiLocale, setUiLocale, setMarketCode }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useMarket(): MarketCtx {

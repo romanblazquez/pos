@@ -48,9 +48,22 @@ export class MarketsController {
     return this.svc.listLanguages();
   }
 
-  // Declared LAST: a ':code' route placed above 'default'/'countries' would
-  // swallow them, and the failure would look like a missing market rather than
-  // a routing mistake.
+  @Get('commerce')
+  @ApiOperation({
+    summary: 'Markets a shopper may switch between',
+    description:
+      'Only activated commerce markets — unlike GET /markets, which lists every '
+      + 'configured country. Drives the market switcher, so it must never offer a '
+      + 'market where nothing can be bought.',
+  })
+  @ApiOkResponse({ type: MarketDto, isArray: true })
+  listCommerceMarkets(): Promise<MarketDto[]> {
+    return this.svc.listCommerceMarkets();
+  }
+
+  // Declared LAST: a ':code' route placed above 'default'/'countries'/'commerce'
+  // would swallow them, and the failure would look like a missing market rather
+  // than a routing mistake.
   @Get(':code')
   @ApiOperation({ summary: 'One active commerce market by code (MX, AR)' })
   @ApiOkResponse({ type: MarketDto })

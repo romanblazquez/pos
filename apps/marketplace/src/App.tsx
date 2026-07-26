@@ -20,7 +20,7 @@ import { useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
-import { CatalogSearchBar, LocaleSwitcher } from '@retail-os/ui-react';
+import { CatalogSearchBar, LocaleSwitcher, MarketSwitcher } from '@retail-os/ui-react';
 import { formatMoney, WALLET_CURRENCY } from './marketplace-meta.js';
 import { trackPageView, trackEvent } from './analytics.js';
 import { type Route, parseRoute, routePath } from './routing.js';
@@ -236,7 +236,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
           {checkout.state === 'confirmed' && (
             <>
               <p className="text-4xl">🎉</p>
-              <h1 className="text-lg font-bold text-emerald-600">¡Pago confirmado!</h1>
+              <h1 className="text-lg font-bold text-[--success]">¡Pago confirmado!</h1>
               <p className="text-sm text-[--tx-muted]">
                 Pedido <code className="font-mono text-xs bg-[--bg-subtle] px-1.5 py-0.5 rounded">{checkout.orderId.slice(-10)}</code> recibido.
               </p>
@@ -292,7 +292,7 @@ function AppInner({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme
                 onClick={() => navigate({ page })}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors
                   ${route.page === page
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100'
+                    ? 'bg-[--success-bg] text-[--success]'
                     : 'bg-[--bg-subtle] text-[--tx-muted] hover:text-[--tx] hover:bg-[--bg-hover]'}`}
               >
                 {label}
@@ -372,8 +372,15 @@ function Header({
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
-  const { uiLocale, setUiLocale } = useMarket();
+  const { uiLocale, setUiLocale, markets, countryCode, setMarketCode } = useMarket();
   const intl = useIntl();
+
+  // The switcher takes the shared shape; the API's market DTO is per-country.
+  const marketOptions = markets.map((m) => ({
+    code: m.countryCode,
+    name: m.countryName,
+    currency: m.currencyCode,
+  }));
 
   // Keep the input in sync with the URL (submits, links, browser back/forward).
   useEffect(() => setQ(searchQuery), [searchQuery]);
@@ -457,9 +464,8 @@ function Header({
           {session && (
             <button
               onClick={onWalletClick}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50
-                         px-3 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100
-                         dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[--success-border] bg-[--success-bg]
+                         px-3 text-sm font-semibold text-[--success] transition-colors hover:brightness-105"
             >
               <Wallet className="h-4 w-4" aria-hidden="true" />
               {walletSummary ? formatMoney(walletTotal, WALLET_CURRENCY) : 'Wallet'}
@@ -476,6 +482,13 @@ function Header({
             <Store className="h-4 w-4" aria-hidden="true" />
             {intl.formatMessage({ id: 'header.imASeller' })}
           </a>
+
+          <MarketSwitcher
+            markets={marketOptions}
+            active={countryCode}
+            onSelect={setMarketCode}
+            ariaLabel={uiLocale === 'es' ? 'Cambiar de mercado' : 'Change market'}
+          />
 
           <LocaleSwitcher
             locales={UI_LOCALES}
@@ -494,8 +507,8 @@ function Header({
                 onClick={onAccountClick}
                 className="flex h-9 items-center gap-2 rounded-lg bg-[--bg-subtle] px-2 transition-colors hover:bg-[--bg-hover]"
               >
-                <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-full bg-emerald-700
-                                text-xs font-bold text-white">
+                <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-full bg-[--primary]
+                                text-xs font-bold text-[--primary-foreground]">
                   {(session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase()}
                 </div>
                 <span className="max-w-[8rem] truncate text-sm font-medium text-[--tx]">
@@ -534,7 +547,12 @@ function MobileMenu({
   const [open, setOpen] = useState(false);
   const { session, logout } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
-  const { uiLocale, setUiLocale } = useMarket();
+  const { uiLocale, setUiLocale, markets, countryCode, setMarketCode } = useMarket();
+  const marketOptions = markets.map((m) => ({
+    code: m.countryCode,
+    name: m.countryName,
+    currency: m.currencyCode,
+  }));
   const intl = useIntl();
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -619,7 +637,7 @@ function MobileMenu({
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
               {session ? (
                 <button onClick={() => run(onAccountClick)} className={`${rowCls} border border-[--border] bg-[--bg-subtle]`}>
-                  <span className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                  <span className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-[--primary] text-sm font-bold text-[--primary-foreground]">
                     {(session.customer.name?.[0] ?? session.customer.email[0]).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -670,6 +688,19 @@ function MobileMenu({
                   <span className="flex-1 text-sm font-medium">{intl.formatMessage({ id: 'header.logout' })}</span>
                 </button>
               )}
+              {/* Market first: it decides the currency every price on the page is
+                  quoted in, so it is the setting most worth reaching on a phone. */}
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[--border] bg-[--bg-subtle] p-2.5">
+                <span className="pl-1 text-xs font-medium uppercase tracking-wide text-[--tx-faint]">
+                  {uiLocale === 'es' ? 'Mercado' : 'Market'}
+                </span>
+                <MarketSwitcher
+                  markets={marketOptions}
+                  active={countryCode}
+                  onSelect={setMarketCode}
+                  ariaLabel={uiLocale === 'es' ? 'Cambiar de mercado' : 'Change market'}
+                />
+              </div>
               <div className="flex items-center justify-between gap-3 rounded-xl border border-[--border] bg-[--bg-subtle] p-2.5">
                 <span className="pl-1 text-xs font-medium uppercase tracking-wide text-[--tx-faint]">{intl.formatMessage({ id: 'header.settings' })}</span>
                 <div className="flex items-center gap-2">
@@ -733,7 +764,7 @@ function CartButton({ count, onClick, compact = false }: { count: number; onClic
       {!compact && <span className="text-sm">Carrito</span>}
       {count > 0 && (
         <span className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full
-                         bg-emerald-600 px-0.5 text-[10px] font-bold text-white">
+                         bg-[--primary] px-0.5 text-[10px] font-bold text-[--primary-foreground]">
           {count}
         </span>
       )}

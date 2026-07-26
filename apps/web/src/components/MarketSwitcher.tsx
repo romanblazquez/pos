@@ -1,11 +1,10 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { MarketSwitcher as SharedMarketSwitcher } from '@retail-os/ui-react';
 import {
   MARKETS,
   localePrefix,
-  parseLocalePrefix,
   resolveKind,
   segmentFor,
   type Locale,
@@ -48,59 +47,44 @@ function targetPath(pathname: string, locale: Locale, market: string): string {
     : [home, segmentFor(kind, locale)].join('/');
 }
 
-export function MarketSwitcher({ locale, market }: { locale: Locale; market: string }) {
+/**
+ * The apex market picker.
+ *
+ * Presentation comes from the shared control the SPA header also uses, so the
+ * two hosts cannot drift into looking like different stores. Only the behaviour
+ * differs, and it has to: here a market is part of the URL, so switching
+ * navigates; in the SPA the market is a cookie, so it reloads in place.
+ */
+export function MarketSwitcher({
+  locale,
+  market,
+  placement,
+}: {
+  locale: Locale;
+  market: string;
+  placement?: 'bottom' | 'top';
+}) {
   const pathname = usePathname() ?? `/${localePrefix(locale, market)}`;
   const router = useRouter();
-  const [open, setOpen] = useState(false);
 
-  const active = MARKETS[market];
-  const options = Object.values(MARKETS).filter((m) => m.languages.includes(locale));
-  if (options.length < 2) return null;
+  const options = Object.values(MARKETS)
+    .filter((m) => m.languages.includes(locale))
+    .map((m) => ({ code: m.code, name: m.name, currency: m.canonicalCurrency }));
 
-  function switchTo(targetMarket: string) {
-    setOpen(false);
-    if (targetMarket === market) return;
-    persistMarket(MARKETS[targetMarket].code);
-    const parsed = parseLocalePrefix(localePrefix(locale, targetMarket));
-    if (!parsed) return;
-    router.push(targetPath(pathname, locale, targetMarket));
+  function switchTo(code: string) {
+    const target = Object.values(MARKETS).find((m) => m.code === code);
+    if (!target || target.urlCode === market) return;
+    persistMarket(target.code);
+    router.push(targetPath(pathname, locale, target.urlCode));
   }
 
   return (
-    <div className="market-switcher">
-      <button
-        type="button"
-        className="market-switcher-trigger"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={locale === 'es' ? 'Cambiar de mercado' : 'Change market'}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span aria-hidden="true">{active?.flag}</span>
-        <span>{active?.name ?? market.toUpperCase()}</span>
-        <span className="market-switcher-currency">{active?.canonicalCurrency}</span>
-      </button>
-
-      {open && (
-        <ul className="market-switcher-menu" role="listbox">
-          {options.map((option) => (
-            <li key={option.urlCode}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={option.urlCode === market}
-                className={`market-switcher-option${option.urlCode === market ? ' is-active' : ''}`}
-                onClick={() => switchTo(option.urlCode)}
-              >
-                <span>
-                  <span aria-hidden="true">{option.flag}</span> {option.name}
-                </span>
-                <span className="market-switcher-currency">{option.canonicalCurrency}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <SharedMarketSwitcher
+      markets={options}
+      active={MARKETS[market]?.code ?? market.toUpperCase()}
+      onSelect={switchTo}
+      ariaLabel={locale === 'es' ? 'Cambiar de mercado' : 'Change market'}
+      placement={placement}
+    />
   );
 }

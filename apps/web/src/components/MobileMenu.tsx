@@ -182,7 +182,7 @@ export function MobileMenu({
             <div className="mobile-nav-foot">
               <span className="mobile-nav-foot-label">{t.market}</span>
               <div className="mobile-nav-foot-controls">
-                <MarketSwitcher locale={locale} market={market ?? DEFAULT_MARKET} />
+                <MarketSwitcher locale={locale} market={market ?? DEFAULT_MARKET} placement="top" />
               </div>
             </div>
 

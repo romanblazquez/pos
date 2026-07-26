@@ -8,6 +8,7 @@ export * from './components/catalog-search.js';
 export * from './components/catalog-search-bar.js';
 export * from './components/breadcrumbs.js';
 export * from './components/locale-switcher.js';
+export * from './components/market-switcher.js';
 export * from './components/meeple-mark.js';
 export * from './money.js';
 export * from './commerce-state.js';

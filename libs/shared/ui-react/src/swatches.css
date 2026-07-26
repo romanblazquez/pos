@@ -62,6 +62,17 @@
   --jp-danger-text: #93291f;
   --jp-danger-mark: #b23a2e;
   --jp-danger-tint: #f6e1dc;
+
+  /* Merchandising hues. Not status: these distinguish kinds of offer
+     (pre-order, second-hand) that are neither good news nor bad, and so must
+     not borrow success/warning/danger, whose colour carries a verdict. */
+  --jp-violet-text: #574079;
+  --jp-violet-mark: #6f5497;
+  --jp-violet-tint: #ece6f3;
+
+  --jp-teal-text: #2c6b5f;
+  --jp-teal-mark: #3d8878;
+  --jp-teal-tint: #deeeea;
 }
 
 .dark,

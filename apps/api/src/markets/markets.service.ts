@@ -34,6 +34,39 @@ export class MarketsService {
    * is unknown or inactive — the caller falls back rather than being handed a
    * market that is not open.
    */
+  /**
+   * The markets a shopper may actually switch between.
+   *
+   * Distinct from `list()`, which returns every configured country: offering
+   * France in a market switcher would let someone select a market we do not
+   * trade in, where every product is unbuyable. Only rows the operator has
+   * activated appear here.
+   */
+  async listCommerceMarkets(): Promise<MarketDto[]> {
+    try {
+      const markets = await this.prisma.commerceMarket.findMany({
+        where: { active: true },
+        orderBy: { code: 'asc' },
+      });
+      const symbols = await this.prisma.currency.findMany({
+        where: { code: { in: markets.map((m) => m.canonicalCurrency) } },
+        select: { code: true, symbol: true },
+      });
+      const symbolFor = new Map(symbols.map((c) => [c.code, c.symbol]));
+      return markets.map((market) => ({
+        countryCode: market.countryCode,
+        countryName: market.name,
+        currencyCode: market.canonicalCurrency,
+        currencySymbol: symbolFor.get(market.canonicalCurrency) ?? '$',
+        languageCode: market.defaultLanguage,
+        timezone: market.timezone,
+      }));
+    } catch (err) {
+      this.logger.warn(`Commerce market list failed: ${String(err)}`);
+      return [];
+    }
+  }
+
   async getByCode(code: string): Promise<MarketDto | null> {
     try {
       const market = await this.prisma.commerceMarket.findFirst({

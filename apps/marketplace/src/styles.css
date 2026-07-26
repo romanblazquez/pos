@@ -5,12 +5,11 @@
 /* Filter-panel chrome (.filter-select, .filter-more) shared with apps/web. Only
    reads tokens this file already defines below — it declares none of its own. */
 @import "../../../libs/shared/ui-react/src/filter-panel.css";
-@source "../../../libs/shared/ui-react/src/components/catalog-filter.tsx";
-@source "../../../libs/shared/ui-react/src/components/catalog-search.tsx";
-@source "../../../libs/shared/ui-react/src/components/catalog-search-bar.tsx";
-@source "../../../libs/shared/ui-react/src/components/responsive-filter-panel.tsx";
-@source "../../../libs/shared/ui-react/src/components/breadcrumbs.tsx";
-@source "../../../libs/shared/ui-react/src/components/locale-switcher.tsx";
+/* Every shared component, by glob rather than by name. The list used to be
+   enumerated file by file, so adding a shared component shipped it with none of
+   its utility classes generated — visibly broken, with nothing failing at build
+   time to say why. apps/web scans the same directory the same way. */
+@source "../../../libs/shared/ui-react/src/components/**/*.{ts,tsx}";
 
 @theme {
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
