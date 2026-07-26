@@ -580,27 +580,9 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 .chip-shelf { display: inline-flex; align-items: center; gap: .4rem; }
 .chip-shelf-motif { color: var(--cat-accent); flex: none; }
 
-/* ── Wide surfaces — grids earn more width than prose does ───────────────────
-   `.container` caps at 1200px, which is right for reading: past ~75ch a line of
-   text gets hard to track. But results grids have no such limit, and the cap was
-   costing real space — measured at 1920px, 37% of the viewport sat empty while
-   the grid stayed pinned to 3 columns (at 2560px, over half). Grid surfaces
-   (search, catalogue) opt into this; prose and editorial keep `.container`. */
-.container-wide { width: min(100% - 2.5rem, 1200px); margin-inline: auto; }
-@media (min-width: 1440px) { .container-wide { width: min(100% - 4rem, 1440px); } }
-@media (min-width: 1760px) { .container-wide { width: min(100% - 5rem, 1640px); } }
-/* Header and footer track the wide grid pages (juegos, buscar) so the site
-   chrome stays boxed with the catalogue on large viewports — below 1440px both
-   containers are already 1200px, so reading-width pages are untouched. */
-@media (min-width: 1440px) {
-  .site-header .container, .site-footer .container { width: min(100% - 4rem, 1440px); }
-}
-@media (min-width: 1760px) {
-  .site-header .container, .site-footer .container { width: min(100% - 5rem, 1640px); }
-}
-/* The search field is a control, not a canvas — it shouldn't stretch to 1640px
-   just because its page did. */
-.container-wide .search-command { max-width: 640px; }
+/* Catalogue/search pages use the same box as the header and footer. Keeping one
+   container contract prevents the navigation and results rail from drifting at
+   large viewport breakpoints. */
 
 /* Sort control (§04 form controls). A native select so it works in the no-JS
    GET form the whole filter panel is built as; styled to the parchment kit
