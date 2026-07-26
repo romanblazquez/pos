@@ -1,4 +1,4 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get, Inject, NotFoundException, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { MarketsService } from './markets.service.js';
 import { MarketDto, CountryRefDto, CurrencyRefDto, LanguageRefDto } from './markets.dto.js';
@@ -46,5 +46,17 @@ export class MarketsController {
   @ApiOkResponse({ type: LanguageRefDto, isArray: true })
   listLanguages(): Promise<LanguageRefDto[]> {
     return this.svc.listLanguages();
+  }
+
+  // Declared LAST: a ':code' route placed above 'default'/'countries' would
+  // swallow them, and the failure would look like a missing market rather than
+  // a routing mistake.
+  @Get(':code')
+  @ApiOperation({ summary: 'One active commerce market by code (MX, AR)' })
+  @ApiOkResponse({ type: MarketDto })
+  async getByCode(@Param('code') code: string): Promise<MarketDto> {
+    const market = await this.svc.getByCode(code);
+    if (!market) throw new NotFoundException(`Market "${code}" not found or inactive`);
+    return market;
   }
 }

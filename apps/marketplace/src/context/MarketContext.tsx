@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { API_BASE } from '../lib/api-client.js';
+import { API_BASE, activeMarketCode } from '../lib/api-client.js';
 
 export interface Market {
   countryCode: string;
@@ -59,12 +59,28 @@ export function MarketProvider({ children }: { children: ReactNode }) {
   const [market, setMarket] = useState<Market>(FALLBACK_MARKET);
   const [uiLocale, setUiLocaleState] = useState<UiLocale>(() => readSharedLocale() ?? 'es');
 
+  // Resolve the shopper's market from the SHARED cookie the switcher on
+  // juegospedia.com writes, falling back to the platform default only when they
+  // have never chosen. Previously this always fetched the default, so a shopper
+  // who picked Argentina had their offers queried in AR (activeMarketCode reads
+  // the cookie) while this context still reported MXN — the app quoting one
+  // market's prices under another market's currency.
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API_BASE}/api/v1/markets/default`)
+    const chosen = activeMarketCode();
+    const url = `${API_BASE}/api/v1/markets/${encodeURIComponent(chosen)}`;
+
+    fetch(url)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: Market | null) => {
-        if (!cancelled && data) setMarket(data);
+        if (!cancelled && data) return setMarket(data);
+        // Unknown or unreachable market: fall back to the platform default
+        // rather than silently keeping a currency the shopper did not choose.
+        return fetch(`${API_BASE}/api/v1/markets/default`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((fallback: Market | null) => {
+            if (!cancelled && fallback) setMarket(fallback);
+          });
       })
       .catch(() => {
         // Keep FALLBACK_MARKET — no UI regression if the markets endpoint is down.

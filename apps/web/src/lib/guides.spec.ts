@@ -90,8 +90,11 @@ describe('editor profiles', () => {
       expect(slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(slugs.has(slug), `duplicate editor slug ${slug}`).toBe(false);
       slugs.add(slug);
-      expect(editorPath(author, 'es', 'mx')).toBe(`/es-mx/editores/${slug}`);
-      expect(editorPath(author, 'en', 'mx')).toBe(`/en-mx/editors/${slug}`);
+      // Editor profiles are editorial: one global URL per language, no market.
+      expect(editorPath(author, 'es', 'mx')).toBe(`/es/editores/${slug}`);
+      expect(editorPath(author, 'en', 'mx')).toBe(`/en/editors/${slug}`);
+      // The market argument must make no difference at all.
+      expect(editorPath(author, 'es', 'ar')).toBe(`/es/editores/${slug}`);
     }
     expect(slugs.size).toBe(6);
     expect(editorSlug(AUTHORS_BY_ID['sofia-mx'])).toBe('sofia-herrera');

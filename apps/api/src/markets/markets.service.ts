@@ -28,6 +28,36 @@ export class MarketsService {
 
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  /**
+   * One active commerce market by code, shaped like MarketDto so the storefront
+   * can swap it for the default without branching. Returns null when the market
+   * is unknown or inactive — the caller falls back rather than being handed a
+   * market that is not open.
+   */
+  async getByCode(code: string): Promise<MarketDto | null> {
+    try {
+      const market = await this.prisma.commerceMarket.findFirst({
+        where: { code: code.toUpperCase(), active: true },
+      });
+      if (!market) return null;
+      const currency = await this.prisma.currency.findUnique({
+        where: { code: market.canonicalCurrency },
+        select: { symbol: true },
+      });
+      return {
+        countryCode: market.countryCode,
+        countryName: market.name,
+        currencyCode: market.canonicalCurrency,
+        currencySymbol: currency?.symbol ?? '$',
+        languageCode: market.defaultLanguage,
+        timezone: market.timezone,
+      };
+    } catch (err) {
+      this.logger.warn(`Commerce market lookup failed for ${code}: ${String(err)}`);
+      return null;
+    }
+  }
+
   /** All active countries, for market/language pickers. */
   async list(): Promise<MarketDto[]> {
     let countries: Awaited<ReturnType<PrismaService['country']['findMany']>>;
