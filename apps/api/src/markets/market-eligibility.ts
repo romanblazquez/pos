@@ -89,7 +89,16 @@ export function summariseForeignAvailability(
  */
 export function withMarketPricing<
   T extends { minPriceMinor?: number; maxPriceMinor?: number; currency?: string },
->(product: T, marketCode?: string | null): T {
+>(product: T, marketCode?: string | null): T & { availableElsewhere?: boolean } {
   if (!product.currency || product.currency === marketCurrency(marketCode)) return product;
-  return { ...product, minPriceMinor: 0, maxPriceMinor: 0, currency: undefined };
+  // `availableElsewhere` distinguishes "nobody sells this" from "sold, but not
+  // here". Both have no local price; only one of them is worth telling the
+  // shopper about, and conflating them wastes the most useful signal we have.
+  return {
+    ...product,
+    minPriceMinor: 0,
+    maxPriceMinor: 0,
+    currency: undefined,
+    availableElsewhere: true,
+  };
 }

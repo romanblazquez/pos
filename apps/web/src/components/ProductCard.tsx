@@ -81,6 +81,14 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
               <span className="card-price-label">{locale === 'es' ? 'desde' : 'from'}</span>{' '}
               {formatMoney(product.minPriceMinor, product.currency!, locale)}
             </span>
+          ) : product.availableElsewhere ? (
+            // Sold, but not here. Deliberately no price: the only amount we have
+            // is in another market's currency, and converting it without
+            // confirmed shipping, tax and customs would be a number we cannot
+            // stand behind. The product page explains the options.
+            <span className="card-price card-price--elsewhere">
+              {locale === 'es' ? 'Disponible en otros países' : 'Available in other countries'}
+            </span>
           ) : (
             <span className="card-price card-price--na">{locale === 'es' ? 'Sin oferta' : 'No offer'}</span>
           )}

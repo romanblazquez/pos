@@ -76,6 +76,8 @@ describe('withMarketPricing', () => {
       minPriceMinor: 0,
       maxPriceMinor: 0,
       currency: undefined,
+      // "sold, but not here" — distinct from having no offers at all.
+      availableElsewhere: true,
     });
   });
 
@@ -86,8 +88,10 @@ describe('withMarketPricing', () => {
     expect(withMarketPricing(card, 'MX').slug).toBe('catan');
   });
 
-  it('leaves a product with no offers untouched', () => {
+  it('leaves a product with no offers untouched, and unflagged', () => {
     const card = { minPriceMinor: 0, maxPriceMinor: 0, currency: undefined };
-    expect(withMarketPricing(card, 'MX')).toEqual(card);
+    const result = withMarketPricing(card, 'MX');
+    expect(result).toEqual(card);
+    expect(result.availableElsewhere).toBeUndefined();
   });
 });

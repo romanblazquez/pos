@@ -247,6 +247,10 @@ button, input, select { font: inherit; }
 .card-price { color: var(--foreground); font-family: var(--font-display); font-size: 1.42rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .card-price-label { display: block; margin-bottom: .12rem; color: var(--subtle-foreground); font-family: var(--font-mono); font-size: .56rem; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; }
 .card-price--na { color: var(--muted-foreground); font-family: var(--font-sans); font-size: .82rem; font-weight: 600; }
+/* Sold abroad but not in this market — a real signal, so it reads as
+   information rather than absence. Never accompanied by a converted price. */
+.card-price--elsewhere { color: var(--muted-foreground); font-family: var(--font-sans);
+  font-size: .78rem; font-weight: 600; line-height: 1.25; text-wrap: balance; }
 .stock-pill { padding: .22rem .42rem; background: color-mix(in srgb, var(--success) 15%, var(--card)); color: var(--success); }
 .stock-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
 .stock-pill.out { background: var(--muted); color: var(--muted-foreground); }

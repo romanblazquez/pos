@@ -83,6 +83,11 @@ export interface ProductSummary {
    * there is no single range to quote and callers must not invent one.
    */
   currency?: string;
+  /**
+   * True when this product HAS offers, just not in the current market. Distinct
+   * from having no offers at all: one is worth surfacing, the other is not.
+   */
+  availableElsewhere?: boolean;
   totalListings: number;
   inStockListings: number;
 }
