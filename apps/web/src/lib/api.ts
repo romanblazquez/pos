@@ -6,6 +6,7 @@
 // Server-only (App Router server components). ISR is driven by per-request
 // `next.revalidate`; Phase 3 adds cache tags + on-demand revalidation.
 import { API_BASE_URL, REVALIDATE } from './site';
+import type { Locale } from './segments';
 
 export interface DeliveryOption {
   id: string;
@@ -195,6 +196,27 @@ export async function listProducts(opts: {
     REVALIDATE.listing,
   );
   return data ?? { results: [], total: 0 };
+}
+
+/**
+ * Games a shopper who is looking at this one might also want.
+ *
+ * Server-rendered rather than fetched in the browser: these are crawlable
+ * internal links between product pages, which is how a catalogue of 21,000
+ * pages passes authority around instead of leaving every page an island.
+ */
+export async function listSimilar(
+  slug: string,
+  locale: Locale,
+  market?: string,
+): Promise<ProductSummary[]> {
+  const params = new URLSearchParams({ locale, ...(market ? { market } : {}) });
+  return (
+    (await api<ProductSummary[]>(
+      `/api/v1/products/${encodeURIComponent(slug)}/similar?${params}`,
+      REVALIDATE.product,
+    )) ?? []
+  );
 }
 
 export async function getCategories(): Promise<CategoryCount[]> {

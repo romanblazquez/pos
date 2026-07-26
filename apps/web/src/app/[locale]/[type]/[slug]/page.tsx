@@ -6,6 +6,7 @@ import {
   getCategories,
   getProduct,
   listProducts,
+  listSimilar,
   type ProductDetail,
 } from '@/lib/api';
 import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
@@ -738,6 +739,10 @@ async function renderProduct(
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
   const relatedGuides = await guidesMentioning(product.slug, locale);
+  // Crawlable product-to-product links. A 21,000-page catalogue where every
+  // product page is a dead end passes no authority around; the app has had
+  // these for a while and the indexable side did not.
+  const similar = await listSimilar(product.slug, locale, market);
 
   // Each attribute doubles as a crawlable entry point into a real filtered view,
   // so bots discover publisher/designer/player-count hubs and users can pivot
@@ -943,6 +948,19 @@ async function renderProduct(
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {similar.length > 0 && (
+        <section>
+          <h2 className="section-title">
+            {locale === 'es' ? 'Juegos parecidos' : 'Similar games'}
+          </h2>
+          <div className="catalog-grid">
+            {similar.slice(0, 8).map((game) => (
+              <ProductCard key={game.slug} product={game} locale={locale} market={market} />
+            ))}
+          </div>
         </section>
       )}
 

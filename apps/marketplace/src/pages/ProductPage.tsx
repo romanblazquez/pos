@@ -8,6 +8,7 @@ import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { useMarket } from '../context/MarketContext.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import {
+  ShareBar,
   SITE_ORIGIN,
   canonicalHomeUrl,
   canonicalProductUrl,
@@ -268,6 +269,16 @@ export default function ProductPage({
               ))}
             </div>
           )}
+
+          {/* Same share row as the public site, sharing the CANONICAL url —
+              never this host's, which is a duplicate that carries no ranking
+              and renders no card. */}
+          <ShareBar
+            url={canonicalUrl}
+            title={p.name}
+            text={description.slice(0, 160)}
+            locale={shareLocale}
+          />
         </div>
 
         {/* Info */}
