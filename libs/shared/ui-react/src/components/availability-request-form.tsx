@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import type { Locale } from '@/lib/segments';
+
 
 interface Props {
   slug: string;
   /** Uppercase market code the shopper is waiting in, e.g. 'MX'. */
   market: string;
   marketName: string;
-  locale: Locale;
+  locale: 'es' | 'en';
 }
 
 type Status = 'idle' | 'sending' | 'done' | 'error';

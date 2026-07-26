@@ -1,0 +1,37 @@
+/* Availability notice + notify-me capture. Ships with the component so any
+ * host that renders it gets the presentation too.
+ *
+ * Mobile first: the field and button stack full width, then sit side by side
+ * once there is room.
+ */
+.availability-notice { display: flex; flex-direction: column; gap: .75rem; margin-block: 1.75rem;
+  padding: 1.15rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.availability-notice-title { margin: 0; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.3; }
+.availability-notice-lede { margin: 0; font-size: .9rem; line-height: 1.55; }
+.availability-notice-list { display: flex; flex-direction: column; gap: .5rem;
+  margin: 0; padding-left: 1.1rem; font-size: .88rem; line-height: 1.5; }
+.availability-notice-note { margin: 0; padding-top: .6rem; border-top: 1px solid var(--border);
+  color: var(--muted-foreground); font-size: .78rem; line-height: 1.5; }
+
+/* Notify-me capture. Mobile first: the field and button stack and go full width,
+   then sit side by side once there is room for both. */
+.availability-notice-form { display: flex; flex-direction: column; gap: .5rem; }
+.availability-notice-label { font-family: var(--font-display); font-size: .9rem; font-weight: 700; }
+.availability-notice-row { display: flex; flex-direction: column; gap: .5rem; }
+.availability-notice-input { min-height: 44px; flex: 1; padding: 0 .85rem;
+  border: 1px solid var(--border-strong, var(--border)); border-radius: 11px;
+  background: var(--bg-raised, var(--card)); color: var(--foreground); font-size: .95rem; }
+.availability-notice-input:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.availability-notice-submit { min-height: 44px; padding: 0 1.1rem; border: none; border-radius: 11px;
+  background: var(--primary); color: var(--primary-foreground);
+  font-family: var(--font-display); font-size: .95rem; font-weight: 700; cursor: pointer; }
+.availability-notice-submit:hover { filter: brightness(1.05); }
+.availability-notice-submit:disabled { opacity: .6; cursor: default; }
+.availability-notice-fineprint { margin: 0; color: var(--muted-foreground); font-size: .78rem; line-height: 1.5; }
+.availability-notice-done { margin: 0; font-size: .9rem; line-height: 1.55; }
+.availability-notice-waiting { color: var(--muted-foreground); }
+@media (min-width: 700px) {
+  .availability-notice { padding: 1.4rem 1.6rem; }
+  .availability-notice-row { flex-direction: row; align-items: center; }
+  .availability-notice-input { max-width: 22rem; }
+}

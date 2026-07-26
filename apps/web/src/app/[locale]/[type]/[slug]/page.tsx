@@ -11,7 +11,7 @@ import {
 } from '@/lib/api';
 import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
 import { APP_URL, absoluteUrl } from '@/lib/site';
-import { PlayerFitPanel, buttonVariants } from '@retail-os/ui-react';
+import { PlayerFitPanel, ProductGallery, buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
 import { articleLd, breadcrumbLd, faqLd, itemListLd, personLd, productLd, type Crumb } from '@/lib/jsonld';
 import {
@@ -788,18 +788,20 @@ async function renderProduct(
         {/* Sticky from the two-column breakpoint (see .product-figure-col), so
             the game stays in view while the offers and specs scroll past. */}
         <div className="product-figure-col">
-          <div className="product-figure">
-            {product.images?.[0] ? (
-              <img src={product.images[0]} alt={product.name} width={320} height={320} />
-            ) : (
-              <div className="card-noimg" style={{ aspectRatio: '1 / 1', fontSize: '4rem' }} aria-hidden="true">🎲</div>
-            )}
-          </div>
-
-          {/* Sharing lives beside the image rather than under the title: it
-              stays reachable the whole way down the page, and the canonical URL
-              is what gets shared regardless of which market the reader is in. */}
-          <ShareBar url={absoluteUrl(path)} title={product.name} locale={locale} />
+          {/* Same gallery as the app. The indexable page used to show one cover
+              while the app showed up to six, so the page a shopper ARRIVES on
+              carried less than the one they reached afterwards. */}
+          <ProductGallery images={product.images ?? []} name={product.name} locale={locale}>
+            {/* Sharing lives beside the image rather than under the title: it
+                stays reachable the whole way down the page, and the canonical
+                URL is what gets shared whatever market the reader is in. */}
+            <ShareBar
+              url={absoluteUrl(path)}
+              title={product.name}
+              text={productDescription(product, locale)}
+              locale={locale}
+            />
+          </ProductGallery>
         </div>
 
         <div className="product-body">

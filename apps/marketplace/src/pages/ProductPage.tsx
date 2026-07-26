@@ -8,6 +8,9 @@ import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { useMarket } from '../context/MarketContext.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import {
+  AvailabilityNotice,
+  availabilityState,
+  ProductGallery,
   ShareBar,
   SITE_ORIGIN,
   canonicalHomeUrl,
@@ -51,6 +54,8 @@ interface ProductDetail {
   isExpansion?: boolean;
   tags: string[];
   listings: ListingDetail[];
+  /** Offers outside this market — counts and currencies only, never prices. */
+  foreignAvailability?: { currencies: string[]; offerCount: number };
 }
 
 async function fetchProduct(slug: string, locale: string): Promise<ProductDetail> {
@@ -76,7 +81,7 @@ export default function ProductPage({
   const intl = useIntl();
   const { data: platformCfg } = usePlatformConfig();
   // The market decides the canonical URL and which offers may be published.
-  const { countryCode, currencyCode } = useMarket();
+  const { countryCode, countryName, currencyCode } = useMarket();
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
   const { data, isLoading, isError } = useQuery({
@@ -84,7 +89,6 @@ export default function ProductPage({
     queryFn: () => fetchProduct(slug, intl.locale),
   });
 
-  const [selectedImage, setSelectedImage] = useState(0);
   const { add, items: cartItems } = useCart();
   const [toast, setToast] = useState<string | null>(null);
 
@@ -117,6 +121,8 @@ export default function ProductPage({
   const activeListings = p.listings.filter(isAvailable);
   const inStockListings = activeListings;
   const outOfStockListings = p.listings.filter((l) => !isAvailable(l));
+  // One definition of "for sale here", shared with the public site.
+  const availability = availabilityState(p);
   const shareLocale: SeoLocale = intl.locale === 'en' ? 'en' : 'es';
   // Canonical and card URLs come from the shared rules, so this page and the
   // public site cannot disagree about where a product lives. Previously this
@@ -244,41 +250,18 @@ export default function ProductPage({
       />
       <div className="mb-12 grid min-w-0 gap-6 sm:gap-8 lg:grid-cols-[minmax(300px,420px)_minmax(0,1fr)] lg:gap-14">
 
-        {/* Images */}
-        <div className="flex flex-col gap-3">
-          <div className="aspect-square w-full overflow-hidden rounded-[14px] border border-[--border] bg-[--bg-subtle] shadow-sm lg:sticky lg:top-6">
-            {p.images[selectedImage] ? (
-              <img src={p.images[selectedImage]} alt={p.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[--tx-faint]">
-                <PackageCheck className="h-16 w-16" aria-hidden="true" />
-              </div>
-            )}
-          </div>
-          {p.images.length > 1 && (
-            <div className="flex gap-2">
-              {p.images.slice(0, 5).map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 bg-[--bg-subtle] transition-colors
-                    ${selectedImage === i ? 'border-[--accent]' : 'border-[--border]'}`}
-                >
-                  <img src={img} alt="" className="h-full w-full object-contain p-1" />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Same share row as the public site, sharing the CANONICAL url —
-              never this host's, which is a duplicate that carries no ranking
-              and renders no card. */}
-          <ShareBar
-            url={canonicalUrl}
-            title={p.name}
-            text={description.slice(0, 160)}
-            locale={shareLocale}
-          />
+        {/* Images — same gallery component as the public site. */}
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <ProductGallery images={p.images ?? []} name={p.name} locale={shareLocale}>
+            {/* Shares the CANONICAL url, never this host's: a link to the app
+                carries no ranking and renders no card. */}
+            <ShareBar
+              url={canonicalUrl}
+              title={p.name}
+              text={description.slice(0, 160)}
+              locale={shareLocale}
+            />
+          </ProductGallery>
         </div>
 
         {/* Info */}
@@ -341,6 +324,19 @@ export default function ProductPage({
           })()}
         </div>
       </div>
+
+      {/* Nothing to buy here — say which kind of "nothing" it is, exactly as the
+          public site does. This host used to render an offers table with no rows
+          and leave the shopper to work it out. */}
+      <AvailabilityNotice
+        state={availability}
+        foreign={p.foreignAvailability}
+        marketCode={countryCode}
+        marketName={countryName}
+        slug={p.slug}
+        productName={p.name}
+        locale={shareLocale}
+      />
 
       {/* Listings comparison */}
       <SellerOfferComparisonTable
