@@ -131,9 +131,14 @@ export class MarketplaceController {
   @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
   @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
   @ApiResponse({ status: 200, description: 'Product object with a listings array containing all active seller offers.' })
+  @ApiQuery({ name: 'market', required: false, description: 'Market code whose offers to return. Offers quoted in another market currency are excluded; `foreignAvailability` reports them as counts only.', example: 'MX' })
   @ApiResponse({ status: 404, description: 'No product found with this slug.' })
-  async getProduct(@Param('slug') slug: string, @Query('locale') locale?: string) {
-    const product = await this.svc.getProduct(slug, locale);
+  async getProduct(
+    @Param('slug') slug: string,
+    @Query('locale') locale?: string,
+    @Query('market') market?: string,
+  ) {
+    const product = await this.svc.getProduct(slug, locale, market);
     if (!product) throw new NotFoundException(`Product "${slug}" not found`);
     return product;
   }

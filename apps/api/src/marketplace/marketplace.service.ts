@@ -2,6 +2,12 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { SemanticSearchService } from '../search/semantic-search.service.js';
+import {
+  eligibleListingWhere,
+  marketConfig,
+  marketCurrency,
+  summariseForeignAvailability,
+} from '../markets/market-eligibility.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './complexity-bands.js';
 
@@ -424,14 +430,15 @@ export class MarketplaceService {
     };
   }
 
-  async getProduct(slug: string, locale?: string) {
+  async getProduct(slug: string, locale?: string, market?: string) {
     const product = await this.prisma.mktProduct.findUnique({
       where: { slug },
       include: {
         publisherEntity: true,
         categories: { include: { category: true }, orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
         listings: {
-          where: { active: true },
+          // One market, one currency — see markets/market-eligibility.ts.
+          where: eligibleListingWhere(market),
           include: {
             deliveryOptions: true,
             seller: { include: { score: true, rewardConfig: true } },
@@ -458,9 +465,22 @@ export class MarketplaceService {
 
     const localized = (await this.getProductLocalizations([product.id], locale)).get(product.id);
 
+    // Filtering must not dead-end a product. When this market has no offer we
+    // still know the game is stocked elsewhere; report that as counts only.
+    // A price in another market's currency is not an offer to this shopper and
+    // must never be rendered as one.
+    const foreignListings = await this.prisma.listing.findMany({
+      where: { productId: product.id, active: true, currency: { not: marketCurrency(market) } },
+      select: { currency: true },
+    });
+    const foreignAvailability = summariseForeignAvailability(foreignListings, market);
+
     return {
       id: product.id,
       slug: product.slug,
+      marketCode: marketConfig(market).code,
+      marketCurrency: marketCurrency(market),
+      foreignAvailability,
       name: localized?.title ?? product.name,
       category: product.categories[0]?.category.normalizedName ?? product.category,
       categories: product.categories.map(({ category, isPrimary }) => ({
