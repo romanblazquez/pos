@@ -136,7 +136,17 @@ export class LoyaltyService {
       create: { customerId, platformCreditsMinor: 0 },
       update: {},
       include: {
-        storeCredits: { include: { seller: { select: { id: true, name: true, slug: true } } } },
+        // `currency` is not decoration: store credit is market-scoped (see
+        // markets/credit-eligibility.ts — it may only be redeemed in the market
+        // that issued it), so a client that cannot see the currency has no way
+        // to avoid adding pesos to australes and labelling the result.
+        storeCredits: {
+          include: { seller: { select: { id: true, name: true, slug: true } } },
+        },
+        // Platform credit, split by the market that issued it. `platformCreditsMinor`
+        // on the wallet is a single undenominated number and cannot be shown next
+        // to a currency honestly; these can.
+        marketCredits: true,
       },
     });
   }

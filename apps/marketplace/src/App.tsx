@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, LogOut, Menu, Moon, ShoppingCart, Store, Sun, User, Wallet, X } from 'lucide-react';
+import { ChevronRight, LogOut, Menu, Moon, ShoppingCart, Sun, User, Wallet, X } from 'lucide-react';
 import SearchPage from './pages/SearchPage.js';
 import ProductPage from './pages/ProductPage.js';
 import HomePage from './pages/HomePage.js';
@@ -16,12 +16,12 @@ import { MarketProvider, useMarket } from './context/MarketContext.js';
 import { IntlProvider, useIntl } from 'react-intl';
 import esMessages from './i18n/messages/es.json';
 import enMessages from './i18n/messages/en.json';
-import { useWallet } from './hooks/useWallet.js';
+import { spendableInMarket, useWallet } from './hooks/useWallet.js';
 import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
 import { CatalogSearchBar, LocaleSwitcher, MarketSwitcher } from '@retail-os/ui-react';
-import { formatMoney, WALLET_CURRENCY } from './marketplace-meta.js';
+import { formatMoney } from './marketplace-meta.js';
 import { trackPageView, trackEvent } from './analytics.js';
 import { type Route, parseRoute, routePath } from './routing.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
@@ -372,7 +372,7 @@ function Header({
   const { count } = useCart();
   const { session, isLoading } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
-  const { uiLocale, setUiLocale, markets, countryCode, setMarketCode } = useMarket();
+  const { uiLocale, setUiLocale, markets, countryCode, currencyCode, setMarketCode } = useMarket();
   const intl = useIntl();
 
   // The switcher takes the shared shape; the API's market DTO is per-country.
@@ -385,9 +385,17 @@ function Header({
   // Keep the input in sync with the URL (submits, links, browser back/forward).
   useEffect(() => setQ(searchQuery), [searchQuery]);
 
-  const walletTotal = walletSummary
-    ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
-    : 0;
+  // Only what is spendable HERE. The old sum added every market's credits
+  // together and stamped one currency on the result.
+  const walletBalanceMinor = spendableInMarket(walletSummary, countryCode, currencyCode);
+  const walletBalanceLabel = formatMoney(walletBalanceMinor, currencyCode);
+  // Names the market as well as the amount, because the same shopper holds a
+  // different balance in each one and the number alone would be ambiguous.
+  const walletTooltip =
+    uiLocale === 'es'
+      ? `Monedero · ${walletBalanceLabel} disponible en ${countryCode}`
+      : `Wallet · ${walletBalanceLabel} available in ${countryCode}`;
+  const cartLabel = uiLocale === 'es' ? 'Carrito' : 'Cart';
 
   // Single search-submission flow (Enter, icon, suggestion). Fires the `search`
   // analytics that used to live in SearchPage's now-removed input, trims, skips
@@ -426,7 +434,7 @@ function Header({
           </button>
 
           <div className="ml-auto flex items-center gap-1 lg:hidden">
-            <CartButton count={count} onClick={onCartOpen} compact />
+            <CartButton count={count} onClick={onCartOpen} label={cartLabel} />
             <MobileMenu
               theme={theme}
               onToggleTheme={onToggleTheme}
@@ -461,27 +469,17 @@ function Header({
         </form>
 
         <nav className="hidden shrink-0 items-center gap-1 lg:ml-auto lg:flex">
+          {/* Icon only. The header showed a running total labelled MXN no matter
+              which market was selected — and that total summed credits from
+              every market together. A balance means nothing without the market
+              it belongs to, so the amount moved into the tooltip where it can
+              name its own currency, and the button routes to the wallet for the
+              full per-market breakdown. */}
           {session && (
-            <button
-              onClick={onWalletClick}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[--success-border] bg-[--success-bg]
-                         px-3 text-sm font-semibold text-[--success] transition-colors hover:brightness-105"
-            >
+            <HeaderIconButton label={walletTooltip} onClick={onWalletClick}>
               <Wallet className="h-4 w-4" aria-hidden="true" />
-              {walletSummary ? formatMoney(walletTotal, WALLET_CURRENCY) : 'Wallet'}
-            </button>
+            </HeaderIconButton>
           )}
-
-          <a
-            href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[--bg-subtle] px-3 text-sm font-medium text-[--tx-muted]
-                       transition-colors hover:bg-[--bg-hover] hover:text-[--tx]"
-          >
-            <Store className="h-4 w-4" aria-hidden="true" />
-            {intl.formatMessage({ id: 'header.imASeller' })}
-          </a>
 
           <MarketSwitcher
             markets={marketOptions}
@@ -523,7 +521,7 @@ function Header({
             )
           )}
 
-          <CartButton count={count} onClick={onCartOpen} />
+          <CartButton count={count} onClick={onCartOpen} label={cartLabel} />
         </nav>
       </div>
     </header>
@@ -547,7 +545,7 @@ function MobileMenu({
   const [open, setOpen] = useState(false);
   const { session, logout } = useCustomer();
   const { data: walletSummary } = useWallet(session?.customer.id);
-  const { uiLocale, setUiLocale, markets, countryCode, setMarketCode } = useMarket();
+  const { uiLocale, setUiLocale, markets, countryCode, currencyCode, setMarketCode } = useMarket();
   const marketOptions = markets.map((m) => ({
     code: m.countryCode,
     name: m.countryName,
@@ -557,9 +555,10 @@ function MobileMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const walletTotal = walletSummary
-    ? walletSummary.platformCreditsMinor + walletSummary.storeCredits.reduce((sum, item) => sum + item.balanceMinor, 0)
-    : 0;
+  // Only what is spendable HERE. The old sum added every market's credits
+  // together and stamped one currency on the result.
+  const walletBalanceMinor = spendableInMarket(walletSummary, countryCode, currencyCode);
+  const walletBalanceLabel = formatMoney(walletBalanceMinor, currencyCode);
 
   useEffect(() => {
     if (!open) return;
@@ -661,23 +660,13 @@ function MobileMenu({
                     <span className={iconWrap}><Wallet className="h-4 w-4" aria-hidden="true" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'header.wallet' })}</span>
-                      {walletSummary && <span className="block text-xs text-[--tx-muted]">{formatMoney(walletTotal, WALLET_CURRENCY)}</span>}
+                      {walletSummary && (
+                        <span className="block text-xs text-[--tx-muted]">{walletBalanceLabel}</span>
+                      )}
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
                   </button>
                 )}
-
-                <a
-                  href={import.meta.env.VITE_SELLER_PORTAL_URL ?? 'http://localhost:4400'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={close}
-                  className={rowCls}
-                >
-                  <span className={iconWrap}><Store className="h-4 w-4" aria-hidden="true" /></span>
-                  <span className="flex-1 text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'header.imASeller' })}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
-                </a>
               </nav>
             </div>
 
@@ -751,17 +740,21 @@ function HeaderIconButton({
   );
 }
 
-function CartButton({ count, onClick, compact = false }: { count: number; onClick: () => void; compact?: boolean }) {
+/**
+ * Cart trigger. Icon only at every width — a cart glyph needs no caption, and
+ * the row of header controls reads faster without one word among icons. The
+ * count badge carries the state; the tooltip and aria-label carry the meaning.
+ */
+function CartButton({ count, onClick, label }: { count: number; onClick: () => void; label: string }) {
   return (
     <button
-      aria-label="Abrir carrito"
-      title="Carrito"
+      aria-label={label}
+      title={label}
       onClick={onClick}
-      className={`relative inline-flex h-9 items-center justify-center rounded-lg bg-[--bg-subtle] text-[--tx] transition-colors hover:bg-[--bg-hover]
-        ${compact ? 'w-9' : 'gap-2 px-3 font-medium'}`}
+      className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg bg-[--bg-subtle]
+                 text-[--tx] transition-colors hover:bg-[--bg-hover] sm:h-9 sm:w-9"
     >
       <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-      {!compact && <span className="text-sm">Carrito</span>}
       {count > 0 && (
         <span className="absolute -right-0.5 -top-0.5 flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full
                          bg-[--primary] px-0.5 text-[10px] font-bold text-[--primary-foreground]">
