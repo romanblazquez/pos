@@ -16,6 +16,11 @@ export type EditorialLocale = 'es' | 'en';
 
 export interface Author {
   id: string;
+  /**
+   * Admin-facing handle stored in `editorial_author.slug`, echoed by the API.
+   * Public profile URLs do NOT read it — see `editorSlug()` in lib/guides.ts.
+   */
+  slug?: string;
   name: string;
   locale: EditorialLocale;
   /** Human-facing origin, e.g. "Guadalajara, México". */

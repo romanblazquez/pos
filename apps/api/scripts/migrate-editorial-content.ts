@@ -8,7 +8,7 @@
 import { PrismaClient } from '@prisma/client';
 import { AUTHORS } from '../../../apps/web/src/content/editorial/authors.js';
 import { allGuidesRaw, localizeGuide, type Guide } from '../../../apps/web/src/lib/guides.js';
-import type { Locale } from '../../../apps/web/src/lib/segments.js';
+import { slugify, type Locale } from '../../../apps/web/src/lib/segments.js';
 
 const prisma = new PrismaClient();
 const locales: Locale[] = ['es', 'en'];
@@ -27,7 +27,9 @@ function wordCount(guide: Guide): number {
 async function main() {
   for (const author of AUTHORS) {
     const data = {
-      slug: author.id,
+      // Name-derived so the public profile URL reads as the person
+      // (/es/editores/sofia-herrera). Must match editorSlug() in web lib/guides.
+      slug: slugify(author.name),
       name: author.name,
       locale: author.locale,
       from: author.from,

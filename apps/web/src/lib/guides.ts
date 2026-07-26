@@ -17,7 +17,7 @@ import { editorBatchJuly2026 } from '../content/guides/editor-batch-july-2026.js
 import { trendingGuidesJuly2026 } from '../content/guides/trending-guides-july-2026.js';
 import { AUTHORS, type Author } from '../content/editorial/authors.js';
 import generatedTranslations from '../content/editorial/translations.gen.json';
-import { entityPath, type Locale } from './segments';
+import { entityPath, slugify, type Locale } from './segments';
 import { API_BASE_URL } from './site';
 
 /** A curated product recommendation inside a guide (the guide → product link). */
@@ -179,11 +179,47 @@ export async function listGuides(locale: Locale = 'es'): Promise<Guide[]> {
   return stored?.length ? stored : fixtureGuides(locale);
 }
 
-export async function listEditorialAuthors(locale: Locale): Promise<Author[]> {
-  const stored = await editorialApi<Author[]>(`/authors?locale=${locale}`);
-  return stored?.length
-    ? stored
-    : AUTHORS.filter((author) => author.locale === locale);
+/**
+ * URL slug for an editor's profile page — a pure function of the name, so it
+ * reads as the person (/es/editores/sofia-herrera, not /sofia-mx).
+ *
+ * Deliberately NOT read from the stored `slug` column. Editor objects reach this
+ * function from two different API shapes (the `/authors` list and the author
+ * joined onto a guide), so honouring a stored slug makes a byline and its
+ * profile disagree whenever those two shapes — or the API and the web app —
+ * deploy out of step, which 404s the byline. Deriving from the name that both
+ * shapes always carry makes that class of mismatch impossible. The migration
+ * writes the identical value to `editorial_author.slug`, which stays the
+ * admin-facing handle and the uniqueness constraint.
+ */
+export function editorSlug(author: Author): string {
+  return slugify(author.name);
+}
+
+/** Path to an editor's profile page in a given site locale. */
+export function editorPath(author: Author, locale: Locale): string {
+  return entityPath('editors', locale, editorSlug(author));
+}
+
+/**
+ * Every active editor, in BOTH site locales. An editor's `locale` is the
+ * language they write in, not the audience they're shown to — Eoin writes in
+ * English but is still part of the masthead a Spanish reader sees, so the
+ * profiles are never filtered by site locale.
+ */
+export async function listEditorialAuthors(): Promise<Author[]> {
+  const stored = await editorialApi<Author[]>('/authors');
+  return stored?.length ? stored : [...AUTHORS];
+}
+
+export async function getEditorialAuthor(slug: string): Promise<Author | null> {
+  const authors = await listEditorialAuthors();
+  return authors.find((author) => editorSlug(author) === slug) ?? null;
+}
+
+/** Guides bylined to an editor, newest first — powers the profile page. */
+export async function guidesByAuthor(authorId: string, locale: Locale = 'es'): Promise<Guide[]> {
+  return (await listGuides(locale)).filter((guide) => guide.authorId === authorId);
 }
 
 export async function getGuide(slug: string, locale: Locale = 'es'): Promise<Guide | null> {

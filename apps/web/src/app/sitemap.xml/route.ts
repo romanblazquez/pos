@@ -1,5 +1,5 @@
 import { listProducts, type ProductSummary } from '@/lib/api';
-import { listGuides } from '@/lib/guides';
+import { editorPath, listEditorialAuthors, listGuides } from '@/lib/guides';
 import { INDEXABLE_THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
 import {
@@ -75,6 +75,13 @@ export async function GET(): Promise<Response> {
     entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
     for (const g of await listGuides(locale)) {
       entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
+    }
+
+    // Editorial team index + one profile per editor — the authorship signal the
+    // guides' Article/Person markup points at.
+    entries.push({ loc: `${SITE_URL}${listingPath('editors', locale)}`, changefreq: 'monthly', priority: 0.5 });
+    for (const editor of await listEditorialAuthors()) {
+      entries.push({ loc: `${SITE_URL}${editorPath(editor, locale)}`, changefreq: 'monthly', priority: 0.5 });
     }
 
     // Curated theme landing pages (the real category SEO targets). The catch-all

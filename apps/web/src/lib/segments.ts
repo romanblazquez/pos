@@ -26,7 +26,7 @@ export function isIndexable(locale: Locale): boolean {
 
 // Entity kinds and their localized path segments.
 export type EntityKind =
-  | 'games' | 'categories' | 'publishers' | 'mechanics' | 'stores' | 'search' | 'guides';
+  | 'games' | 'categories' | 'publishers' | 'mechanics' | 'stores' | 'search' | 'guides' | 'editors';
 
 export const SEGMENTS: Record<EntityKind, Record<Locale, string>> = {
   games: { es: 'juegos-de-mesa', en: 'board-games' },
@@ -37,6 +37,9 @@ export const SEGMENTS: Record<EntityKind, Record<Locale, string>> = {
   search: { es: 'buscar', en: 'search' },
   // Editorial hub — guides/best-of lists that interlink with catalog pages.
   guides: { es: 'guias', en: 'guides' },
+  // Author profiles behind the bylines — the E-E-A-T destination every guide's
+  // byline and Article/Person `url` points at.
+  editors: { es: 'editores', en: 'editors' },
 };
 
 /** Resolve a localized path segment back to its entity kind, scoped to locale. */

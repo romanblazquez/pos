@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AUTHORS_BY_ID } from '../content/editorial/authors.js';
-import { allGuidesRaw, localizeGuide } from './guides.js';
-import { articleLd } from './jsonld.js';
+import { AUTHORS, AUTHORS_BY_ID } from '../content/editorial/authors.js';
+import { allGuidesRaw, editorPath, editorSlug, localizeGuide } from './guides.js';
+import { articleLd, personLd } from './jsonld.js';
 
 describe('editorial guide catalogue', () => {
   const guides = allGuidesRaw();
@@ -79,5 +79,65 @@ describe('editorial guide catalogue', () => {
       },
       publisher: { '@type': 'Organization' },
     });
+  });
+});
+
+describe('editor profiles', () => {
+  it('gives every editor a unique, human-readable profile slug in both locales', () => {
+    const slugs = new Set<string>();
+    for (const author of AUTHORS) {
+      const slug = editorSlug(author);
+      expect(slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(slugs.has(slug), `duplicate editor slug ${slug}`).toBe(false);
+      slugs.add(slug);
+      expect(editorPath(author, 'es')).toBe(`/es/editores/${slug}`);
+      expect(editorPath(author, 'en')).toBe(`/en/editors/${slug}`);
+    }
+    expect(slugs.size).toBe(6);
+    expect(editorSlug(AUTHORS_BY_ID['sofia-mx'])).toBe('sofia-herrera');
+  });
+
+  // A byline and its profile page must resolve to the same URL even when the
+  // author object arrives from a different API shape carrying a stale slug.
+  it('ignores a stored slug so a byline can never point away from its profile', () => {
+    expect(editorSlug({ ...AUTHORS[0], slug: 'sofia-mx' })).toBe('sofia-herrera');
+    expect(editorSlug({ ...AUTHORS[0], slug: undefined })).toBe('sofia-herrera');
+  });
+
+  it('points every guide byline at a profile page that exists', () => {
+    const profiles = new Set(AUTHORS.map((author) => editorPath(author, 'es')));
+    for (const guide of allGuidesRaw()) {
+      const author = AUTHORS_BY_ID[guide.authorId ?? ''];
+      expect(profiles.has(editorPath(author, 'es'))).toBe(true);
+    }
+  });
+
+  it('emits a ProfilePage whose Person url matches the guide author url', () => {
+    const author = AUTHORS_BY_ID['nuria-es'];
+    const path = editorPath(author, 'es');
+    const profile = personLd({
+      name: author.name,
+      path,
+      jobTitle: author.role,
+      description: author.bio,
+      knowsAbout: author.expertise,
+      authored: [{ title: 'Una guía', path: '/es/guias/una-guia' }],
+    }) as Record<string, any>;
+    const article = articleLd({
+      title: 'Una guía',
+      description: 'Descripción',
+      path: '/es/guias/una-guia',
+      datePublished: '2026-07-26',
+      dateModified: '2026-07-26',
+      author: { name: author.name, url: path },
+    }) as Record<string, any>;
+
+    expect(profile['@type']).toBe('ProfilePage');
+    expect(profile.mainEntity['@type']).toBe('Person');
+    expect(profile.mainEntity.jobTitle).toBe(author.role);
+    expect(profile.mainEntity.knowsAbout).toEqual(author.expertise);
+    expect(profile.hasPart).toHaveLength(1);
+    // The authorship graph only connects if both URLs are byte-identical.
+    expect(article.author.url).toBe(profile.mainEntity.url);
   });
 });

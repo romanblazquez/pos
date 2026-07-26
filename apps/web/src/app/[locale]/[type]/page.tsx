@@ -24,7 +24,7 @@ import {
   resolveKind,
   type Locale,
 } from '@/lib/segments';
-import { listGuides, GUIDE_OG_DEFAULT } from '@/lib/guides';
+import { listEditorialAuthors, listGuides, editorPath, GUIDE_OG_DEFAULT } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
 import { listShelves } from '@/lib/shelves';
 import { ShelfCard } from '@/components/ShelfCard';
@@ -138,6 +138,19 @@ export async function generateMetadata({
           : 'Guides, comparisons and best-of lists for board games, with prices compared across stores.',
       images: [GUIDE_OG_DEFAULT],
       alternates: { es: listingPath('guides', 'es'), en: listingPath('guides', 'en') },
+    });
+  }
+
+  if (kind === 'editors') {
+    return buildMetadata({
+      locale,
+      path: listingPath('editors', locale),
+      title: locale === 'es' ? 'Equipo editorial' : 'Editorial team',
+      description:
+        locale === 'es'
+          ? 'Quién escribe las guías de Juegospedia: su especialidad, su criterio de evaluación y las guías que firman.'
+          : 'Who writes the Juegospedia guides: their beat, the criteria they review against and the guides they sign.',
+      alternates: { es: listingPath('editors', 'es'), en: listingPath('editors', 'en') },
     });
   }
 
@@ -515,12 +528,85 @@ export default async function ListingPage({
           ]}
         />
         <h1 className="page-title">{hubName}</h1>
-        <p className="lede">{hubDesc}</p>
+        <p className="lede">
+          {hubDesc}{' '}
+          <Link href={listingPath('editors', locale)}>
+            {locale === 'es' ? 'Conoce al equipo editorial' : 'Meet the editorial team'}
+          </Link>.
+        </p>
         <figure className="guides-hub-hero">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={GUIDE_OG_DEFAULT} alt={hubName} width={1600} height={900} />
         </figure>
         <GuidesExplorer guides={cards} locale={locale} />
+      </main>
+    );
+  }
+
+  // ── Editorial team index (the masthead behind every byline) ────────────────
+  if (kind === 'editors') {
+    const [editors, guides] = await Promise.all([listEditorialAuthors(), listGuides(locale)]);
+    const guideCount = (authorId: string) =>
+      guides.filter((guide) => guide.authorId === authorId).length;
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale) },
+      { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale) },
+    ];
+    const title = locale === 'es' ? 'Equipo editorial' : 'Editorial team';
+    const lede = locale === 'es'
+      ? 'Cada guía la firma una persona con una especialidad y un criterio de evaluación fijo. Aquí está quién escribe qué, y con qué reglas juzga un juego.'
+      : 'Every guide is signed by someone with a beat and a fixed set of review criteria. Here is who writes what, and the rules they judge a game by.';
+    return (
+      <main className="container">
+        <LocaleAlternates alternates={{ es: listingPath('editors', 'es'), en: listingPath('editors', 'en') }} />
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(editors.map((editor) => ({
+              name: editor.name,
+              path: editorPath(editor, locale),
+            }))),
+          ]}
+        />
+        <h1 className="page-title">{title}</h1>
+        <p className="lede">{lede}</p>
+        <div className="editorial-team-grid">
+          {editors.map((editor) => {
+            const count = guideCount(editor.id);
+            return (
+              <article key={editor.id} className="editor-profile-card">
+                <div className="editor-profile-heading">
+                  <span className="editor-profile-avatar" aria-hidden="true">
+                    {editor.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}
+                  </span>
+                  <div>
+                    <h2><Link href={editorPath(editor, locale)}>{editor.name}</Link></h2>
+                    <p>{editor.from}</p>
+                  </div>
+                </div>
+                <strong>{editor.role}</strong>
+                <p>{editor.bio}</p>
+                <div className="editor-profile-tags">
+                  {editor.expertise.map((item) => <span className="chip" key={item}>{item}</span>)}
+                </div>
+                <p className="editor-profile-method">
+                  <b>{locale === 'es' ? 'Evalúa:' : 'Reviews for:'}</b>{' '}
+                  {editor.reviewPrinciples.join(' · ')}
+                </p>
+                {count > 0 && (
+                  <p className="editor-profile-count">
+                    <Link href={editorPath(editor, locale)}>
+                      {locale === 'es'
+                        ? `${count} ${count === 1 ? 'guía firmada' : 'guías firmadas'} →`
+                        : `${count} ${count === 1 ? 'signed guide' : 'signed guides'} →`}
+                    </Link>
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </main>
     );
   }

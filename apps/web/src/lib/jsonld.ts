@@ -240,6 +240,46 @@ export function articleLd(input: {
   };
 }
 
+// Editor profile -> ProfilePage wrapping the Person. Google reads authorship
+// from the Person that guides' Article.author points at, so the `path` here must
+// be the exact URL used as `articleLd({ author: { url } })`.
+export function personLd(input: {
+  name: string;
+  path: string;
+  jobTitle: string;
+  description: string;
+  knowsAbout?: string[];
+  /** Guides this editor wrote — evidences the expertise the profile claims. */
+  authored?: Array<{ title: string; path: string }>;
+}): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    mainEntity: {
+      '@type': 'Person',
+      name: input.name,
+      url: absoluteUrl(input.path),
+      jobTitle: input.jobTitle,
+      description: input.description,
+      ...(input.knowsAbout?.length ? { knowsAbout: input.knowsAbout } : {}),
+      worksFor: {
+        '@type': 'Organization',
+        name: ORGANIZATION.name,
+        url: SITE_URL,
+      },
+    },
+    ...(input.authored?.length
+      ? {
+          hasPart: input.authored.map((article) => ({
+            '@type': 'Article',
+            headline: article.title,
+            url: absoluteUrl(article.path),
+          })),
+        }
+      : {}),
+  };
+}
+
 export function faqLd(faqs: Array<{ q: string; a: string }>): Json {
   return {
     '@context': 'https://schema.org',

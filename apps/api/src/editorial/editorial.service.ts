@@ -114,6 +114,8 @@ export class EditorialService {
       ),
       author: {
         id: row.article.author.id,
+        // Drives the byline link and the Article/Person `url` on the web side.
+        slug: row.article.author.slug,
         name: row.article.author.name,
         locale: row.article.author.locale,
         from: row.article.author.from,

@@ -12,8 +12,18 @@ import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
 import { APP_URL, absoluteUrl } from '@/lib/site';
 import { buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
-import { articleLd, breadcrumbLd, faqLd, itemListLd, productLd, type Crumb } from '@/lib/jsonld';
-import { getGuide, guideAlternates, guidesMentioning, type Guide, type GuidePick } from '@/lib/guides';
+import { articleLd, breadcrumbLd, faqLd, itemListLd, personLd, productLd, type Crumb } from '@/lib/jsonld';
+import {
+  editorPath,
+  getEditorialAuthor,
+  getGuide,
+  guideAlternates,
+  guidesByAuthor,
+  guidesMentioning,
+  type Guide,
+  type GuidePick,
+} from '@/lib/guides';
+import type { Author } from '@/content/editorial/authors';
 import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { editorTake } from '@/content/editorial/takes';
@@ -163,6 +173,19 @@ export async function generateMetadata({
         modifiedTime: guide.updatedAt,
         section: locale === 'es' ? 'Juegos de mesa' : 'Board games',
       },
+    });
+  }
+
+  if (kind === 'editors') {
+    const editor = await getEditorialAuthor(params.slug);
+    if (!editor) return {};
+    return buildMetadata({
+      locale,
+      path: editorPath(editor, locale),
+      title: `${editor.name} — ${editor.role}`,
+      description: editor.bio,
+      alternates: { es: editorPath(editor, 'es'), en: editorPath(editor, 'en') },
+      type: 'article',
     });
   }
 
@@ -322,7 +345,108 @@ export default async function DetailPage({
     return renderGuide(guide, locale, homeName);
   }
 
+  if (kind === 'editors') {
+    const editor = await getEditorialAuthor(params.slug);
+    if (!editor) notFound();
+    return renderEditor(editor, locale, homeName);
+  }
+
   notFound();
+}
+
+// Editor profile — the accountability page behind every byline. Everything here
+// is drawn from the stored profile (beat, expertise, review criteria) plus the
+// guides actually bylined to them; nothing is invented per-request.
+async function renderEditor(editor: Author, locale: Locale, homeName: string) {
+  const path = editorPath(editor, locale);
+  const guides = await guidesByAuthor(editor.id, locale);
+  const crumbs: Crumb[] = [
+    { name: homeName, path: homePath(locale) },
+    { name: locale === 'es' ? 'Equipo editorial' : 'Editorial team', path: listingPath('editors', locale) },
+    { name: editor.name, path },
+  ];
+  const writesIn = editor.locale === 'es' ? 'español' : locale === 'es' ? 'inglés' : 'English';
+
+  return (
+    <main className="container">
+      <LocaleAlternates alternates={{ es: editorPath(editor, 'es'), en: editorPath(editor, 'en') }} />
+      <Breadcrumbs crumbs={crumbs} />
+      <JsonLd
+        data={[
+          breadcrumbLd(crumbs),
+          personLd({
+            name: editor.name,
+            path,
+            jobTitle: editor.role,
+            description: editor.bio,
+            knowsAbout: editor.expertise,
+            authored: guides.map((guide) => ({
+              title: guide.title,
+              path: entityPath('guides', locale, guide.slug),
+            })),
+          }),
+        ]}
+      />
+
+      <article className="prose editor-profile" style={{ maxWidth: 760 }}>
+        <header className="editor-profile-header">
+          <span className="editor-profile-avatar editor-profile-avatar-lg" aria-hidden="true">
+            {editor.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}
+          </span>
+          <div>
+            <h1 className="product-h1" style={{ margin: 0 }}>{editor.name}</h1>
+            <p className="muted" style={{ margin: '.25rem 0 0' }}>
+              {editor.role} · {editor.from}
+            </p>
+          </div>
+        </header>
+        <p className="lede">{editor.bio}</p>
+
+        <h2>{locale === 'es' ? 'Especialidad' : 'Beat'}</h2>
+        <div className="editor-profile-tags">
+          {editor.expertise.map((item) => <span className="chip" key={item}>{item}</span>)}
+        </div>
+
+        <h2>{locale === 'es' ? 'Criterio de evaluación' : 'Review criteria'}</h2>
+        <p className="muted" style={{ marginTop: '-.5rem' }}>
+          {locale === 'es'
+            ? 'Estos criterios son fijos: toda recomendación firmada por esta persona se juzga con ellos.'
+            : 'These criteria are fixed: every recommendation under this byline is judged against them.'}
+        </p>
+        <ul>
+          {editor.reviewPrinciples.map((principle) => <li key={principle}>{principle}</li>)}
+        </ul>
+
+        <h2>{locale === 'es' ? 'Idioma de redacción' : 'Writing language'}</h2>
+        <p>
+          {locale === 'es'
+            ? `Escribe sus artículos en ${writesIn}. Las versiones en otros idiomas se marcan como traducción automática y conservan su firma.`
+            : `Writes in ${writesIn}. Versions in other languages are labelled as machine translations and keep this byline.`}
+        </p>
+
+        <h2>
+          {locale === 'es' ? 'Guías firmadas' : 'Signed guides'}
+          {guides.length > 0 && <span className="muted"> ({guides.length})</span>}
+        </h2>
+        {guides.length > 0 ? (
+          <ul className="editor-profile-guides">
+            {guides.map((guide) => (
+              <li key={guide.slug}>
+                <Link href={entityPath('guides', locale, guide.slug)}>{guide.title}</Link>
+                <p className="muted">{guide.description}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">
+            {locale === 'es'
+              ? 'Todavía no hay guías publicadas con esta firma.'
+              : 'No published guides carry this byline yet.'}
+          </p>
+        )}
+      </article>
+    </main>
+  );
 }
 
 async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
@@ -348,9 +472,7 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
   });
 
   const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
-  const authorPath = author
-    ? listingPath('guides', locale)
-    : undefined;
+  const authorPath = author ? editorPath(author, locale) : undefined;
   const wordCount = [
     ...guide.intro,
     ...guide.picks.map((pick) => pick.blurb),

@@ -40,7 +40,14 @@ When a task is complete: commit, push and deploy it, then verify production.
 - Three trend-led articles in
   `apps/web/src/content/guides/trending-guides-july-2026.ts`.
 - Relevant category hero art mapped as article covers.
-- Editorial team cards on the guides hub.
+- Editor profile pages under a new `editors` segment kind (es `/editores`,
+  en `/editors`): a team index plus one profile per editor carrying beat,
+  expertise, fixed review criteria, writing language and signed guides, with
+  `ProfilePage`/`Person` JSON-LD. Every guide byline and the Article
+  `author.url` point at that profile. Profile slugs are derived from the
+  editor's name (`editorSlug()`), never from the stored slug column — the two
+  API shapes that carry an author would otherwise disagree across deploys and
+  404 the byline.
 - Rich Article JSON-LD: canonical URL, language, section, word count, citations,
   Person author URL/bio/expertise, publisher, image and dates; existing
   BreadcrumbList and FAQPage remain.
