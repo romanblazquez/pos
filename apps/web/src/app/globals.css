@@ -667,3 +667,8 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
   color: inherit; font-size: .82rem; text-align: left; cursor: pointer; }
 .market-switcher-option:hover { background: var(--accent); }
 .market-switcher-option.is-active { font-weight: 700; }
+
+/* The market switcher opens upward inside the mobile sheet — a downward menu
+   would fall past the viewport bottom, where the settings row already sits. */
+.mobile-nav-foot .market-switcher-menu { top: auto; bottom: calc(100% + .4rem); right: auto; left: 0; }
+.mobile-nav-foot .market-switcher-trigger { min-height: 40px; }

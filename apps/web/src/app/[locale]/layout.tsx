@@ -156,7 +156,7 @@ export default function LocaleLayout({
                 <CircleUserRound size={18} aria-hidden="true" />
               </a>
             </div>
-            <MobileMenu locale={locale} />
+            <MobileMenu locale={locale} market={market} />
           </div>
         </header>
 

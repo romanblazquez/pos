@@ -76,6 +76,7 @@ export function MarketSwitcher({ locale, market }: { locale: Locale; market: str
         aria-label={locale === 'es' ? 'Cambiar de mercado' : 'Change market'}
         onClick={() => setOpen((value) => !value)}
       >
+        <span aria-hidden="true">{active?.flag}</span>
         <span>{active?.name ?? market.toUpperCase()}</span>
         <span className="market-switcher-currency">{active?.canonicalCurrency}</span>
       </button>
@@ -91,7 +92,9 @@ export function MarketSwitcher({ locale, market }: { locale: Locale; market: str
                 className={`market-switcher-option${option.urlCode === market ? ' is-active' : ''}`}
                 onClick={() => switchTo(option.urlCode)}
               >
-                <span>{option.name}</span>
+                <span>
+                  <span aria-hidden="true">{option.flag}</span> {option.name}
+                </span>
                 <span className="market-switcher-currency">{option.canonicalCurrency}</span>
               </button>
             </li>

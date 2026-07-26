@@ -24,6 +24,13 @@ export interface Market {
   code: string;
   /** Human market name shown to shoppers, in the market's own language. */
   name: string;
+  /**
+   * Regional-indicator flag. Emoji rather than an image so it needs no asset,
+   * scales with type and inherits colour; always paired with the market name and
+   * currency, never used alone — a flag denotes a country, not a language or a
+   * currency, and alone it is ambiguous and often politically wrong.
+   */
+  flag: string;
   /** Lowercase URL segment component: /es-mx. */
   urlCode: string;
   countryCode: string;
@@ -36,6 +43,7 @@ export const MARKETS: Readonly<Record<string, Market>> = {
   mx: {
     code: 'MX',
     name: 'México',
+    flag: '🇲🇽',
     urlCode: 'mx',
     countryCode: 'MX',
     canonicalCurrency: 'MXN',
@@ -44,6 +52,7 @@ export const MARKETS: Readonly<Record<string, Market>> = {
   ar: {
     code: 'AR',
     name: 'Argentina',
+    flag: '🇦🇷',
     urlCode: 'ar',
     countryCode: 'AR',
     canonicalCurrency: 'ARS',

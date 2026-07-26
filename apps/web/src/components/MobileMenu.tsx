@@ -8,7 +8,8 @@ import { BookOpen, ChevronRight, Dices, LayoutGrid, Menu, Search, User, X } from
 import { MeepleMark } from './MeepleMark';
 import { ThemeToggle } from './ThemeToggle';
 import { LocaleSwitcher } from './LocaleSwitcher';
-import { listingPath, type Locale } from '@/lib/segments';
+import { MarketSwitcher } from './MarketSwitcher';
+import { DEFAULT_MARKET, listingPath, type Locale } from '@/lib/segments';
 import { APP_URL } from '@/lib/site';
 
 const COPY = {
@@ -20,6 +21,7 @@ const COPY = {
     guidesHint: 'Rankings y mejores listas',
     login: 'Iniciar sesión',
     settings: 'Preferencias',
+    market: 'Mercado y moneda',
   },
   en: {
     open: 'Open menu', close: 'Close menu', nav: 'Main menu',
@@ -29,6 +31,7 @@ const COPY = {
     guidesHint: 'Rankings and best-of lists',
     login: 'Log in',
     settings: 'Preferences',
+    market: 'Market & currency',
   },
 } as const;
 
@@ -38,7 +41,14 @@ const COPY = {
  * become the containing block for a fixed child) can't trap it. Handles focus
  * trapping, Escape/backdrop dismissal, scroll-lock, and route-change close.
  */
-export function MobileMenu({ locale }: { locale: Locale }) {
+export function MobileMenu({
+  locale,
+  market,
+}: {
+  locale: Locale;
+  /** Keeps mobile navigation inside the shopper's market. */
+  market?: string;
+}) {
   const t = COPY[locale];
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -96,9 +106,9 @@ export function MobileMenu({ locale }: { locale: Locale }) {
   }, [open]);
 
   const links = [
-    { href: listingPath('games', locale), label: t.games, hint: t.gamesHint, Icon: Dices },
-    { href: listingPath('categories', locale), label: t.categories, hint: t.categoriesHint, Icon: LayoutGrid },
-    { href: listingPath('guides', locale), label: t.guides, hint: t.guidesHint, Icon: BookOpen },
+    { href: listingPath('games', locale, market), label: t.games, hint: t.gamesHint, Icon: Dices },
+    { href: listingPath('categories', locale, market), label: t.categories, hint: t.categoriesHint, Icon: LayoutGrid },
+    { href: listingPath('guides', locale, market), label: t.guides, hint: t.guidesHint, Icon: BookOpen },
   ];
 
   return (
@@ -143,7 +153,7 @@ export function MobileMenu({ locale }: { locale: Locale }) {
               </button>
             </div>
 
-            <Link href={listingPath('search', locale)} className="mobile-nav-search" onClick={close}>
+            <Link href={listingPath('search', locale, market)} className="mobile-nav-search" onClick={close}>
               <Search size={18} aria-hidden="true" />
               <span>{t.search}</span>
             </Link>
@@ -165,6 +175,16 @@ export function MobileMenu({ locale }: { locale: Locale }) {
               <User size={18} aria-hidden="true" />
               <span>{t.login}</span>
             </a>
+
+            {/* Market first: it decides prices and sellers, so it outranks
+                language and theme as a setting. Desktop shows it in the header;
+                without this it was simply unreachable on a phone. */}
+            <div className="mobile-nav-foot">
+              <span className="mobile-nav-foot-label">{t.market}</span>
+              <div className="mobile-nav-foot-controls">
+                <MarketSwitcher locale={locale} market={market ?? DEFAULT_MARKET} />
+              </div>
+            </div>
 
             <div className="mobile-nav-foot">
               <span className="mobile-nav-foot-label">{t.settings}</span>

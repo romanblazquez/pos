@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Clock3, Users } from 'lucide-react';
 import type { ProductSummary } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
-import { listingPath, type Locale } from '@/lib/segments';
+import { entityPath, type Locale } from '@/lib/segments';
 import {
   commerceStateEmphasis,
   commerceStateLabel,
@@ -18,8 +18,19 @@ const DOTTED = new Set(['in-stock', 'low-stock', 'out-of-stock']);
 
 // Catalog card for a price-comparison storefront: image, name, lowest price,
 // and how many stores carry it. Crawlable <a> to the product page.
-export function ProductCard({ product, locale }: { product: ProductSummary; locale: Locale }) {
-  const href = `${listingPath('games', locale)}/${product.slug}`;
+export function ProductCard({
+  product,
+  locale,
+  market,
+}: {
+  product: ProductSummary;
+  locale: Locale;
+  /** Market this card belongs to; keeps the link inside the shopper's market. */
+  market?: string;
+}) {
+  // Must carry the market: a card on /en-ar linking to /en-mx sends an
+  // Argentine shopper to a Mexican page priced in another currency.
+  const href = entityPath('games', locale, product.slug, market);
   const inStock = product.inStockListings > 0;
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   // A price without its currency is not a price we can honestly show: the same

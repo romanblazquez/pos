@@ -324,7 +324,7 @@ export default async function ListingPage({
               </p>
               {results.length > 0 ? (
                 <div className="catalog-grid">
-                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
                 </div>
               ) : (
                 <CatalogEmpty locale={locale} clearHref={listingPath('search', locale, market)} />
@@ -427,7 +427,7 @@ export default async function ListingPage({
               </p>
               {results.length > 0 ? (
                 <div className="catalog-grid">
-                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+                  {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
                 </div>
               ) : (
                 <CatalogEmpty locale={locale} clearHref={base} />
@@ -470,7 +470,7 @@ export default async function ListingPage({
         {cards.length > 0 ? (
           <div className="category-grid">
             {cards.map((shelf) => (
-              <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} />
+              <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} market={market} />
             ))}
           </div>
         ) : (

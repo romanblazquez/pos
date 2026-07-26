@@ -28,16 +28,18 @@ function srcSet(art: string, ext: 'avif' | 'webp'): string {
 
 export function ShelfCard({
   shelf,
-  locale,
+  locale, market,
   share = true,
 }: {
   shelf: Shelf;
   locale: Locale;
+  /** Keeps the shelf link inside the shopper's market. */
+  market?: string;
   /** Share affordance belongs on the browse hub, not in a compact home rail. */
   share?: boolean;
 }) {
   const { theme, identity: id, count } = shelf;
-  const href = entityPath('categories', locale, theme.slug[locale]);
+  const href = entityPath('categories', locale, theme.slug[locale], market);
   const label = theme.label[locale];
 
   return (

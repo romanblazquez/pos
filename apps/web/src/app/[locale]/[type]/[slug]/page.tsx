@@ -138,7 +138,7 @@ export async function generateMetadata({
         // Themes have distinct per-locale slugs, so map hreflang explicitly.
         alternates: page > 1 || theme.noindex
           ? undefined
-          : { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) },
+          : { es: entityPath('categories', 'es', theme.slug.es, market), en: entityPath('categories', 'en', theme.slug.en, market) },
       });
     }
     const real = await resolveCategory(params.slug);
@@ -279,7 +279,7 @@ export default async function DetailPage({
     const catAlternates = theme
       ? theme.noindex
         ? undefined
-        : { es: entityPath('categories', 'es', theme.slug.es), en: entityPath('categories', 'en', theme.slug.en) }
+        : { es: entityPath('categories', 'es', theme.slug.es, market), en: entityPath('categories', 'en', theme.slug.en, market) }
       : entityAlternates('categories', params.slug);
     return (
       <main className="container">
@@ -319,7 +319,7 @@ export default async function DetailPage({
         {results.length > 0 ? (
           <>
             <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
-              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} />)}
+              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
             </div>
             <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
           </>

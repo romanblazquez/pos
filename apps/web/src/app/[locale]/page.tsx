@@ -72,7 +72,7 @@ export async function generateMetadata({
     path: homePath(locale, market),
     title: t.title,
     description: t.desc,
-    alternates: { es: homePath('es'), en: homePath('en') },
+    alternates: { es: homePath('es', market), en: homePath('en', market) },
   });
 }
 
@@ -128,7 +128,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
             <h2 className="section-title home-section-title">{t.cats}</h2>
             <div className="category-grid home-shelf-grid">
               {topShelves.map((shelf) => (
-                <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} share={false} />
+                <ShelfCard key={shelf.theme.key} shelf={shelf} locale={locale} market={market} share={false} />
               ))}
             </div>
             <p style={{ marginTop: '1.5rem' }}>
@@ -149,7 +149,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
             <h2 className="section-title home-section-title">{t.featured}</h2>
             <div className="catalog-grid">
               {featured.map((p) => (
-                <ProductCard key={p.id} product={p} locale={locale} />
+                <ProductCard key={p.id} product={p} locale={locale} market={market} />
               ))}
             </div>
             <p style={{ marginTop: '1.5rem' }}>
