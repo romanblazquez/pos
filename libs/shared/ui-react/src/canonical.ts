@@ -80,5 +80,7 @@ export function socialCardUrl(
   locale: SeoLocale,
   slug: string,
 ): string {
-  return `${SITE_ORIGIN}/og/${kind}/${locale}/${encodeURIComponent(slug)}.png`;
+  // JPEG, not PNG: the same card is 59KB instead of 577KB, and these are
+  // generated on demand on a small box where a slow card is a missing card.
+  return `${SITE_ORIGIN}/og/${kind}/${locale}/${encodeURIComponent(slug)}.jpg`;
 }

@@ -58,7 +58,7 @@ export function socialImageUrl(
   // Query-free on purpose: robots.txt disallows `/api/` and `/*?*`, and the
   // crawlers that build social cards obey it — so a card image behind a query
   // string silently never loads. Rewritten to the generator in next.config.mjs.
-  return absoluteUrl(`/og/${kind}/${locale}/${encodeURIComponent(slug)}.png`);
+  return absoluteUrl(`/og/${kind}/${locale}/${encodeURIComponent(slug)}.jpg`);
 }
 
 export function buildMetadata(input: SeoInput): Metadata {
@@ -85,7 +85,10 @@ export function buildMetadata(input: SeoInput): Metadata {
         width: 1200,
         height: 630,
         alt: input.title,
-        type: 'image/png',
+        // Generated cards are JPEG (see the /og route: a tenth the bytes of the
+        // PNG for a fraction of the time). Declaring the wrong type here makes
+        // some scrapers discard the image outright.
+        type: url.endsWith('.jpg') ? 'image/jpeg' : 'image/png',
       }))
     : [
         {

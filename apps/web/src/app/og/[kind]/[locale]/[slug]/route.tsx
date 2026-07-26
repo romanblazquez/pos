@@ -11,13 +11,37 @@ export const revalidate = 900;
 
 const SIZE = { width: 1200, height: 630 };
 
+/**
+ * Serve the card as JPEG rather than the PNG `ImageResponse` produces.
+ *
+ * Measured on this box: 577KB PNG -> 59KB JPEG for 125ms of extra work. Palette
+ * PNG reaches 133KB but costs 2.3s, which is worse than the problem — these are
+ * generated per request, and Twitterbot gives up long before that.
+ *
+ * Cached for six hours rather than fifteen minutes. A card carries a price, so
+ * it should not be pinned forever; but at ~1.4s per miss on a Raspberry Pi,
+ * regenerating four times an hour for every product is how a crawler times out
+ * and the link renders with no image at all. `stale-while-revalidate` keeps the
+ * old card serving while a new one is built.
+ */
+const CARD_CACHE = 'public, max-age=21600, stale-while-revalidate=604800';
+
+async function asJpeg(card: ImageResponse): Promise<Response> {
+  const png = Buffer.from(await card.arrayBuffer());
+  const jpeg = await sharp(png).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
+  return new Response(new Uint8Array(jpeg), {
+    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': CARD_CACHE },
+  });
+}
+
+
 function cleanSlug(value: string | null): string {
   // The public URL is /og/{kind}/{locale}/{slug}.png (see next.config.mjs) —
   // a query-free path, because robots.txt disallows `/api/` and `/*?*` and the
   // crawlers that build social cards obey it. Depending on how the rewrite
   // splits the segment, the extension can arrive attached to the slug, so strip
   // it here rather than depending on path-to-regexp's handling of a literal dot.
-  const slug = (value ?? '').replace(/\.png$/, '');
+  const slug = (value ?? '').replace(/\.(jpe?g|png)$/, '');
   return /^[a-z0-9][a-z0-9-]{0,180}$/.test(slug) ? slug : '';
 }
 
@@ -55,7 +79,7 @@ export async function GET(
     const prices = available.map((listing) => listing.priceMinorUnits);
     const currency = available[0]?.currency ?? 'MXN';
     const price = prices.length ? money(Math.min(...prices), currency, locale) : null;
-    return new ImageResponse(
+    return asJpeg(new ImageResponse(
       <SocialFrame accent="#b4502e">
         <div style={{ display: 'flex', width: 480, height: 480, alignItems: 'center', justifyContent: 'center' }}>
           {product.images[0]
@@ -83,8 +107,8 @@ export async function GET(
           </div>
         </div>
       </SocialFrame>,
-      { ...SIZE, headers: { 'Cache-Control': 'public, max-age=900, stale-while-revalidate=86400' } },
-    );
+      SIZE,
+    ));
   }
 
   const theme = getThemeBySlug(locale, slug);
@@ -98,7 +122,7 @@ export async function GET(
   const art = identity?.art
     ? await imageDataUrl(new URL(identity.art.replace(/\.webp$/, '-hero.webp'), request.url))
     : null;
-  return new ImageResponse(
+  return asJpeg(new ImageResponse(
     <SocialFrame accent={identity?.accent ?? '#b4502e'} dark={identity?.dark}>
       {art && <img src={art} alt="" width="640" height="630"
         style={{ position: 'absolute', right: 0, top: 0, width: 640, height: 630, objectFit: 'cover', opacity: identity?.dark ? .9 : .82 }} />}
@@ -122,8 +146,8 @@ export async function GET(
         </div>
       </div>
     </SocialFrame>,
-    { ...SIZE, headers: { 'Cache-Control': 'public, max-age=900, stale-while-revalidate=86400' } },
-  );
+    SIZE,
+  ));
 }
 
 async function imageDataUrl(url: URL): Promise<string | null> {

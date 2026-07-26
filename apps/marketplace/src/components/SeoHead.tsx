@@ -60,6 +60,12 @@ export function SeoHead({
     setMeta('property', 'og:image:alt', title);
     if (defaultImage) {
       setMeta('property', 'og:image:type', 'image/png');
+    } else if (resolvedImage.endsWith('.jpg')) {
+      // Generated social cards are JPEG; a declared type that disagrees with the
+      // bytes makes some scrapers drop the image.
+      setMeta('property', 'og:image:type', 'image/jpeg');
+      setMeta('property', 'og:image:width', '1200');
+      setMeta('property', 'og:image:height', '630');
       setMeta('property', 'og:image:width', '1200');
       setMeta('property', 'og:image:height', '630');
     } else {
