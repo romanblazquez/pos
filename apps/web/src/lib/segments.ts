@@ -22,6 +22,8 @@ export const DEFAULT_LOCALE: Locale = 'es';
 export interface Market {
   /** Uppercase market code, conventionally the ISO country code. */
   code: string;
+  /** Human market name shown to shoppers, in the market's own language. */
+  name: string;
   /** Lowercase URL segment component: /es-mx. */
   urlCode: string;
   countryCode: string;
@@ -33,6 +35,7 @@ export interface Market {
 export const MARKETS: Readonly<Record<string, Market>> = {
   mx: {
     code: 'MX',
+    name: 'México',
     urlCode: 'mx',
     countryCode: 'MX',
     canonicalCurrency: 'MXN',

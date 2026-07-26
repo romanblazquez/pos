@@ -38,6 +38,17 @@ button, input, select { font: inherit; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; }
 
 .container { width: min(100% - 2.5rem, 1200px); margin-inline: auto; }
+/* No-local-offer state. Mobile-first: a single column that simply widens. */
+.foreign-availability { display: flex; flex-direction: column; gap: .75rem; margin-block: 1.75rem;
+  padding: 1.15rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.foreign-availability-title { margin: 0; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.3; }
+.foreign-availability-lede { margin: 0; font-size: .9rem; line-height: 1.55; }
+.foreign-availability-list { display: flex; flex-direction: column; gap: .5rem;
+  margin: 0; padding-left: 1.1rem; font-size: .88rem; line-height: 1.5; }
+.foreign-availability-note { margin: 0; padding-top: .6rem; border-top: 1px solid var(--border);
+  color: var(--muted-foreground); font-size: .78rem; line-height: 1.5; }
+@media (min-width: 700px) { .foreign-availability { padding: 1.4rem 1.6rem; } }
+
 .editorial-team-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-block: 1.5rem 2.5rem; }
 .editor-profile-card { padding: 1.1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
 .editor-profile-heading { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }

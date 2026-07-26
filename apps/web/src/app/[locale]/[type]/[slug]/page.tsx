@@ -34,6 +34,7 @@ import { ShelfHero } from '@/components/ShelfHero';
 import { JsonLd } from '@/components/JsonLd';
 import { LocaleAlternates } from '@/components/LocaleAlternates';
 import { ShareBar } from '@/components/ShareBar';
+import { ForeignAvailabilityNotice } from '@/components/ForeignAvailabilityNotice';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
@@ -47,6 +48,7 @@ import {
   slugify,
   type Locale,
   parseLocalePrefix,
+  MARKETS,
 } from '@/lib/segments';
 
 // SSR + ISR: pages aren't pre-generated at build (catalog is large/changing);
@@ -94,7 +96,7 @@ export async function generateMetadata({
   const page = pageOf(searchParams);
 
   if (kind === 'games') {
-    const product = await getProduct(params.slug, locale);
+    const product = await getProduct(params.slug, locale, market);
     if (!product) return {};
     const range = priceRange(product, locale);
     const title = range ? `${product.name} — ${range}` : product.name;
@@ -223,9 +225,9 @@ export default async function DetailPage({
   const homeName = locale === 'es' ? 'Inicio' : 'Home';
 
   if (kind === 'games') {
-    const product = await getProduct(params.slug, locale);
+    const product = await getProduct(params.slug, locale, market);
     if (!product) notFound();
-    return renderProduct(product, locale, homeName);
+    return renderProduct(product, locale, homeName, market);
   }
 
   if (kind === 'categories') {
@@ -671,7 +673,12 @@ function productCrumbs(product: ProductDetail, locale: Locale, homeName: string,
   return crumbs;
 }
 
-async function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
+async function renderProduct(
+  product: ProductDetail,
+  locale: Locale,
+  homeName: string,
+  market: string,
+) {
   const path = entityPath('games', locale, product.slug);
   const crumbs = productCrumbs(product, locale, homeName, path);
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);
@@ -791,6 +798,15 @@ async function renderProduct(product: ProductDetail, locale: Locale, homeName: s
           </figure>
         );
       })()}
+
+      {/* Market has no offers, but the game is stocked elsewhere. Never a dead end. */}
+      {sorted.length === 0 && product.foreignAvailability && (
+        <ForeignAvailabilityNotice
+          foreign={product.foreignAvailability}
+          marketName={MARKETS[market]?.name ?? market.toUpperCase()}
+          locale={locale}
+        />
+      )}
 
       {sorted.length > 0 && (
         <section>

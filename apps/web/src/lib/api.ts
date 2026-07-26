@@ -51,6 +51,15 @@ export interface ProductDetail {
   bggWeight?: number;
   tags: string[];
   listings: Listing[];
+  /** Market these offers were selected for, and the currency they are quoted in. */
+  marketCode?: string;
+  marketCurrency?: string;
+  /**
+   * Offers that exist for this product OUTSIDE the current market. Counts and
+   * currencies only — never prices, because an amount in another market's
+   * currency is not an offer to this shopper.
+   */
+  foreignAvailability?: { currencies: string[]; offerCount: number };
 }
 
 export interface ProductSummary {
@@ -110,8 +119,17 @@ async function api<T>(path: string, revalidate: number): Promise<T | null> {
 
 // `locale` selects the API's approved title/description override (es-MX / en-US);
 // without it the API falls back to the base English BGG text, so always pass it.
-export function getProduct(slug: string, locale?: string): Promise<ProductDetail | null> {
-  const qs = locale ? `?locale=${encodeURIComponent(locale)}` : '';
+export function getProduct(
+  slug: string,
+  locale?: string,
+  market?: string,
+): Promise<ProductDetail | null> {
+  const params = new URLSearchParams();
+  if (locale) params.set('locale', locale);
+  // Always send the market: offers are market-scoped, and an omitted market
+  // would silently fall back to the default one's currency.
+  if (market) params.set('market', market.toUpperCase());
+  const qs = params.toString() ? `?${params}` : '';
   return api<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}${qs}`, REVALIDATE.product);
 }
 
