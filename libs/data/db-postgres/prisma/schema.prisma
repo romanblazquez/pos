@@ -1209,6 +1209,7 @@ model Country {
   affiliateAccounts AffiliateAccount[]
   tenantMarkets     TenantMarket[]
   sellerMarkets     SellerMarket[]
+  commerceMarkets   CommerceMarket[]
 
   @@index([active, code])
   @@map("country")
@@ -2402,10 +2403,14 @@ model TenantMarket {
   timezone            String
   taxConfiguration    Json?
   active              Boolean  @default(true)
+  /// Links tenant (retail-os) configuration to the public marketplace market it
+  /// backs, when one exists. Nullable: most tenant markets have no public face.
+  commerceMarketId    String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   country             Country  @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  commerceMarket      CommerceMarket? @relation(fields: [commerceMarketId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, countryId, currencyCode, defaultLanguageCode])
   @@index([countryId, active])
@@ -2422,10 +2427,14 @@ model SellerMarket {
   shippingCountries      String[]
   localPickup            Boolean  @default(false)
   active                 Boolean  @default(true)
+  /// The public market this seller configuration makes them eligible for.
+  /// Nullable during backfill; eligibility falls back to `shippingCountries`.
+  commerceMarketId       String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   seller                 Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   country                Country  @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  commerceMarket         CommerceMarket? @relation(fields: [commerceMarketId], references: [id], onDelete: SetNull)
 
   @@unique([sellerId, countryId, settlementCurrencyCode])
   @@index([countryId, active])
@@ -3574,4 +3583,98 @@ model EditorialArticleRevision {
   @@unique([articleId, revision])
   @@index([articleId, createdAt])
   @@map("editorial_article_revision")
+}
+
+// ─── Commerce markets (public marketplace) ───────────────────────────────────
+//
+// A CommerceMarket is the PUBLIC, consumer-facing market of juegospedia.com: a
+// country whose shoppers get their own eligible sellers, canonical currency, tax
+// treatment, ranking and analytics dimension.
+//
+// Deliberately NOT named `Market`. Two other models already claim that word:
+// `Marketplace` is an EXTERNAL marketplace (Amazon, MercadoLibre) that we ingest
+// offers from, and `TenantMarket` is retail-os tenant configuration on the
+// POS/ERP side of this monorepo. Collapsing three concepts into one noun would
+// make a 147-model schema unreadable. See docs/adr/0007-language-market-separation.md.
+model CommerceMarket {
+  id                String                 @id @default(cuid())
+  /// Uppercase market code, conventionally the ISO country code (MX, ES, US).
+  code              String                 @unique
+  name              String
+  countryId         String
+  countryCode       String                 @db.Char(2)
+  /// The market's native commercial currency. Offers keep their own native
+  /// currency; this is what SEO-visible comparison and JSON-LD are priced in.
+  canonicalCurrency String                 @db.Char(3)
+  /// Display currencies a user may switch to. Presentation only — never changes
+  /// the canonical URL, hreflang or sitemap.
+  displayCurrencies String[]
+  defaultLanguage   String
+  timezone          String
+  /// 'inclusive' | 'exclusive' — whether displayed prices include tax.
+  taxMode           String                 @default("inclusive")
+  /// Offers older than this are excluded from comparison as stale.
+  offerFreshnessHours Int                  @default(72)
+  active            Boolean                @default(false)
+  /// Whether this market's pages may be indexed. Independent of `active` so a
+  /// market can be launched to users before it is opened to crawlers.
+  indexable         Boolean                @default(false)
+  sortOrder         Int                    @default(100)
+  seoTitle          String?
+  seoDescription    String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  country           Country                @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  locales           CommerceMarketLocale[]
+  tenantMarkets     TenantMarket[]
+  sellerMarkets     SellerMarket[]
+
+  @@index([active, indexable, sortOrder])
+  @@index([countryCode, active])
+  @@map("commerce_market")
+}
+
+/// One language × market combination, and the URL prefix that serves it.
+/// `/es-mx` and `/en-mx` are two locales of the single MX market.
+model CommerceMarketLocale {
+  id           String         @id @default(cuid())
+  marketId     String
+  languageCode String
+  /// BCP-47 tag, e.g. es-MX. Stored canonically cased for hreflang output.
+  localeCode   String
+  /// Lowercase URL prefix, e.g. es-mx. Unique across all markets.
+  urlPrefix    String         @unique
+  active       Boolean        @default(false)
+  indexable    Boolean        @default(false)
+  /// The locale served when a market is resolved without an explicit language.
+  isDefault    Boolean        @default(false)
+  seoTitle     String?
+  seoDescription String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  market       CommerceMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@unique([marketId, languageCode])
+  @@index([active, indexable])
+  @@map("commerce_market_locale")
+}
+
+/// Append-only FX observation. Rates are NEVER updated or deleted: a converted
+/// price shown to a user must stay explainable for as long as the price history
+/// that references it, so each conversion records the snapshot it used.
+model ExchangeRateSnapshot {
+  id            String   @id @default(cuid())
+  baseCurrency  String   @db.Char(3)
+  quoteCurrency String   @db.Char(3)
+  /// Units of quoteCurrency per 1 baseCurrency. High precision: some pairs in
+  /// scope (e.g. ARS) carry large magnitudes with meaningful minor digits.
+  rate          Decimal  @db.Decimal(20, 10)
+  provider      String
+  effectiveAt   DateTime
+  fetchedAt     DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([baseCurrency, quoteCurrency, provider, effectiveAt])
+  @@index([baseCurrency, quoteCurrency, effectiveAt(sort: Desc)])
+  @@map("exchange_rate_snapshot")
 }

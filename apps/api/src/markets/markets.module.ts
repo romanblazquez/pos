@@ -3,10 +3,11 @@ import { MarketsController } from './markets.controller.js';
 import { TenantMarketsController } from './tenant-markets.controller.js';
 import { SellerMarketsController } from './seller-markets.controller.js';
 import { MarketsService } from './markets.service.js';
+import { ExchangeRateService } from './exchange-rate.service.js';
 
 @Module({
   controllers: [MarketsController, TenantMarketsController, SellerMarketsController],
-  providers: [MarketsService],
-  exports: [MarketsService],
+  providers: [MarketsService, ExchangeRateService],
+  exports: [MarketsService, ExchangeRateService],
 })
 export class MarketsModule {}
