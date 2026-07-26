@@ -86,7 +86,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   // reading "board-game 26" that led to a thin `/categorias/board-game` page.
   // The curated shelves are the real browse axis (see `lib/themes.ts`).
   const [{ results: featured }, shelves] = await Promise.all([
-    listProducts({ inStock: true, limit: 18, locale }),
+    listProducts({ inStock: true, limit: 18, locale, market }),
     listShelves(),
   ]);
   const topShelves = shelves.slice(0, HOME_SHELVES);

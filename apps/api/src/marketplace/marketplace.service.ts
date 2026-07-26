@@ -7,6 +7,7 @@ import {
   marketConfig,
   marketCurrency,
   summariseForeignAvailability,
+  withMarketPricing,
 } from '../markets/market-eligibility.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './complexity-bands.js';
@@ -28,6 +29,8 @@ export interface ProductSearchParams {
   offset?: number;
   sortBy?: string;
   semantic?: boolean;
+  /** Market whose offers may be priced. Cards outside it fall back to "no offer". */
+  market?: string;
 }
 
 // searchProducts and semanticSearchProducts call each other (semantic falls back
@@ -177,11 +180,12 @@ export class MarketplaceService {
       const localizations = await this.getProductLocalizations(hits.map((hit) => hit.id), locale);
       const localizedHits = hits.map((hit) => {
         const localized = localizations.get(hit.id);
-        return localized ? {
+        const named = localized ? {
           ...hit,
           name: localized.title,
           description: localized.description ?? hit.description,
         } : hit;
+        return withMarketPricing(named, params.market);
       });
       return { results: localizedHits, total, source: 'search' as const };
     }
@@ -283,7 +287,11 @@ export class MarketplaceService {
       };
     });
 
-    return { results, total: totalCount, source: 'db' as const };
+    return {
+      results: results.map((r) => withMarketPricing(r, params.market)),
+      total: totalCount,
+      source: 'db' as const,
+    };
   }
 
   async getSuggestions(q = '', requestedLimit = 8) {

@@ -260,6 +260,7 @@ export default async function ListingPage({
       q,
       semantic,
       locale,
+      market,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
@@ -363,6 +364,7 @@ export default async function ListingPage({
     );
     const { results, total } = await listProducts({
       locale,
+      market,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,

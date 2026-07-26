@@ -56,6 +56,7 @@ export class MarketplaceController {
     @Query('mechanics')   mechanics?: string | string[],
     @Query('complexity')  complexity?: string,
     @Query('semantic')    semantic?: string,
+    @Query('market')      market?: string,
   ) {
     return this.svc.searchProducts({
       q,
@@ -74,6 +75,7 @@ export class MarketplaceController {
       offset: offset ? parseInt(offset, 10) : 0,
       sortBy,
       semantic: semantic === 'true',
+      market,
     }, locale);
   }
 

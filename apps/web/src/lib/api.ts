@@ -156,6 +156,8 @@ export async function listProducts(opts: {
   locale?: string;
   /** Meaning-based retrieval for unfiltered natural-language searches. */
   semantic?: boolean;
+  /** Market whose offers may be priced; others fall back to "no offer". */
+  market?: string;
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
@@ -175,6 +177,7 @@ export async function listProducts(opts: {
   if (opts.minPriceMinor) params.set('minPrice', String(opts.minPriceMinor));
   if (opts.maxPriceMinor) params.set('maxPrice', String(opts.maxPriceMinor));
   if (opts.complexity) params.set('complexity', opts.complexity);
+  if (opts.market) params.set('market', opts.market.toUpperCase());
   for (const mechanic of opts.mechanics ?? []) params.append('mechanics', mechanic);
   const data = await api<{ results: ProductSummary[]; total: number }>(
     `/api/v1/products?${params}`,

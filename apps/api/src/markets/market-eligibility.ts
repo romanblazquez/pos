@@ -74,3 +74,22 @@ export function summariseForeignAvailability(
     offerCount: foreign.length,
   };
 }
+
+/**
+ * Blank a listing card's price when it is not quoted in this market's currency.
+ *
+ * The product itself STAYS in results. A globally catalogued game must remain
+ * discoverable even where nobody sells it — hiding it would shrink the
+ * catalogue to the ~4% of products that currently have any offer at all. What
+ * must not survive is the price: an ARS amount rendered on a Mexican listing
+ * page is the same defect as on a product page, just harder to notice in a grid.
+ *
+ * The card then falls through to its "no offer" state, which is the truth for
+ * this market.
+ */
+export function withMarketPricing<
+  T extends { minPriceMinor?: number; maxPriceMinor?: number; currency?: string },
+>(product: T, marketCode?: string | null): T {
+  if (!product.currency || product.currency === marketCurrency(marketCode)) return product;
+  return { ...product, minPriceMinor: 0, maxPriceMinor: 0, currency: undefined };
+}
