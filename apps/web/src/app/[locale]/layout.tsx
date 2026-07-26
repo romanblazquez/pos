@@ -3,7 +3,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { CircleUserRound } from 'lucide-react';
 import { Bricolage_Grotesque, Hanken_Grotesk, Space_Mono } from 'next/font/google';
-import { APP_URL, SITE_NAME, SITE_URL } from '@/lib/site';
+import {
+  APP_URL,
+  BING_SITE_VERIFICATION,
+  GOOGLE_SITE_VERIFICATION,
+  SITE_NAME,
+  SITE_URL,
+} from '@/lib/site';
 import { organizationLd, webSiteLd } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { Analytics } from '@/components/Analytics';
@@ -39,6 +45,16 @@ const mono = Space_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Only emitted when configured — see lib/site.ts. Ownership has to be proven
+  // before the sitemap can be submitted or indexing problems can be seen at all.
+  ...(GOOGLE_SITE_VERIFICATION || BING_SITE_VERIFICATION
+    ? {
+        verification: {
+          ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+          ...(BING_SITE_VERIFICATION ? { other: { 'msvalidate.01': BING_SITE_VERIFICATION } } : {}),
+        },
+      }
+    : {}),
   applicationName: SITE_NAME,
   manifest: '/site.webmanifest',
   icons: {

@@ -14,6 +14,18 @@ export const API_BASE_URL = (
 
 export const SITE_NAME = 'Juegospedia';
 
+/**
+ * Search Console / Bing ownership tokens.
+ *
+ * The site went live to crawlers without these, which means it was indexed but
+ * unobservable: no way to submit the sitemap, see which URLs Google rejected, or
+ * find out that a page stopped ranking. Empty is a valid state — the tag is only
+ * emitted when a token is configured, so an unset env var leaves the head clean
+ * rather than shipping `content=""`.
+ */
+export const GOOGLE_SITE_VERIFICATION = (process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? '').trim();
+export const BING_SITE_VERIFICATION = (process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? '').trim();
+
 // GA4 Measurement ID. Public by design (it ships in client HTML). Always on for
 // now — no consent gate, ad signals stay off. Override via env per-environment.
 export const GA_MEASUREMENT_ID = (
