@@ -36,6 +36,12 @@ describe('language × market URLs', () => {
 
   // A market we do not serve must 404, never fall back to Mexico's commercial
   // terms rendered under someone else's country in the URL.
+  it('routes a second market with no code change beyond its config entry', () => {
+    expect(parseLocalePrefix('es-ar')).toEqual({ locale: 'es', market: 'ar' });
+    expect(entityPath('games', 'es', 'catan', 'ar')).toBe('/es-ar/juegos-de-mesa/catan');
+    expect(bcp47('es', 'ar')).toBe('es-AR');
+  });
+
   it('rejects prefixes for markets that are not configured', () => {
     expect(parseLocalePrefix('es-es')).toBeNull();
     expect(parseLocalePrefix('en-us')).toBeNull();
@@ -46,7 +52,7 @@ describe('language × market URLs', () => {
 
   it('enumerates exactly the language×market pairs that are configured', () => {
     expect(allLocalePrefixes().map((p) => localePrefix(p.locale, p.market)).sort())
-      .toEqual(['en-mx', 'es-mx']);
+      .toEqual(['en-ar', 'en-mx', 'es-ar', 'es-mx']);
   });
 
   it('defaults every path builder to the default market', () => {

@@ -34,6 +34,7 @@ export const SELLER_VISIBLE_STATUS = 'active';
 
 export const MARKET_COMMERCE: Readonly<Record<string, MarketCommerceConfig>> = {
   MX: { code: 'MX', countryCode: 'MX', canonicalCurrency: 'MXN' },
+  AR: { code: 'AR', countryCode: 'AR', canonicalCurrency: 'ARS' },
 };
 
 export const DEFAULT_MARKET_CODE = 'MX';

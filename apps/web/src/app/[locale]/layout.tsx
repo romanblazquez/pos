@@ -10,6 +10,7 @@ import { Analytics } from '@/components/Analytics';
 import { MeepleMark } from '@/components/MeepleMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
+import { MarketSwitcher } from '@/components/MarketSwitcher';
 import { MobileMenu } from '@/components/MobileMenu';
 import { PrivacyPreferencesButton } from '@/components/PrivacyPreferencesButton';
 import {
@@ -148,6 +149,7 @@ export default function LocaleLayout({
               <span aria-hidden="true">⌕</span> {t.search}
             </Link>
             <div className="header-controls nav-desktop">
+              <MarketSwitcher locale={locale} market={market} />
               <LocaleSwitcher locale={locale} />
               <ThemeToggle locale={locale} />
               <a className="header-login" href={`${APP_URL}/account`} aria-label={t.login} title={t.login}>

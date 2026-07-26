@@ -649,3 +649,21 @@ table.offers tr.is-best td:first-child { border-left: 4px solid var(--primary); 
 
 /* .filter-more / .filter-select now live in the shared filter-panel.css partial
    (imported at the top of this file), so apps/marketplace gets them too. */
+
+/* Market switcher — shows the market AND its currency, because "México" alone
+   does not tell a shopper which money they are about to compare prices in. */
+.market-switcher { position: relative; }
+.market-switcher-trigger { display: inline-flex; align-items: center; gap: .4rem;
+  padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: inherit; font-size: .78rem; font-weight: 600; cursor: pointer; }
+.market-switcher-trigger:hover { background: var(--accent); }
+.market-switcher-currency { color: var(--muted-foreground); font-family: var(--font-mono); font-size: .7rem; }
+.market-switcher-menu { position: absolute; right: 0; top: calc(100% + .4rem); z-index: 40;
+  min-width: 190px; margin: 0; padding: .3rem; list-style: none;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+  box-shadow: 0 12px 28px rgb(0 0 0 / .14); }
+.market-switcher-option { display: flex; width: 100%; align-items: center; justify-content: space-between;
+  gap: .75rem; padding: .5rem .6rem; border: 0; border-radius: 8px; background: transparent;
+  color: inherit; font-size: .82rem; text-align: left; cursor: pointer; }
+.market-switcher-option:hover { background: var(--accent); }
+.market-switcher-option.is-active { font-weight: 700; }

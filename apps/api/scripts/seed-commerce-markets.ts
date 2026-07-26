@@ -32,9 +32,9 @@ interface MarketSeed {
   locales: LocaleSeed[];
 }
 
-// Only Mexico ships today. Spain/US/Ireland/Argentina are added through the
-// admin Markets module, which is the acceptance test for the whole programme:
-// a new market must need no code change.
+// Mexico and Argentina both have real seller supply today. Further markets are
+// added through the admin Markets module, which is the acceptance test for the
+// whole programme: a new market must need no code change.
 const MARKETS: MarketSeed[] = [
   {
     code: 'MX',
@@ -49,6 +49,21 @@ const MARKETS: MarketSeed[] = [
     locales: [
       { languageCode: 'es', localeCode: 'es-MX', urlPrefix: 'es-mx', isDefault: true },
       { languageCode: 'en', localeCode: 'en-MX', urlPrefix: 'en-mx', isDefault: false },
+    ],
+  },
+  {
+    code: 'AR',
+    name: 'Argentina',
+    countryCode: 'AR',
+    canonicalCurrency: 'ARS',
+    displayCurrencies: ['ARS'],
+    defaultLanguage: 'es',
+    timezone: 'America/Argentina/Buenos_Aires',
+    taxMode: 'inclusive',
+    sortOrder: 20,
+    locales: [
+      { languageCode: 'es', localeCode: 'es-AR', urlPrefix: 'es-ar', isDefault: true },
+      { languageCode: 'en', localeCode: 'en-AR', urlPrefix: 'en-ar', isDefault: false },
     ],
   },
 ];

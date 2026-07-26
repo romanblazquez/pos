@@ -41,6 +41,14 @@ export const MARKETS: Readonly<Record<string, Market>> = {
     canonicalCurrency: 'MXN',
     languages: ['es', 'en'],
   },
+  ar: {
+    code: 'AR',
+    name: 'Argentina',
+    urlCode: 'ar',
+    countryCode: 'AR',
+    canonicalCurrency: 'ARS',
+    languages: ['es', 'en'],
+  },
 };
 
 export const DEFAULT_MARKET = 'mx';
