@@ -321,11 +321,28 @@ button, input, select { font: inherit; }
 .filter-opt .muted { margin-left: auto; font-family: var(--font-mono); font-size: .62rem; }
 .search-command { width: min(100%, 620px); }
 
+/* Two columns for the WHOLE product page, not just its header. The figure
+   column is sticky, and sticky only travels as far as its containing block: when
+   this grid held the title block alone, the image unpinned a few hundred pixels
+   down while the offers, specs and editorial scrolled on without it. The
+   transactional app got this right; this now matches it. */
 .product-head { display: grid; grid-template-columns: minmax(260px, 390px) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4rem); align-items: start; margin-top: 1.4rem; }
+/* The content column owns the vertical rhythm the page used to get from
+   top-level siblings. */
+.product-body { display: flex; min-width: 0; flex-direction: column; }
 /* Match the marketplace app: square, edge-to-edge cover on a subtle framed
    background — the same wrap used by catalog cards, for one consistent look. */
+/* The image column follows the reader down a long product page — the shopper
+   keeps the thing they are considering in view while reading offers, specs and
+   the editor's take. Matches the transactional app, which already did this.
+   Sticky only from the two-column breakpoint: stacked on a phone the image is
+   above the content, and pinning it there would eat the screen. */
+.product-figure-col { display: flex; flex-direction: column; gap: .75rem; }
 .product-figure { aspect-ratio: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-subtle); box-shadow: 0 1px 2px rgb(43 38 34 / .05); }
 .product-figure img { width: 100%; height: 100%; object-fit: cover; }
+@media (min-width: 861px) {
+  .product-figure-col { position: sticky; top: calc(62px + 1rem); align-self: start; }
+}
 .product-h1 { max-width: 18ch; margin: .2rem 0 .65rem; font-family: var(--font-display); font-size: clamp(2.25rem, 5vw, 3.3rem); font-weight: 800; line-height: 1; letter-spacing: -.035em; }
 .product-sub { margin: 0 0 1.25rem; color: var(--muted-foreground); }
 .product-price-lead { color: var(--foreground); font-family: var(--font-display); font-size: 1.85rem; font-weight: 800; }

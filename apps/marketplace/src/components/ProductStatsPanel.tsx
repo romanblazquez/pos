@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
 import type { ReactNode } from 'react';
 import { BarChart3, Clock3, Layers, ShieldCheck, Star, TrendingUp } from 'lucide-react';
+import { PlayerFitPanel } from '@retail-os/ui-react';
+import { useMarket } from '../context/MarketContext.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -36,6 +38,7 @@ export function ProductStatsPanel({
   bggRank, bggUsersRated, isExpansion,
 }: ProductStatsProps) {
   const intl = useIntl();
+  const { uiLocale } = useMarket();
   const { data: salesByYear } = useQuery({
     queryKey: ['product-sales-by-year', slug],
     queryFn: () => fetchSalesByYear(slug),
@@ -78,7 +81,9 @@ export function ProductStatsPanel({
         </div>
       )}
 
-      {minPlayers && maxPlayers && <PlayerCountFit minPlayers={minPlayers} maxPlayers={maxPlayers} />}
+      {minPlayers && maxPlayers && (
+        <PlayerFitPanel minPlayers={minPlayers} maxPlayers={maxPlayers} locale={uiLocale} />
+      )}
 
       {bggWeight ? <ComplexityMeter weight={bggWeight} /> : null}
 
@@ -156,77 +161,3 @@ function ComplexityMeter({ weight }: { weight: number }) {
   );
 }
 
-function PlayerCountFit({ minPlayers, maxPlayers }: { minPlayers: number; maxPlayers: number }) {
-  const intl = useIntl();
-  // One cell per player becomes unusable for party games such as Flip 7
-  // (3–18). Keep exact cells for normal ranges and summarize large ranges
-  // into the same meaningful states shown by the detailed version.
-  const slots = maxPlayers <= 8
-    ? Array.from({ length: maxPlayers }, (_, index) => ({ start: index + 1, end: index + 1 }))
-    : [
-        ...(minPlayers > 1 ? [{ start: 1, end: minPlayers - 1 }] : []),
-        { start: minPlayers, end: minPlayers },
-        ...(maxPlayers > minPlayers ? [{ start: minPlayers + 1, end: maxPlayers }] : []),
-      ];
-  const badge = minPlayers === maxPlayers
-    ? intl.formatMessage({ id: 'product.playersCount' }, { count: minPlayers })
-    : intl.formatMessage({ id: 'product.playersBadge' }, { range: `${minPlayers}–${maxPlayers}` });
-
-  function slotStyle(n: number): { cellClass: string; labelClass: string; label: string; strikethrough?: boolean } {
-    if (n < minPlayers) {
-      return {
-        cellClass: 'bg-[#EDE4D2] border border-dashed border-[#D8CCB3] text-[#B6A98C] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#8A7E68]',
-        labelClass: 'text-[#B6A98C] dark:text-[#8A7E68]',
-        label: 'No',
-        strikethrough: true,
-      };
-    }
-    if (n === minPlayers && minPlayers < maxPlayers) {
-      return {
-        cellClass: 'bg-[--jp-warning-tint] border border-[--jp-warning-mark]/30 text-[--jp-warning-text]',
-        labelClass: 'text-[--jp-warning-text]',
-        label: 'OK',
-      };
-    }
-    if (n <= maxPlayers) {
-      return {
-        cellClass: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950',
-        labelClass: 'font-bold text-[--jp-success-text]',
-        label: 'Best',
-      };
-    }
-    return {
-      cellClass: 'bg-[#EDE4D2] border border-[#E0D4BC] text-[#9A8E79] dark:bg-[#312B20] dark:border-[#4A4233] dark:text-[#9A8E79]',
-      labelClass: 'text-[#9A8E79]',
-      label: 'Ext',
-    };
-  }
-
-  return (
-    <div className="rounded-[14px] border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="font-display font-bold text-[15px] text-[--tx]">{intl.formatMessage({ id: 'product.playersLabel' })}</span>
-        <span className="font-mono text-[12px] rounded-[7px] border px-2 py-0.5
-                         border-[--jp-success-mark]/30 bg-[--jp-success-tint] text-[--jp-success-text]">
-          {badge}
-        </span>
-      </div>
-      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }}>
-        {slots.map(({ start, end }) => {
-          const s = slotStyle(start);
-          const value = start === end ? String(start) : `${start}–${end}`;
-          return (
-            <div key={value} className="min-w-0 text-center">
-              <div className={`grid h-[38px] place-items-center rounded-[9px] px-1 font-mono text-[13px] font-bold sm:text-[14px] ${s.cellClass} ${s.strikethrough ? 'line-through' : ''}`}>
-                {value}
-              </div>
-              <div className={`font-mono text-[9px] uppercase mt-[5px] ${s.labelClass}`}>
-                {s.label}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}

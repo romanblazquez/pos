@@ -12,7 +12,13 @@ export const revalidate = 900;
 const SIZE = { width: 1200, height: 630 };
 
 function cleanSlug(value: string | null): string {
-  return /^[a-z0-9][a-z0-9-]{0,180}$/.test(value ?? '') ? value! : '';
+  // The public URL is /og/{kind}/{locale}/{slug}.png (see next.config.mjs) —
+  // a query-free path, because robots.txt disallows `/api/` and `/*?*` and the
+  // crawlers that build social cards obey it. Depending on how the rewrite
+  // splits the segment, the extension can arrive attached to the slug, so strip
+  // it here rather than depending on path-to-regexp's handling of a literal dot.
+  const slug = (value ?? '').replace(/\.png$/, '');
+  return /^[a-z0-9][a-z0-9-]{0,180}$/.test(slug) ? slug : '';
 }
 
 function money(minor: number, currency: string, locale: Locale) {
@@ -21,13 +27,22 @@ function money(minor: number, currency: string, locale: Locale) {
   }).format(minor / 100);
 }
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const locale: Locale = isLocale(url.searchParams.get('locale') ?? '')
-    ? url.searchParams.get('locale') as Locale
-    : 'es';
-  const slug = cleanSlug(url.searchParams.get('slug'));
-  const kind = url.searchParams.get('kind');
+/**
+ * Social card images, addressed entirely by path: /og/{kind}/{locale}/{slug}.png
+ *
+ * The generator used to live at /api/og?kind=…&slug=…&locale=…, which robots.txt
+ * blocks twice over (`Disallow: /api/` and `Disallow: /*?*`). Twitterbot and
+ * facebookexternalhit honour robots.txt when fetching card images, so every
+ * shared link rendered without one. A query-free path under a directory no rule
+ * matches is fetchable, and caches better besides.
+ */
+export async function GET(
+  request: Request,
+  { params }: { params: { kind: string; locale: string; slug: string } },
+) {
+  const locale: Locale = isLocale(params.locale) ? (params.locale as Locale) : 'es';
+  const slug = cleanSlug(params.slug);
+  const kind = params.kind;
   if (!slug || (kind !== 'product' && kind !== 'category')) {
     return new Response('Invalid social card request', { status: 400 });
   }

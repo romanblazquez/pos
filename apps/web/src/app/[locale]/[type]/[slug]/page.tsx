@@ -10,7 +10,7 @@ import {
 } from '@/lib/api';
 import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
 import { APP_URL, absoluteUrl } from '@/lib/site';
-import { buttonVariants } from '@retail-os/ui-react';
+import { PlayerFitPanel, buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
 import { articleLd, breadcrumbLd, faqLd, itemListLd, personLd, productLd, type Crumb } from '@/lib/jsonld';
 import {
@@ -780,15 +780,24 @@ async function renderProduct(
       />
 
       <div className="product-head">
-        <div className="product-figure">
-          {product.images?.[0] ? (
-            <img src={product.images[0]} alt={product.name} width={320} height={320} />
-          ) : (
-            <div className="card-noimg" style={{ aspectRatio: '1 / 1', fontSize: '4rem' }} aria-hidden="true">🎲</div>
-          )}
+        {/* Sticky from the two-column breakpoint (see .product-figure-col), so
+            the game stays in view while the offers and specs scroll past. */}
+        <div className="product-figure-col">
+          <div className="product-figure">
+            {product.images?.[0] ? (
+              <img src={product.images[0]} alt={product.name} width={320} height={320} />
+            ) : (
+              <div className="card-noimg" style={{ aspectRatio: '1 / 1', fontSize: '4rem' }} aria-hidden="true">🎲</div>
+            )}
+          </div>
+
+          {/* Sharing lives beside the image rather than under the title: it
+              stays reachable the whole way down the page, and the canonical URL
+              is what gets shared regardless of which market the reader is in. */}
+          <ShareBar url={absoluteUrl(path)} title={product.name} locale={locale} />
         </div>
 
-        <div>
+        <div className="product-body">
           <h1 className="product-h1">{product.name}</h1>
           {range && (
             <p className="product-sub">
@@ -803,8 +812,6 @@ async function renderProduct(
               {locale === 'es' ? 'Comprar ahora' : 'Buy now'} →
             </a>
           )}
-
-          <ShareBar url={absoluteUrl(path)} title={product.name} locale={locale} />
 
           <ul className="attrs">
             {attrs
@@ -829,13 +836,11 @@ async function renderProduct(
           </ul>
 
           {product.minPlayers && product.maxPlayers && (
-            <PlayerCountFit minPlayers={product.minPlayers} maxPlayers={product.maxPlayers} locale={locale} />
+            <PlayerFitPanel minPlayers={product.minPlayers} maxPlayers={product.maxPlayers} locale={locale} />
           )}
           {product.bggWeight && (
             <ComplexityMeter weight={product.bggWeight} locale={locale} />
           )}
-        </div>
-      </div>
 
       {product.description && <p className="prose" style={{ marginTop: '1.5rem' }}>{product.description}</p>}
 
@@ -954,6 +959,8 @@ async function renderProduct(
             </div>
           </section>
       )}
+        </div>
+      </div>
     </main>
   );
 }
@@ -990,47 +997,3 @@ function ComplexityMeter({ weight, locale }: { weight: number; locale: string })
   );
 }
 
-function PlayerCountFit({ minPlayers, maxPlayers, locale }: { minPlayers: number; maxPlayers: number; locale: string }) {
-  const counts = Array.from({ length: maxPlayers }, (_, i) => i + 1);
-  const badge = minPlayers === maxPlayers
-    ? `${minPlayers} ${locale === 'es' ? 'jugadores' : 'players'}`
-    : `${minPlayers}–${maxPlayers} ${locale === 'es' ? 'jugadores' : 'players'}`;
-
-  return (
-    <div style={{ marginTop: '1rem', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-raised, var(--card))', padding: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>
-          {locale === 'es' ? 'Jugadores' : 'Players'}
-        </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--game-token-forest-edge)', background: 'color-mix(in srgb, var(--game-token-forest-bg) 16%, var(--bg-raised, var(--card)))', border: '1px solid color-mix(in srgb, var(--game-token-forest-bg) 42%, transparent)', padding: '3px 9px', borderRadius: 7 }}>
-          {badge}
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {counts.map((n) => {
-          const isMin = n === minPlayers && minPlayers < maxPlayers;
-          const isSupported = n >= minPlayers && n <= maxPlayers;
-          const bg = !isSupported
-            ? 'var(--bg-subtle, var(--muted))'
-            : isMin ? 'color-mix(in srgb, var(--game-token-ochre-bg) 18%, var(--bg-raised, var(--card)))' : 'var(--game-token-forest-bg)';
-          const border = !isSupported
-            ? '1px dashed var(--border-strong, var(--border))'
-            : isMin ? '1px solid color-mix(in srgb, var(--game-token-ochre-bg) 42%, transparent)' : undefined;
-          const color = !isSupported ? 'var(--tx-faint, var(--subtle-foreground))' : isMin ? 'var(--game-token-ochre-edge)' : 'var(--game-token-forest-fg)';
-          const label = !isSupported ? 'No' : isMin ? 'OK' : locale === 'es' ? 'Bien' : 'Good';
-          const labelColor = !isSupported ? 'var(--tx-faint, var(--subtle-foreground))' : isMin ? 'var(--game-token-ochre-edge)' : 'var(--game-token-forest-bg)';
-          return (
-            <div key={n} style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ height: 38, borderRadius: 9, background: bg, border, display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color, textDecoration: !isSupported ? 'line-through' : undefined }}>
-                {n}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, textTransform: 'uppercase', color: labelColor, marginTop: 5, fontWeight: isSupported && !isMin ? 700 : undefined }}>
-                {label}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}

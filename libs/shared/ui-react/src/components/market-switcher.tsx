@@ -95,15 +95,22 @@ export function MarketSwitcher({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={ariaLabel}
+        // The visible label is a bare currency code, so the accessible name has
+        // to carry what the control actually does.
+        aria-label={`${ariaLabel} (${current?.name ?? active})`}
+        title={current?.name ?? active}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-11 min-w-11 items-center gap-1.5 rounded-[10px] border border-(--border) bg-(--bg-raised)
-                   px-3 text-sm font-semibold text-(--tx) transition-colors hover:border-(--primary) hover:text-(--primary)
-                   sm:h-[34px] sm:min-w-0 sm:px-2.5 sm:text-[13px]"
+        className="inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-[10px] border border-(--border)
+                   bg-(--bg-raised) px-3 text-sm font-semibold text-(--tx) transition-colors
+                   hover:border-(--primary) hover:text-(--primary) sm:h-[34px] sm:px-2.5"
       >
-        <span aria-hidden="true">{countryFlag(current?.code ?? active)}</span>
-        <span className="max-w-[7rem] truncate">{current?.name ?? active.toUpperCase()}</span>
-        <span className="font-mono text-[11px] font-bold text-(--tx-muted)">{current?.currency}</span>
+        {/* Currency only. A flag denotes a country, not a market or a money —
+            and what the shopper is actually choosing here is which currency the
+            prices are quoted in. The market name stays in the open menu, where
+            there is room to say it properly. */}
+        <span className="font-mono text-[13px] font-bold tracking-wide">
+          {current?.currency ?? active.toUpperCase()}
+        </span>
       </button>
 
       {open && (
@@ -134,9 +141,7 @@ export function MarketSwitcher({
                       : 'font-medium text-(--tx-muted) hover:bg-(--bg-hover) hover:text-(--tx)'
                   }`}
                 >
-                  <span className="truncate">
-                    <span aria-hidden="true">{countryFlag(market.code)}</span> {market.name}
-                  </span>
+                  <span className="truncate">{market.name}</span>
                   <span className="font-mono text-[11px] font-bold text-(--tx-muted)">{market.currency}</span>
                 </button>
               </li>

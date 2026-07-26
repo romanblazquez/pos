@@ -55,8 +55,10 @@ export function socialImageUrl(
   slug: string,
   locale: Locale,
 ): string {
-  const params = new URLSearchParams({ kind, slug, locale });
-  return absoluteUrl(`/api/og?${params.toString()}`);
+  // Query-free on purpose: robots.txt disallows `/api/` and `/*?*`, and the
+  // crawlers that build social cards obey it — so a card image behind a query
+  // string silently never loads. Rewritten to the generator in next.config.mjs.
+  return absoluteUrl(`/og/${kind}/${locale}/${encodeURIComponent(slug)}.png`);
 }
 
 export function buildMetadata(input: SeoInput): Metadata {
