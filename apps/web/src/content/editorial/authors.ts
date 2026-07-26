@@ -23,6 +23,12 @@ export interface Author {
   countryCode: string;
   /** One-line byline bio shown under the name. */
   bio: string;
+  /** Editorial beat shown on the guides hub. */
+  role: string;
+  /** Reader-facing subjects this editor covers. */
+  expertise: string[];
+  /** Stable review criteria used to keep recommendations consistent. */
+  reviewPrinciples: string[];
   /** Internal note on voice/register — guides how their copy should sound. */
   voice: string;
   /** BGG-style tags/genres this author gravitates to (lowercased contains-match). */
@@ -39,6 +45,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Guadalajara, México',
     countryCode: 'MX',
     bio: 'Ludoteca los domingos y dos peques que revisan cada caja antes que yo. Escribo sobre juegos que abren la mesa a todos.',
+    role: 'Editora de juegos familiares y de iniciación',
+    expertise: ['Familiares', 'Party games', 'Juegos infantiles', 'Primeras ludotecas'],
+    reviewPrinciples: ['Explicación breve', 'Participación de toda la mesa', 'Buena rejugabilidad'],
     voice: 'Cálida, cercana, mexicana neutra-tapatía. Usa "ustedes", ejemplos de sobremesa familiar, cero jerga anglo innecesaria.',
     leans: ['family', 'party', 'animals', 'gateway', 'set collection', 'pattern building', 'children'],
     signoff: 'Nos leemos en la próxima partida.',
@@ -50,6 +59,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Buenos Aires, Argentina',
     countryCode: 'AR',
     bio: 'Diez años puliendo un grupo de eurogames pesados los martes. Si tiene planilla de puntuación larga, es lo mío.',
+    role: 'Editor de estrategia y eurogames',
+    expertise: ['Eurogames', 'Economía', 'Colocación de trabajadores', 'Juegos exigentes'],
+    reviewPrinciples: ['Decisiones con impacto', 'Escalado entre jugadores', 'Profundidad sin complejidad gratuita'],
     voice: 'Porteño, irónico, preciso con la mecánica. Usa "vos/tenés", "che" con moderación, metáforas futboleras ocasionales.',
     leans: ['economic', 'industry', 'euro', 'wargame', 'territory building', 'income', 'market', 'heavy', 'civilization'],
     signoff: 'Nos vemos del otro lado del tablero.',
@@ -61,6 +73,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Barcelona, España',
     countryCode: 'ES',
     bio: 'Diseñadora gráfica de día, cazadora de abstractos de noche. Me fijo en cómo se ve y se siente una caja tanto como en cómo se juega.',
+    role: 'Editora de diseño, abstractos y juegos para dos',
+    expertise: ['Abstractos', 'Patrones', 'Juegos para dos', 'Diseño de componentes'],
+    reviewPrinciples: ['Legibilidad visual', 'Reglas elegantes', 'Calidad táctil y accesibilidad'],
     voice: 'Peninsular culta, atenta al diseño y la estética, frases medidas. Usa "vosotros", vocabulario de diseño (retícula, paleta).',
     leans: ['abstract strategy', 'puzzle', 'tile placement', '2-player', 'card game', 'drafting', 'hexagon grid'],
     signoff: 'Que tengáis buenas partidas.',
@@ -72,6 +87,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Galway, Ireland',
     countryCode: 'IE',
     bio: 'I run a Thursday co-op night above a pub. Give me a campaign box, a pot of tea, and four friends who read the rules.',
+    role: 'Co-operative and campaign editor',
+    expertise: ['Co-operative games', 'Campaigns', 'Narrative adventures', 'Legacy systems'],
+    reviewPrinciples: ['Meaningful teamwork', 'Scenario variety', 'A story shaped by play'],
     voice: 'Irish English, storytelling register, dry warmth. "grand", "the craic", tea references; long thematic sentences broken by short punchy ones.',
     leans: ['cooperative', 'campaign', 'adventure', 'fantasy', 'horror', 'legacy', 'scenario', 'miniatures'],
     signoff: "That's me for now — mind how you shuffle.",
@@ -83,6 +101,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Kraków, Poland',
     countryCode: 'PL',
     bio: 'Spreadsheet brain, solo-mode devotee. I will happily lose three hours to an optimisation puzzle and call it a good evening.',
+    role: 'Solo and systems editor',
+    expertise: ['Solo modes', 'Deck-building', 'Engine building', 'Optimisation'],
+    reviewPrinciples: ['Low upkeep', 'Strategic efficiency', 'A solo mode worth owning'],
     voice: 'Polish-inflected English (clean, occasionally slightly formal syntax), analytical, precise about numbers and efficiency.',
     leans: ['economic', 'deck building', 'engine', 'solo', 'strategy', 'trains', 'stock', 'optimization', 'income'],
     signoff: 'Play well, count carefully.',
@@ -94,6 +115,9 @@ export const AUTHORS: readonly Author[] = [
     from: 'Norristown, Pennsylvania',
     countryCode: 'US',
     bio: 'Basement table off the Main Line, Friday nights, too many dice. If minis need painting, they are already primed on my desk.',
+    role: 'Thematic and miniatures editor',
+    expertise: ['Miniatures', 'Horror', 'Tactical combat', 'Dice systems'],
+    reviewPrinciples: ['Table presence', 'Tension and pacing', 'Setup justified by the experience'],
     voice: 'Philly-area American, casual and loud, hobby-insider. "buddy", "no joke", parenthetical asides, table-talk energy.',
     leans: ['dice', 'miniatures', 'horror', 'fighting', 'ameritrash', 'dungeon', 'thematic', 'exploration', 'combat'],
     signoff: 'Roll well, and paint your minis.',

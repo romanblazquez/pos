@@ -73,7 +73,7 @@ export async function GET(): Promise<Response> {
 
     // Editorial hub — guides index + each guide.
     entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
-    for (const g of listGuides(locale)) {
+    for (const g of await listGuides(locale)) {
       entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
     }
 

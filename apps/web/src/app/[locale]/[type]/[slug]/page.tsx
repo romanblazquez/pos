@@ -143,12 +143,12 @@ export async function generateMetadata({
   }
 
   if (kind === 'guides') {
-    const guide = getGuide(params.slug, locale);
+    const guide = await getGuide(params.slug, locale);
     if (!guide) return {};
     // Social card = the guide's curated editorial banner; fall back to the first
     // pick's product photo only if a guide somehow has no art.
     const cover = guide.ogImage ?? (await guideCover(guide, locale));
-    const author = guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined;
+    const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
     return buildMetadata({
       locale,
       path: entityPath('guides', locale, guide.slug),
@@ -317,7 +317,7 @@ export default async function DetailPage({
   }
 
   if (kind === 'guides') {
-    const guide = getGuide(params.slug, locale);
+    const guide = await getGuide(params.slug, locale);
     if (!guide) notFound();
     return renderGuide(guide, locale, homeName);
   }
@@ -347,7 +347,16 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const author = guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined;
+  const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
+  const authorPath = author
+    ? `${listingPath('guides', locale)}#editor-${author.id}`
+    : undefined;
+  const wordCount = [
+    ...guide.intro,
+    ...guide.picks.map((pick) => pick.blurb),
+    ...(guide.sections ?? []).flatMap((section) => [section.heading, ...section.paragraphs]),
+    ...(guide.faq ?? []).flatMap((item) => [item.q, item.a]),
+  ].join(' ').trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <main className="container">
@@ -363,7 +372,16 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
             datePublished: guide.publishedAt,
             dateModified: guide.updatedAt,
             image: editorialCover ?? picks[0]?.product.images?.[0],
-            author: author ? { name: author.name } : undefined,
+            inLanguage: locale,
+            articleSection: locale === 'es' ? 'Guías de juegos de mesa' : 'Board game guides',
+            wordCount,
+            citations: guide.sources?.map((source) => source.url),
+            author: author ? {
+              name: author.name,
+              url: authorPath,
+              description: author.bio,
+              knowsAbout: author.expertise,
+            } : undefined,
           }),
           ...(guide.faq?.length ? [faqLd(guide.faq)] : []),
         ]}
@@ -383,7 +401,9 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
               {author.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
             </span>
             <span style={{ fontSize: 14, lineHeight: 1.35 }}>
-              <b>{locale === 'es' ? 'Por' : 'By'} {author.name}</b>
+              <b>{locale === 'es' ? 'Por' : 'By'}{' '}
+                <Link href={authorPath!}>{author.name}</Link>
+              </b>
               <span className="muted"> · {author.from}</span>
               <br />
               <span className="muted">
@@ -451,6 +471,21 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
             ))}
           </section>
         ) : null}
+
+        {guide.sources?.length ? (
+          <section aria-labelledby="guide-sources">
+            <h2 id="guide-sources" className="section-title">
+              {locale === 'es' ? 'Fuentes consultadas' : 'Sources consulted'}
+            </h2>
+            <ul>
+              {guide.sources.map((source) => (
+                <li key={source.url}>
+                  <a href={source.url} rel="noopener noreferrer">{source.label}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </article>
     </main>
   );
@@ -505,12 +540,13 @@ function productCrumbs(product: ProductDetail, locale: Locale, homeName: string,
   return crumbs;
 }
 
-function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
+async function renderProduct(product: ProductDetail, locale: Locale, homeName: string) {
   const path = entityPath('games', locale, product.slug);
   const crumbs = productCrumbs(product, locale, homeName, path);
   const sorted = [...product.listings].sort((a, b) => a.priceMinorUnits - b.priceMinorUnits);
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
+  const relatedGuides = await guidesMentioning(product.slug, locale);
 
   // Each attribute doubles as a crawlable entry point into a real filtered view,
   // so bots discover publisher/designer/player-count hubs and users can pivot
@@ -695,22 +731,18 @@ function renderProduct(product: ProductDetail, locale: Locale, homeName: string)
       )}
 
       {/* Hub-and-spoke back-link: guides that recommend this game. */}
-      {(() => {
-        const related = guidesMentioning(product.slug, locale);
-        if (!related.length) return null;
-        return (
+      {relatedGuides.length > 0 && (
           <section>
             <h2 className="section-title">{locale === 'es' ? 'Aparece en estas guías' : 'Featured in these guides'}</h2>
             <div className="taglist">
-              {related.map((g) => (
+              {relatedGuides.map((g) => (
                 <Link key={g.slug} className="chip" href={entityPath('guides', locale, g.slug)}>
                   {g.title} →
                 </Link>
               ))}
             </div>
           </section>
-        );
-      })()}
+      )}
     </main>
   );
 }

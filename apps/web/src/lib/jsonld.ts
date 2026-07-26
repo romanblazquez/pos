@@ -201,8 +201,12 @@ export function articleLd(input: {
   datePublished: string;
   dateModified: string;
   image?: string;
-  /** Named byline persona; falls back to the org when absent. */
-  author?: { name: string };
+  inLanguage?: string;
+  articleSection?: string;
+  wordCount?: number;
+  citations?: string[];
+  /** Named editorial profile; falls back to the organisation when absent. */
+  author?: { name: string; url?: string; description?: string; knowsAbout?: string[] };
 }): Json {
   return {
     '@context': 'https://schema.org',
@@ -212,8 +216,20 @@ export function articleLd(input: {
     datePublished: input.datePublished,
     dateModified: input.dateModified,
     mainEntityOfPage: absoluteUrl(input.path),
+    url: absoluteUrl(input.path),
+    isAccessibleForFree: true,
+    ...(input.inLanguage ? { inLanguage: input.inLanguage } : {}),
+    ...(input.articleSection ? { articleSection: input.articleSection } : {}),
+    ...(input.wordCount ? { wordCount: input.wordCount } : {}),
+    ...(input.citations?.length ? { citation: input.citations } : {}),
     author: input.author
-      ? { '@type': 'Person', name: input.author.name }
+      ? {
+          '@type': 'Person',
+          name: input.author.name,
+          ...(input.author.url ? { url: absoluteUrl(input.author.url) } : {}),
+          ...(input.author.description ? { description: input.author.description } : {}),
+          ...(input.author.knowsAbout?.length ? { knowsAbout: input.author.knowsAbout } : {}),
+        }
       : { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     publisher: {
       '@type': 'Organization',

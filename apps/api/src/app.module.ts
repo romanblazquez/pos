@@ -23,6 +23,7 @@ import { MarketsModule } from './markets/markets.module.js';
 import { ShelfModule } from './shelf/shelf.module.js';
 import { RedisThrottlerStorage } from './common/redis-throttler.storage.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { EditorialModule } from './editorial/editorial.module.js';
 
 const throttlers = [{ ttl: 60_000, limit: 120, blockDuration: 60_000 }];
 const useRedisThrottling = process.env.NODE_ENV === 'production'
@@ -54,6 +55,7 @@ const throttlerConfig = {
     MarketsModule,
     ShelfModule,
     AnalyticsModule,
+    EditorialModule,
   ],
   controllers: [SyncController, HealthController, PaymentsController, OnboardingController],
   providers: [

@@ -1,0 +1,93 @@
+# Agent handoff — database-owned editorial SEO
+
+You are continuing work in the Juegospedia Nx monorepo at `/home/pi/pos`, on
+branch `feat/browse-taxonomy-full-coverage`.
+
+## User outcome
+
+Build useful, original editorial guides that improve topical SEO. Every editor
+must have a stable profile, expertise, voice and review criteria. Topic selection
+may use current demand signals, but prose must be original and must never copy
+competitors. Published authors/articles belong in PostgreSQL, not source files.
+When a task is complete: commit, push and deploy it, then verify production.
+
+## Architecture and decisions already made
+
+- Public SEO site: `apps/web` (Next.js App Router).
+- API/database owner: `apps/api` (NestJS) +
+  `libs/data/db-postgres/prisma/schema.prisma` (PostgreSQL/Prisma).
+- Admin: `apps/admin-console` (React/Vite using shared shadcn components).
+- Typed guide modules under `apps/web/src/content/guides` are **seed fixtures and
+  emergency fallback only**. PostgreSQL is the runtime source of truth.
+- Six stable editorial profiles live in
+  `apps/web/src/content/editorial/authors.ts`: Sofía Herrera, Mateo Bonavena,
+  Núria Ferrer, Eoin Gallagher, Kasia Nowak and Dave Ruggiero.
+- Do not fabricate play counts, personal testing claims, quotes or credentials.
+  Do not inject deliberate spelling mistakes into new content.
+- English and Spanish versions in the July 2026 batches are manually authored
+  translations (`reviewedAt` is populated); machine translations remain clearly
+  flagged.
+- Trend research selected topics only. Original writing was produced locally.
+  The time-sensitive Spiel des Jahres guide cites the official jury source.
+
+## Implemented but not yet shipped at handoff creation
+
+- Enriched author profiles: role, expertise and stable review principles.
+- Six editor-aligned articles in
+  `apps/web/src/content/guides/editor-batch-july-2026.ts`.
+- Three trend-led articles in
+  `apps/web/src/content/guides/trending-guides-july-2026.ts`.
+- Relevant category hero art mapped as article covers.
+- Editorial team cards on the guides hub.
+- Rich Article JSON-LD: canonical URL, language, section, word count, citations,
+  Person author URL/bio/expertise, publisher, image and dates; existing
+  BreadcrumbList and FAQPage remain.
+- Prisma entities and relations:
+  `EditorialAuthor -> EditorialArticle -> EditorialArticleTranslation` and
+  append-only `EditorialArticleRevision`.
+- Schema migration:
+  `20260726010000_editorial_content`.
+- Idempotent data migration:
+  `apps/api/scripts/migrate-editorial-content.ts`.
+- Nest public API:
+  `/api/v1/editorial/guides`, `/guides/:slug`, `/authors`;
+  admin publication-status endpoint `/api/v1/editorial/admin/articles`.
+- Next guide reads are database-first with five-minute revalidation and fixture
+  fallback during migration.
+
+## Required continuation checklist
+
+1. Run `prisma generate`, API/Web typechecks and `git diff --check`.
+2. Add focused tests for the editorial API mapper, localization/alternates,
+   JSON-LD author/citation fields and duplicate slugs.
+3. Run a migration diff/status check and apply the migration locally or in a
+   disposable database if available.
+4. Run `apps/api/scripts/migrate-editorial-content.ts`; confirm expected counts:
+   6 authors, 17 articles, 34 translations, 17 initial revisions.
+5. Verify every guide pick resolves to a real product. The guide renderer drops
+   missing picks, but the release must fail if any seed slug is unavailable.
+6. Build API, Web and Admin. Inspect at least one Spanish and one English guide,
+   the guide hub author cards, sitemap entries, canonical/hreflang, Article,
+   Person, BreadcrumbList and FAQPage JSON-LD.
+7. Consider adding an Admin Editorial view (draft/published/reviewed status and
+   revisions) using shared shadcn components; do not create a mock shell.
+8. Commit intentionally, push
+   `feat/browse-taxonomy-full-coverage`.
+9. Deploy in order:
+   - migrate PostgreSQL;
+   - run the idempotent editorial content migration;
+   - rebuild/recreate `retail-os-api`;
+   - rebuild/recreate `retail-os-seo-web`;
+   - Admin/web stack only if Admin was changed.
+10. Smoke-test public API, article pages, sitemap and container health. Report
+    exact commit, row counts and live URLs.
+
+## Quality bar
+
+- Avoid keyword stuffing and near-duplicate intent.
+- Each page must answer a distinct reader decision and include disadvantages,
+  suitability or selection criteria—not just a ranked list.
+- Do not claim “perfect SEO”; validate concrete signals.
+- Keep external factual claims cited and dated.
+- Preserve admin RBAC, database relations, revision auditability and safe
+  fallback behaviour.

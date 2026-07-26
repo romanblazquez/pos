@@ -13,8 +13,12 @@ import { bestSoloBoardGames } from '../content/guides/best-solo-board-games.js';
 import { bestCooperativeBoardGames } from '../content/guides/best-cooperative-board-games.js';
 import { bestMiniaturesBoardGames } from '../content/guides/best-miniatures-board-games.js';
 import { mejoresJuegosAbstractos } from '../content/guides/mejores-juegos-abstractos.js';
+import { editorBatchJuly2026 } from '../content/guides/editor-batch-july-2026.js';
+import { trendingGuidesJuly2026 } from '../content/guides/trending-guides-july-2026.js';
+import { AUTHORS, type Author } from '../content/editorial/authors.js';
 import generatedTranslations from '../content/editorial/translations.gen.json';
 import { entityPath, type Locale } from './segments';
+import { API_BASE_URL } from './site';
 
 /** A curated product recommendation inside a guide (the guide → product link). */
 export interface GuidePick {
@@ -34,6 +38,11 @@ export interface GuideFaq {
   a: string;
 }
 
+export interface GuideSource {
+  label: string;
+  url: string;
+}
+
 export interface GuideContent {
   slug: string;
   title: string;
@@ -50,6 +59,8 @@ export interface GuideContent {
   picks: GuidePick[];
   sections?: GuideSection[];
   faq?: GuideFaq[];
+  /** Primary sources for time-sensitive facts; all editorial prose remains original. */
+  sources?: GuideSource[];
 }
 
 export interface Guide extends GuideContent {
@@ -76,6 +87,10 @@ export interface Guide extends GuideContent {
    * localization (translations spread over the base but never carry this key).
    */
   ogImage?: string;
+  /** Localized slugs supplied by the database API. */
+  alternates?: Partial<Record<Locale, string>>;
+  /** Joined author profile supplied by the database API. */
+  author?: Author;
 }
 
 // Per-guide OG art (public/guides/*.jpg), keyed by each guide's canonical
@@ -91,6 +106,15 @@ const OG_IMAGES: Record<string, string> = {
   'best-cooperative-board-games': '/guides/cooperativos.jpg',
   'best-miniatures-board-games': '/guides/miniaturas.jpg',
   'mejores-juegos-de-mesa-abstractos': '/guides/abstractos.jpg',
+  'mejores-party-games-para-grupos': '/categories/party-hero.webp',
+  'mejores-juegos-colocacion-de-trabajadores': '/categories/strategy-hero.webp',
+  'juegos-de-mesa-bonitos-colocacion-losetas': '/categories/abstract-hero.webp',
+  'best-campaign-board-games-for-a-regular-group': '/categories/campaign-hero.webp',
+  'best-deck-building-board-games': '/categories/deckbuilding-hero.webp',
+  'best-horror-board-games-that-build-real-tension': '/categories/horror-hero.webp',
+  'spiel-des-jahres-2026-ganadores-y-finalistas': '/categories/family-hero.webp',
+  'best-quick-setup-solo-board-games': '/categories/solo-hero.webp',
+  'mejores-juegos-cooperativos-para-parejas': '/categories/coop-hero.webp',
 };
 
 // Build-time Google-Translate output, keyed by the guide's ORIGINAL-locale slug
@@ -106,6 +130,8 @@ const GUIDES: readonly Guide[] = [
   bestCooperativeBoardGames,
   bestMiniaturesBoardGames,
   mejoresJuegosAbstractos,
+  ...editorBatchJuly2026,
+  ...trendingGuidesJuly2026,
 ].map((guide) => ({ ...guide, ogImage: OG_IMAGES[guide.slug] ?? GUIDE_OG_DEFAULT }));
 
 /** Raw, un-localized guides — for the build-time translation tool only. */
@@ -113,7 +139,7 @@ export function allGuidesRaw(): readonly Guide[] {
   return GUIDES;
 }
 
-function localizeGuide(guide: Guide, locale: Locale): Guide {
+export function localizeGuide(guide: Guide, locale: Locale): Guide {
   const original = guide.originalLocale ?? 'es';
   if (locale === original) return guide;
 
@@ -129,18 +155,55 @@ function localizeGuide(guide: Guide, locale: Locale): Guide {
   return guide; // no translation yet — show the original text rather than 404.
 }
 
-export function listGuides(locale: Locale = 'es'): Guide[] {
+function fixtureGuides(locale: Locale): Guide[] {
   return [...GUIDES]
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .map((guide) => localizeGuide(guide, locale));
 }
 
-export function getGuide(slug: string, locale: Locale = 'es'): Guide | null {
-  const guide = GUIDES.find((g) => localizeGuide(g, locale).slug === slug);
+async function editorialApi<T>(path: string): Promise<T | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/editorial${path}`, {
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) return null;
+    return await response.json() as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Database-first published guides, with migration-safe source fixture fallback. */
+export async function listGuides(locale: Locale = 'es'): Promise<Guide[]> {
+  const stored = await editorialApi<Guide[]>(`/guides?locale=${locale}`);
+  return stored?.length ? stored : fixtureGuides(locale);
+}
+
+export async function listEditorialAuthors(locale: Locale): Promise<Author[]> {
+  const stored = await editorialApi<Author[]>(`/authors?locale=${locale}`);
+  return stored?.length
+    ? stored
+    : AUTHORS.filter((author) => author.locale === locale);
+}
+
+export async function getGuide(slug: string, locale: Locale = 'es'): Promise<Guide | null> {
+  const stored = await editorialApi<Guide>(
+    `/guides/${encodeURIComponent(slug)}?locale=${locale}`,
+  );
+  if (stored) return stored;
+  const guide = GUIDES.find((candidate) => localizeGuide(candidate, locale).slug === slug);
   return guide ? localizeGuide(guide, locale) : null;
 }
 
 export function guideAlternates(guide: Guide): Partial<Record<Locale, string>> {
+  if (guide.alternates) {
+    return Object.fromEntries(
+      Object.entries(guide.alternates).map(([locale, slug]) => [
+        locale,
+        entityPath('guides', locale as Locale, slug!),
+      ]),
+    );
+  }
   // Find the underlying (original-locale) guide this localized view came from, by
   // matching the requested slug against any locale's slug, then map every locale
   // to its own slug (human slug → machine slug → original slug).
@@ -158,8 +221,8 @@ export function guideAlternates(guide: Guide): Partial<Record<Locale, string>> {
 }
 
 /** Guides that recommend a given product — powers the product → guide back-link. */
-export function guidesMentioning(gameSlug: string, locale: Locale = 'es'): Guide[] {
-  return GUIDES
-    .filter((g) => g.picks.some((p) => p.gameSlug === gameSlug))
-    .map((guide) => localizeGuide(guide, locale));
+export async function guidesMentioning(gameSlug: string, locale: Locale = 'es'): Promise<Guide[]> {
+  return (await listGuides(locale)).filter(
+    (guide) => guide.picks.some((pick) => pick.gameSlug === gameSlug),
+  );
 }
