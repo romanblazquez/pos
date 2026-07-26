@@ -32,6 +32,14 @@ export interface ProductDocument {
   // aggregated from listings (updated on every listing change)
   minPriceMinor: number;
   maxPriceMinor: number;
+  /**
+   * ISO code the price range is denominated in, or '' when the product has no
+   * listings or spans several currencies. Never defaulted to a house currency:
+   * a range labelled with the wrong currency is worse than no range.
+   */
+  currency: string;
+  /** Every distinct listing currency — drives the market/currency facet. */
+  currencies: string[];
   totalListings: number;
   inStockListings: number;
   images: string[];
@@ -63,6 +71,8 @@ const COLLECTION_SCHEMA = {
     { name: 'bggWeight',       type: 'float'   as const, optional: true },
     { name: 'minPriceMinor',   type: 'int32'   as const, optional: true, sort: true },
     { name: 'maxPriceMinor',   type: 'int32'   as const, optional: true },
+    { name: 'currency',        type: 'string'  as const, facet: true, optional: true },
+    { name: 'currencies',      type: 'string[]' as const, facet: true, optional: true },
     { name: 'totalListings',   type: 'int32'   as const, optional: false, sort: true },
     { name: 'inStockListings', type: 'int32'   as const, optional: false, sort: true },
     { name: 'images',          type: 'string[]' as const, optional: true },
@@ -81,7 +91,10 @@ export function collectionNeedsRecreation(existing: ExistingCollectionShape): bo
   const fields = existing.fields ?? [];
   return !fields.some((field) => field.name === 'nameEs')
     || existing.default_sorting_field !== 'inStockListings'
-    || !fields.some((field) => field.name === 'name' && field.sort === true);
+    || !fields.some((field) => field.name === 'name' && field.sort === true)
+    // Without `currency` every price renders in the house currency regardless of
+    // what the seller charges, so an index lacking it must be rebuilt, not used.
+    || !fields.some((field) => field.name === 'currency');
 }
 
 @Injectable()

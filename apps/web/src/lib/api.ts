@@ -68,6 +68,12 @@ export interface ProductSummary {
   playTimeMinutes?: number;
   minPriceMinor: number;
   maxPriceMinor: number;
+  /**
+   * Currency the price range is denominated in. Absent when the product has no
+   * listings, or when its listings span several currencies — in which case
+   * there is no single range to quote and callers must not invent one.
+   */
+  currency?: string;
   totalListings: number;
   inStockListings: number;
 }

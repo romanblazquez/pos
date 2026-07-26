@@ -22,7 +22,10 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
   const href = `${listingPath('games', locale)}/${product.slug}`;
   const inStock = product.inStockListings > 0;
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
-  const hasPrice = product.minPriceMinor > 0;
+  // A price without its currency is not a price we can honestly show: the same
+  // digits mean very different things in MXN and ARS, and roughly half the
+  // catalogue's listings are Argentine. No currency -> treat as "no offer".
+  const hasPrice = product.minPriceMinor > 0 && Boolean(product.currency);
   // `category` is base-game vs expansion, so this qualifier is the one extra
   // badge the catalogue can back today. The design system's detail suffixes
   // (Sale −19%, Low · 3 left, Used · VG) need BO data we don't have yet.
@@ -76,7 +79,7 @@ export function ProductCard({ product, locale }: { product: ProductSummary; loca
           {hasPrice ? (
             <span className="card-price">
               <span className="card-price-label">{locale === 'es' ? 'desde' : 'from'}</span>{' '}
-              {formatMoney(product.minPriceMinor, undefined, locale)}
+              {formatMoney(product.minPriceMinor, product.currency!, locale)}
             </span>
           ) : (
             <span className="card-price card-price--na">{locale === 'es' ? 'Sin oferta' : 'No offer'}</span>

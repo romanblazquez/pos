@@ -1,9 +1,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
-import { TypesenseService } from '../search/typesense.service.js';
+import { ProductIndexerService } from '../search/product-indexer.service.js';
 import { BggService } from './bgg.service.js';
-import type { ProductDocument } from '../search/typesense.service.js';
 import type { RankedGame } from './bgg-scraper-client.service.js';
 
 export interface ImportByBggIdResult {
@@ -39,7 +38,7 @@ export class MktCatalogService {
 
   constructor(
     @Inject(PrismaService)   private readonly prisma: PrismaService,
-    @Inject(TypesenseService) private readonly search: TypesenseService,
+    @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
     @Inject(BggService)       private readonly bgg: BggService,
   ) {}
 
@@ -202,57 +201,7 @@ export class MktCatalogService {
 
   /** Re-sync a product's Typesense document (call after listing changes too). */
   async syncToSearch(productId: string): Promise<void> {
-    const product = await this.prisma.mktProduct.findUnique({
-      where: { id: productId },
-      include: {
-        listings: {
-          where: { active: true },
-          select: { priceMinorUnits: true, stockStatus: true },
-        },
-        categories: { select: { category: { select: { normalizedName: true } } } },
-      },
-    });
-    if (!product) return;
-
-    const prices = product.listings.map((l) => l.priceMinorUnits);
-    const inStock = product.listings.filter((l) => l.stockStatus !== 'out_of_stock').length;
-
-    // Fold approved localized copy in so search matches in both languages (see
-    // the ranking scheduler's syncProductToSearch for the same treatment).
-    const localizations = await this.prisma.entityLocalization.findMany({
-      where: { entityType: 'mkt_product', entityId: product.id, moderationStatus: 'APPROVED' },
-      include: { language: { select: { code: true } } },
-    });
-    const byCode = new Map(localizations.map((l) => [l.language.code, l]));
-    const es = byCode.get('es-MX');
-    const en = byCode.get('en-US');
-
-    const doc: ProductDocument = {
-      id: product.id,
-      slug: product.slug,
-      name: en?.title ?? product.name,
-      nameEs: es?.title ?? product.name,
-      publisher: product.publisher ?? '',
-      description: en?.description ?? product.description ?? '',
-      descriptionEs: es?.description ?? product.description ?? '',
-      category: product.category,
-      categorySlugs: product.categories.map((link) => link.category.normalizedName),
-      tags: product.tags,
-      language: product.language ?? '',
-      minPlayers: product.minPlayers ?? 0,
-      maxPlayers: product.maxPlayers ?? 0,
-      minAge: product.minAge ?? 0,
-      playTimeMinutes: product.playTimeMinutes ?? 0,
-      bggRating: product.bggRating ?? 0,
-      bggWeight: product.bggWeight ?? 0,
-      minPriceMinor: prices.length ? Math.min(...prices) : 0,
-      maxPriceMinor: prices.length ? Math.max(...prices) : 0,
-      totalListings: product.listings.length,
-      inStockListings: inStock,
-      images: product.images,
-    };
-
-    await this.search.upsertProduct(doc);
+    await this.indexer.syncProduct(productId);
   }
 
   /**

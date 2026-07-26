@@ -3,6 +3,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { SemanticSearchService } from '../search/semantic-search.service.js';
+import { ProductIndexerService } from '../search/product-indexer.service.js';
 import { calculateRankScore } from '@retail-os/rankings';
 import type { RankingInput } from '@retail-os/rankings';
 
@@ -28,6 +29,7 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(TypesenseService) private readonly search: TypesenseService,
     @Inject(SemanticSearchService) private readonly semantic: SemanticSearchService,
+    @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
   ) {}
 
   async onModuleInit() {
@@ -318,69 +320,6 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async syncProductToSearch(productId: string): Promise<void> {
-    const product = await this.prisma.mktProduct.findUnique({
-      where: { id: productId },
-      include: {
-        listings: {
-          where: { active: true },
-          orderBy: { rankScore: 'desc' },
-          select: {
-            priceMinorUnits: true,
-            stock: true,
-            stockStatus: true,
-          },
-        },
-        // Browse-category membership, so a category page filters the index
-        // rather than dropping to a narrower Prisma query.
-        categories: { select: { category: { select: { normalizedName: true } } } },
-      },
-    });
-
-    if (!product) return;
-
-    const activeListings = product.listings;
-    const inStock = activeListings.filter(
-      (l) => l.stockStatus !== 'out_of_stock',
-    ).length;
-
-    // Fold approved localized copy into the search doc so queries match in both
-    // languages: es-MX populates nameEs/descriptionEs, en-US overrides the base
-    // English fields. Falls back to the raw BGG text when no override exists.
-    const localizations = await this.prisma.entityLocalization.findMany({
-      where: { entityType: 'mkt_product', entityId: product.id, moderationStatus: 'APPROVED' },
-      include: { language: { select: { code: true } } },
-    });
-    const byCode = new Map(localizations.map((l) => [l.language.code, l]));
-    const es = byCode.get('es-MX');
-    const en = byCode.get('en-US');
-
-    await this.search.upsertProduct({
-      id: product.id,
-      slug: product.slug,
-      name: en?.title ?? product.name,
-      nameEs: es?.title ?? product.name,
-      publisher: product.publisher ?? '',
-      description: en?.description ?? product.description ?? '',
-      descriptionEs: es?.description ?? product.description ?? '',
-      category: product.category,
-      categorySlugs: product.categories.map((link) => link.category.normalizedName),
-      tags: product.tags,
-      language: product.language ?? '',
-      minPlayers: product.minPlayers ?? 0,
-      maxPlayers: product.maxPlayers ?? 0,
-      minAge: product.minAge ?? 0,
-      playTimeMinutes: product.playTimeMinutes ?? 0,
-      bggRating: product.bggRating ?? 0,
-      bggWeight: product.bggWeight ?? 0,
-      minPriceMinor: activeListings.length
-        ? Math.min(...activeListings.map((l) => l.priceMinorUnits))
-        : 0,
-      maxPriceMinor: activeListings.length
-        ? Math.max(...activeListings.map((l) => l.priceMinorUnits))
-        : 0,
-      totalListings: activeListings.length,
-      inStockListings: inStock,
-      images: product.images,
-    });
+    await this.indexer.syncProduct(productId);
   }
 }
