@@ -747,10 +747,14 @@ model CustomerWallet {
   id                   String              @id @default(cuid())
   customerId           String              @unique
   customer             MktCustomer         @relation(fields: [customerId], references: [id])
+  /// DEPRECATED: market-blind global balance. Superseded by MarketCredit, which
+  /// carries the market and currency a credit is denominated in. Retained only
+  /// so the pre-migration balance stays auditable; never write to it.
   platformCreditsMinor Int                 @default(0)
   updatedAt            DateTime            @updatedAt
   transactions         WalletTransaction[]
   storeCredits         StoreCredit[]
+  marketCredits        MarketCredit[]
 }
 
 /// Store credits per customer×seller pair — only redeemable with that seller.
@@ -760,6 +764,8 @@ model StoreCredit {
   wallet       CustomerWallet @relation(fields: [walletId], references: [id])
   sellerId     String
   seller       Seller         @relation(fields: [sellerId], references: [id])
+  /// Currency this credit is denominated in — a seller trades in one market.
+  currency     String?        @db.Char(3)
   balanceMinor Int            @default(0)
   updatedAt    DateTime       @updatedAt
 
@@ -775,6 +781,10 @@ model WalletTransaction {
   /// earn_platform | redeem_platform | earn_store | redeem_store
   type        String
   amountMinor Int // positive = credit, negative = debit
+  /// Market and currency this movement occurred in. Nullable only for rows
+  /// written before credits were market-scoped.
+  marketCode  String?
+  currency    String?        @db.Char(3)
   sellerId    String?
   orderId     String?
   description String?
@@ -3677,4 +3687,32 @@ model ExchangeRateSnapshot {
   @@unique([baseCurrency, quoteCurrency, provider, effectiveAt])
   @@index([baseCurrency, quoteCurrency, effectiveAt(sort: Desc)])
   @@map("exchange_rate_snapshot")
+}
+
+/// Platform cashback balance scoped to ONE market, in that market's currency.
+///
+/// Credits are a liability the platform owes, so they cannot be a single global
+/// integer: credits earned on an MXN purchase must never be redeemable against
+/// an ARS one. Doing so would make the platform absorb the FX spread, and would
+/// move value across a tax border with no corresponding transaction — the same
+/// reason `StoreCredit` is scoped per seller rather than pooled.
+///
+/// Redemption is only permitted when the market, the currency and the payment
+/// rail all match the market the credit was earned in.
+model MarketCredit {
+  id           String         @id @default(cuid())
+  walletId     String
+  /// Market code (CommerceMarket.code), e.g. MX.
+  marketCode   String
+  /// Always the market's canonical currency; denormalized so a balance can
+  /// never be read without the money it is denominated in.
+  currency     String         @db.Char(3)
+  balanceMinor Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  wallet       CustomerWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, marketCode])
+  @@index([walletId])
+  @@map("market_credit")
 }
