@@ -26,6 +26,13 @@ import {
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
 import { SeoHead } from '../components/SeoHead.js';
+import { useMarket } from '../context/MarketContext.js';
+import {
+  canonicalCategoryUrl,
+  canonicalGamesUrl,
+  canonicalHomeUrl,
+  type SeoLocale,
+} from '@retail-os/ui-react';
 import {
   categoryDescription,
   categoryLabel,
@@ -119,6 +126,8 @@ export default function SearchPage({
   onHome: () => void;
 }) {
   const intl = useIntl();
+  const { countryCode } = useMarket();
+  const seoLocale: SeoLocale = intl.locale === 'en' ? 'en' : 'es';
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [players, setPlayers] = useState<number | undefined>(undefined);
@@ -200,15 +209,25 @@ export default function SearchPage({
         description={category
           ? `${categoryDescription(category, intl.locale as 'es' | 'en')} Compara precio, stock y envío en tiendas de México.`
           : `Busca ${query || 'juegos de mesa'} y compara disponibilidad, precios y tiendas en Juegospedia.`}
+        // Canonical points at the public site's real page for this view, not at
+        // the app's filtered URL: `/search?…` there is both 301'd away and
+        // disallowed by robots.txt, so canonicalising to it aimed the crawler
+        // at nothing. A free-text query has no canonical destination at all,
+        // which is why it stays noindex.
+        canonical={
+          category
+            ? canonicalCategoryUrl(seoLocale, countryCode, category)
+            : canonicalGamesUrl(seoLocale, countryCode)
+        }
         path={`/search?${new URLSearchParams({
           ...(query ? { q: query } : {}),
           ...(category ? { category } : {}),
         }).toString()}`}
         noindex={Boolean(query)}
         jsonLd={category ? breadcrumbJsonLd([
-          [intl.formatMessage({ id: 'search.home' }), 'https://juegospedia.com/'],
-          [intl.formatMessage({ id: 'search.categoriesCrumb' }), 'https://juegospedia.com/search'],
-          [categoryLabel(category, intl.locale as 'es' | 'en'), `https://juegospedia.com/search?category=${encodeURIComponent(category)}`],
+          [intl.formatMessage({ id: 'search.home' }), canonicalHomeUrl(seoLocale, countryCode)],
+          [intl.formatMessage({ id: 'search.categoriesCrumb' }), canonicalCategoryUrl(seoLocale, countryCode)],
+          [categoryLabel(category, intl.locale as 'es' | 'en'), canonicalCategoryUrl(seoLocale, countryCode, category)],
         ]) : undefined}
       />
       <aside>

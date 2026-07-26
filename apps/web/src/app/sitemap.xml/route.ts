@@ -17,11 +17,24 @@ import {
 // noindex/search/account/paginated pages).
 export const revalidate = 3600;
 
-// The catalog API is Typesense-backed (per_page cap 250), so page through in 250s
-// up to `total`. MAX_PAGES bounds deep pagination until the catalog outgrows a
-// single sitemap (Phase 3: sitemap index) — 50 pages = 12,500 products.
+// The catalog API is Typesense-backed (per_page cap 250), so page through in
+// 250s up to `total`.
+//
+// MAX_PAGES was 50 — 12,500 products — set when the enriched catalogue was
+// ~2,200 and the cap was comfortably out of reach. Enrichment has since passed
+// 21,000, so the cap was silently withholding 43% of the indexable catalogue
+// from Google: pages that render, self-canonicalise and say `index, follow`,
+// but that nothing tells a crawler exist.
+//
+// The ceiling now is the protocol's own: 50,000 URLs and 50MB per sitemap. That
+// is a per-URL budget shared by every indexable language x market pair, so the
+// guard below counts entries rather than products.
 const PAGE_SIZE = 250;
-const MAX_PAGES = 50;
+const MAX_PAGES = 200;
+/** Sitemap protocol hard limits. Exceeding either makes Google reject the file. */
+const MAX_URLS_PER_SITEMAP = 50_000;
+/** Concurrent upstream page fetches — enough to be quick, few enough to be kind. */
+const FETCH_CONCURRENCY = 8;
 
 interface UrlEntry {
   loc: string;
@@ -35,13 +48,17 @@ async function allIndexableProducts(): Promise<ProductSummary[]> {
   const products = [...first.results];
   const pages = Math.min(Math.ceil(first.total / PAGE_SIZE), MAX_PAGES);
 
-  if (pages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: pages - 1 }, (_, i) =>
-        listProducts({ limit: PAGE_SIZE, offset: (i + 1) * PAGE_SIZE }),
+  // Fetched in bounded batches rather than one Promise.all over every page: at
+  // 21k products that would open ~87 simultaneous connections to Typesense on
+  // the same small box that serves the site.
+  for (let start = 1; start < pages; start += FETCH_CONCURRENCY) {
+    const batch = await Promise.all(
+      Array.from(
+        { length: Math.min(FETCH_CONCURRENCY, pages - start) },
+        (_, i) => listProducts({ limit: PAGE_SIZE, offset: (start + i) * PAGE_SIZE }),
       ),
     );
-    for (const page of rest) products.push(...page.results);
+    for (const page of batch) products.push(...page.results);
   }
   return products;
 }
@@ -108,10 +125,15 @@ export async function GET(): Promise<Response> {
     }
   }
 
+  // A sitemap over the limit is rejected wholesale, which is worse than a
+  // truncated one: losing the tail beats losing the file. When this trips, the
+  // fix is a sitemap index, not a bigger number here.
+  const capped = entries.slice(0, MAX_URLS_PER_SITEMAP);
+
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">` +
-    entries.map(renderUrl).join('') +
+    capped.map(renderUrl).join('') +
     `</urlset>`;
 
   return new Response(xml, {

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ProductCard, type Product } from '../components/ProductCard.js';
 import { SeoHead } from '../components/SeoHead.js';
+import { canonicalHomeUrl, type SeoLocale } from '@retail-os/ui-react';
 import { Button, cn } from '../components/ui/index.js';
 import {
   CatalogFilterPanel,
@@ -117,7 +118,8 @@ interface HomePageProps {
 
 export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const intl = useIntl();
-  const { currencyCode: marketCurrency } = useMarket();
+  const { currencyCode: marketCurrency, countryCode } = useMarket();
+  const seoLocale: SeoLocale = intl.locale === 'en' ? 'en' : 'es';
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string | undefined>();
@@ -179,6 +181,10 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
         title="Juegospedia — Compara, juega, colecciona"
         description="Compara precios, disponibilidad y envíos de juegos de mesa en tiendas conectadas."
         path="/"
+        // The bare apex 307s to the visitor's market, so canonicalising to "/"
+        // aims the crawler at a redirect whose destination depends on a cookie.
+        // Name the market's home page directly.
+        canonical={canonicalHomeUrl(seoLocale, countryCode)}
       />
       <section className="market-surface-pattern border-b border-[--border] bg-[--bg]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:py-14">

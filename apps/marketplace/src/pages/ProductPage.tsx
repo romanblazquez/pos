@@ -5,7 +5,16 @@ import { useIntl } from 'react-intl';
 import { AlertTriangle, Gift, PackageCheck } from 'lucide-react';
 import { useCart } from '../cart/CartContext.js';
 import { usePlatformConfig } from '../hooks/usePlatformConfig.js';
+import { useMarket } from '../context/MarketContext.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
+import {
+  SITE_ORIGIN,
+  canonicalHomeUrl,
+  canonicalProductUrl,
+  majorUnits,
+  socialCardUrl,
+  type SeoLocale,
+} from '@retail-os/ui-react';
 import { SeoHead } from '../components/SeoHead.js';
 import { SellerOfferComparisonTable, type ListingDetail } from '../components/SellerOfferComparisonTable.js';
 import { GameInfoBadges } from '../components/GameInfoBadges.js';
@@ -65,6 +74,8 @@ export default function ProductPage({
 }) {
   const intl = useIntl();
   const { data: platformCfg } = usePlatformConfig();
+  // The market decides the canonical URL and which offers may be published.
+  const { countryCode, currencyCode } = useMarket();
   const platformCashback = platformCfg?.platformCashbackPct ?? 0.01;
 
   const { data, isLoading, isError } = useQuery({
@@ -105,12 +116,24 @@ export default function ProductPage({
   const activeListings = p.listings.filter(isAvailable);
   const inStockListings = activeListings;
   const outOfStockListings = p.listings.filter((l) => !isAvailable(l));
-  const minPrice = activeListings.length ? Math.min(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
-  const maxPrice = activeListings.length ? Math.max(...activeListings.map((listing) => listing.priceMinorUnits)) : 0;
-  const currency = activeListings[0]?.currency ?? 'MXN';
-  const shareLocale = intl.locale === 'en' ? 'en' : 'es';
-  const canonicalUrl = `https://juegospedia.com/${shareLocale}/${shareLocale === 'es' ? 'juegos-de-mesa' : 'board-games'}/${p.slug}`;
-  const socialImage = `https://juegospedia.com/api/og?kind=product&slug=${encodeURIComponent(p.slug)}&locale=${shareLocale}`;
+  const shareLocale: SeoLocale = intl.locale === 'en' ? 'en' : 'es';
+  // Canonical and card URLs come from the shared rules, so this page and the
+  // public site cannot disagree about where a product lives. Previously this
+  // pointed at a language-only URL that the public site 301s away, and at an
+  // /api/og card that robots.txt blocks.
+  const canonicalUrl = canonicalProductUrl(shareLocale, countryCode, p.slug);
+  const socialImage = socialCardUrl('product', shareLocale, p.slug);
+
+  // Offers this page may publish as structured data: a real price, a well-formed
+  // currency, and the currency this market actually trades in. Taking
+  // `priceCurrency` from whichever offer sorted first — which is what this did —
+  // can label Argentine amounts as pesos on a Mexican page, and structured data
+  // is where Google treats that as a claim about the price.
+  const publishable = activeListings.filter((listing) => {
+    const code = listing.currency?.trim().toUpperCase() ?? '';
+    return /^[A-Z]{3}$/.test(code) && listing.priceMinorUnits > 0 && code === currencyCode.toUpperCase();
+  });
+  const publishedPrices = publishable.map((listing) => majorUnits(listing.priceMinorUnits, listing.currency));
   const description = plainText(p.description) ||
     `${p.name}: compara precios, stock, envío y tiendas disponibles en México.`;
   const productJsonLd = {
@@ -119,12 +142,14 @@ export default function ProductPage({
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://juegospedia.com/' },
+          { '@type': 'ListItem', position: 1, name: 'Inicio', item: canonicalHomeUrl(shareLocale, countryCode) },
           {
             '@type': 'ListItem',
             position: 2,
             name: categoryLabel(p.category, intl.locale as 'es' | 'en'),
-            item: `https://juegospedia.com/search?category=${encodeURIComponent(p.category)}`,
+            // Must resolve on the canonical host; /search?category= does not
+            // exist there, and a breadcrumb to a 404 is worse than none.
+            item: `${SITE_ORIGIN}/${shareLocale}-${countryCode.toLowerCase()}/${shareLocale === 'es' ? 'categorias' : 'categories'}`,
           },
           { '@type': 'ListItem', position: 3, name: p.name, item: canonicalUrl },
         ],
@@ -138,24 +163,27 @@ export default function ProductPage({
         category: categoryLabel(p.category, intl.locale as 'es' | 'en'),
         ...(p.publisher ? { brand: { '@type': 'Brand', name: p.publisher } } : {}),
         ...(p.bggId ? { sku: `BGG-${p.bggId}` } : {}),
-        offers: {
+        // No publishable offer means no `offers` node at all — a page with
+        // nothing for sale must not invent a price for Google.
+        ...(publishable.length ? { offers: {
           '@type': 'AggregateOffer',
           url: canonicalUrl,
-          priceCurrency: currency,
-          lowPrice: (minPrice / 100).toFixed(2),
-          highPrice: (maxPrice / 100).toFixed(2),
-          offerCount: activeListings.length,
-          availability: activeListings.length > 0
-            ? 'https://schema.org/InStock'
-            : 'https://schema.org/OutOfStock',
-          offers: activeListings.map((listing) => {
+          // A fact about the surviving offers, not a guess from the first one.
+          priceCurrency: publishable[0].currency.trim().toUpperCase(),
+          lowPrice: Math.min(...publishedPrices).toFixed(2),
+          highPrice: Math.max(...publishedPrices).toFixed(2),
+          offerCount: publishable.length,
+          availability: 'https://schema.org/InStock',
+          offers: publishable.map((listing) => {
             const shipping = listing.deliveryOptions.length
               ? listing.deliveryOptions.reduce((best, option) => option.priceMinorUnits < best.priceMinorUnits ? option : best)
               : null;
             return {
               '@type': 'Offer',
-              price: (listing.priceMinorUnits / 100).toFixed(2),
-              priceCurrency: listing.currency,
+              // Scale comes from the currency, never a hardcoded hundred: CLP
+              // and JPY have no minor unit and would be inflated 100x.
+              price: majorUnits(listing.priceMinorUnits, listing.currency).toFixed(2),
+              priceCurrency: listing.currency.trim().toUpperCase(),
               availability: 'https://schema.org/InStock',
               itemCondition: schemaCondition(listing.condition),
               seller: { '@type': 'Organization', name: listing.sellerName },
@@ -164,8 +192,8 @@ export default function ProductPage({
                   '@type': 'OfferShippingDetails',
                   shippingRate: {
                     '@type': 'MonetaryAmount',
-                    value: (shipping.priceMinorUnits / 100).toFixed(2),
-                    currency: listing.currency,
+                    value: majorUnits(shipping.priceMinorUnits, listing.currency).toFixed(2),
+                    currency: listing.currency.trim().toUpperCase(),
                   },
                   deliveryTime: {
                     '@type': 'ShippingDeliveryTime',
@@ -180,7 +208,7 @@ export default function ProductPage({
               } : {}),
             };
           }),
-        },
+        } } : {}),
       },
     ],
   };

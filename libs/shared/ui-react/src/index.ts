@@ -14,6 +14,7 @@ export * from './components/meeple-mark.js';
 export * from './money.js';
 export * from './commerce-state.js';
 export * from './player-fit.js';
+export * from './canonical.js';
 export * from './components/player-fit-panel.js';
 export * from './components/google-sign-in-button.js';
 export * from './components/consent-banner.js';

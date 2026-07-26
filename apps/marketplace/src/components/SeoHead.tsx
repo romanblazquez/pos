@@ -10,7 +10,18 @@ const GOOGLE_SITE_VERIFICATION = import.meta.env.VITE_GOOGLE_SITE_VERIFICATION?.
 export interface SeoHeadProps {
   title: string;
   description: string;
+  /** This app's own path — used for analytics and as the canonical fallback. */
   path: string;
+  /**
+   * Absolute canonical URL, when the indexable version of this view lives
+   * somewhere other than this host's path.
+   *
+   * The app renders the same catalogue as the public site, so almost every page
+   * here is a duplicate of one there. Left to derive from `path`, a view like
+   * `/search?category=x` canonicalises to a public URL that is both redirected
+   * and disallowed by robots.txt — which points the crawler at nothing at all.
+   */
+  canonical?: string;
   image?: string;
   type?: 'website' | 'product';
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
@@ -21,6 +32,7 @@ export function SeoHead({
   title,
   description,
   path,
+  canonical,
   image = DEFAULT_IMAGE,
   type = 'website',
   jsonLd,
@@ -29,7 +41,7 @@ export function SeoHead({
   const { uiLocale } = useMarket();
   useEffect(() => {
     const shouldNoindex = noindex || !SEO_INDEXING_ENABLED;
-    const canonicalUrl = new URL(path, SITE_URL).toString();
+    const canonicalUrl = canonical ?? new URL(path, SITE_URL).toString();
     const resolvedImage = new URL(image, SITE_URL).toString();
     const defaultImage = resolvedImage === DEFAULT_IMAGE;
     document.title = title;
@@ -77,7 +89,7 @@ export function SeoHead({
       document.head.appendChild(script);
     }
     return () => document.getElementById(id)?.remove();
-  }, [description, image, jsonLd, noindex, path, title, type, uiLocale]);
+  }, [canonical, description, image, jsonLd, noindex, path, title, type, uiLocale]);
 
   return null;
 }
