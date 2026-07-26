@@ -481,6 +481,7 @@ model MktProduct {
   bggEnrichment   BggEnrichmentState?
   publisherEntity Publisher?             @relation(fields: [publisherId], references: [id], onDelete: SetNull)
   categories      MktProductCategory[]
+  availabilityRequests ProductAvailabilityRequest[]
 
   @@index([category])
   @@index([publisherId])
@@ -640,6 +641,7 @@ model MktCustomer {
   collections           UserCollection[]
   wishlists             Wishlist[]
   alerts                UserAlert[]
+  availabilityRequests  ProductAvailabilityRequest[]
   recommendationProfile RecommendationProfile?
   shelfItems            ShelfItem[]
   xp                    CustomerXp?
@@ -2005,6 +2007,46 @@ model CategoryRule {
 /// Marketplace-product taxonomy bridge. A shoppable product may belong to
 /// several browse categories while one relation can be selected as the stable
 /// breadcrumb/category-hub parent.
+/// A shopper asking to be told when a product becomes buyable in their market.
+///
+/// Exists because the availability notice on ~2,100 catalogue-only pages
+/// promises "we'll tell you as soon as a local offer appears", and a promise
+/// with nowhere to write the request down is one we cannot keep by
+/// construction.
+///
+/// Deliberately NOT `UserAlert`: that model belongs to a registered customer
+/// and points at CatalogProduct/MasterGame, while this is an anonymous request
+/// against the storefront's MktProduct. Requiring an account before we will
+/// take an email would lose the request we are trying to capture.
+///
+/// Market-scoped, because "available" is a per-market fact: an offer appearing
+/// in Argentina does not answer a shopper waiting in Mexico. `customerId` links
+/// the request to an account when we can identify one, without ever requiring
+/// it.
+model ProductAvailabilityRequest {
+  id         String       @id @default(cuid())
+  productId  String
+  email      String
+  marketCode String       @db.Char(2)
+  /// Language to write to them in, captured at request time.
+  locale     String       @default("es") @db.VarChar(5)
+  customerId String?
+  /// Set when the shopper has actually been told, so a second offer does not
+  /// re-notify and so unsent requests are countable.
+  notifiedAt DateTime?
+  createdAt  DateTime     @default(now())
+  product    MktProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer   MktCustomer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  /// One request per person, product and market — asking twice is not two
+  /// requests, and re-submitting must not create a duplicate to email.
+  @@unique([productId, email, marketCode])
+  /// Demand signal for seller acquisition: "N shoppers in MX want this".
+  @@index([marketCode, productId])
+  @@index([marketCode, notifiedAt])
+  @@map("product_availability_request")
+}
+
 model MktProductCategory {
   productId  String
   categoryId String

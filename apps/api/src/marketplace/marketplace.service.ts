@@ -3,12 +3,17 @@ import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService } from '../search/typesense.service.js';
 import { SemanticSearchService } from '../search/semantic-search.service.js';
 import {
+  MARKET_COMMERCE,
   eligibleListingWhere,
   marketConfig,
   marketCurrency,
   summariseForeignAvailability,
   withMarketPricing,
 } from '../markets/market-eligibility.js';
+import {
+  normalizeAvailabilityRequest,
+  type AvailabilityRequestError,
+} from './availability-request.js';
 import { DEFAULT_CURRENCY_CODE } from '../markets/default-market.constants.js';
 import { COMPLEXITY_BAND_RANGES, isComplexityBand, bandForWeight } from './complexity-bands.js';
 
@@ -636,6 +641,52 @@ export class MarketplaceService {
     `;
 
     return rows.map((r) => ({ year: r.year, count: Number(r.count) }));
+  }
+
+  /**
+   * Record a shopper's request to be told when a product becomes buyable in
+   * their market.
+   *
+   * Idempotent by (product, email, market): resubmitting returns the existing
+   * request rather than creating a second one to email. The reply carries how
+   * many people are waiting, which is honest feedback to the shopper ("you are
+   * not the only one") and the demand signal we take to sellers.
+   */
+  async requestAvailability(
+    slug: string,
+    input: { email?: string; market?: string; locale?: string },
+  ): Promise<
+    | { ok: false; error: AvailabilityRequestError | 'unknown_product' }
+    | { ok: true; alreadyRequested: boolean; waiting: number }
+  > {
+    const normalized = normalizeAvailabilityRequest(input, Object.keys(MARKET_COMMERCE));
+    if (!normalized.ok) return normalized;
+    const { email, marketCode, locale } = normalized.value;
+
+    const product = await this.prisma.mktProduct.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!product) return { ok: false, error: 'unknown_product' };
+
+    const existing = await this.prisma.productAvailabilityRequest.findUnique({
+      where: {
+        productId_email_marketCode: { productId: product.id, email, marketCode },
+      },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      await this.prisma.productAvailabilityRequest.create({
+        data: { productId: product.id, email, marketCode, locale },
+      });
+    }
+
+    const waiting = await this.prisma.productAvailabilityRequest.count({
+      where: { productId: product.id, marketCode },
+    });
+
+    return { ok: true, alreadyRequested: Boolean(existing), waiting };
   }
 }
 

@@ -1,13 +1,17 @@
 import type { Locale } from '@/lib/segments';
 import type { AvailabilityState } from '@/lib/availability';
+import { AvailabilityRequestForm } from './AvailabilityRequestForm';
 
 interface Props {
   state: AvailabilityState;
   /** Offers that exist outside this market — counts and currencies only. */
   foreign?: { currencies: string[]; offerCount: number };
+  /** Uppercase market code the shopper is waiting in, e.g. 'MX'. */
+  marketCode: string;
   /** Human market name, e.g. "México". */
   marketName: string;
-  /** Product name, so the catalogue-only copy can name what it is talking about. */
+  /** Product slug and name — the request is filed against the product. */
+  slug: string;
   productName: string;
   locale: Locale;
 }
@@ -36,7 +40,15 @@ function places(currencies: string[], locale: Locale): string {
  * full of specifications with no indication that the game isn't for sale, which
  * reads as a broken store rather than an encyclopedia entry.
  */
-export function AvailabilityNotice({ state, foreign, marketName, productName, locale }: Props) {
+export function AvailabilityNotice({
+  state,
+  foreign,
+  marketCode,
+  marketName,
+  slug,
+  productName,
+  locale,
+}: Props) {
   if (state === 'available') return null;
 
   const es = locale === 'es';
@@ -86,25 +98,16 @@ export function AvailabilityNotice({ state, foreign, marketName, productName, lo
         )}
       </p>
 
-      <ul className="availability-notice-list">
-        {showForeign && (
-          <li>
-            {es
-              ? 'Podemos verificar si algún vendedor internacional envía a tu país, con el costo total.'
-              : 'We can check whether an international seller ships to you, with the full landed cost.'}
-          </li>
-        )}
-        <li>
-          {es
-            ? 'Podemos preguntar a vendedores locales si pueden conseguirlo por pedido especial.'
-            : 'We can ask local sellers whether they can source it on special order.'}
-        </li>
-        <li>
-          {es
-            ? 'Te avisamos en cuanto aparezca una oferta local.'
-            : "We'll tell you as soon as a local offer appears."}
-        </li>
-      </ul>
+      {/* The only thing we can actually do today is tell them when it changes,
+          so it is the only thing offered. Sourcing on request and checking
+          international shipping are real plans, but they are not built, and a
+          bulleted list of them reads as a service we provide. */}
+      <AvailabilityRequestForm
+        slug={slug}
+        market={marketCode}
+        marketName={marketName}
+        locale={locale}
+      />
 
       <p className="availability-notice-note">
         {showForeign

@@ -863,7 +863,9 @@ async function renderProduct(
       <AvailabilityNotice
         state={availability}
         foreign={product.foreignAvailability}
+        marketCode={MARKETS[market]?.code ?? market.toUpperCase()}
         marketName={MARKETS[market]?.name ?? market.toUpperCase()}
+        slug={product.slug}
         productName={product.name}
         locale={locale}
       />

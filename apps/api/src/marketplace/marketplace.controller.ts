@@ -1,8 +1,10 @@
 import {
-  Controller, Get, Inject, Param, Query, NotFoundException,
+  Body, Controller, Get, Inject, Param, Post, Query,
+  BadRequestException, NotFoundException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
-  ApiTags, ApiOperation, ApiQuery, ApiParam, ApiResponse,
+  ApiTags, ApiOperation, ApiQuery, ApiParam, ApiResponse, ApiBody,
 } from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service.js';
 import { Public } from '../auth/auth.guard.js';
@@ -174,5 +176,42 @@ export class MarketplaceController {
   @ApiResponse({ status: 200, description: 'Array of { year, count }, ascending by year.' })
   getSalesByYear(@Param('slug') slug: string) {
     return this.svc.getSalesByYear(slug);
+  }
+
+  @Post(':slug/availability-request')
+  // Public and unauthenticated, so it is throttled harder than the read
+  // endpoints: without a limit it is a way to write rows, and to use us to send
+  // mail to an address the submitter does not own.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Ask to be told when a product becomes available in a market',
+    description:
+      'Records a shopper request against a product and market. Idempotent per '
+      + '(product, email, market): asking twice returns the original request rather '
+      + 'than queuing a second notification.',
+  })
+  @ApiParam({ name: 'slug', description: 'URL-friendly product slug', example: 'catan-settlers-of' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['email', 'market'],
+      properties: {
+        email: { type: 'string', example: 'shopper@example.com' },
+        market: { type: 'string', example: 'MX', description: 'Market the shopper is waiting in.' },
+        locale: { type: 'string', enum: ['es', 'en'], example: 'es', description: 'Language to write to them in.' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Request recorded (or already held).' })
+  @ApiResponse({ status: 400, description: 'Malformed email or unknown market.' })
+  @ApiResponse({ status: 404, description: 'No such product.' })
+  async requestAvailability(
+    @Param('slug') slug: string,
+    @Body() body: { email?: string; market?: string; locale?: string },
+  ) {
+    const result = await this.svc.requestAvailability(slug, body ?? {});
+    if (result.ok) return result;
+    if (result.error === 'unknown_product') throw new NotFoundException('Product not found');
+    throw new BadRequestException(result.error);
   }
 }
