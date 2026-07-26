@@ -155,8 +155,15 @@ export async function generateMetadata({
           ? `Juegos de mesa de la categoría ${real}, con precios comparados entre tiendas.`
           : `${real} board games with prices compared across stores.`,
       images: [socialImageUrl('category', params.slug, locale)],
-      noindex: page > 1,
-      alternates: page > 1 ? undefined : entityAlternates('categories', params.slug),
+      // Raw BGG categories are browsable but never indexable. They are
+      // auto-derived, thin, and slugged from the English source term
+      // (/categorias/two-player) even in Spanish — so indexing them would put
+      // English URLs in a Spanish index, competing with the curated theme that
+      // actually targets the query (/categorias/juegos-para-2-jugadores). The
+      // sitemap has always excluded them; the metadata now agrees.
+      noindex: true,
+      // `follow`, so the products below still get crawled through this page.
+      alternates: undefined,
     });
   }
 
@@ -638,6 +645,52 @@ const RAW_CATEGORY_LABELS: Record<string, { es: string; en: string }> = {
   Preventas: { es: 'Preventas', en: 'Preorders' },
 };
 
+/**
+ * The one category link a product should point at, named in the reader's
+ * language.
+ *
+ * Shared by the breadcrumb and the "see more in" chip because they were
+ * disagreeing: the breadcrumb resolved the curated theme
+ * (/categorias/juegos-para-2-jugadores, "Para 2 jugadores") while the chip used
+ * the raw slug straight off the catalogue (/categorias/two-player, labelled
+ * "two-player"). That published two internal URLs for one concept — the
+ * indexable curated page and a thin English-slugged duplicate — and showed an
+ * English term to a Spanish reader.
+ */
+function productCategoryLink(
+  product: ProductDetail,
+  locale: Locale,
+  market: string,
+): { name: string; path: string } | null {
+  const persistedPrimary =
+    product.categories?.find((category) => category.isPrimary) ?? product.categories?.[0];
+  const theme = persistedPrimary
+    ? THEMES.find((candidate) => candidate.key === persistedPrimary.slug)
+    : primaryTheme(product);
+
+  if (theme) {
+    return {
+      name: theme.label[locale],
+      path: entityPath('categories', locale, theme.slug[locale], market),
+    };
+  }
+  if (persistedPrimary) {
+    // A category with no theme of its own (admin-created): its own name and key
+    // are all we have, and /categorias/<key> resolves for it.
+    return {
+      name: persistedPrimary.name,
+      path: entityPath('categories', locale, persistedPrimary.slug, market),
+    };
+  }
+  if (product.category) {
+    return {
+      name: RAW_CATEGORY_LABELS[product.category]?.[locale] ?? product.category,
+      path: entityPath('categories', locale, slugify(product.category), market),
+    };
+  }
+  return null;
+}
+
 // Breadcrumb trail for a product, built from the product's own info so it mirrors
 // where the game actually sits in the browse taxonomy:
 //   Inicio › Categorías › <best theme | labelled category> › <product>
@@ -662,24 +715,8 @@ function productCrumbs(
   // to the local theme so the crumb reads "Estrategia" and points at
   // /es/categorias/juegos-de-estrategia — the canonical localized URL, not the
   // key that only 301s there.
-  const persistedPrimary = product.categories?.find((category) => category.isPrimary)
-    ?? product.categories?.[0];
-  const theme = persistedPrimary
-    ? THEMES.find((candidate) => candidate.key === persistedPrimary.slug)
-    : primaryTheme(product);
-  if (theme) {
-    crumbs.push({ name: theme.label[locale], path: entityPath('categories', locale, theme.slug[locale], market) });
-  } else if (persistedPrimary) {
-    // A category with no theme of its own (admin-created): its own name and key
-    // are all we have, and /categorias/<key> resolves for it.
-    crumbs.push({
-      name: persistedPrimary.name,
-      path: entityPath('categories', locale, persistedPrimary.slug, market),
-    });
-  } else if (product.category) {
-    const label = RAW_CATEGORY_LABELS[product.category]?.[locale] ?? product.category;
-    crumbs.push({ name: label, path: entityPath('categories', locale, slugify(product.category)) });
-  }
+  const category = productCategoryLink(product, locale, market);
+  if (category) crumbs.push(category);
 
   crumbs.push({ name: product.name, path });
   return crumbs;
@@ -697,6 +734,7 @@ async function renderProduct(
   // One derivation of "can this be bought here", shared by the copy above the
   // fold, the notice below it and the buy button.
   const availability = availabilityState(product);
+  const categoryLink = productCategoryLink(product, locale, market);
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
   const relatedGuides = await guidesMentioning(product.slug, locale);
@@ -876,12 +914,14 @@ async function renderProduct(
         </section>
       )}
 
-      {(product.tags?.length > 0 || product.category) && (
+      {(product.tags?.length > 0 || categoryLink) && (
         <section>
-          {product.category && (
+          {categoryLink && (
             <p style={{ margin: '1.75rem 0 0.75rem' }}>
-              <Link className="chip" href={`${listingPath('categories', locale, market)}/${slugify(product.category)}`}>
-                {locale === 'es' ? 'Ver más en' : 'See more in'} {product.category} →
+              {/* Same destination and wording as the breadcrumb — one internal
+                  link per concept, pointing at the page we want ranked. */}
+              <Link className="chip" href={categoryLink.path}>
+                {locale === 'es' ? 'Ver más en' : 'See more in'} {categoryLink.name} →
               </Link>
             </p>
           )}
