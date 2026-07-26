@@ -21,7 +21,7 @@ import AuthModal from './components/AuthModal.js';
 import { BrandMark } from './components/BrandMark.js';
 import { Button } from './components/ui/index.js';
 import { CatalogSearchBar, LocaleSwitcher } from '@retail-os/ui-react';
-import { formatMoney } from './marketplace-meta.js';
+import { formatMoney, WALLET_CURRENCY } from './marketplace-meta.js';
 import { trackPageView, trackEvent } from './analytics.js';
 import { type Route, parseRoute, routePath } from './routing.js';
 import { API_BASE, marketplaceApi } from './lib/api-client.js';
@@ -462,7 +462,7 @@ function Header({
                          dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
             >
               <Wallet className="h-4 w-4" aria-hidden="true" />
-              {walletSummary ? formatMoney(walletTotal) : 'Wallet'}
+              {walletSummary ? formatMoney(walletTotal, WALLET_CURRENCY) : 'Wallet'}
             </button>
           )}
 
@@ -643,7 +643,7 @@ function MobileMenu({
                     <span className={iconWrap}><Wallet className="h-4 w-4" aria-hidden="true" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-[--tx]">{intl.formatMessage({ id: 'header.wallet' })}</span>
-                      {walletSummary && <span className="block text-xs text-[--tx-muted]">{formatMoney(walletTotal)}</span>}
+                      {walletSummary && <span className="block text-xs text-[--tx-muted]">{formatMoney(walletTotal, WALLET_CURRENCY)}</span>}
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-[--tx-faint]" aria-hidden="true" />
                   </button>

@@ -9,19 +9,16 @@
   "header.logout": "Cerrar sesión",
   "header.wallet": "Cartera",
   "header.settings": "Preferencias",
-
   "wallet.title": "Mi Wallet",
   "wallet.freeCredits": "Créditos libres",
   "wallet.freeCreditsHint": "Usables en cualquier tienda",
   "wallet.storeCredits": "Créditos por tienda",
   "wallet.totalStoreCredits": "Total créditos de tienda",
-
   "account.loremasterPath": "El Camino del Loremaster",
   "account.myShelf": "Mi Estante",
   "account.waysToEarnXp": "Cómo ganar XP",
   "account.recentXpActivity": "Actividad de XP reciente",
   "account.recentOrders": "Pedidos recientes",
-
   "shelf.owned": "Tengo",
   "shelf.wishlist": "Wishlist",
   "shelf.wantToPlay": "Quiero jugar",
@@ -32,7 +29,6 @@
   "shelf.spareParts": "Piezas sueltas",
   "shelf.add": "Agregar a {label}",
   "shelf.remove": "Quitar de {label}",
-
   "home.verifiedBadge": "Marketplace verificado",
   "home.heroTitle": "Encuentra juegos con stock real, mejor precio y créditos.",
   "home.heroSubtitle": "Busca una vez y compara tiendas conectadas, disponibilidad, envío y cashback sin abrir diez pestañas.",
@@ -87,7 +83,6 @@
   "home.showMore": "Ver {count} más",
   "home.allCatalog": "Todo el catálogo",
   "home.allStoresConnected": "Todas las tiendas conectadas",
-
   "search.title": "Buscar juegos",
   "search.noLimit": "Sin tope",
   "search.resultsFor": "Resultados para \"{query}\"",
@@ -120,7 +115,6 @@
   "search.goToPage": "Ir a la página {page}",
   "search.previous": "Anterior",
   "search.next": "Siguiente",
-
   "product.from": "Desde",
   "product.storesWithStock": "{count, plural, one {# tienda con stock} other {# tiendas con stock}}",
   "product.upToCashback": "Hasta {pct}% en créditos",
@@ -149,7 +143,6 @@
   "product.isExpansion": "Expansión",
   "product.salesByYear": "Ventas por año",
   "product.similarProducts": "Juegos similares",
-
   "offers.stockSummary": "{inStock, plural, one {# con stock} other {# con stock}}{outOfStock, plural, =0 {} other { · {outOfStock, plural, one {# agotada} other {# agotadas}}}}",
   "offers.compareStores": "Comparar tiendas",
   "offers.sortHint": "Ordenado por el total real más bajo (artículo + envío); la confianza del vendedor desempata.",
@@ -176,7 +169,6 @@
   "offers.maxStockTitle": "Ya agregaste todo el stock disponible",
   "offers.max": "Máximo",
   "offers.add": "Agregar",
-
   "orders.title": "Mis pedidos",
   "orders.emptyTitle": "Todavía no hiciste ninguna compra",
   "orders.emptyHint": "Cuando compres algo, tus pedidos aparecerán acá",
@@ -198,7 +190,6 @@
   "orders.statusRefunded": "Reembolsado",
   "orders.paymentCard": "Tarjeta",
   "orders.paymentWalletCredits": "Créditos de tu cuenta",
-
   "addresses.title": "Mis direcciones",
   "addresses.add": "+ Agregar dirección",
   "addresses.empty": "Todavía no guardaste ninguna dirección.",
@@ -209,7 +200,6 @@
   "addresses.delete": "Eliminar",
   "addresses.saveNew": "Guardar dirección",
   "addresses.saveChanges": "Guardar cambios",
-
   "addressForm.labelPlaceholder": "Etiqueta (ej. Casa, Oficina) — opcional",
   "addressForm.streetPlaceholder": "Calle y número",
   "addressForm.cityPlaceholder": "Ciudad",
@@ -217,7 +207,6 @@
   "addressForm.postalCodePlaceholder": "Código postal",
   "addressForm.saving": "Guardando…",
   "addressForm.cancel": "Cancelar",
-
   "auth.brand": "Juegospedia",
   "auth.subtitleMobile": "Tu cuenta de juego",
   "auth.close": "Cerrar",
@@ -242,7 +231,6 @@
   "auth.hasAccount": "¿Ya tenés cuenta?",
   "auth.goToRegister": "Registrate",
   "auth.goToLogin": "Iniciá sesión",
-
   "cart.titleCart": "Tu carrito",
   "cart.titleForm": "Datos de envío",
   "cart.fullName": "Nombre completo",
@@ -279,11 +267,12 @@
   "cart.empty": "Tu carrito está vacío",
   "cart.startCheckoutError": "Error al iniciar el pago.",
   "cart.connectionError": "No se pudo conectar con el servidor.",
-
   "productCard.players": "{count} jug.",
   "productCard.minAge": "+{age} años",
   "productCard.inStores": "{count, plural, one {# tienda} other {# tiendas}}",
   "productCard.outOfStock": "Sin stock",
   "productCard.addToWishlist": "Agregar a wishlist",
-  "productCard.removeFromWishlist": "Quitar de wishlist"
+  "productCard.removeFromWishlist": "Quitar de wishlist",
+  "productCard.noOffer": "Sin oferta",
+  "productCard.availableElsewhere": "Disponible en otros países"
 }

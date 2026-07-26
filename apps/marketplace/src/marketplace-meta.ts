@@ -177,9 +177,21 @@ export function getCategoryOptions(categories: Array<string | null | undefined> 
   }));
 }
 
-export function formatMoney(minor: number, currency = 'MXN', locale?: string) {
-  return sharedFormatMoney({ minorUnits: minor, currency }, locale, 0);
+/**
+ * Money for the marketplace SPA.
+ *
+ * `currency` is required and has no default — it used to default to MXN, which
+ * rendered the ~49% of listings priced in ARS as Mexican pesos. Shown as the ISO
+ * code rather than a symbol because MXN, ARS and USD all render as a bare "$"
+ * in a Spanish locale, so "$700" cannot tell a shopper what they would pay.
+ * Mirrors apps/web/src/lib/format.ts so the SEO site and the app agree.
+ */
+export function formatMoney(minor: number, currency: string, locale?: string) {
+  return sharedFormatMoney({ minorUnits: minor, currency }, locale, 0, 'code');
 }
+
+/** Platform wallet balance — always held in the platform's own currency. */
+export const WALLET_CURRENCY = 'MXN';
 
 function humanizeCategory(category: string) {
   return category

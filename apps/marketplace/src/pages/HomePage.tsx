@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useMarket } from '../context/MarketContext.js';
 import { useQuery } from '@tanstack/react-query';
 import { useIntl } from 'react-intl';
 import {
@@ -115,6 +116,7 @@ interface HomePageProps {
 
 export default function HomePage({ onSearch, onProduct }: HomePageProps) {
   const intl = useIntl();
+  const { currencyCode: marketCurrency } = useMarket();
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string | undefined>();
@@ -282,7 +284,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               <p className="mt-1 text-sm text-[--tx-muted]">
                 {data
                   ? (minPrice
-                      ? intl.formatMessage({ id: 'home.resultsSince' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), price: formatMoney(minPrice) })
+                      ? intl.formatMessage({ id: 'home.resultsSince' }, { count: data.total.toLocaleString(numberLocale(intl.locale)), price: formatMoney(minPrice, marketCurrency) })
                       : intl.formatMessage({ id: 'home.resultsCount' }, { count: data.total.toLocaleString(numberLocale(intl.locale)) }))
                   : categoryDescription(activeCategory, intl.locale as 'es' | 'en')}
               </p>
@@ -311,7 +313,7 @@ export default function HomePage({ onSearch, onProduct }: HomePageProps) {
               )}
               {filters.inStockOnly && <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterInStock' })} onClear={() => updateFilters({ inStockOnly: false })} />}
               {filters.maxPrice && (
-                <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterMaxPrice' }, { price: formatMoney(filters.maxPrice) })} onClear={() => updateFilters({ maxPrice: undefined })} />
+                <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterMaxPrice' }, { price: formatMoney(filters.maxPrice, marketCurrency) })} onClear={() => updateFilters({ maxPrice: undefined })} />
               )}
               {filters.players && (
                 <ActiveFilterPill label={intl.formatMessage({ id: 'home.filterPlayers' }, { count: filters.players })} onClear={() => updateFilters({ players: undefined })} />
@@ -433,6 +435,7 @@ function MetricCard({ icon, label, value }: { icon: ReactNode; label: string; va
 
 function FeaturedProduct({ product, onProduct }: { product?: Product; onProduct: (slug: string) => void }) {
   const intl = useIntl();
+  const { currencyCode: marketCurrency } = useMarket();
   if (!product) {
     return (
       <div className="rounded-lg border border-[--border] bg-[--bg-raised] p-4 shadow-sm">
@@ -458,7 +461,7 @@ function FeaturedProduct({ product, onProduct }: { product?: Product; onProduct:
       <div className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">{intl.formatMessage({ id: 'home.featured' })}</p>
         <p className="mt-1 line-clamp-2 text-sm font-semibold text-[--tx]">{product.name}</p>
-        <p className="mt-2 text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'home.priceFrom' }, { price: formatMoney(product.minPriceMinor) })}</p>
+        <p className="mt-2 text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'home.priceFrom' }, { price: formatMoney(product.minPriceMinor, product.currency ?? marketCurrency) })}</p>
       </div>
     </button>
   );

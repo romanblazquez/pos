@@ -23,6 +23,10 @@ export interface Product {
   language?: string;
   minPriceMinor: number;
   maxPriceMinor: number;
+  /** Currency the range is quoted in; absent when there is no comparable offer. */
+  currency?: string;
+  /** Offers exist for this product, but not in the active market. */
+  availableElsewhere?: boolean;
   totalListings: number;
   inStockListings: number;
 }
@@ -40,9 +44,16 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
   const isWishlisted = getShelfStatus(product.slug) === 'wishlist';
   const commerceState = resolveCommerceState(product.tags, product.inStockListings);
   const samePrice = product.minPriceMinor === product.maxPriceMinor;
-  const priceLabel = samePrice
-    ? formatMoney(product.minPriceMinor)
-    : `${formatMoney(product.minPriceMinor)} - ${formatMoney(product.maxPriceMinor)}`;
+  // No currency means no comparable offer in this market. Showing the number
+  // anyway is how an Argentine price came to read as Mexican pesos here.
+  const hasPrice = product.minPriceMinor > 0 && Boolean(product.currency);
+  const priceLabel = !hasPrice
+    ? (product.availableElsewhere
+        ? intl.formatMessage({ id: 'productCard.availableElsewhere' })
+        : intl.formatMessage({ id: 'productCard.noOffer' }))
+    : samePrice
+      ? formatMoney(product.minPriceMinor, product.currency!)
+      : `${formatMoney(product.minPriceMinor, product.currency!)} - ${formatMoney(product.maxPriceMinor, product.currency!)}`;
 
   const players = product.minPlayers && product.maxPlayers
     ? product.minPlayers === product.maxPlayers
