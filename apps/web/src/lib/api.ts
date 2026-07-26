@@ -163,6 +163,11 @@ export async function listProducts(opts: {
   semantic?: boolean;
   /** Market whose offers may be priced; others fall back to "no offer". */
   market?: string;
+  /**
+   * Show only products offered in these currencies, at the seller's own price.
+   * A filter, not a converter — nothing is restated in another currency.
+   */
+  currencies?: string[];
 }): Promise<{ results: ProductSummary[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
@@ -183,6 +188,7 @@ export async function listProducts(opts: {
   if (opts.maxPriceMinor) params.set('maxPrice', String(opts.maxPriceMinor));
   if (opts.complexity) params.set('complexity', opts.complexity);
   if (opts.market) params.set('market', opts.market.toUpperCase());
+  for (const currency of opts.currencies ?? []) params.append('currency', currency.toUpperCase());
   for (const mechanic of opts.mechanics ?? []) params.append('mechanics', mechanic);
   const data = await api<{ results: ProductSummary[]; total: number }>(
     `/api/v1/products?${params}`,

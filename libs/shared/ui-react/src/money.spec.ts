@@ -34,3 +34,23 @@ describe('formatMoney', () => {
     expect(digits(formatMoney({ minorUnits: 45_000, currency: 'CLP' }, 'en-US', 0))).toBe('45,000');
   });
 });
+
+describe('currency disambiguation', () => {
+  // MXN, ARS and USD all render as a bare "$" in a Spanish locale, so a symbol
+  // alone cannot tell a shopper which money a price is in. Any surface showing
+  // more than one currency must use the code.
+  it('distinguishes currencies that share the dollar sign', () => {
+    const mxn = formatMoney({ minorUnits: 70_000, currency: 'MXN' }, 'es-MX', 0, 'code');
+    const ars = formatMoney({ minorUnits: 70_000, currency: 'ARS' }, 'es-MX', 0, 'code');
+    const usd = formatMoney({ minorUnits: 70_000, currency: 'USD' }, 'es-MX', 0, 'code');
+
+    expect(mxn).toContain('MXN');
+    expect(ars).toContain('ARS');
+    expect(usd).toContain('USD');
+    expect(new Set([mxn, ars, usd]).size).toBe(3);
+  });
+
+  it('still offers bare symbols for single-currency surfaces like the POS', () => {
+    expect(formatMoney({ minorUnits: 70_000, currency: 'MXN' }, 'es-MX', 0)).toContain('$');
+  });
+});

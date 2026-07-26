@@ -23,11 +23,24 @@ const MINOR_UNITS_PER_MAJOR: Readonly<Record<string, number>> = {
  * SEO site by 100: a $5,100 game advertised at $510,000. The scale of a currency
  * is a property of the currency, never of how many decimals you want to show.
  */
-export function formatMoney(money: MoneyDTO, locale = DEFAULT_LOCALE, fractionDigits = 2): string {
+export function formatMoney(
+  money: MoneyDTO,
+  locale = DEFAULT_LOCALE,
+  fractionDigits = 2,
+  /**
+   * 'symbol' — "$700". Fine for a single-currency surface like the POS.
+   * 'code'   — "MXN 700". Required anywhere several currencies can appear:
+   *            MXN, ARS and USD all render as a bare "$" in a Spanish locale,
+   *            so a symbol alone tells a shopper nothing about what they would
+   *            actually pay.
+   */
+  currencyDisplay: 'symbol' | 'code' = 'symbol',
+): string {
   const scale = MINOR_UNITS_PER_MAJOR[money.currency?.toUpperCase()] ?? 100;
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: money.currency,
+    currencyDisplay,
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(money.minorUnits / scale);

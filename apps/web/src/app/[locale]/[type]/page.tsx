@@ -108,6 +108,7 @@ export async function generateMetadata({
     year?: string;
     age?: string;
     duration?: string;
+    currency?: string;
   };
 }): Promise<Metadata> {
   const parsedLocale = parseLocalePrefix(params.locale);
@@ -163,7 +164,8 @@ export async function generateMetadata({
   const filtered = Boolean(
     searchParams.category || searchParams.inStock || searchParams.sort || searchParams.max || searchParams.players
     || searchParams.complexity || searchParams.publisher || searchParams.year
-    || searchParams.age || searchParams.duration || toMechanicsArray(searchParams.mechanics).length > 0,
+    || searchParams.age || searchParams.duration || searchParams.currency
+    || toMechanicsArray(searchParams.mechanics).length > 0,
   );
   const navigational = page > 1 || filtered;
 
@@ -196,7 +198,7 @@ export async function generateMetadata({
 // Serialize active filters (everything except page) so pagination preserves them.
 function filterQuery(sp: Record<string, string | string[] | undefined>): string {
   const p = new URLSearchParams();
-  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players', 'complexity', 'publisher', 'year', 'age', 'duration'] as const) {
+  for (const k of ['q', 'category', 'inStock', 'sort', 'max', 'players', 'complexity', 'publisher', 'year', 'age', 'duration', 'currency'] as const) {
     if (sp[k]) p.set(k, sp[k] as string);
   }
   for (const mechanic of toMechanicsArray(sp.mechanics)) p.append('mechanics', mechanic);
@@ -222,6 +224,7 @@ export default async function ListingPage({
     year?: string;
     age?: string;
     duration?: string;
+    currency?: string;
   };
 }) {
   const parsedLocale = parseLocalePrefix(params.locale);
@@ -261,6 +264,7 @@ export default async function ListingPage({
       semantic,
       locale,
       market,
+      currencies: searchParams.currency ? [searchParams.currency] : undefined,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,
@@ -365,6 +369,7 @@ export default async function ListingPage({
     const { results, total } = await listProducts({
       locale,
       market,
+      currencies: searchParams.currency ? [searchParams.currency] : undefined,
       category: state.category,
       inStock: state.inStock,
       sortBy: state.sort,

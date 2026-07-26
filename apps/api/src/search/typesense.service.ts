@@ -277,13 +277,15 @@ export class TypesenseService implements OnModuleInit {
     inStockOnly?: boolean;
     mechanics?: string[];
     complexity?: string;
+    /** Show only products with at least one offer in these currencies. */
+    currencies?: string[];
     limit?: number;
     offset?: number;
     sortBy?: string;
   }): Promise<{ hits: ProductDocument[]; total: number }> {
     const {
       q, category, minPrice, maxPrice, minPlayers,
-      inStockOnly, mechanics, complexity,
+      inStockOnly, mechanics, complexity, currencies,
       limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
     } = params;
 
@@ -302,6 +304,12 @@ export class TypesenseService implements OnModuleInit {
     if (minPrice)    filterParts.push(`minPriceMinor:>=${minPrice}`);
     if (maxPrice)    filterParts.push(`minPriceMinor:<=${maxPrice}`);
     if (inStockOnly) filterParts.push(`inStockListings:>0`);
+    // Currency is a FILTER, not a converter: it selects which sellers' offers a
+    // shopper is willing to see, priced as those sellers actually quote them.
+    // Nothing is converted, so no landed cost is implied and none is invented.
+    if (currencies && currencies.length > 0) {
+      filterParts.push(`currencies:=[${currencies.map((c) => `\`${c}\``).join(',')}]`);
+    }
     if (mechanics && mechanics.length > 0) filterParts.push(`tags:=[${mechanics.join(',')}]`);
     if (complexity && isComplexityBand(complexity)) {
       const { min, max } = COMPLEXITY_BAND_RANGES[complexity];

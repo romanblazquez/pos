@@ -57,6 +57,7 @@ export class MarketplaceController {
     @Query('complexity')  complexity?: string,
     @Query('semantic')    semantic?: string,
     @Query('market')      market?: string,
+    @Query('currency')    currency?: string | string[],
   ) {
     return this.svc.searchProducts({
       q,
@@ -76,6 +77,9 @@ export class MarketplaceController {
       sortBy,
       semantic: semantic === 'true',
       market,
+      currencies: currency
+        ? (Array.isArray(currency) ? currency : [currency]).map((c) => c.toUpperCase())
+        : undefined,
     }, locale);
   }
 

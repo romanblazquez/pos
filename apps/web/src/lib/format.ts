@@ -11,7 +11,15 @@ import type { Locale } from './segments';
  * compile error instead of a plausible-looking wrong price.
  */
 export function formatMoney(minor: number, currency: string, locale: Locale = 'es'): string {
-  return sharedFormatMoney({ minorUnits: minor, currency }, locale === 'es' ? 'es-MX' : 'en-US', 0);
+  // 'code' rather than 'symbol': this site shows several currencies, and MXN,
+  // ARS and USD all render as a bare "$" in a Spanish locale. "$700" would tell
+  // a shopper nothing about what they would actually pay.
+  return sharedFormatMoney(
+    { minorUnits: minor, currency },
+    locale === 'es' ? 'es-MX' : 'en-US',
+    0,
+    'code',
+  );
 }
 
 /** "$590" or "$590 – $1,200" from a min/max minor pair. */

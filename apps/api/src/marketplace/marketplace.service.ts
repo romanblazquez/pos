@@ -31,6 +31,12 @@ export interface ProductSearchParams {
   semantic?: boolean;
   /** Market whose offers may be priced. Cards outside it fall back to "no offer". */
   market?: string;
+  /**
+   * Currency filter: show only products offered in these currencies, priced as
+   * the seller quotes them. A filter, never a converter — selecting ARS shows
+   * real Argentine offers, it does not restate Mexican ones in pesos argentinos.
+   */
+  currencies?: string[];
 }
 
 // searchProducts and semanticSearchProducts call each other (semantic falls back
@@ -167,6 +173,7 @@ export class MarketplaceService {
       inStockOnly: params.inStockOnly,
       mechanics: params.mechanics,
       complexity: params.complexity,
+      currencies: params.currencies,
       sortBy: normalizeSort(params.sortBy),
       limit,
       offset,
