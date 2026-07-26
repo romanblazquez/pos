@@ -15,6 +15,18 @@ const MINOR_UNITS_PER_MAJOR: Readonly<Record<string, number>> = {
 };
 
 /**
+ * Convert integer minor units to major units for a currency.
+ *
+ * Exported because currency scale is needed outside of display: structured data
+ * has to publish `price` as a decimal number, and hardcoding `/ 100` there
+ * reintroduces the same 100× error this table exists to prevent — silently, in
+ * the one place a human never reads the output.
+ */
+export function majorUnits(minorUnits: number, currency: string): number {
+  return minorUnits / (MINOR_UNITS_PER_MAJOR[currency?.trim().toUpperCase() ?? ''] ?? 100);
+}
+
+/**
  * Format an integer-minor-units amount as a localized currency string.
  *
  * `fractionDigits` controls DISPLAY precision only. It used to double as the

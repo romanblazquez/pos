@@ -3,6 +3,7 @@
 // Review: the only rating available (bggRating) is BoardGameGeek's, not our own
 // review corpus, so claiming it as the product's rating would misrepresent the
 // page. Add it only once real, visible, first-party reviews exist.
+import { majorUnits } from '@retail-os/ui-react';
 import { ORGANIZATION, SITE_NAME, SITE_URL, absoluteUrl } from './site';
 import type { ProductDetail, ProductSummary, Listing } from './api';
 
@@ -71,8 +72,8 @@ function offerLd(listing: Listing, canonicalUrl: string): Json {
   return {
     '@type': 'Offer',
     url: canonicalUrl,
-    price: (listing.priceMinorUnits / 100).toFixed(2),
-    priceCurrency: listing.currency,
+    price: majorUnits(listing.priceMinorUnits, listing.currency).toFixed(2),
+    priceCurrency: listing.currency.trim().toUpperCase(),
     priceValidUntil: priceValidUntil(),
     availability: availability(listing),
     itemCondition: 'https://schema.org/NewCondition',
@@ -80,14 +81,49 @@ function offerLd(listing: Listing, canonicalUrl: string): Json {
   };
 }
 
+/**
+ * Offers this page is allowed to publish as structured data.
+ *
+ * Structured data is the one surface where a wrong currency is not merely
+ * embarrassing: Google reads `priceCurrency` as a machine claim, compares it to
+ * the rendered page, and suppresses rich results — or distrusts the domain —
+ * when they disagree. So the rule is stricter here than in the UI: an offer is
+ * published only if it carries a well-formed currency, a real price, and that
+ * currency is the one this market actually transacts in.
+ *
+ * The API already market-scopes listings. This is the second lock, on the door
+ * that matters most.
+ */
+function publishableOffers(listings: Listing[], marketCurrency?: string): Listing[] {
+  const wanted = marketCurrency?.trim().toUpperCase();
+  return listings.filter((listing) => {
+    const code = listing.currency?.trim().toUpperCase() ?? '';
+    if (!/^[A-Z]{3}$/.test(code)) return false;
+    if (listing.priceMinorUnits <= 0) return false;
+    return !wanted || code === wanted;
+  });
+}
+
 // Marketplace product with multiple seller offers -> Product + AggregateOffer
 // (spec §5, §6). When a single offer exists, AggregateOffer still validates and
 // keeps the shape uniform.
-export function productLd(product: ProductDetail, canonicalPath: string): Json {
+//
+// `marketCurrency` is the currency the page itself quotes. Pass it: without it
+// the aggregate took its `priceCurrency` from whichever offer happened to sort
+// first, so a product with one Mexican and two Argentine offers could publish
+// ARS amounts labelled MXN — the same first-row-wins bug already removed from
+// the cart, the search index and the price ranges, surviving where only a
+// crawler would ever notice.
+export function productLd(
+  product: ProductDetail,
+  canonicalPath: string,
+  marketCurrency?: string,
+): Json {
   const url = absoluteUrl(canonicalPath);
-  const listings = product.listings ?? [];
-  const prices = listings.map((l) => l.priceMinorUnits).filter((p) => p > 0);
-  const currency = listings[0]?.currency ?? 'MXN';
+  const offers = publishableOffers(product.listings ?? [], marketCurrency);
+  const prices = offers.map((l) => majorUnits(l.priceMinorUnits, l.currency));
+  // Every surviving offer shares one currency, so this is a fact, not a guess.
+  const currency = offers[0]?.currency.trim().toUpperCase();
 
   const node: Json = {
     '@context': 'https://schema.org',
@@ -107,18 +143,21 @@ export function productLd(product: ProductDetail, canonicalPath: string): Json {
       : {}),
   };
 
-  if (prices.length) {
+  // No publishable offer means no `offers` node at all. A catalogue page with
+  // nothing for sale must not invent an AggregateOffer: that is a fabricated
+  // price to Google, and it earns a manual action rather than a rich result.
+  if (prices.length && currency) {
     node.offers =
       prices.length > 1
         ? {
             '@type': 'AggregateOffer',
             priceCurrency: currency,
-            lowPrice: (Math.min(...prices) / 100).toFixed(2),
-            highPrice: (Math.max(...prices) / 100).toFixed(2),
+            lowPrice: Math.min(...prices).toFixed(2),
+            highPrice: Math.max(...prices).toFixed(2),
             offerCount: prices.length,
-            offers: listings.map((l) => offerLd(l, url)),
+            offers: offers.map((l) => offerLd(l, url)),
           }
-        : offerLd(listings[0], url);
+        : offerLd(offers[0], url);
   }
 
   return node;

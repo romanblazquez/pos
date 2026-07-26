@@ -728,7 +728,14 @@ async function renderProduct(
     <main className="container">
       <LocaleAlternates alternates={entityAlternates('games', product.slug)} />
       <Breadcrumbs crumbs={crumbs} />
-      <JsonLd data={[breadcrumbLd(crumbs), productLd(product, path)]} />
+      <JsonLd
+        data={[
+          breadcrumbLd(crumbs),
+          // The page quotes this market's currency, so the structured data must
+          // claim that currency and no other.
+          productLd(product, path, MARKETS[market]?.canonicalCurrency),
+        ]}
+      />
 
       <div className="product-head">
         <div className="product-figure">
