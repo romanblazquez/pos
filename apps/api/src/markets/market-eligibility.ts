@@ -90,6 +90,11 @@ export function summariseForeignAvailability(
 export function withMarketPricing<
   T extends { minPriceMinor?: number; maxPriceMinor?: number; currency?: string },
 >(product: T, marketCode?: string | null): T & { availableElsewhere?: boolean } {
+  // The search index stores '' for a product with no offers, or offers in
+  // several currencies. Normalise it away here so no client ever receives an
+  // empty currency string — one of them fed it straight to Intl.NumberFormat,
+  // which throws and took down the whole page.
+  if (product.currency === '') return { ...product, currency: undefined };
   if (!product.currency || product.currency === marketCurrency(marketCode)) return product;
   // `availableElsewhere` distinguishes "nobody sells this" from "sold, but not
   // here". Both have no local price; only one of them is worth telling the

@@ -36,14 +36,29 @@ export function formatMoney(
    */
   currencyDisplay: 'symbol' | 'code' = 'symbol',
 ): string {
-  const scale = MINOR_UNITS_PER_MAJOR[money.currency?.toUpperCase()] ?? 100;
+  const code = money.currency?.trim().toUpperCase() ?? '';
+  const scale = MINOR_UNITS_PER_MAJOR[code] ?? 100;
+  const amount = money.minorUnits / scale;
+
+  // `Intl.NumberFormat` THROWS on an empty or malformed currency code, which
+  // takes down the whole React tree rather than spoiling one price. The search
+  // index legitimately stores '' for a product with no offers or offers in
+  // several currencies, so this is reachable with clean data. Degrade to a bare
+  // number: unlabelled money is bad, a blank page is worse.
+  if (!/^[A-Z]{3}$/.test(code)) {
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(amount);
+  }
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: money.currency,
+    currency: code,
     currencyDisplay,
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
-  }).format(money.minorUnits / scale);
+  }).format(amount);
 }
 
 /** Inline currency display primitive used throughout the POS. */

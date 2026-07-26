@@ -95,3 +95,18 @@ describe('withMarketPricing', () => {
     expect(result.availableElsewhere).toBeUndefined();
   });
 });
+
+describe('empty currency normalisation', () => {
+  // The index stores '' for products with no offers or mixed currencies. That
+  // value reached a client and was passed to Intl.NumberFormat, which throws —
+  // crashing the page rather than spoiling one price. Never emit it.
+  it('never emits an empty currency string', () => {
+    const result = withMarketPricing({ minPriceMinor: 0, maxPriceMinor: 0, currency: '' }, 'MX');
+    expect(result.currency).toBeUndefined();
+  });
+
+  it('does not mistake an empty currency for a foreign one', () => {
+    const result = withMarketPricing({ minPriceMinor: 0, maxPriceMinor: 0, currency: '' }, 'MX');
+    expect(result.availableElsewhere).toBeUndefined();
+  });
+});

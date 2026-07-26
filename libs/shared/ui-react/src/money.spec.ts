@@ -54,3 +54,29 @@ describe('currency disambiguation', () => {
     expect(formatMoney({ minorUnits: 70_000, currency: 'MXN' }, 'es-MX', 0)).toContain('$');
   });
 });
+
+describe('invalid currency codes', () => {
+  // Regression: Intl.NumberFormat THROWS on an empty currency code, which took
+  // down the entire React tree on app.juegospedia.com. The search index stores
+  // '' for products with no offers or offers in several currencies, so this is
+  // reachable with correct data — it must degrade, never crash.
+  it('does not throw on an empty currency', () => {
+    expect(() => formatMoney({ minorUnits: 59_900, currency: '' }, 'en-US', 0)).not.toThrow();
+    expect(digits(formatMoney({ minorUnits: 59_900, currency: '' }, 'en-US', 0))).toBe('599');
+  });
+
+  it('does not throw on a malformed currency', () => {
+    for (const bad of ['X', 'PESOS', '12', '  ']) {
+      expect(() => formatMoney({ minorUnits: 1_000, currency: bad }, 'en-US', 0)).not.toThrow();
+    }
+  });
+
+  it('still scales correctly when the currency is unusable', () => {
+    // Falls back to hundredths, so the amount stays right even unlabelled.
+    expect(digits(formatMoney({ minorUnits: 510_000, currency: '' }, 'en-US', 0))).toBe('5,100');
+  });
+
+  it('tolerates surrounding whitespace on a valid code', () => {
+    expect(formatMoney({ minorUnits: 1_000, currency: ' mxn ' }, 'en-US', 0, 'code')).toContain('MXN');
+  });
+});

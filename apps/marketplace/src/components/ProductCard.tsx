@@ -52,8 +52,8 @@ export function ProductCard({ product, onClick, cashbackPct = 0.01, priority = f
         ? intl.formatMessage({ id: 'productCard.availableElsewhere' })
         : intl.formatMessage({ id: 'productCard.noOffer' }))
     : samePrice
-      ? formatMoney(product.minPriceMinor, product.currency!)
-      : `${formatMoney(product.minPriceMinor, product.currency!)} - ${formatMoney(product.maxPriceMinor, product.currency!)}`;
+      ? formatMoney(product.minPriceMinor, product.currency as string)
+      : `${formatMoney(product.minPriceMinor, product.currency as string)} - ${formatMoney(product.maxPriceMinor, product.currency as string)}`;
 
   const players = product.minPlayers && product.maxPlayers
     ? product.minPlayers === product.maxPlayers

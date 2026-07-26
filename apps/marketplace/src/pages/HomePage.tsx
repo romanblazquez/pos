@@ -461,7 +461,7 @@ function FeaturedProduct({ product, onProduct }: { product?: Product; onProduct:
       <div className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">{intl.formatMessage({ id: 'home.featured' })}</p>
         <p className="mt-1 line-clamp-2 text-sm font-semibold text-[--tx]">{product.name}</p>
-        <p className="mt-2 text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'home.priceFrom' }, { price: formatMoney(product.minPriceMinor, product.currency ?? marketCurrency) })}</p>
+        <p className="mt-2 text-sm text-[--tx-muted]">{intl.formatMessage({ id: 'home.priceFrom' }, { price: formatMoney(product.minPriceMinor, product.currency || marketCurrency) })}</p>
       </div>
     </button>
   );

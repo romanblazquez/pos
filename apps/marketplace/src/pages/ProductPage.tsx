@@ -12,14 +12,10 @@ import { ShelfButtons } from '../components/ShelfButtons.js';
 import { ProductStatsPanel } from '../components/ProductStatsPanel.js';
 import { SimilarProducts } from '../components/SimilarProducts.js';
 import { ProductShareButton } from '../components/ProductShareButton.js';
-import { categoryLabel } from '../marketplace-meta.js';
+import { categoryLabel, formatMoney } from '../marketplace-meta.js';
 import { trackEvent } from '../analytics.js';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-function fmt(minor: number, currency = 'ARS') {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
-}
 
 interface ProductDetail {
   id: string;
@@ -283,7 +279,7 @@ export default function ProductPage({
                   </p>
                 </div>
                 <p className="font-display text-4xl font-extrabold tracking-tight text-[--success]">
-                  {fmt(Math.min(...activeListings.map((l) => l.priceMinorUnits)), activeListings[0].currency)}
+                  {formatMoney(Math.min(...activeListings.map((l) => l.priceMinorUnits)), activeListings[0].currency)}
                 </p>
                 {bestCashback > 0 && (
                   <div className="flex items-start gap-2 pt-1 border-t border-[--success-border]">
