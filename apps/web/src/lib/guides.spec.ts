@@ -90,8 +90,8 @@ describe('editor profiles', () => {
       expect(slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(slugs.has(slug), `duplicate editor slug ${slug}`).toBe(false);
       slugs.add(slug);
-      expect(editorPath(author, 'es')).toBe(`/es/editores/${slug}`);
-      expect(editorPath(author, 'en')).toBe(`/en/editors/${slug}`);
+      expect(editorPath(author, 'es', 'mx')).toBe(`/es-mx/editores/${slug}`);
+      expect(editorPath(author, 'en', 'mx')).toBe(`/en-mx/editors/${slug}`);
     }
     expect(slugs.size).toBe(6);
     expect(editorSlug(AUTHORS_BY_ID['sofia-mx'])).toBe('sofia-herrera');

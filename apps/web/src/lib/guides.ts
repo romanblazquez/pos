@@ -197,8 +197,8 @@ export function editorSlug(author: Author): string {
 }
 
 /** Path to an editor's profile page in a given site locale. */
-export function editorPath(author: Author, locale: Locale): string {
-  return entityPath('editors', locale, editorSlug(author));
+export function editorPath(author: Author, locale: Locale, market?: string): string {
+  return entityPath('editors', locale, editorSlug(author), market);
 }
 
 /**

@@ -46,6 +46,7 @@ import {
   resolveKind,
   slugify,
   type Locale,
+  parseLocalePrefix,
 } from '@/lib/segments';
 
 // SSR + ISR: pages aren't pre-generated at build (catalog is large/changing);
@@ -86,8 +87,9 @@ export async function generateMetadata({
   params: { locale: string; type: string; slug: string };
   searchParams?: { page?: string };
 }): Promise<Metadata> {
-  if (!isLocale(params.locale)) return {};
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) return {};
+  const { locale, market } = parsedLocale;
   const kind = resolveKind(locale, params.type);
   const page = pageOf(searchParams);
 
@@ -213,8 +215,9 @@ export default async function DetailPage({
   params: { locale: string; type: string; slug: string };
   searchParams?: { page?: string };
 }) {
-  if (!isLocale(params.locale)) notFound();
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) notFound();
+  const { locale, market } = parsedLocale;
   const kind = resolveKind(locale, params.type);
   if (kind === null) notFound();
   const homeName = locale === 'es' ? 'Inicio' : 'Home';

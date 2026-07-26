@@ -23,6 +23,7 @@ import {
   listingPath,
   resolveKind,
   type Locale,
+  parseLocalePrefix,
 } from '@/lib/segments';
 import { listEditorialAuthors, listGuides, editorPath, GUIDE_OG_DEFAULT } from '@/lib/guides';
 import { THEMES } from '@/lib/themes';
@@ -109,8 +110,9 @@ export async function generateMetadata({
     duration?: string;
   };
 }): Promise<Metadata> {
-  if (!isLocale(params.locale)) return {};
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) return {};
+  const { locale, market } = parsedLocale;
   const kind = resolveKind(locale, params.type);
   const page = pageOf(searchParams);
 
@@ -222,8 +224,9 @@ export default async function ListingPage({
     duration?: string;
   };
 }) {
-  if (!isLocale(params.locale)) notFound();
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) notFound();
+  const { locale, market } = parsedLocale;
   const kind = resolveKind(locale, params.type);
   const homeName = locale === 'es' ? 'Inicio' : 'Home';
   const page = pageOf(searchParams);

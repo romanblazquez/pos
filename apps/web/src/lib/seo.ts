@@ -13,9 +13,11 @@ import { SITE_NAME, SITE_URL, absoluteUrl } from './site';
 import {
   type EntityKind,
   type Locale,
+  DEFAULT_MARKET,
   INDEXABLE_LOCALES,
+  bcp47,
+  entityPath,
   isIndexable,
-  segmentFor,
 } from './segments';
 
 export interface SeoInput {
@@ -26,6 +28,8 @@ export interface SeoInput {
   description: string;
   /** Per-locale paths for the same entity, used to build hreflang. */
   alternates?: Partial<Record<Locale, string>>;
+  /** Market this page serves; drives the hreflang region subtag. */
+  market?: string;
   images?: string[];
   /** Force noindex even on an indexable locale (e.g. search results). */
   noindex?: boolean;
@@ -60,11 +64,13 @@ export function buildMetadata(input: SeoInput): Metadata {
   const indexable = isIndexable(input.locale) && !input.noindex;
 
   // hreflang cluster: only indexable locales that have a known alternate path.
+  // Keys are full BCP-47 language-region tags (es-MX, not es) — the whole point
+  // of the market axis is that Google can tell a Mexican page from a Spanish one.
   const languages: Record<string, string> = {};
   if (indexable && input.alternates) {
     for (const locale of INDEXABLE_LOCALES) {
       const altPath = input.alternates[locale];
-      if (altPath) languages[locale] = absoluteUrl(altPath);
+      if (altPath) languages[bcp47(locale, input.market ?? DEFAULT_MARKET)] = absoluteUrl(altPath);
     }
     const xDefault = input.alternates.es ?? input.path;
     if (xDefault) languages['x-default'] = absoluteUrl(xDefault);
@@ -140,10 +146,14 @@ export function buildMetadata(input: SeoInput): Metadata {
 }
 
 /** Convenience: localized alternates for an entity across all locales. */
-export function entityAlternates(kind: EntityKind, slug: string): Partial<Record<Locale, string>> {
+export function entityAlternates(
+  kind: EntityKind,
+  slug: string,
+  market: string = DEFAULT_MARKET,
+): Partial<Record<Locale, string>> {
   return {
-    es: `/es/${segmentFor(kind, 'es')}/${slug}`,
-    en: `/en/${segmentFor(kind, 'en')}/${slug}`,
+    es: entityPath(kind, 'es', slug, market),
+    en: entityPath(kind, 'en', slug, market),
   };
 }
 

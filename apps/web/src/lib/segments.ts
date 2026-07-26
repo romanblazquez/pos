@@ -6,9 +6,82 @@
 // rather than hardcoded route folders — it keeps slugs human-readable and
 // localized while letting one code path build canonical + hreflang for all.
 
+// LANGUAGE. Controls copy, metadata language, localized slugs and hreflang's
+// language subtag. Deliberately NOT the market: the same language is spoken
+// across many markets, and merging the two is what makes an Argentine price
+// show up on a Mexican page.
 export const LOCALES = ['es', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'es';
+
+// MARKET. Controls eligible sellers, shipping destination, canonical currency,
+// tax treatment and price comparison. Mirrors the `commerce_market` /
+// `commerce_market_locale` rows the API owns; this map is the routing-layer view
+// of them, so adding Spain is a config entry plus a database row, never a code
+// change in a page or component.
+export interface Market {
+  /** Uppercase market code, conventionally the ISO country code. */
+  code: string;
+  /** Lowercase URL segment component: /es-mx. */
+  urlCode: string;
+  countryCode: string;
+  canonicalCurrency: string;
+  /** Languages this market publishes, most-default first. */
+  languages: readonly Locale[];
+}
+
+export const MARKETS: Readonly<Record<string, Market>> = {
+  mx: {
+    code: 'MX',
+    urlCode: 'mx',
+    countryCode: 'MX',
+    canonicalCurrency: 'MXN',
+    languages: ['es', 'en'],
+  },
+};
+
+export const DEFAULT_MARKET = 'mx';
+
+/** Markets whose pages may be indexed right now. */
+export const INDEXABLE_MARKETS: readonly string[] = ['mx'];
+
+/**
+ * The URL prefix for a language×market pair: ('es','mx') -> 'es-mx'.
+ * Lowercase throughout — one canonical casing, enforced by the middleware.
+ */
+export function localePrefix(locale: Locale, market: string = DEFAULT_MARKET): string {
+  return `${locale}-${market.toLowerCase()}`;
+}
+
+/** BCP-47 tag for hreflang/`<html lang>`: ('es','mx') -> 'es-MX'. */
+export function bcp47(locale: Locale, market: string = DEFAULT_MARKET): string {
+  return `${locale}-${(MARKETS[market.toLowerCase()]?.countryCode ?? market).toUpperCase()}`;
+}
+
+export interface ParsedLocalePrefix {
+  locale: Locale;
+  market: string;
+}
+
+/**
+ * Parse a URL prefix back into its language and market. Returns null for
+ * anything not configured, so an unknown market 404s rather than silently
+ * rendering the default market's commercial terms under a foreign URL.
+ */
+export function parseLocalePrefix(prefix: string): ParsedLocalePrefix | null {
+  const [language, market] = prefix.split('-');
+  if (!isLocale(language) || !market) return null;
+  const configured = MARKETS[market.toLowerCase()];
+  if (!configured || !configured.languages.includes(language)) return null;
+  return { locale: language, market: configured.urlCode };
+}
+
+/** Every active language×market prefix — drives routing, sitemaps and hreflang. */
+export function allLocalePrefixes(): ParsedLocalePrefix[] {
+  return Object.values(MARKETS).flatMap((market) =>
+    market.languages.map((locale) => ({ locale, market: market.urlCode })),
+  );
+}
 
 // Locales whose pages are allowed to be indexed RIGHT NOW. English routes
 // exist and render, but stay noindex + self-canonical until real (non-machine)
@@ -54,18 +127,33 @@ export function segmentFor(kind: EntityKind, locale: Locale): string {
   return SEGMENTS[kind][locale];
 }
 
-/** Path to a listing root, e.g. /es/juegos-de-mesa. */
-export function listingPath(kind: EntityKind, locale: Locale): string {
-  return `/${locale}/${segmentFor(kind, locale)}`;
+// Path builders take the market as an optional trailing argument so the ~110
+// existing call sites keep working against the default market. Pages that know
+// their market (every route does — it is in the URL) should pass it explicitly;
+// once a second market is live, an omitted market is a bug waiting to link a
+// shopper out of their own market.
+
+/** Path to a listing root, e.g. /es-mx/juegos-de-mesa. */
+export function listingPath(
+  kind: EntityKind,
+  locale: Locale,
+  market: string = DEFAULT_MARKET,
+): string {
+  return `/${localePrefix(locale, market)}/${segmentFor(kind, locale)}`;
 }
 
-/** Path to an entity detail, e.g. /es/juegos-de-mesa/catan. */
-export function entityPath(kind: EntityKind, locale: Locale, slug: string): string {
-  return `${listingPath(kind, locale)}/${slug}`;
+/** Path to an entity detail, e.g. /es-mx/juegos-de-mesa/catan. */
+export function entityPath(
+  kind: EntityKind,
+  locale: Locale,
+  slug: string,
+  market: string = DEFAULT_MARKET,
+): string {
+  return `${listingPath(kind, locale, market)}/${slug}`;
 }
 
-export function homePath(locale: Locale): string {
-  return `/${locale}`;
+export function homePath(locale: Locale, market: string = DEFAULT_MARKET): string {
+  return `/${localePrefix(locale, market)}`;
 }
 
 // Lowercase, hyphenated, ASCII-folded slug (spec §2). Stable + human-readable.

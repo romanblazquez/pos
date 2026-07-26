@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_LOCALE, LOCALES, segmentFor } from '@/lib/segments';
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_MARKET,
+  LOCALES,
+  localePrefix,
+  parseLocalePrefix,
+  segmentFor,
+  type Locale,
+} from '@/lib/segments';
 
 // The transactional SPA host (cart/checkout/account live here post-cutover).
 const APP_HOST = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.juegospedia.com';
@@ -43,12 +51,12 @@ export function middleware(req: NextRequest) {
   const legacyProduct = pathname.match(/^\/product\/([^/]+)\/?$/);
   if (legacyProduct) {
     const url = req.nextUrl.clone();
-    url.pathname = `/${DEFAULT_LOCALE}/${segmentFor('games', DEFAULT_LOCALE)}/${legacyProduct[1]}`;
+    url.pathname = `/${localePrefix(DEFAULT_LOCALE, DEFAULT_MARKET)}/${segmentFor('games', DEFAULT_LOCALE)}/${legacyProduct[1]}`;
     return NextResponse.redirect(url, 301);
   }
   if (pathname === '/search') {
     const url = req.nextUrl.clone();
-    url.pathname = `/${DEFAULT_LOCALE}/${segmentFor('search', DEFAULT_LOCALE)}`;
+    url.pathname = `/${localePrefix(DEFAULT_LOCALE, DEFAULT_MARKET)}/${segmentFor('search', DEFAULT_LOCALE)}`;
     return NextResponse.redirect(url, 301);
   }
   // Account/cart/checkout now live on the SPA host — send legacy paths there.
@@ -56,11 +64,23 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(`${APP_HOST}${pathname}${req.nextUrl.search}`, 301);
   }
 
-  // Locale prefix required: redirect bare paths to the default locale.
   const first = pathname.split('/')[1];
-  if (!LOCALES.includes(first as (typeof LOCALES)[number])) {
+
+  // ── Language-only legacy prefixes -> language×market (spec: existing-route
+  // migration). `/es` and `/en` meant "the Mexican market" for the site's whole
+  // life, so they map to the MX market and the rest of the path is preserved.
+  // 301 rather than 307: this is a permanent restructure, not a preference.
+  if (LOCALES.includes(first as Locale)) {
     const url = req.nextUrl.clone();
-    url.pathname = `/${DEFAULT_LOCALE}${pathname === '/' ? '' : pathname}`;
+    const rest = pathname.slice(first.length + 1);
+    url.pathname = `/${localePrefix(first as Locale, DEFAULT_MARKET)}${rest}`;
+    return NextResponse.redirect(url, 301);
+  }
+
+  // Unknown or missing prefix: send to the default language×market.
+  if (!parseLocalePrefix(first)) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${localePrefix(DEFAULT_LOCALE, DEFAULT_MARKET)}${pathname === '/' ? '' : pathname}`;
     return NextResponse.redirect(url, 307);
   }
 

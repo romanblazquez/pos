@@ -12,7 +12,14 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { MobileMenu } from '@/components/MobileMenu';
 import { PrivacyPreferencesButton } from '@/components/PrivacyPreferencesButton';
-import { LOCALES, isLocale, listingPath, type Locale } from '@/lib/segments';
+import {
+  allLocalePrefixes,
+  bcp47,
+  homePath,
+  listingPath,
+  localePrefix,
+  parseLocalePrefix,
+} from '@/lib/segments';
 import '../globals.css';
 
 const hanken = Hanken_Grotesk({ subsets: ['latin'], variable: '--font-hanken', display: 'swap' });
@@ -82,7 +89,9 @@ export const metadata: Metadata = {
 };
 
 export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale }));
+  return allLocalePrefixes().map(({ locale, market }) => ({
+    locale: localePrefix(locale, market),
+  }));
 }
 
 export default function LocaleLayout({
@@ -92,8 +101,9 @@ export default function LocaleLayout({
   children: React.ReactNode;
   params: { locale: string };
 }) {
-  if (!isLocale(params.locale)) notFound();
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) notFound();
+  const { locale, market } = parsedLocale;
   const t =
     locale === 'es'
       ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
@@ -101,7 +111,7 @@ export default function LocaleLayout({
 
   return (
     <html
-      lang={locale}
+      lang={bcp47(locale, market)}
       className={`${hanken.variable} ${bricolage.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
@@ -124,17 +134,17 @@ export default function LocaleLayout({
         <JsonLd data={[organizationLd(), webSiteLd()]} />
         <header className="site-header">
           <div className="container">
-            <Link href={`/${locale}`} className="brand" aria-label={SITE_NAME}>
+            <Link href={homePath(locale, market)} className="brand" aria-label={SITE_NAME}>
               <span className="brand-mark"><MeepleMark /></span>
               <span>Juegos<span className="brand-word-accent">pedia</span></span>
             </Link>
             <nav className="nav nav-desktop" aria-label={locale === 'es' ? 'Principal' : 'Main'}>
-              <Link href={listingPath('games', locale)}>{t.games}</Link>
-              <Link href={listingPath('categories', locale)}>{t.cats}</Link>
-              <Link href={listingPath('guides', locale)}>{t.guides}</Link>
+              <Link href={listingPath('games', locale, market)}>{t.games}</Link>
+              <Link href={listingPath('categories', locale, market)}>{t.cats}</Link>
+              <Link href={listingPath('guides', locale, market)}>{t.guides}</Link>
             </nav>
             <span className="nav-spacer" />
-            <Link className="header-search nav-desktop" href={listingPath('search', locale)}>
+            <Link className="header-search nav-desktop" href={listingPath('search', locale, market)}>
               <span aria-hidden="true">⌕</span> {t.search}
             </Link>
             <div className="header-controls nav-desktop">
@@ -158,8 +168,8 @@ export default function LocaleLayout({
             </span>
             <span className="footer-tagline">{t.tagline}</span>
             <span className="nav-spacer" />
-            <Link href={listingPath('games', locale)}>{t.games}</Link>
-            <Link href={listingPath('categories', locale)}>{t.cats}</Link>
+            <Link href={listingPath('games', locale, market)}>{t.games}</Link>
+            <Link href={listingPath('categories', locale, market)}>{t.cats}</Link>
             <PrivacyPreferencesButton label={locale === 'es' ? 'Privacidad' : 'Privacy'} />
           </div>
         </footer>

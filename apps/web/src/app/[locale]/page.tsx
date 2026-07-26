@@ -9,7 +9,7 @@ import { PromoBanner, PromoStrip } from '@/components/PromoBanner';
 import { ShelfCard } from '@/components/ShelfCard';
 import { listShelves } from '@/lib/shelves';
 import { getPromos, rotateTones } from '@/lib/promos';
-import { homePath, isLocale, listingPath, type Locale } from '@/lib/segments';
+import { homePath, listingPath, parseLocalePrefix, type Locale } from '@/lib/segments';
 
 export const revalidate = 1800;
 
@@ -62,8 +62,9 @@ export async function generateMetadata({
 }: {
   params: { locale: string };
 }): Promise<Metadata> {
-  if (!isLocale(params.locale)) return {};
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) return {};
+  const { locale, market } = parsedLocale;
   const t = T[locale];
   return buildMetadata({
     locale,
@@ -75,8 +76,9 @@ export async function generateMetadata({
 }
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
-  if (!isLocale(params.locale)) notFound();
-  const locale = params.locale as Locale;
+  const parsedLocale = parseLocalePrefix(params.locale);
+  if (!parsedLocale) notFound();
+  const { locale, market } = parsedLocale;
   const t = T[locale];
 
   // The home page browses by *shelf*, not by the catalogue's raw `category`

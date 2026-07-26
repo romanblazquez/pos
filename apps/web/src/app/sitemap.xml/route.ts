@@ -4,6 +4,7 @@ import { INDEXABLE_THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
 import {
   INDEXABLE_LOCALES,
+  INDEXABLE_MARKETS,
   entityPath,
   homePath,
   listingPath,
@@ -66,29 +67,31 @@ export async function GET(): Promise<Response> {
 
   const entries: UrlEntry[] = [];
 
+  // Every indexable language x indexable market pair is its own URL space.
+  for (const market of INDEXABLE_MARKETS)
   for (const locale of INDEXABLE_LOCALES) {
-    entries.push({ loc: `${SITE_URL}${homePath(locale)}`, changefreq: 'daily', priority: 1 });
-    entries.push({ loc: `${SITE_URL}${listingPath('games', locale)}`, changefreq: 'daily', priority: 0.9 });
-    entries.push({ loc: `${SITE_URL}${listingPath('categories', locale)}`, changefreq: 'weekly', priority: 0.6 });
+    entries.push({ loc: `${SITE_URL}${homePath(locale, market)}`, changefreq: 'daily', priority: 1 });
+    entries.push({ loc: `${SITE_URL}${listingPath('games', locale, market)}`, changefreq: 'daily', priority: 0.9 });
+    entries.push({ loc: `${SITE_URL}${listingPath('categories', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
 
     // Editorial hub — guides index + each guide.
-    entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
+    entries.push({ loc: `${SITE_URL}${listingPath('guides', locale, market)}`, changefreq: 'weekly', priority: 0.7 });
     for (const g of await listGuides(locale)) {
-      entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug)}`, changefreq: 'monthly', priority: 0.7 });
+      entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug, market)}`, changefreq: 'monthly', priority: 0.7 });
     }
 
     // Editorial team index + one profile per editor — the authorship signal the
     // guides' Article/Person markup points at.
-    entries.push({ loc: `${SITE_URL}${listingPath('editors', locale)}`, changefreq: 'monthly', priority: 0.5 });
+    entries.push({ loc: `${SITE_URL}${listingPath('editors', locale, market)}`, changefreq: 'monthly', priority: 0.5 });
     for (const editor of await listEditorialAuthors()) {
-      entries.push({ loc: `${SITE_URL}${editorPath(editor, locale)}`, changefreq: 'monthly', priority: 0.5 });
+      entries.push({ loc: `${SITE_URL}${editorPath(editor, locale, market)}`, changefreq: 'monthly', priority: 0.5 });
     }
 
     // Curated theme landing pages (the real category SEO targets). The catch-all
     // shelf is browsable but noindex, so it never enters the sitemap.
     for (const theme of INDEXABLE_THEMES) {
       entries.push({
-        loc: `${SITE_URL}${entityPath('categories', locale, theme.slug[locale])}`,
+        loc: `${SITE_URL}${entityPath('categories', locale, theme.slug[locale], market)}`,
         changefreq: 'weekly',
         priority: 0.7,
       });
@@ -96,7 +99,7 @@ export async function GET(): Promise<Response> {
 
     for (const p of products) {
       entries.push({
-        loc: `${SITE_URL}${entityPath('games', locale, p.slug)}`,
+        loc: `${SITE_URL}${entityPath('games', locale, p.slug, market)}`,
         changefreq: 'daily',
         priority: 0.8,
         image: p.images?.[0],
