@@ -5,7 +5,9 @@ import {
   LOCALES,
   localePrefix,
   MARKETS,
+  isMarketNeutral,
   parseLocalePrefix,
+  resolveKind,
   segmentFor,
   type Locale,
 } from '@/lib/segments';
@@ -67,15 +69,40 @@ export function middleware(req: NextRequest) {
 
   const first = pathname.split('/')[1];
 
-  // ── Language-only legacy prefixes -> language×market (spec: existing-route
-  // migration). `/es` and `/en` meant "the Mexican market" for the site's whole
-  // life, so they map to the MX market and the rest of the path is preserved.
-  // 301 rather than 307: this is a permanent restructure, not a preference.
-  if (LOCALES.includes(first as Locale)) {
-    const url = req.nextUrl.clone();
+  // ── One canonical URL shape per kind ───────────────────────────────────────
+  // Commerce lives at /es-mx (price, sellers and tax vary by market); editorial
+  // lives at /es (an article reads the same in every market, so publishing it
+  // per market would be duplicate content competing with itself). Whichever
+  // shape a request arrives in, it 301s to the one that kind actually uses.
+  const parsed = parseLocalePrefix(first);
+  const segment = pathname.split('/')[2];
+  const kind = parsed && segment ? resolveKind(parsed.locale, segment) : null;
+
+  if (parsed) {
+    const neutral = kind ? isMarketNeutral(kind) : false;
     const rest = pathname.slice(first.length + 1);
-    url.pathname = `/${localePrefix(first as Locale, DEFAULT_MARKET)}${rest}`;
-    return NextResponse.redirect(url, 301);
+
+    // Editorial requested with a market prefix -> drop the market.
+    if (neutral && !parsed.languageOnly) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${parsed.locale}${rest}`;
+      return NextResponse.redirect(url, 301);
+    }
+
+    // Commerce (or the bare home page) requested without a market -> add it.
+    // `/es` and `/en` meant "the Mexican market" for the site's whole life, so
+    // a remembered market wins and Mexico is the fallback.
+    if (!neutral && parsed.languageOnly) {
+      const remembered = req.cookies.get('jp-market')?.value?.toLowerCase();
+      const market = remembered && MARKETS[remembered] ? remembered : DEFAULT_MARKET;
+      const url = req.nextUrl.clone();
+      url.pathname = `/${localePrefix(parsed.locale, market)}${rest}`;
+      const res = NextResponse.redirect(url, 301);
+      res.headers.set('Cache-Control', 'no-store');
+      return res;
+    }
+
+    return NextResponse.next();
   }
 
   // Unknown or missing prefix: send the visitor to their remembered market

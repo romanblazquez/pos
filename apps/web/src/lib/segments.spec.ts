@@ -47,8 +47,9 @@ describe('language × market URLs', () => {
     expect(parseLocalePrefix('es-es')).toBeNull();
     expect(parseLocalePrefix('en-us')).toBeNull();
     expect(parseLocalePrefix('fr-mx')).toBeNull();
-    expect(parseLocalePrefix('es')).toBeNull();
     expect(parseLocalePrefix('')).toBeNull();
+    // A bare language is no longer invalid — it is the editorial prefix.
+    expect(parseLocalePrefix('es')?.languageOnly).toBe(true);
   });
 
   it('enumerates exactly the language×market pairs that are configured', () => {
@@ -89,5 +90,34 @@ describe('indexability', () => {
 
   it('defaults to the default market when none is given', () => {
     expect(isIndexable('es')).toBe(isIndexable('es', DEFAULT_MARKET));
+  });
+});
+
+describe('market-neutral editorial URLs', () => {
+  // Editorial carries no prices, so publishing it under every market prefix
+  // would put identical prose at several URLs competing with each other.
+  it('gives guides and editor profiles a language-only URL', () => {
+    expect(listingPath('guides', 'es', 'mx')).toBe('/es/guias');
+    expect(listingPath('guides', 'es', 'ar')).toBe('/es/guias');
+    expect(listingPath('editors', 'en', 'ar')).toBe('/en/editors');
+  });
+
+  it('ignores the market argument entirely for those kinds', () => {
+    expect(listingPath('guides', 'es', 'mx')).toBe(listingPath('guides', 'es', 'ar'));
+  });
+
+  it('keeps commercial kinds market-scoped', () => {
+    expect(listingPath('games', 'es', 'mx')).toBe('/es-mx/juegos-de-mesa');
+    expect(listingPath('games', 'es', 'ar')).toBe('/es-ar/juegos-de-mesa');
+    expect(listingPath('categories', 'es', 'ar')).toBe('/es-ar/categorias');
+  });
+
+  it('parses a bare language as an editorial prefix', () => {
+    expect(parseLocalePrefix('es')).toEqual({ locale: 'es', market: DEFAULT_MARKET, languageOnly: true });
+  });
+
+  it('still rejects an unconfigured market', () => {
+    expect(parseLocalePrefix('es-es')).toBeNull();
+    expect(parseLocalePrefix('fr')).toBeNull();
   });
 });

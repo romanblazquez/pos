@@ -74,19 +74,6 @@ export async function GET(): Promise<Response> {
     entries.push({ loc: `${SITE_URL}${listingPath('games', locale, market)}`, changefreq: 'daily', priority: 0.9 });
     entries.push({ loc: `${SITE_URL}${listingPath('categories', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
 
-    // Editorial hub — guides index + each guide.
-    entries.push({ loc: `${SITE_URL}${listingPath('guides', locale, market)}`, changefreq: 'weekly', priority: 0.7 });
-    for (const g of await listGuides(locale)) {
-      entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, g.slug, market)}`, changefreq: 'monthly', priority: 0.7 });
-    }
-
-    // Editorial team index + one profile per editor — the authorship signal the
-    // guides' Article/Person markup points at.
-    entries.push({ loc: `${SITE_URL}${listingPath('editors', locale, market)}`, changefreq: 'monthly', priority: 0.5 });
-    for (const editor of await listEditorialAuthors()) {
-      entries.push({ loc: `${SITE_URL}${editorPath(editor, locale, market)}`, changefreq: 'monthly', priority: 0.5 });
-    }
-
     // Curated theme landing pages (the real category SEO targets). The catch-all
     // shelf is browsable but noindex, so it never enters the sitemap.
     for (const theme of INDEXABLE_THEMES) {
@@ -104,6 +91,20 @@ export async function GET(): Promise<Response> {
         priority: 0.8,
         image: p.images?.[0],
       });
+    }
+  }
+
+  // Editorial is market-neutral: emitted once per indexable LANGUAGE, outside the
+  // market loop. Emitting it per market would list the same article several
+  // times, which is the duplicate content the language-only URL exists to avoid.
+  for (const locale of INDEXABLE_LOCALES) {
+    entries.push({ loc: `${SITE_URL}${listingPath('guides', locale)}`, changefreq: 'weekly', priority: 0.7 });
+    for (const guide of await listGuides(locale)) {
+      entries.push({ loc: `${SITE_URL}${entityPath('guides', locale, guide.slug)}`, changefreq: 'monthly', priority: 0.7 });
+    }
+    entries.push({ loc: `${SITE_URL}${listingPath('editors', locale)}`, changefreq: 'monthly', priority: 0.5 });
+    for (const editor of await listEditorialAuthors()) {
+      entries.push({ loc: `${SITE_URL}${editorPath(editor, locale)}`, changefreq: 'monthly', priority: 0.5 });
     }
   }
 

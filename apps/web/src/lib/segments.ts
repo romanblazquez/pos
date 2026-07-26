@@ -81,6 +81,13 @@ export function bcp47(locale: Locale, market: string = DEFAULT_MARKET): string {
 export interface ParsedLocalePrefix {
   locale: Locale;
   market: string;
+  /**
+   * True when the URL carried a bare language (/es) rather than a
+   * language×market prefix (/es-mx). Only market-neutral editorial routes may
+   * be served this way; `market` still resolves to the default so any commerce
+   * embedded in an article has somewhere to point.
+   */
+  languageOnly?: boolean;
 }
 
 /**
@@ -90,7 +97,10 @@ export interface ParsedLocalePrefix {
  */
 export function parseLocalePrefix(prefix: string): ParsedLocalePrefix | null {
   const [language, market] = prefix.split('-');
-  if (!isLocale(language) || !market) return null;
+  if (!isLocale(language)) return null;
+  // Bare language: an editorial URL. The caller decides whether the requested
+  // kind is allowed to be served market-neutrally.
+  if (!market) return { locale: language, market: DEFAULT_MARKET, languageOnly: true };
   const configured = MARKETS[market.toLowerCase()];
   if (!configured || !configured.languages.includes(language)) return null;
   return { locale: language, market: configured.urlCode };
@@ -142,6 +152,25 @@ export const SEGMENTS: Record<EntityKind, Record<Locale, string>> = {
   editors: { es: 'editores', en: 'editors' },
 };
 
+/**
+ * Kinds whose content does not vary by market, so they live at a LANGUAGE-only
+ * URL: /es/guias/..., not /es-mx/guias/... .
+ *
+ * "The best cooperative board games" has the same answer in Mexico City and
+ * Buenos Aires — an article carries no prices, sellers or tax. Publishing it
+ * under every market prefix would put identical prose at /es-mx/guias/x,
+ * /es-ar/guias/x and /es-es/guias/x, which is duplicate content that splits the
+ * links a guide earns across markets and lets Google pick the winner.
+ *
+ * Commerce inside an article is still market-correct: product links resolve to
+ * the reader's own market. The ARTICLE is global, the OFFERS in it are local.
+ */
+export const MARKET_NEUTRAL_KINDS: ReadonlySet<EntityKind> = new Set(['guides', 'editors']);
+
+export function isMarketNeutral(kind: EntityKind): boolean {
+  return MARKET_NEUTRAL_KINDS.has(kind);
+}
+
 /** Resolve a localized path segment back to its entity kind, scoped to locale. */
 export function resolveKind(locale: Locale, segment: string): EntityKind | null {
   for (const kind of Object.keys(SEGMENTS) as EntityKind[]) {
@@ -166,7 +195,10 @@ export function listingPath(
   locale: Locale,
   market: string = DEFAULT_MARKET,
 ): string {
-  return `/${localePrefix(locale, market)}/${segmentFor(kind, locale)}`;
+  // Market-neutral kinds ignore the market argument entirely, so every existing
+  // call site produces the correct URL without being touched.
+  const prefix = isMarketNeutral(kind) ? locale : localePrefix(locale, market);
+  return `/${prefix}/${segmentFor(kind, locale)}`;
 }
 
 /** Path to an entity detail, e.g. /es-mx/juegos-de-mesa/catan. */

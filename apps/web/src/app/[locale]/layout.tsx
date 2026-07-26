@@ -14,6 +14,7 @@ import { MarketSwitcher } from '@/components/MarketSwitcher';
 import { MobileMenu } from '@/components/MobileMenu';
 import { PrivacyPreferencesButton } from '@/components/PrivacyPreferencesButton';
 import {
+  LOCALES,
   allLocalePrefixes,
   bcp47,
   homePath,
@@ -90,9 +91,11 @@ export const metadata: Metadata = {
 };
 
 export function generateStaticParams() {
-  return allLocalePrefixes().map(({ locale, market }) => ({
-    locale: localePrefix(locale, market),
-  }));
+  // Two shapes: /es-mx for commerce, /es for market-neutral editorial.
+  return [
+    ...allLocalePrefixes().map(({ locale, market }) => ({ locale: localePrefix(locale, market) })),
+    ...LOCALES.map((locale) => ({ locale })),
+  ];
 }
 
 export default function LocaleLayout({
