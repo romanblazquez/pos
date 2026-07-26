@@ -17,8 +17,19 @@ describe('market eligibility', () => {
     expect(marketCurrency('ZZ')).toBe('MXN');
   });
 
-  it('filters offers to the market currency and active state', () => {
-    expect(eligibleListingWhere('MX')).toEqual({ active: true, currency: 'MXN' });
+  it('requires the seller to have declared the market, and the money to match', () => {
+    const where = eligibleListingWhere('MX');
+    expect(where.active).toBe(true);
+    expect(where.currency).toBe('MXN');
+    // Seller declaration is the authoritative signal: a seller decides which
+    // markets they serve. Currency stays as a guard so a seller who declares
+    // Mexico cannot put an ARS price on a Mexican page.
+    expect(where.seller.canonicalMarkets.some.active).toBe(true);
+    expect(where.seller.canonicalMarkets.some.commerceMarket).toEqual({ code: 'MX', active: true });
+  });
+
+  it('never matches offers through an inactive market', () => {
+    expect(eligibleListingWhere('MX').seller.canonicalMarkets.some.commerceMarket.active).toBe(true);
   });
 
   // The defect this exists to prevent: an Argentine price on a Mexican page,

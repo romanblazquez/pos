@@ -43,9 +43,29 @@ export function marketCurrency(code?: string | null): string {
 /**
  * Prisma `where` fragment selecting the offers eligible for a market.
  * Compose with the caller's own filters rather than replacing them.
+ *
+ * Two conditions, both required:
+ *
+ *  1. The seller has DECLARED this market — an active `SellerMarket` linked to
+ *     the `CommerceMarket`. This is the authoritative signal: a seller decides
+ *     which markets they serve, we do not infer it for them.
+ *  2. The offer is quoted in the market's canonical currency. Kept as a guard
+ *     rather than dropped, so a seller who declares Mexico but prices a listing
+ *     in pesos argentinos cannot put that price on a Mexican page.
  */
 export function eligibleListingWhere(marketCode?: string | null) {
-  return { active: true, currency: marketCurrency(marketCode) };
+  return {
+    active: true,
+    currency: marketCurrency(marketCode),
+    seller: {
+      canonicalMarkets: {
+        some: {
+          active: true,
+          commerceMarket: { code: marketConfig(marketCode).code, active: true },
+        },
+      },
+    },
+  };
 }
 
 /**
