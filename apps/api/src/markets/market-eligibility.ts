@@ -66,16 +66,37 @@ export function eligibleListingWhere(marketCode?: string | null) {
   return {
     active: true,
     currency: marketCurrency(marketCode),
-    seller: {
-      // A suspended seller disappears from comparison entirely. Without this,
-      // "ban this seller" changed a status column and nothing else — their
-      // offers kept competing on every product page.
-      status: SELLER_VISIBLE_STATUS,
-      canonicalMarkets: {
-        some: {
-          active: true,
-          commerceMarket: { code: marketConfig(marketCode).code, active: true },
-        },
+    seller: visibleSellerWhere(marketConfig(marketCode).code),
+  };
+}
+
+/**
+ * The seller half of eligibility, on its own.
+ *
+ * Exported because the search index needs the same rule but not the rest of it:
+ * an index document is market-agnostic (it carries every currency a product is
+ * listed in), so it cannot filter by one market's currency — but it absolutely
+ * must exclude suspended sellers.
+ *
+ * Splitting it is not a nicety. The indexer filtered listings on `active: true`
+ * alone, so suspending a seller removed their offers from product pages while
+ * their price and store count stayed on every card, search hit and shelf — the
+ * primary browse surface. A ban that only half-applies is worse than no ban,
+ * because the operator believes it worked.
+ *
+ * @param marketCode When given, requires the seller to serve that specific
+ *   market. Omit for the index, where any active market makes the offer real
+ *   somewhere and the per-market currency guard does the rest at query time.
+ */
+export function visibleSellerWhere(marketCode?: string | null) {
+  return {
+    status: SELLER_VISIBLE_STATUS,
+    canonicalMarkets: {
+      some: {
+        active: true,
+        commerceMarket: marketCode
+          ? { code: marketCode.toUpperCase(), active: true }
+          : { active: true },
       },
     },
   };

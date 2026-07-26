@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { TypesenseService, type ProductDocument } from './typesense.service.js';
+import { visibleSellerWhere } from '../markets/market-eligibility.js';
 
 /**
  * The single place a product becomes a search document.
@@ -57,7 +58,10 @@ export class ProductIndexerService {
       where: { id: productId },
       include: {
         listings: {
-          where: { active: true },
+          // Same seller rule the query path enforces. `active: true` alone left
+          // suspended sellers' prices and store counts on every card while the
+          // product page correctly showed nothing.
+          where: { active: true, seller: visibleSellerWhere() },
           orderBy: { rankScore: 'desc' },
           select: {
             priceMinorUnits: true,
