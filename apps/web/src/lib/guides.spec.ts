@@ -33,6 +33,21 @@ describe('editorial guide catalogue', () => {
     }
   });
 
+  it('publishes Irish and Polish editors in English and translates their frontend copy', () => {
+    for (const authorId of ['eoin-ie', 'kasia-pl']) {
+      const author = AUTHORS_BY_ID[authorId];
+      expect(author.locale).toBe('en');
+
+      const authoredGuides = guides.filter((guide) => guide.authorId === authorId);
+      expect(authoredGuides.length).toBeGreaterThan(0);
+      for (const guide of authoredGuides) {
+        expect(guide.originalLocale).toBe('en');
+        expect(guide.translations?.es).toBeUndefined();
+        expect(localizeGuide(guide, 'es').autoTranslated).toBe(true);
+      }
+    }
+  });
+
   it('emits accountable Article structured data', () => {
     const json = articleLd({
       title: 'A useful guide',

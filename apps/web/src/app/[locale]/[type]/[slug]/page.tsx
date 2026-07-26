@@ -444,7 +444,13 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string) {
                     {range && <span className="muted" style={{ fontWeight: 400 }}> · {locale === 'es' ? 'desde' : 'from'} {range.split('–')[0].trim()}</span>}
                   </h2>
                   <p style={{ margin: '0.4rem 0 0' }}>{pick.blurb}</p>
-                  <Link className="chip" style={{ marginTop: 8, display: 'inline-block' }} href={entityPath('games', locale, product.slug)}>
+                  <Link
+                    className="chip guide-product-cta"
+                    data-guide-product-cta={product.slug}
+                    aria-label={`${locale === 'es' ? 'Ver ofertas de' : 'See offers for'} ${product.name}`}
+                    style={{ marginTop: 8, display: 'inline-block' }}
+                    href={entityPath('games', locale, product.slug)}
+                  >
                     {locale === 'es' ? 'Ver ofertas' : 'See offers'} →
                   </Link>
                 </div>

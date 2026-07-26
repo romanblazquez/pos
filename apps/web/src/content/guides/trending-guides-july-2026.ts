@@ -57,7 +57,7 @@ export const spielDesJahres2026 = withTranslation({
   ],
 });
 
-export const quickSetupSoloGames = withTranslation({
+export const quickSetupSoloGames: Guide = {
   slug: 'best-quick-setup-solo-board-games',
   title: 'The best quick-setup solo board games for a weeknight',
   description: 'Solo board games with meaningful decisions, modest table space and setup short enough that the game actually reaches the table after work.',
@@ -74,21 +74,7 @@ export const quickSetupSoloGames = withTranslation({
   faq: [{ q: 'Which takes the least table space?', a: 'Cartographers. A player sheet, cards and pencils are enough.' }, { q: 'Which has the deepest campaign?', a: 'Under Falling Skies adds a structured campaign while keeping each battle compact.' }],
   publishedAt: '2026-07-26',
   updatedAt: '2026-07-26',
-}, 'es', {
-  slug: 'juegos-de-mesa-en-solitario-preparacion-rapida',
-  title: 'Juegos en solitario de preparación rápida para una noche entre semana',
-  description: 'Juegos en solitario con buenas decisiones, poco espacio y una preparación lo bastante breve para llegar a la mesa después del trabajo.',
-  authorId: 'kasia-pl',
-  intro: ['Jugar en solitario sirve cuando el calendario falla, así que una preparación de cuarenta minutos contradice la idea. He medido fricción: componentes, reglas que recuperar y tiempo hasta la primera decisión real.', 'Rápido no significa superficial. Cada juego ofrece un sistema que merece aprenderse sin exigir una mesa enorme.'],
-  picks: [
-    { gameSlug: 'under-falling-skies-306735', blurb: 'Colocación de dados para una defensa limpia, casi sin mantenimiento oculto. La campaña varía batallas que siguen siendo compactas.' },
-    { gameSlug: 'cartographers-263918', blurb: 'Una hoja y una baraja producen un rompecabezas espacial que se reinicia al instante. Las emboscadas evitan la rutina.' },
-    { gameSlug: 'cascadia-295947', blurb: 'Losetas y fauna forman una optimización tranquila. La preparación son unas pilas y las cartas de puntuación cambian el problema.' },
-    { gameSlug: 'final-girl-277659', blurb: 'Tiene algo más de preparación, pero está diseñado para una persona. Elegidlo si queréis drama y ritmo de cartas.' },
-  ],
-  sections: [{ heading: 'El coste oculto de preparar una partida', paragraphs: ['Ordenar, ocupar mesa y guardar estado forman parte del peso. Cartographers gana en comodidad; Under Falling Skies en densidad por espacio; Cascadia se pausa mejor; Final Girl ofrece más narrativa.', 'Separad material de campaña y componentes frecuentes en bolsas etiquetadas. Cinco minutos de reinicio pueden convertir una caja en hábito.'] }],
-  faq: [{ q: '¿Cuál ocupa menos mesa?', a: 'Cartographers: basta una hoja, cartas y lápices.' }, { q: '¿Cuál tiene la campaña más profunda?', a: 'Under Falling Skies añade campaña sin perder batallas compactas.' }],
-});
+};
 
 export const cooperativeGamesForCouples = withTranslation({
   slug: 'mejores-juegos-cooperativos-para-parejas',

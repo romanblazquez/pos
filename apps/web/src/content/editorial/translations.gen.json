@@ -222,5 +222,155 @@
         }
       ]
     }
-  }
+  },
+  "mejores-party-games-para-grupos": {},
+  "mejores-juegos-colocacion-de-trabajadores": {},
+  "juegos-de-mesa-bonitos-colocacion-losetas": {},
+  "best-campaign-board-games-for-a-regular-group": {
+    "es": {
+      "slug": "los-mejores-juegos-de-mesa-de-campana-para-un-grupo-que-los-terminara",
+      "title": "Los mejores juegos de mesa de campaña para un grupo que los terminará",
+      "description": "Los juegos de mesa de campaña se juzgan según la continuidad, la configuración, la variedad de escenarios y si un grupo regular puede llegar de manera realista al final.",
+      "intro": [
+        "Comprar una campaña es fácil. Reunir a las mismas personas alrededor de una mesa para el capítulo doce es la verdadera batalla contra el jefe. Prefiero las campañas que recuerdan tus elecciones sin pedirle a un jugador que se convierta en archivero de tiempo completo.",
+        "Antes de elegir, acuerde la duración de la sesión, quién guarda la caja y con qué frecuencia se reunirán. Una gran historia no sirve de nada si la preparación consume la única hora que todos tenían libre."
+      ],
+      "picks": [
+        {
+          "gameSlug": "pandemic-legacy-season-1-161936",
+          "blurb": "Sigue siendo la puerta de entrada de campaña más limpia. Las decisiones familiares de la pandemia adquieren consecuencias, las reglas llegan gradualmente y cada sesión avanza la historia sin un mantenimiento excesivo."
+        },
+        {
+          "gameSlug": "iss-vanguard-325494",
+          "blurb": "Una vasta expedición de ciencia ficción dividida entre la gestión de barcos y misiones planetarias. Lo mejor para un grupo comprometido que disfruta de registros narrativos y arcos largos."
+        },
+        {
+          "gameSlug": "arkham-horror-the-card-game-463126",
+          "blurb": "La construcción de plataformas y los escenarios de ramificación hacen que el fracaso sea más interesante que terminal. Excelente a las dos y fácil de continuar una vez que se guardan las barajas."
+        },
+        {
+          "gameSlug": "clank-legacy-acquisitions-incorporated-266507",
+          "blurb": "Un puente animado entre la construcción de mazos accesible y los cambios permanentes de campaña. Los chistes son amplios, pero la evolución de la junta le da al grupo una propiedad real."
+        }
+      ],
+      "sections": [
+        {
+          "heading": "¿Puede su grupo apoyar la campaña?",
+          "paragraphs": [
+            "Cuente la fricción del calendario como parte de la complejidad. Pandemic Legacy tolera sesiones más cortas y un conocimiento modesto de las reglas. ISS Vanguard pide más almacenamiento, lectura y continuidad. Arkham es flexible con dos jugadores confiables; Clank Legacy le da la bienvenida a un grupo de experiencias mixtas.",
+            "Mantenga una nota de sesión de una página con el próximo objetivo, las excepciones a las reglas actuales y quién posee qué personaje. Diez minutos de organización evitan que un intervalo de un mes acabe con el impulso."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "¿Con qué campaña debería empezar un nuevo grupo?",
+          "a": "Pandemic Legacy: Temporada 1. Su núcleo familiar y sus reglas graduales hacen que la continuidad sea manejable."
+        },
+        {
+          "q": "¿Qué funciona mejor con dos jugadores?",
+          "a": "Arkham Horror: The Card Game, cuyos mazos de investigadores y escenarios ramificados son excelentes en dos."
+        }
+      ]
+    }
+  },
+  "best-deck-building-board-games": {
+    "es": {
+      "slug": "los-mejores-juegos-de-construccion-de-mazos-cinco-razones-diferentes-para-mejorar-un-mazo",
+      "title": "Los mejores juegos de construcción de mazos: cinco razones diferentes para mejorar un mazo",
+      "description": "Juegos de construcción de mazos comparados según la tensión del mercado, la eficiencia de las cartas, la interacción y la claridad con la que cada compra cambia tu próximo turno.",
+      "intro": [
+        "La construcción de plataformas es satisfactoria porque la mejora es mensurable. Una mano inicial débil se convierte en una máquina, pero sólo si cada compra tiene un propósito y las malas cartas pueden gestionarse en lugar de simplemente soportarse.",
+        "Seleccioné sistemas en los que la plataforma realiza un trabajo realmente diferente: combate, colocación de trabajadores, cooperación y supervivencia táctica. La mejor elección depende de lo que quieras que produzca el rompecabezas de eficiencia."
+      ],
+      "picks": [
+        {
+          "gameSlug": "dune-imperium-uprising-397598",
+          "blurb": "Las tarjetas son a la vez acciones y acceso a espacios de trabajadores, por lo que cada compra cambia dos sistemas. La dura competencia hace que la eficiencia sea visible de inmediato."
+        },
+        {
+          "gameSlug": "slay-the-spire-the-board-game-338960",
+          "blurb": "Una adaptación cooperativa con cuidadosas actualizaciones y matemáticas de combate transparentes. El mazo sigue siendo lo suficientemente pequeño como para que cada elección de carta importe."
+        },
+        {
+          "gameSlug": "clank-catacombs-365717",
+          "blurb": "La mejora del mazo impulsa una ruidosa carrera en las mazmorras. La exploración modular añade incertidumbre, mientras que el ruido metálico en la bolsa convierte la codicia en un riesgo legible."
+        },
+        {
+          "gameSlug": "aeon-s-end-the-descent-412268",
+          "blurb": "Nunca se baraja, por lo que el orden de los descartes se convierte en planificación. Los roles cooperativos y un mercado hostil recompensan a un grupo que coordina las compras."
+        }
+      ],
+      "sections": [
+        {
+          "heading": "¿Qué hace que las decisiones de construcción de mazos sean buenas?",
+          "paragraphs": [
+            "Un mercado fuerte ofrece compensaciones, no mejoras obvias. El robo de cartas, la eliminación, el ritmo y la sinergia deberían competir por la misma moneda limitada. Si una compra es siempre correcta, el mercado es sólo decoración.",
+            "Considere también el manejo. Aeon's End recompensa un orden de descarte cuidadoso; Slay the Spire requiere administrar tarjetas mejoradas; Clank es más suelto y rápido; Dune: Imperium te pide que leas tanto las cartas como los espacios del tablero."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "¿Cuál es más fácil de aprender?",
+          "a": "Clank!: Catacombs es la introducción más indulgente aquí, con una aventura intuitiva envuelta en la cubierta."
+        },
+        {
+          "q": "¿Cuál es mejor en solitario?",
+          "a": "Slay the Spire es la mejor opción si quieres que el mazo en sí lleve el rompecabezas táctico en solitario."
+        }
+      ]
+    }
+  },
+  "best-horror-board-games-that-build-real-tension": {},
+  "spiel-des-jahres-2026-ganadores-y-finalistas": {},
+  "best-quick-setup-solo-board-games": {
+    "es": {
+      "slug": "los-mejores-juegos-de-mesa-en-solitario-de-configuracion-rapida-para-una-noche-entre-semana",
+      "title": "Los mejores juegos de mesa en solitario de configuración rápida para una noche entre semana",
+      "description": "Juegos de mesa en solitario con decisiones significativas, espacio de mesa modesto y configuración lo suficientemente corta como para que el juego llegue a la mesa después del trabajo.",
+      "intro": [
+        "El juego en solitario es útil precisamente cuando falla la programación, por lo que una configuración de cuarenta minutos anula el objetivo. Medí estas elecciones por fricción: componentes que clasificar, reglas que recuperar y qué tan rápido llega la primera decisión real.",
+        "Rápido no significa superficial. Cada juego proporciona un sistema que vale la pena aprender respetando una mesa pequeña y una noche normal entre semana."
+      ],
+      "picks": [
+        {
+          "gameSlug": "under-falling-skies-306735",
+          "blurb": "La colocación de los dados crea un rompecabezas de defensa limpio y casi sin mantenimiento oculto. La campaña añade variedad mientras que las batallas individuales siguen siendo compactas."
+        },
+        {
+          "gameSlug": "cartographers-263918",
+          "blurb": "Una hoja de mapa y un pequeño mazo producen un rompecabezas espacial que se reinicia instantáneamente. Las cartas de emboscada añaden la perturbación suficiente para evitar la rutina."
+        },
+        {
+          "gameSlug": "cascadia-295947",
+          "blurb": "Las fichas y las fichas de vida silvestre crean un problema de optimización tranquilo. La configuración consiste en unas pocas pilas y las tarjetas de puntuación te permiten variar el rompecabezas."
+        },
+        {
+          "gameSlug": "final-girl-277659",
+          "blurb": "Más configuración que los demás, pero todavía limitada y diseñada específicamente para uno. Elige esto cuando quieras dramatismo y sincronización táctica de cartas en lugar de eficiencia meditativa."
+        }
+      ],
+      "sections": [
+        {
+          "heading": "El costo oculto de la configuración en solitario",
+          "paragraphs": [
+            "El tiempo de clasificación, el tamaño de la mesa y la complejidad del estado de guardado son parte del peso de un juego en solitario. Los cartógrafos ganan por pura conveniencia; Under Falling Skies ofrece la mejor relación entre densidad estratégica y espacio; Cascadia es más fácil de hacer una pausa; Final Girl ofrece el arco narrativo más fuerte.",
+            "Guarde los componentes de uso frecuente en bolsas etiquetadas y deje el material de campaña separado. Un reinicio de cinco minutos suele ser la diferencia entre que un juego se convierta en un hábito y permanezca en el estante."
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "q": "¿Cuál ocupa menos espacio en la mesa?",
+          "a": "Cartógrafos. Una hoja de jugador, cartas y lápices son suficientes."
+        },
+        {
+          "q": "¿Cuál tiene la campaña más profunda?",
+          "a": "Under Falling Skies agrega una campaña estructurada manteniendo cada batalla compacta."
+        }
+      ]
+    }
+  },
+  "mejores-juegos-cooperativos-para-parejas": {}
 }

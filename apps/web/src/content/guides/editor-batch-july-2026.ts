@@ -108,7 +108,7 @@ export const juegosColocacionLosetasBonitos = bilingual({
   faq: [{ q: 'Which is best for families?', a: 'Cascadia: calm, scalable and easy to adjust through different scoring patterns.' }, { q: 'Which has the most interaction?', a: 'Carcassonne, because everyone contributes to and contests the same landscape.' }],
 });
 
-export const bestCampaignBoardGames = bilingual({
+export const bestCampaignBoardGames: Guide = {
   slug: 'best-campaign-board-games-for-a-regular-group',
   title: 'The best campaign board games for a group that will finish them',
   description: 'Campaign board games judged on continuity, setup, scenario variety and whether a regular group can realistically reach the ending.',
@@ -123,23 +123,9 @@ export const bestCampaignBoardGames = bilingual({
   sections: [{ heading: 'Can your group support the campaign?', paragraphs: ['Count calendar friction as part of complexity. Pandemic Legacy tolerates shorter sessions and modest rules knowledge. ISS Vanguard asks for more storage, reading and continuity. Arkham is flexible with two reliable players; Clank Legacy welcomes a mixed-experience group.', 'Keep a one-page session note with the next objective, current rules exceptions and who owns which character. Ten minutes of organisation prevents a month’s gap from killing momentum.'] }],
   faq: [{ q: 'Which campaign should a new group start with?', a: 'Pandemic Legacy: Season 1. Its familiar core and gradual rules make continuity manageable.' }, { q: 'What works best with two players?', a: 'Arkham Horror: The Card Game, whose investigator decks and branching scenarios are excellent at two.' }],
   publishedAt: '2026-07-23', updatedAt: '2026-07-23',
-}, 'es', {
-  slug: 'mejores-juegos-de-campana-para-grupos',
-  title: 'Los mejores juegos de campaña para un grupo que quiere terminarlos',
-  description: 'Juegos de campaña valorados por continuidad, preparación, variedad y posibilidades reales de llegar al final con un grupo estable.',
-  authorId: 'eoin-ie',
-  intro: ['Comprar una campaña es fácil. Reunir a las mismas personas para el capítulo doce es el verdadero jefe final. Prefiero campañas que recuerdan decisiones sin convertir a un jugador en archivero a tiempo completo.', 'Antes de elegir, acordad duración, frecuencia y quién guarda la caja. Una gran historia no sirve si la preparación consume la única hora libre del grupo.'],
-  picks: [
-    { gameSlug: 'pandemic-legacy-season-1-161936', blurb: 'La entrada más limpia: decisiones conocidas adquieren consecuencias, las reglas llegan poco a poco y cada sesión mueve la historia sin demasiado mantenimiento.' },
-    { gameSlug: 'iss-vanguard-325494', blurb: 'Una expedición de ciencia ficción enorme, dividida entre gestión de nave y misiones planetarias. Para grupos constantes que disfrutan registrar una historia larga.' },
-    { gameSlug: 'arkham-horror-the-card-game-463126', blurb: 'Construcción de mazos y escenarios ramificados donde perder también produce historia. Excelente a dos y fácil de retomar con los mazos preparados.' },
-    { gameSlug: 'clank-legacy-acquisitions-incorporated-266507', blurb: 'Un puente animado entre deck-building accesible y cambios permanentes. El tablero evoluciona y termina sintiéndose propio.' },
-  ],
-  sections: [{ heading: '¿Puede vuestro grupo sostener la campaña?', paragraphs: ['El calendario también es complejidad. Pandemic Legacy tolera sesiones breves; ISS Vanguard exige más almacenamiento y continuidad; Arkham funciona con dos jugadores fiables; Clank Legacy admite experiencia mezclada.', 'Guardad una nota con el próximo objetivo, excepciones actuales y personajes. Diez minutos de orden evitan que una pausa de un mes mate la campaña.'] }],
-  faq: [{ q: '¿Por cuál debería empezar un grupo nuevo?', a: 'Pandemic Legacy: Season 1, por su núcleo conocido y reglas graduales.' }, { q: '¿Cuál funciona mejor a dos?', a: 'Arkham Horror: The Card Game, por sus mazos de investigador y escenarios ramificados.' }],
-});
+};
 
-export const bestDeckBuildingGames = bilingual({
+export const bestDeckBuildingGames: Guide = {
   slug: 'best-deck-building-board-games',
   title: 'The best deck-building games: five different reasons to improve a deck',
   description: 'Deck-building games compared by market tension, card efficiency, interaction and how clearly each purchase changes your next turn.',
@@ -154,21 +140,7 @@ export const bestDeckBuildingGames = bilingual({
   sections: [{ heading: 'What makes deck-building decisions good?', paragraphs: ['A strong market offers trade-offs, not obvious upgrades. Card draw, removal, tempo and synergy should compete for the same limited currency. If one purchase is always correct, the market is only decoration.', 'Also consider handling. Aeon’s End rewards careful discard order; Slay the Spire requires managing upgraded cards; Clank is looser and faster; Dune: Imperium asks you to read both cards and board spaces.'] }],
   faq: [{ q: 'Which is easiest to learn?', a: 'Clank!: Catacombs is the most forgiving introduction here, with an intuitive adventure wrapped around the deck.' }, { q: 'Which is best solo?', a: 'Slay the Spire is the strongest fit if you want the deck itself to carry the solo tactical puzzle.' }],
   publishedAt: '2026-07-24', updatedAt: '2026-07-24',
-}, 'es', {
-  slug: 'mejores-juegos-de-construccion-de-mazos',
-  title: 'Los mejores juegos de construcción de mazos',
-  description: 'Deck-building comparado por tensión del mercado, eficiencia, interacción y cuánto cambia cada compra vuestro siguiente turno.',
-  authorId: 'kasia-pl',
-  intro: ['Construir un mazo satisface porque la mejora se puede medir. Una mano débil se convierte en máquina, pero solo si cada compra tiene propósito y las cartas malas se pueden gestionar.', 'He elegido sistemas donde el mazo hace trabajos distintos: combate, colocación, cooperación y supervivencia táctica. La mejor opción depende de qué queréis producir con el rompecabezas de eficiencia.'],
-  picks: [
-    { gameSlug: 'dune-imperium-uprising-397598', blurb: 'Las cartas son acciones y acceso a espacios, así que cada compra cambia dos sistemas. La competencia hace visible la eficiencia enseguida.' },
-    { gameSlug: 'slay-the-spire-the-board-game-338960', blurb: 'Adaptación cooperativa con mejoras cuidadas y combate transparente. El mazo sigue siendo pequeño y cada carta importa.' },
-    { gameSlug: 'clank-catacombs-365717', blurb: 'La mejora impulsa una carrera ruidosa por la mazmorra. La exploración modular añade incertidumbre y el ruido convierte la codicia en riesgo legible.' },
-    { gameSlug: 'aeon-s-end-the-descent-412268', blurb: 'Nunca se baraja: el descarte es planificación. Roles cooperativos y mercado hostil premian coordinar las compras.' },
-  ],
-  sections: [{ heading: '¿Qué hace buenas las decisiones de mercado?', paragraphs: ['Un mercado fuerte ofrece compromisos, no mejoras obvias. Robo, eliminación, tempo y sinergia deben competir por la misma moneda. Si una compra siempre es correcta, el mercado es decorado.', 'Considerad también el manejo: Aeon’s End premia ordenar descartes; Slay the Spire gestiona mejoras; Clank es más rápido; Dune exige leer cartas y tablero.'] }],
-  faq: [{ q: '¿Cuál es más fácil de aprender?', a: 'Clank!: Catacombs, porque envuelve el mazo en una aventura intuitiva.' }, { q: '¿Cuál funciona mejor en solitario?', a: 'Slay the Spire si queréis que el propio mazo sostenga el rompecabezas táctico.' }],
-});
+};
 
 export const bestHorrorBoardGames = bilingual({
   slug: 'best-horror-board-games-that-build-real-tension',
