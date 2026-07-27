@@ -143,6 +143,10 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
             connectorType: data.connectorType || null,
             shipsFrom: data.shipsFrom,
             offersPickup: data.offersPickup,
+            // The seller ticks this to advance, but it was never sent — so the
+            // commission was charged with no stored evidence anyone agreed to
+            // it. The server stamps `commissionAcceptedAt` from this.
+            commissionAccepted: data.commissionAccepted,
           },
         }),
       });
@@ -153,7 +157,10 @@ export default function OnboardingWizard({ session, onComplete }: OnboardingWiza
         return;
       }
 
-      onComplete({ onboardingStep: 'complete', status: 'active' });
+      // Status comes from the server, which does not activate a seller here —
+      // finishing the wizard submits an application, it does not publish one.
+      const result = (await res.json().catch(() => ({}))) as { status?: string };
+      onComplete({ onboardingStep: 'complete', status: result.status ?? 'pending' });
     } catch {
       setError('No se pudo conectar con el servidor.');
     } finally {

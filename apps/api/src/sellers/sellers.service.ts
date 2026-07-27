@@ -46,7 +46,13 @@ export class SellersService {
       data: {
         targetType: 'seller',
         targetId: id,
-        action: status === 'suspended' ? 'seller.suspended' : 'seller.reactivated',
+        // A seller leaving `pending` for the first time is an approval, not a
+        // reactivation. They read the same in the column and mean opposite
+        // things in an audit log — one is "we vetted them", the other is "we
+        // reversed a ban".
+        action: status === 'suspended'
+          ? 'seller.suspended'
+          : seller.status === 'pending' ? 'seller.approved' : 'seller.reactivated',
         actorPrincipalId: actorId ?? null,
         metadata: { from: seller.status, to: status, sellerName: seller.name },
       },
@@ -369,11 +375,41 @@ export class SellersService {
       .slice(0, limit);
   }
 
+  /**
+   * Sellers for the admin console.
+   *
+   * Explicitly selected, not `include: { score }` over the whole row. The row
+   * carries `passwordHash`, `verifyToken` and `connectorConfig`, and all three
+   * were being serialized to the admin client on every page load. `verifyToken`
+   * is a single-use account-verification secret — handing it out is an account
+   * takeover waiting for one logged response or one shared browser.
+   *
+   * `onboardingData` IS included: it is what an admin reviews before approving,
+   * and there is no queue without it.
+   */
   async list(params: { status?: string; limit?: number; offset?: number }) {
     const { status, limit = 50, offset = 0 } = params;
     return this.prisma.seller.findMany({
       where: status ? { status } : {},
-      include: { score: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        email: true,
+        phone: true,
+        country: true,
+        status: true,
+        tier: true,
+        connectorType: true,
+        commissionRate: true,
+        onboardingStep: true,
+        onboardingData: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        score: true,
+        _count: { select: { listings: true, orders: true } },
+      },
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },

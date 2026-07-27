@@ -22,6 +22,39 @@ export type SellerSession = {
   };
 };
 
+/**
+ * Tells a finished-but-unapproved seller where they actually stand.
+ *
+ * Without it the portal is indistinguishable from a live one: the dashboard,
+ * the listings page and the sync tools all work, so a seller reasonably assumes
+ * their prices are on the site. They are not — only `active` sellers are shown
+ * publicly — and the first they would learn of it is wondering why they get no
+ * traffic. Sellers are the scarce side of this marketplace; leaving them to
+ * discover that on their own is how you lose the ones you managed to recruit.
+ */
+function PendingReviewBanner({ status }: { status: string }) {
+  if (status === 'active') return null;
+  const suspended = status === 'suspended' || status === 'churned';
+  return (
+    <div
+      role="status"
+      className={`flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6
+        ${suspended ? 'bg-red-50 text-red-900' : 'bg-amber-50 text-amber-900'}`}
+    >
+      <p className="font-semibold">
+        {suspended
+          ? 'Tu cuenta está suspendida — tus productos no aparecen en Juegospedia.'
+          : 'Tu solicitud está en revisión — tus productos todavía no aparecen en Juegospedia.'}
+      </p>
+      <p className="text-xs opacity-80 sm:text-right">
+        {suspended
+          ? 'Escribinos para revisar tu caso.'
+          : 'Podés cargar y sincronizar tu catálogo mientras tanto; se publica en cuanto aprobemos la tienda.'}
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState<SellerSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,7 +165,10 @@ export default function App() {
           onComplete={(updated) => updateSession(updated)}
         />
       ) : (
-        <Dashboard session={session} onLogout={handleLogout} onSessionUpdate={updateSession} />
+        <>
+          <PendingReviewBanner status={session.seller.status} />
+          <Dashboard session={session} onLogout={handleLogout} onSessionUpdate={updateSession} />
+        </>
       )}
     </div>
   );

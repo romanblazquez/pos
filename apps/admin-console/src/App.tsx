@@ -267,10 +267,41 @@ function SellersView() {
                   <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-3 text-slate-500 capitalize">{s.connectorType ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{(Number(s.commissionRate) * 100).toFixed(1)}%</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{s.onboardingStep ?? 'complete'}</td>
+                  {/* An approval decision needs something to decide on. Where
+                      the seller ships from and what they connected is the
+                      minimum; the raw step alone told the reviewer nothing. */}
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {s.onboardingStep === 'complete' && s.onboardingData ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span>Envía desde <strong className="font-medium text-slate-700">{s.onboardingData.shipsFrom || '—'}</strong></span>
+                        <span className="text-slate-400">
+                          {s.onboardingData.storeType === 'connect' ? 'Tienda existente' : 'Tienda nueva'}
+                          {s.onboardingData.offersPickup ? ' · retiro en local' : ''}
+                          {s._count ? ` · ${s._count.listings} listados` : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">{s.onboardingStep ?? 'complete'}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      {s.status === 'suspended' ? (
+                      {/* A seller who finished the wizard sits at `pending` until
+                          someone approves them — nothing they do publishes them.
+                          Without this button that queue has no exit. */}
+                      {s.status === 'pending' && s.onboardingStep === 'complete' ? (
+                        <button
+                          type="button"
+                          disabled={pendingId === s.id}
+                          onClick={() => {
+                            if (!window.confirm(`Aprobar a "${s.name}"? Sus precios pasan a mostrarse públicamente en Juegospedia.`)) return;
+                            act.mutate({ id: s.id, action: 'reactivate' });
+                          }}
+                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                        >
+                          Aprobar
+                        </button>
+                      ) : s.status === 'suspended' ? (
                         <button
                           type="button"
                           disabled={pendingId === s.id}
@@ -1680,6 +1711,15 @@ interface Seller {
   id: string; name: string; email: string; status: string;
   connectorType: string | null; commissionRate: number;
   onboardingStep: string | null;
+  /** What the seller submitted in the wizard — the thing being reviewed. */
+  onboardingData: {
+    storeType?: string;
+    shipsFrom?: string;
+    offersPickup?: boolean;
+    commissionAcceptedAt?: string;
+    submittedAt?: string;
+  } | null;
+  _count?: { listings: number; orders: number };
 }
 
 interface MktProduct {

@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '@retail-os/db-postgres';
 import { publicSeller, publicCustomer, type SessionIdentity } from './session.service.js';
@@ -21,6 +21,36 @@ export interface RegisterCustomerDto {
 export interface LoginDto {
   email: string;
   password: string;
+}
+
+/**
+ * The wizard's steps, in order. `complete` means "submitted for review", not
+ * "live" — approval is an admin action (`POST /sellers/:id/reactivate`).
+ */
+export const ONBOARDING_STEPS = [
+  'store-type',
+  'connector',
+  'credentials',
+  'shipping',
+  'terms',
+  'complete',
+] as const;
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+
+/**
+ * What a seller must actually have supplied before they can be reviewed.
+ *
+ * Checked on the server because the wizard's own gating is client-side, and the
+ * endpoint is reachable without it. Kept deliberately small — this is the
+ * minimum needed to judge an application, not a full merchant profile.
+ */
+function missingOnboardingFields(data: Record<string, unknown>): string[] {
+  const missing: string[] = [];
+  const storeType = data.storeType;
+  if (storeType !== 'connect' && storeType !== 'create') missing.push('storeType');
+  if (typeof data.shipsFrom !== 'string' || !data.shipsFrom.trim()) missing.push('shipsFrom');
+  if (data.commissionAccepted !== true) missing.push('commissionAccepted');
+  return missing;
 }
 
 function slugify(name: string): string {
@@ -154,14 +184,34 @@ export class AuthService {
     return customer;
   }
 
+  /**
+   * Record progress through the seller onboarding wizard.
+   *
+   * Finishing the wizard does NOT make a seller public. It used to: reaching
+   * `complete` set `status: 'active'`, and `active` is the one status whose
+   * offers are shown (see `SELLER_VISIBLE_STATUS`). So anyone who could sign in
+   * with Google — which auto-provisions a seller — could put their own prices
+   * on a price-comparison site with nobody having looked at them. The comment
+   * on `SELLER_VISIBLE_STATUS` says "`pending` sellers have not been reviewed";
+   * this makes that true. A finished seller stays `pending` and waits for an
+   * admin to approve them.
+   *
+   * The step is also no longer taken on trust. It arrived straight off the
+   * request body, so `{"step":"complete"}` by curl skipped the wizard entirely —
+   * no store, no shipping origin, no accepted commission — and went live.
+   */
   async updateOnboardingStep(
     sellerId: string,
     step: string,
     data: Record<string, unknown>,
   ) {
+    if (!ONBOARDING_STEPS.includes(step as OnboardingStep)) {
+      throw new BadRequestException(`Unknown onboarding step "${step}"`);
+    }
+
     const seller = await this.prisma.seller.findUniqueOrThrow({
       where: { id: sellerId },
-      select: { onboardingData: true },
+      select: { onboardingData: true, status: true },
     });
 
     const merged = {
@@ -169,17 +219,35 @@ export class AuthService {
       ...data,
     };
 
+    if (step === 'complete') {
+      const missing = missingOnboardingFields(merged);
+      if (missing.length) {
+        throw new BadRequestException(
+          `Onboarding is incomplete: ${missing.join(', ')}`,
+        );
+      }
+      // Stamped server-side, from the request that actually asserted it. The
+      // commission is charged against this, so "the seller accepted" needs to be
+      // a record we hold rather than a checkbox the client says it rendered.
+      merged.commissionAcceptedAt ??= new Date().toISOString();
+      merged.submittedAt ??= new Date().toISOString();
+    }
+
     const updated = await this.prisma.seller.update({
       where: { id: sellerId },
       data: {
         onboardingStep: step,
         onboardingData: merged as Prisma.InputJsonValue,
-        // Activate seller when they reach the final step
-        ...(step === 'complete' ? { status: 'active' } : {}),
       },
     });
 
-    return { step: updated.onboardingStep, status: updated.status };
+    return {
+      step: updated.onboardingStep,
+      status: updated.status,
+      // The portal needs to tell the seller why their listings are not live yet,
+      // and "you are done" is the wrong thing to say to someone awaiting review.
+      awaitingReview: updated.onboardingStep === 'complete' && updated.status === 'pending',
+    };
   }
 
   private ensurePrincipal(email: string, displayName?: string | null) {
