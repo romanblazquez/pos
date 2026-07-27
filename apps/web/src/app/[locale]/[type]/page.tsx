@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCatalogFacets, getCategories, getMechanics, listProducts } from '@/lib/api';
-import { buildMetadata } from '@/lib/seo';
+import { buildMetadata, socialImageUrl } from '@/lib/seo';
 import { breadcrumbLd, itemListLd, blogLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
 import { LocaleAlternates } from '@/components/LocaleAlternates';
@@ -17,6 +17,7 @@ import { Pager } from '@/components/Pager';
 import { SearchFilters, categoryFromParam, filterActiveCount, filterSheetLabels, type FilterState } from '@/components/SearchFilters';
 import { FilterSheet, FilterSheetPanel, FilterSheetTrigger } from '@retail-os/ui-react';
 import {
+  SEGMENTS,
   entityPath,
   homePath,
   isLocale,
@@ -141,7 +142,9 @@ export async function generateMetadata({
         locale === 'es'
           ? 'Guías, comparativas y listas de los mejores juegos de mesa, con precios comparados entre tiendas.'
           : 'Guides, comparisons and best-of lists for board games, with prices compared across stores.',
-      images: [GUIDE_OG_DEFAULT],
+      // The hub shares under its own segment slug, so /es-mx/guias previews as a
+      // branded card carrying the guide count rather than the bare banner file.
+      images: [socialImageUrl('guide', SEGMENTS.guides[locale], locale)],
       alternates: { es: listingPath('guides', 'es', market), en: listingPath('guides', 'en', market) },
     });
   }

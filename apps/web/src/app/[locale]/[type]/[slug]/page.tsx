@@ -171,9 +171,10 @@ export async function generateMetadata({
   if (kind === 'guides') {
     const guide = await getGuide(params.slug, locale);
     if (!guide) return {};
-    // Social card = the guide's curated editorial banner; fall back to the first
-    // pick's product photo only if a guide somehow has no art.
-    const cover = guide.ogImage ?? (await guideCover(guide, locale));
+    // Social card = the generated 1200×630 card, which composites the guide's
+    // editorial banner behind the title, pick count and byline. Sharing the raw
+    // banner file instead — which is what this did — previewed every guide as an
+    // unbranded stock photo carrying none of the words that earn the click.
     const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
     return buildMetadata({
       locale,
@@ -183,7 +184,7 @@ export async function generateMetadata({
       description: guide.description,
       alternates: guideAlternates(guide),
       type: 'article',
-      images: cover ? [cover] : undefined,
+      images: [socialImageUrl('guide', guide.slug, locale)],
       article: {
         authors: author ? [author.name] : undefined,
         publishedTime: guide.publishedAt,

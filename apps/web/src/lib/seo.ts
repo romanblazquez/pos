@@ -51,7 +51,7 @@ const DEFAULT_SOCIAL_ALT = 'Juegospedia — El mejor juego al mejor precio';
 
 /** Branded 1200×630 card rendered by our first-party OG endpoint. */
 export function socialImageUrl(
-  kind: 'product' | 'category',
+  kind: 'product' | 'category' | 'guide',
   slug: string,
   locale: Locale,
 ): string {

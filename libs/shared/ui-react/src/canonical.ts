@@ -76,7 +76,7 @@ export function canonicalCategoryUrl(
  * it. A card image behind a query string simply never loads, silently.
  */
 export function socialCardUrl(
-  kind: 'product' | 'category',
+  kind: 'product' | 'category' | 'guide',
   locale: SeoLocale,
   slug: string,
 ): string {
