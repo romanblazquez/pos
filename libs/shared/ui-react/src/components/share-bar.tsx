@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export interface ShareBarProps {
   /**
@@ -54,6 +54,7 @@ const COPY = {
  */
 export function ShareBar({ url, title, text, image, locale, className }: ShareBarProps) {
   const [copied, setCopied] = useState(false);
+  const warmed = useRef(false);
   const t = COPY[locale];
 
   const enc = encodeURIComponent;
@@ -108,6 +109,26 @@ export function ShareBar({ url, title, text, image, locale, className }: ShareBa
     },
   ];
 
+  /**
+   * Build the card before the crawler asks for it.
+   *
+   * Cards are rendered on demand and the first render costs seconds on this
+   * hardware, so the crawler that fetches a freshly shared link is racing a
+   * timeout it often loses — and the shopper sees their own link post without a
+   * picture. Touching the URL once on intent moves that cost into the moment
+   * the shopper reaches for the button, where nothing is waiting on it.
+   *
+   * On intent rather than on mount: a visitor who never shares should not pay
+   * to warm a card, and most visitors never share.
+   */
+  function warmCard() {
+    if (!image || warmed.current) return;
+    warmed.current = true;
+    // Fire-and-forget. A failure here costs nothing that was not already the
+    // status quo, so it is deliberately unhandled beyond swallowing the reject.
+    fetch(image, { mode: 'no-cors', cache: 'force-cache' }).catch(() => undefined);
+  }
+
   async function nativeOrCopy() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -127,7 +148,12 @@ export function ShareBar({ url, title, text, image, locale, className }: ShareBa
   }
 
   return (
-    <div className={className ?? 'share-bar'}>
+    <div
+      className={className ?? 'share-bar'}
+      onPointerEnter={warmCard}
+      onFocusCapture={warmCard}
+      onTouchStart={warmCard}
+    >
       <span className="share-bar-label">{t.label}</span>
       {targets.map((target) => (
         <a
