@@ -259,6 +259,7 @@ export default function ProductPage({
               url={canonicalUrl}
               title={p.name}
               text={description.slice(0, 160)}
+              image={socialImage}
               locale={shareLocale}
             />
           </ProductGallery>

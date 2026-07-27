@@ -568,7 +568,13 @@ async function renderGuide(guide: Guide, locale: Locale, homeName: string, marke
           </p>
         )}
         {author && <p className="muted" style={{ fontSize: 13.5, fontStyle: 'italic', margin: '2px 0 8px' }}>{author.bio}</p>}
-        <ShareBar url={absoluteUrl(path)} title={guide.title} locale={locale} />
+        <ShareBar
+          url={absoluteUrl(path)}
+          title={guide.title}
+          text={guide.description}
+          image={socialImageUrl('guide', guide.slug, locale)}
+          locale={locale}
+        />
         {guide.intro.map((p, i) => <p key={`intro-${i}`}>{p}</p>)}
 
         <ol className="guide-picks" style={{ listStyle: 'none', padding: 0, margin: '2rem 0', display: 'grid', gap: '1rem' }}>
@@ -800,6 +806,7 @@ async function renderProduct(
               url={absoluteUrl(path)}
               title={product.name}
               text={productDescription(product, locale)}
+              image={socialImageUrl('product', product.slug, locale)}
               locale={locale}
             />
           </ProductGallery>

@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import type { ReactNode } from 'react';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { getProduct, listProducts } from '@/lib/api';
@@ -36,12 +37,80 @@ function isCardKind(value: string): value is CardKind {
   return value === 'product' || value === 'category' || value === 'guide';
 }
 
-async function asJpeg(card: ImageResponse): Promise<Response> {
+/**
+ * How long a rendered card is reused from disk.
+ *
+ * Matched to the `max-age` the CDN is told, so origin and edge expire together
+ * rather than the origin quietly serving something older than the header claims.
+ * A card carries a price, which is why this is hours and not forever.
+ */
+const DISK_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * On-disk card cache.
+ *
+ * Nothing cached these at the origin. `export const revalidate` does not apply
+ * to a dynamic route handler, so every crawler fetch re-queried the API,
+ * re-rendered through Satori and re-encoded the JPEG: measured on this box, 2.5s
+ * for a category and 1.4-1.9s for a product, *every time*.
+ *
+ * That is the reason shared links show up without an image. Cloudflare caches
+ * the result for six hours, but only after one fetch succeeds — and the fetch
+ * that has to succeed first is the one the person sharing is waiting on, from a
+ * crawler that gives up in a couple of seconds. Every newly shared URL was a
+ * fresh race against that timeout.
+ *
+ * Cheap by design: the file IS the cache entry, mtime IS the expiry, and a miss
+ * costs one failed stat.
+ */
+const CARD_DIR = process.env.OG_CACHE_DIR?.trim() || join(tmpdir(), 'juegospedia-og');
+
+function cardPath(kind: CardKind, locale: Locale, slug: string): string {
+  // `kind` and `locale` are union-checked and `slug` has already passed
+  // `cleanSlug`'s [a-z0-9-] test, so this cannot escape the directory.
+  return join(CARD_DIR, `${kind}--${locale}--${slug}.jpg`);
+}
+
+async function cachedCard(file: string): Promise<Buffer | null> {
+  try {
+    const info = await stat(file);
+    if (Date.now() - info.mtimeMs > DISK_TTL_MS) return null;
+    return await readFile(file);
+  } catch {
+    return null;
+  }
+}
+
+async function writeCard(file: string, jpeg: Buffer): Promise<void> {
+  try {
+    await mkdir(CARD_DIR, { recursive: true });
+    // Write-then-rename: a crawler reading a half-written file gets a truncated
+    // image, and it will cache that result rather than come back.
+    const temporary = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}`;
+    await writeFile(temporary, jpeg);
+    await rename(temporary, file);
+  } catch {
+    // A read-only or full disk degrades to the old behaviour — slow, not broken.
+  }
+}
+
+function cardResponse(jpeg: Buffer, hit: boolean): Response {
+  return new Response(new Uint8Array(jpeg), {
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': CARD_CACHE,
+      // Lets a slow card be told apart from a slow network when one of these
+      // does eventually fail to render somewhere.
+      'X-Card-Cache': hit ? 'hit' : 'miss',
+    },
+  });
+}
+
+async function asJpeg(card: ImageResponse, file: string): Promise<Response> {
   const png = Buffer.from(await card.arrayBuffer());
   const jpeg = await sharp(png).jpeg({ quality: 84, mozjpeg: true }).toBuffer();
-  return new Response(new Uint8Array(jpeg), {
-    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': CARD_CACHE },
-  });
+  await writeCard(file, jpeg);
+  return cardResponse(jpeg, false);
 }
 
 
@@ -86,12 +155,18 @@ export async function GET(
   }
   const kind: CardKind = params.kind;
 
-  if (kind === 'product') return productCard(slug, locale);
-  if (kind === 'guide') return guideCard(slug, locale);
-  return categoryCard(slug, locale);
+  // Checked before anything else: a hit skips the API call, the Satori render
+  // and the JPEG encode, which is the whole 1.4-2.5s.
+  const file = cardPath(kind, locale, slug);
+  const cached = await cachedCard(file);
+  if (cached) return cardResponse(cached, true);
+
+  if (kind === 'product') return productCard(slug, locale, file);
+  if (kind === 'guide') return guideCard(slug, locale, file);
+  return categoryCard(slug, locale, file);
 }
 
-async function productCard(slug: string, locale: Locale) {
+async function productCard(slug: string, locale: Locale, file: string) {
   const product = await getProduct(slug, locale);
   if (!product) return new Response('Product not found', { status: 404 });
   const available = product.listings.filter((listing) =>
@@ -129,10 +204,10 @@ async function productCard(slug: string, locale: Locale) {
       </div>
     </SocialFrame>,
     SIZE,
-  ));
+  ), file);
 }
 
-async function categoryCard(slug: string, locale: Locale) {
+async function categoryCard(slug: string, locale: Locale, file: string) {
   const theme = getThemeBySlug(locale, slug);
   const key = theme?.key ?? slug;
   const identity = theme ? identityFor(theme) : CATEGORY_IDENTITY[key];
@@ -160,13 +235,13 @@ async function categoryCard(slug: string, locale: Locale) {
       meta={`${total.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')} ${plural(total, locale, ['juego', 'juegos'], ['game', 'games'])}`}
     />,
     SIZE,
-  ));
+  ), file);
 }
 
-async function guideCard(slug: string, locale: Locale) {
+async function guideCard(slug: string, locale: Locale, file: string) {
   // The hub itself shares under its own segment slug (/og/guide/es/guias.jpg),
   // which no individual guide can collide with — guide slugs are full headlines.
-  if (slug === SEGMENTS.guides[locale]) return guideHubCard(locale);
+  if (slug === SEGMENTS.guides[locale]) return guideHubCard(locale, file);
   const guide = await getGuide(slug, locale);
   if (!guide) return new Response('Guide not found', { status: 404 });
   const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
@@ -194,10 +269,10 @@ async function guideCard(slug: string, locale: Locale) {
       meta={meta}
     />,
     SIZE,
-  ));
+  ), file);
 }
 
-async function guideHubCard(locale: Locale) {
+async function guideHubCard(locale: Locale, file: string) {
   const [guides, art, mark] = await Promise.all([
     listGuides(locale),
     backdrop(GUIDE_ART_FALLBACK),
@@ -217,7 +292,7 @@ async function guideHubCard(locale: Locale) {
       meta={`${guides.length} ${plural(guides.length, locale, ['guía', 'guías'], ['guide', 'guides'])}`}
     />,
     SIZE,
-  ));
+  ), file);
 }
 
 /**
