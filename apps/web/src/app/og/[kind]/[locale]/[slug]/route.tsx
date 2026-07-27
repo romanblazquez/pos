@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import type { ReactNode } from 'react';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import sharp from 'sharp';
 import { getProduct, listProducts } from '@/lib/api';
 import { getGuide, listGuides } from '@/lib/guides';
@@ -74,7 +76,7 @@ function money(minor: number, currency: string, locale: Locale) {
  * matches is fetchable, and caches better besides.
  */
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { kind: string; locale: string; slug: string } },
 ) {
   const locale: Locale = isLocale(params.locale) ? (params.locale as Locale) : 'es';
@@ -85,8 +87,8 @@ export async function GET(
   const kind: CardKind = params.kind;
 
   if (kind === 'product') return productCard(slug, locale);
-  if (kind === 'guide') return guideCard(slug, locale, request);
-  return categoryCard(slug, locale, request);
+  if (kind === 'guide') return guideCard(slug, locale);
+  return categoryCard(slug, locale);
 }
 
 async function productCard(slug: string, locale: Locale) {
@@ -130,7 +132,7 @@ async function productCard(slug: string, locale: Locale) {
   ));
 }
 
-async function categoryCard(slug: string, locale: Locale, request: Request) {
+async function categoryCard(slug: string, locale: Locale) {
   const theme = getThemeBySlug(locale, slug);
   const key = theme?.key ?? slug;
   const identity = theme ? identityFor(theme) : CATEGORY_IDENTITY[key];
@@ -140,7 +142,7 @@ async function categoryCard(slug: string, locale: Locale, request: Request) {
   const description = theme?.description[locale]
     ?? (locale === 'es' ? 'Descubre y compara juegos de mesa de esta categoría.' : 'Discover and compare board games in this category.');
   const [art, mark] = await Promise.all([
-    backdrop(shelfArt(identity, key), request),
+    backdrop(shelfArt(identity, key)),
     brandMark(),
   ]);
   return asJpeg(new ImageResponse(
@@ -161,16 +163,16 @@ async function categoryCard(slug: string, locale: Locale, request: Request) {
   ));
 }
 
-async function guideCard(slug: string, locale: Locale, request: Request) {
+async function guideCard(slug: string, locale: Locale) {
   // The hub itself shares under its own segment slug (/og/guide/es/guias.jpg),
   // which no individual guide can collide with — guide slugs are full headlines.
-  if (slug === SEGMENTS.guides[locale]) return guideHubCard(locale, request);
+  if (slug === SEGMENTS.guides[locale]) return guideHubCard(locale);
   const guide = await getGuide(slug, locale);
   if (!guide) return new Response('Guide not found', { status: 404 });
   const author = guide.author ?? (guide.authorId ? AUTHORS_BY_ID[guide.authorId] : undefined);
   const picks = guide.picks?.length ?? 0;
   const [art, mark] = await Promise.all([
-    backdrop(guide.ogImage ?? GUIDE_ART_FALLBACK, request),
+    backdrop(guide.ogImage ?? GUIDE_ART_FALLBACK),
     brandMark(),
   ]);
   // Guides always render dark. Their art is photographic and full-frame, unlike
@@ -195,10 +197,10 @@ async function guideCard(slug: string, locale: Locale, request: Request) {
   ));
 }
 
-async function guideHubCard(locale: Locale, request: Request) {
+async function guideHubCard(locale: Locale) {
   const [guides, art, mark] = await Promise.all([
     listGuides(locale),
-    backdrop(GUIDE_ART_FALLBACK, request),
+    backdrop(GUIDE_ART_FALLBACK),
     brandMark(),
   ]);
   return asJpeg(new ImageResponse(
@@ -271,19 +273,62 @@ function brandMark(): Promise<string | null> {
 }
 
 /**
+ * Where `public/` lands, depending on how the app was started.
+ *
+ * `next dev`/`next start` run with the app directory as cwd; the standalone
+ * server the container ships runs from the repo root with `apps/web/server.js`.
+ * The first root that holds the file wins.
+ */
+const PUBLIC_ROOTS = [
+  join(process.cwd(), 'public'),
+  join(process.cwd(), 'apps/web/public'),
+];
+
+async function readPublicAsset(assetPath: string): Promise<Buffer | null> {
+  const relative = assetPath.replace(/^\/+/, '');
+  // These paths come from our own identity tables, never from the request — but
+  // this function reads the filesystem, so it refuses traversal regardless.
+  if (relative.includes('..')) return null;
+  for (const root of PUBLIC_ROOTS) {
+    try {
+      return await readFile(join(root, relative));
+    } catch {
+      // Try the next root; a genuinely missing asset falls through to null.
+    }
+  }
+  return null;
+}
+
+/**
  * Full-bleed card background, cover-cropped to the card.
  *
- * Category art used to be a 640px panel pinned to the right half, and guides had
- * no generated card at all — they shared the raw banner file, so every guide
- * link previewed as an unbranded stock photo with no title on it. Both now sit
- * behind the whole 1200×630 frame, which is what makes a shared link look like
- * a page from this site rather than an image someone found.
+ * Read off disk rather than fetched over HTTP. The first version fetched
+ * `new URL(path, request.url)` with `next: { revalidate }`, which works in dev
+ * and silently fails in production: Next's data cache round-trips the body as
+ * text, the bytes come back corrupt, sharp throws, and the catch below turns
+ * that into a card with no artwork at all. The container could reach the asset
+ * fine — the request was never the problem.
+ *
+ * These are our own files sitting on the same disk, so there is no reason to
+ * leave the process for them. It also removes ~1s from a cold card.
  */
-async function backdrop(path: string, request: Request): Promise<string | null> {
+const backdropCache = new Map<string, string | null>();
+
+async function backdrop(path: string): Promise<string | null> {
+  // The asset set is fixed and small (one hero per shelf, one banner per guide),
+  // so every distinct backdrop is decoded and re-encoded at most once per process.
+  const cached = backdropCache.get(path);
+  if (cached !== undefined) return cached;
+  const rendered = await renderBackdrop(path);
+  backdropCache.set(path, rendered);
+  return rendered;
+}
+
+async function renderBackdrop(path: string): Promise<string | null> {
   try {
-    const response = await fetch(new URL(path, request.url), { next: { revalidate: 86_400 } });
-    if (!response.ok) return null;
-    const jpeg = await sharp(Buffer.from(await response.arrayBuffer()))
+    const source = await readPublicAsset(path);
+    if (!source) return null;
+    const jpeg = await sharp(source)
       .resize(SIZE.width, SIZE.height, { fit: 'cover', position: 'attention' })
       .jpeg({ quality: 82 })
       .toBuffer();
