@@ -5,9 +5,10 @@ import { SellerMappingService } from './seller-mapping.service.js';
 import { LoyaltyModule } from '../loyalty/loyalty.module.js';
 import { AiModule } from '../ai/ai.module.js';
 import { MktCatalogModule } from '../mkt-catalog/mkt-catalog.module.js';
+import { CheckoutModule } from '../checkout/checkout.module.js';
 
 @Module({
-  imports: [LoyaltyModule, AiModule, MktCatalogModule],
+  imports: [LoyaltyModule, AiModule, MktCatalogModule, CheckoutModule],
   controllers: [SellersController],
   providers: [SellersService, SellerMappingService],
   exports: [SellersService, SellerMappingService],

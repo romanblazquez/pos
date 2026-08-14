@@ -48,6 +48,7 @@ interface Order {
   totalMinorUnits: number;
   commissionMinorUnits: number;
   paymentProvider: string | null;
+  paymentId: string | null;
   paidOutAt: string | null;
   createdAt: string;
   lines: OrderLine[];
@@ -239,7 +240,11 @@ function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
 
   const latestShipment = order.events.find((e) => e.type === 'shipped');
   const latestCancellation = order.events.find((e) => e.type === 'cancelled_by_seller');
+  const latestRefund = order.events.find((e) => e.type === 'refunded');
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
+  // Mirrors the API's rule: a gateway-captured payment is refunded on cancel,
+  // and the order ends as `refunded` rather than `cancelled`.
+  const willRefund = Boolean(order.paymentId && order.paymentProvider && order.paymentProvider !== 'wallet_credits');
 
   async function updateStatus(body: { status: 'shipped' | 'delivered' | 'cancelled'; trackingCarrier?: string; trackingNumber?: string; reason?: string }) {
     setBusy(true);
@@ -380,6 +385,12 @@ function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
           {latestCancellation?.payload?.reason && (
             <p className="text-xs text-slate-500">✕ Cancelado: {latestCancellation.payload.reason}</p>
           )}
+          {latestRefund && (
+            <p className="text-xs text-slate-500">
+              ↩ Reembolsado al comprador
+              {latestRefund.payload?.reason ? ` · ${latestRefund.payload.reason}` : ''}
+            </p>
+          )}
 
           {/* Fulfillment actions */}
           {nextStatuses.length > 0 && (
@@ -412,7 +423,7 @@ function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
                       disabled={busy}
                       className="min-h-9 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
                     >
-                      Cancelar pedido
+                      {willRefund ? 'Cancelar y reembolsar' : 'Cancelar pedido'}
                     </button>
                   )}
                 </div>
@@ -459,6 +470,12 @@ function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
 
               {cancelFormOpen && (
                 <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+                  {willRefund && (
+                    <p className="text-xs text-amber-700">
+                      Este pedido ya fue cobrado. Al cancelarlo se reembolsa el pago completo al comprador
+                      y el pedido queda como <strong>reembolsado</strong>. No se puede deshacer.
+                    </p>
+                  )}
                   <input
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
@@ -471,7 +488,7 @@ function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
                       disabled={busy}
                       className="min-h-9 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
                     >
-                      {busy ? 'Guardando…' : 'Confirmar cancelación'}
+                      {busy ? 'Procesando…' : willRefund ? 'Confirmar y reembolsar' : 'Confirmar cancelación'}
                     </button>
                     <button
                       onClick={() => setCancelFormOpen(false)}

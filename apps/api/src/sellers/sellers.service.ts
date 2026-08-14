@@ -2,6 +2,7 @@ import { Injectable, Inject, ConflictException, NotFoundException } from '@nestj
 import { PrismaService } from '@retail-os/db-postgres';
 import { ProductIndexerService } from '../search/product-indexer.service.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
+import { CheckoutService } from '../checkout/checkout.service.js';
 import type { CreateSellerDto, UpdateOrderStatusDto } from './sellers.dto.js';
 
 function slugify(name: string): string {
@@ -19,6 +20,7 @@ export class SellersService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
     @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
+    @Inject(CheckoutService) private readonly checkout: CheckoutService,
   ) {}
 
   /**
@@ -356,16 +358,17 @@ export class SellersService {
   }
 
   /**
-   * Seller-initiated order status transition (fulfillment). Only the moves a
-   * seller can make honestly without a payment integration are allowed:
-   * confirm shipment, confirm delivery, or cancel a not-yet-paid order.
+   * Seller-initiated order status transition (fulfillment): confirm shipment,
+   * confirm delivery, or cancel.
    *
-   * Cancelling an order already paid through a real payment provider needs an
-   * actual refund through that provider, not just a status flip — that
-   * integration doesn't exist yet, so it's blocked here with a clear reason
-   * rather than silently leaving a buyer paid for a cancelled order.
-   * Wallet-credits-only orders ARE refundable today (loyalty.refundCredits),
-   * so those go through.
+   * Cancelling is never just a status flip when money moved. An order paid
+   * through a real payment provider is refunded through that provider first
+   * (checkout.refundOrder, which also returns spent credits and reverses
+   * earned cashback) and ends as `refunded`, not `cancelled` — the buyer got
+   * their money back, and the status should say so. A refund failure
+   * propagates: the order stays as it was rather than being marked cancelled
+   * while the buyer is still charged. Wallet-credit and unpaid orders cancel
+   * directly.
    */
   async updateOrderStatus(sellerId: string, orderId: string, input: UpdateOrderStatusDto) {
     const order = await this.prisma.marketplaceOrder.findFirst({ where: { id: orderId, sellerId } });
@@ -382,10 +385,16 @@ export class SellersService {
     }
 
     if (input.status === 'cancelled') {
-      if (order.status === 'confirmed' && order.paymentProvider && order.paymentProvider !== 'wallet_credits') {
-        throw new ConflictException(
-          'This order was paid through a real payment provider and cannot be cancelled here — it needs an actual refund, not just a status change. Refunding is not yet supported from the seller portal.',
-        );
+      // Gateway-paid: refund through the provider. refundOrder settles the
+      // credits and cashback too and writes the final `refunded` status, so
+      // this returns its result directly rather than falling through to the
+      // plain status update below.
+      if (order.paymentId && order.paymentProvider && order.paymentProvider !== 'wallet_credits') {
+        await this.checkout.refundOrder(order.id, input.reason);
+        return this.prisma.marketplaceOrder.findUniqueOrThrow({
+          where: { id: order.id },
+          include: { events: { orderBy: { createdAt: 'desc' }, take: 5 } },
+        });
       }
       if (order.customerId && (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0)) {
         await this.loyalty.refundCredits({

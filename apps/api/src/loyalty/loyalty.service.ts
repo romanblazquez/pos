@@ -324,6 +324,83 @@ export class LoyaltyService {
     });
   }
 
+  /**
+   * Reverse cashback awarded on an order that was later refunded — the exact
+   * inverse of awardCashback, and the reason a refund isn't just a status flip.
+   * Without it, refunding a confirmed order hands the buyer their money back
+   * AND lets them keep the credits that purchase earned: free money, repeatable.
+   *
+   * Clamped at the balance actually available, in both pots, because the buyer
+   * may already have spent some of it. Credits are not a debt we can chase, so
+   * a partially-spent clawback recovers what is there and records the real
+   * amount taken rather than driving a wallet negative. The returned figures
+   * are what was actually recovered, not what was owed.
+   */
+  async clawbackCashback(opts: {
+    customerId: string;
+    sellerId: string;
+    orderId: string;
+    platformCashbackMinor: number;
+    storeCashbackMinor: number;
+  }): Promise<{ platformClawedBackMinor: number; storeClawedBackMinor: number }> {
+    if (opts.platformCashbackMinor === 0 && opts.storeCashbackMinor === 0) {
+      return { platformClawedBackMinor: 0, storeClawedBackMinor: 0 };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.customerWallet.findUnique({ where: { customerId: opts.customerId } });
+      if (!wallet) return { platformClawedBackMinor: 0, storeClawedBackMinor: 0 };
+
+      let platformClawedBackMinor = 0;
+      let storeClawedBackMinor = 0;
+
+      if (opts.platformCashbackMinor > 0) {
+        platformClawedBackMinor = Math.min(opts.platformCashbackMinor, Math.max(0, wallet.platformCreditsMinor));
+        if (platformClawedBackMinor > 0) {
+          await tx.customerWallet.update({
+            where: { id: wallet.id },
+            data: { platformCreditsMinor: { decrement: platformClawedBackMinor } },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              type: 'redeem_platform',
+              amountMinor: -platformClawedBackMinor,
+              sellerId: opts.sellerId,
+              orderId: opts.orderId,
+              description: `Reversión de cashback — orden #${opts.orderId.slice(-8)} reembolsada`,
+            },
+          });
+        }
+      }
+
+      if (opts.storeCashbackMinor > 0) {
+        const credit = await tx.storeCredit.findUnique({
+          where: { walletId_sellerId: { walletId: wallet.id, sellerId: opts.sellerId } },
+        });
+        storeClawedBackMinor = Math.min(opts.storeCashbackMinor, Math.max(0, credit?.balanceMinor ?? 0));
+        if (storeClawedBackMinor > 0) {
+          await tx.storeCredit.update({
+            where: { walletId_sellerId: { walletId: wallet.id, sellerId: opts.sellerId } },
+            data: { balanceMinor: { decrement: storeClawedBackMinor } },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              type: 'redeem_store',
+              amountMinor: -storeClawedBackMinor,
+              sellerId: opts.sellerId,
+              orderId: opts.orderId,
+              description: `Reversión de crédito de tienda — orden #${opts.orderId.slice(-8)} reembolsada`,
+            },
+          });
+        }
+      }
+
+      return { platformClawedBackMinor, storeClawedBackMinor };
+    });
+  }
+
   async getWalletTransactions(customerId: string, limit = 20) {
     const wallet = await this.prisma.customerWallet.findUnique({ where: { customerId } });
     if (!wallet) return [];

@@ -581,6 +581,110 @@ export class CheckoutService {
     return res.json() as Promise<{ id: string; init_point: string; sandbox_init_point?: string }>;
   }
 
+  /**
+   * Refund an order's payment through MercadoPago and settle every balance it
+   * moved. This is what the seller portal's "cancel a paid order" needs: a
+   * status flip alone would leave the buyer charged for something they will
+   * never receive.
+   *
+   * The refund must be issued against the account that COLLECTED the money. A
+   * connected seller's payment was taken with their own OAuth token (that is
+   * what makes MP split it); refunding it with the platform token would 404,
+   * because the payment does not exist under the platform's account. Falls
+   * back to the platform token only for sellers who never connected, which is
+   * exactly the case where the platform did collect.
+   *
+   * Three balances settle here, and all three matter:
+   *  - the gateway payment goes back to the buyer (MP);
+   *  - wallet credits they spent on the order are returned (refundCredits);
+   *  - cashback the order earned is reversed (clawbackCashback) — otherwise a
+   *    buy-then-refund loop mints credits out of nothing.
+   */
+  async refundOrder(orderId: string, reason?: string): Promise<{
+    status: string;
+    refundId: string | null;
+    amountMinor: number;
+  }> {
+    const order = await this.prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: orderId } });
+
+    if (order.status === 'refunded') {
+      return { status: 'refunded', refundId: null, amountMinor: 0 };
+    }
+    if (!order.paymentId) {
+      throw new BadRequestException('This order has no captured payment to refund');
+    }
+
+    let token: string | null = null;
+    try {
+      token = await this.mpOAuth.getSellerAccessToken(order.sellerId);
+    } catch {
+      token = this.mpToken || null;
+    }
+    if (!token) {
+      throw new BadRequestException('No MercadoPago credentials available to issue this refund');
+    }
+
+    const res = await fetch(`${MP_BASE}/v1/payments/${order.paymentId}/refunds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      // No body = full refund of the captured amount, which is what a cancelled
+      // order always is. Partial refunds would need their own reconciliation of
+      // commission and cashback and are deliberately not exposed here.
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new BadRequestException(`MercadoPago refund failed: ${detail}`);
+    }
+
+    const refund = (await res.json()) as { id?: number; amount?: number };
+
+    // Return the credits the buyer spent, then take back what the purchase earned.
+    if (order.customerId && (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0)) {
+      await this.loyalty.refundCredits({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId: order.id,
+        platformCreditsApplied: order.platformCreditsApplied,
+        storeCreditsApplied: order.storeCreditsApplied,
+      });
+    }
+    let clawback = { platformClawedBackMinor: 0, storeClawedBackMinor: 0 };
+    if (order.customerId && (order.platformCashbackMinor > 0 || order.storeCashbackMinor > 0)) {
+      clawback = await this.loyalty.clawbackCashback({
+        customerId: order.customerId,
+        sellerId: order.sellerId,
+        orderId: order.id,
+        platformCashbackMinor: order.platformCashbackMinor,
+        storeCashbackMinor: order.storeCashbackMinor,
+      });
+    }
+
+    await this.prisma.marketplaceOrder.update({
+      where: { id: order.id },
+      data: {
+        status: 'refunded',
+        events: {
+          create: {
+            type: 'refunded',
+            payload: {
+              refundId: refund.id ?? null,
+              paymentId: order.paymentId,
+              amountMinor: order.totalMinorUnits,
+              ...(reason ? { reason } : {}),
+              // Recorded because it can be less than what was awarded when the
+              // buyer already spent some of it — the gap is a real write-off.
+              cashbackClawedBack: clawback,
+            },
+          },
+        },
+      },
+    });
+
+    return { status: 'refunded', refundId: refund.id ? String(refund.id) : null, amountMinor: order.totalMinorUnits };
+  }
+
   private async fetchMpPayment(paymentId: string): Promise<{
     status: string;
     external_reference: unknown;
