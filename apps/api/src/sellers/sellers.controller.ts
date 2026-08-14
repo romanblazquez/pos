@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
 import { SellerMappingService } from './seller-mapping.service.js';
-import { BulkUpdateListingsDto, CreateSellerDto, UpdateListingDto, UpdateSellerProfileDto } from './sellers.dto.js';
+import { BulkUpdateListingsDto, CreateSellerDto, UpdateListingDto, UpdateOrderStatusDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Roles } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
@@ -351,6 +351,28 @@ export class SellersController {
     const l = parseInt(limit, 10);
     const result = await this.svc.getOrders(id, { page: p, limit: l, status });
     return paginate(result.orders, result.total, p, l);
+  }
+
+  @Patch(':id/orders/:orderId')
+  @ApiOperation({
+    summary: 'Advance an order through fulfillment, or cancel it',
+    description:
+      'Seller-initiated status transition: confirm shipment (with optional carrier/tracking number), ' +
+      'confirm delivery, or cancel a not-yet-paid order. Cancelling an order already paid through a real ' +
+      'payment provider is rejected (409) — that needs an actual refund, not just a status change.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiParam({ name: 'orderId', description: 'MarketplaceOrder CUID', example: 'clx5mno6pqr7stu8vwx' })
+  @ApiBody({ type: UpdateOrderStatusDto })
+  @ApiResponse({ status: 200, description: 'The updated order, with its 5 most recent events' })
+  @ApiResponse({ status: 404, description: 'No such order for this seller' })
+  @ApiResponse({ status: 409, description: 'Not a valid transition from the order\'s current status' })
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Param('orderId') orderId: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
+    return this.svc.updateOrderStatus(id, orderId, dto);
   }
 
   @Get(':id/analytics/top-products')

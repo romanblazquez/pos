@@ -1,7 +1,8 @@
 import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@retail-os/db-postgres';
 import { ProductIndexerService } from '../search/product-indexer.service.js';
-import type { CreateSellerDto } from './sellers.dto.js';
+import { LoyaltyService } from '../loyalty/loyalty.service.js';
+import type { CreateSellerDto, UpdateOrderStatusDto } from './sellers.dto.js';
 
 function slugify(name: string): string {
   return name
@@ -17,6 +18,7 @@ export class SellersService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
+    @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
   ) {}
 
   /**
@@ -338,6 +340,10 @@ export class SellersService {
               },
             },
           },
+          // Newest first, capped — this is for surfacing the latest tracking
+          // number / cancellation reason next to the order, not a full audit
+          // trail in the portal UI.
+          events: { orderBy: { createdAt: 'desc' }, take: 5 },
         },
         orderBy: { createdAt: 'desc' },
         take: params.limit,
@@ -347,6 +353,65 @@ export class SellersService {
     ]);
 
     return { orders, total, page: params.page, limit: params.limit };
+  }
+
+  /**
+   * Seller-initiated order status transition (fulfillment). Only the moves a
+   * seller can make honestly without a payment integration are allowed:
+   * confirm shipment, confirm delivery, or cancel a not-yet-paid order.
+   *
+   * Cancelling an order already paid through a real payment provider needs an
+   * actual refund through that provider, not just a status flip — that
+   * integration doesn't exist yet, so it's blocked here with a clear reason
+   * rather than silently leaving a buyer paid for a cancelled order.
+   * Wallet-credits-only orders ARE refundable today (loyalty.refundCredits),
+   * so those go through.
+   */
+  async updateOrderStatus(sellerId: string, orderId: string, input: UpdateOrderStatusDto) {
+    const order = await this.prisma.marketplaceOrder.findFirst({ where: { id: orderId, sellerId } });
+    if (!order) throw new NotFoundException(`Order "${orderId}" not found for this seller`);
+
+    const allowedFrom: Record<string, string[]> = {
+      confirmed: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      pending: ['cancelled'],
+      reserved: ['cancelled'],
+    };
+    if (!(allowedFrom[order.status] ?? []).includes(input.status)) {
+      throw new ConflictException(`Cannot move an order from "${order.status}" to "${input.status}"`);
+    }
+
+    if (input.status === 'cancelled') {
+      if (order.status === 'confirmed' && order.paymentProvider && order.paymentProvider !== 'wallet_credits') {
+        throw new ConflictException(
+          'This order was paid through a real payment provider and cannot be cancelled here — it needs an actual refund, not just a status change. Refunding is not yet supported from the seller portal.',
+        );
+      }
+      if (order.customerId && (order.platformCreditsApplied > 0 || order.storeCreditsApplied > 0)) {
+        await this.loyalty.refundCredits({
+          customerId: order.customerId,
+          sellerId,
+          orderId: order.id,
+          platformCreditsApplied: order.platformCreditsApplied,
+          storeCreditsApplied: order.storeCreditsApplied,
+        });
+      }
+    }
+
+    const eventType = input.status === 'cancelled' ? 'cancelled_by_seller' : input.status;
+    const payload: Record<string, unknown> = {};
+    if (input.trackingCarrier) payload.trackingCarrier = input.trackingCarrier;
+    if (input.trackingNumber) payload.trackingNumber = input.trackingNumber;
+    if (input.reason) payload.reason = input.reason;
+
+    return this.prisma.marketplaceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: input.status,
+        events: { create: { type: eventType, payload: payload as object } },
+      },
+      include: { events: { orderBy: { createdAt: 'desc' }, take: 5 } },
+    });
   }
 
   async getTopProducts(sellerId: string, limit = 5) {

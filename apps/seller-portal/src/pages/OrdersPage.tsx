@@ -32,6 +32,13 @@ interface OrderLine {
   };
 }
 
+interface OrderEvent {
+  id: string;
+  type: string;
+  payload: { trackingCarrier?: string; trackingNumber?: string; reason?: string } | null;
+  createdAt: string;
+}
+
 interface Order {
   id: string;
   status: string;
@@ -44,7 +51,18 @@ interface Order {
   paidOutAt: string | null;
   createdAt: string;
   lines: OrderLine[];
+  events: OrderEvent[];
 }
+
+// What a seller can move an order to from its current status — mirrors
+// SellersService.updateOrderStatus's allowedFrom table exactly, so the UI
+// never offers a transition the API would reject.
+const NEXT_STATUSES: Record<string, Array<'shipped' | 'delivered' | 'cancelled'>> = {
+  pending: ['cancelled'],
+  reserved: ['cancelled'],
+  confirmed: ['shipped', 'cancelled'],
+  shipped: ['delivered'],
+};
 
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -158,8 +176,10 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
             <OrderCard
               key={order.id}
               order={order}
+              sellerId={session.seller.id}
               expanded={expanded === order.id}
               onToggle={() => setExpanded(expanded === order.id ? null : order.id)}
+              onChanged={fetchOrders}
             />
           ))}
         </div>
@@ -200,13 +220,49 @@ export default function OrdersPage({ session }: { session: SellerSession }) {
 
 // ─── Order card ───────────────────────────────────────────────────────────────
 
-function OrderCard({ order, expanded, onToggle }: {
+function OrderCard({ order, sellerId, expanded, onToggle, onChanged }: {
   order: Order;
+  sellerId: string;
   expanded: boolean;
   onToggle: () => void;
+  onChanged: () => void;
 }) {
   const firstProduct = order.lines[0]?.listing.product;
   const extraLines = order.lines.length - 1;
+  const [shipFormOpen, setShipFormOpen] = useState(false);
+  const [trackingCarrier, setTrackingCarrier] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelFormOpen, setCancelFormOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+
+  const latestShipment = order.events.find((e) => e.type === 'shipped');
+  const latestCancellation = order.events.find((e) => e.type === 'cancelled_by_seller');
+  const nextStatuses = NEXT_STATUSES[order.status] ?? [];
+
+  async function updateStatus(body: { status: 'shipped' | 'delivered' | 'cancelled'; trackingCarrier?: string; trackingNumber?: string; reason?: string }) {
+    setBusy(true);
+    setActionError('');
+    try {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(data.message ?? 'No se pudo actualizar el pedido');
+      }
+      setShipFormOpen(false);
+      setCancelFormOpen(false);
+      onChanged();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Error desconocido');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -314,6 +370,121 @@ function OrderCard({ order, expanded, onToggle }: {
             <span>ID: <span className="font-mono">{order.id.slice(-8)}</span></span>
             {order.paymentProvider && <span>Pago: {order.paymentProvider}</span>}
           </div>
+
+          {latestShipment?.payload?.trackingNumber && (
+            <p className="text-xs text-slate-500">
+              📦 Enviado{latestShipment.payload.trackingCarrier ? ` por ${latestShipment.payload.trackingCarrier}` : ''}
+              {' · '}seguimiento: <span className="font-mono">{latestShipment.payload.trackingNumber}</span>
+            </p>
+          )}
+          {latestCancellation?.payload?.reason && (
+            <p className="text-xs text-slate-500">✕ Cancelado: {latestCancellation.payload.reason}</p>
+          )}
+
+          {/* Fulfillment actions */}
+          {nextStatuses.length > 0 && (
+            <div className="border-t border-slate-100 pt-3 space-y-2">
+              {actionError && <p className="text-xs text-red-600">{actionError}</p>}
+
+              {!shipFormOpen && !cancelFormOpen && (
+                <div className="flex flex-wrap gap-2">
+                  {nextStatuses.includes('shipped') && (
+                    <button
+                      onClick={() => setShipFormOpen(true)}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                    >
+                      Marcar como enviado
+                    </button>
+                  )}
+                  {nextStatuses.includes('delivered') && (
+                    <button
+                      onClick={() => updateStatus({ status: 'delivered' })}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                    >
+                      Marcar como entregado
+                    </button>
+                  )}
+                  {nextStatuses.includes('cancelled') && (
+                    <button
+                      onClick={() => setCancelFormOpen(true)}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      Cancelar pedido
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {shipFormOpen && (
+                <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <input
+                      value={trackingCarrier}
+                      onChange={(e) => setTrackingCarrier(e.target.value)}
+                      placeholder="Transportista (opcional)"
+                      className="min-h-9 rounded-lg border border-slate-300 px-2.5 text-sm"
+                    />
+                    <input
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="N° de seguimiento (opcional)"
+                      className="min-h-9 rounded-lg border border-slate-300 px-2.5 text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateStatus({
+                        status: 'shipped',
+                        trackingCarrier: trackingCarrier || undefined,
+                        trackingNumber: trackingNumber || undefined,
+                      })}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                    >
+                      {busy ? 'Guardando…' : 'Confirmar envío'}
+                    </button>
+                    <button
+                      onClick={() => setShipFormOpen(false)}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {cancelFormOpen && (
+                <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+                  <input
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Motivo de la cancelación"
+                    className="min-h-9 w-full rounded-lg border border-slate-300 px-2.5 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => updateStatus({ status: 'cancelled', reason: cancelReason || undefined })}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-500 disabled:opacity-50 transition-colors"
+                    >
+                      {busy ? 'Guardando…' : 'Confirmar cancelación'}
+                    </button>
+                    <button
+                      onClick={() => setCancelFormOpen(false)}
+                      disabled={busy}
+                      className="min-h-9 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -121,6 +121,24 @@ export class UpdateSellerProfileDto {
   timezone?: string;
 }
 
+export class UpdateOrderStatusDto {
+  @ApiProperty({ enum: ['shipped', 'delivered', 'cancelled'], example: 'shipped' })
+  @IsIn(['shipped', 'delivered', 'cancelled'])
+  status: 'shipped' | 'delivered' | 'cancelled';
+
+  @ApiPropertyOptional({ type: 'string', example: 'DHL' })
+  @IsOptional() @IsString() @MaxLength(60)
+  trackingCarrier?: string;
+
+  @ApiPropertyOptional({ type: 'string', example: '1Z999AA10123456784' })
+  @IsOptional() @IsString() @MaxLength(120)
+  trackingNumber?: string;
+
+  @ApiPropertyOptional({ type: 'string', description: 'Required when cancelling', example: 'Out of stock' })
+  @IsOptional() @IsString() @MaxLength(300)
+  reason?: string;
+}
+
 export class SyncResultDto {
   @ApiProperty({ type: 'string', description: 'Seller CUID', example: 'clx1234abcd' })
   sellerId: string;
