@@ -523,6 +523,13 @@ production.
 checks. The healthcheck fix was committed in July but the running container
 was never recreated to pick it up. Recreated; data volume untouched.
 
+### Continuation handoff
+
+Forward-looking notes — open items, blockers needing an owner decision, the
+diagnosed session-revocation bug, and the traps this work paid for — are in
+`docs/agent-handoffs/2026-08-14-marketplace-seo-and-seller-ops.md`. Read that
+before picking this up.
+
 ### Known gaps (not started)
 
 - `apps/backoffice` is still a README with no source. Note that
