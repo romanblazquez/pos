@@ -3,6 +3,7 @@ import { PrismaService } from '@retail-os/db-postgres';
 import { ProductIndexerService } from '../search/product-indexer.service.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
 import { CheckoutService } from '../checkout/checkout.service.js';
+import { RankingSchedulerService } from '../rankings/ranking-scheduler.service.js';
 import type { CreateSellerDto, UpdateOrderStatusDto } from './sellers.dto.js';
 
 function slugify(name: string): string {
@@ -21,6 +22,7 @@ export class SellersService {
     @Inject(ProductIndexerService) private readonly indexer: ProductIndexerService,
     @Inject(LoyaltyService) private readonly loyalty: LoyaltyService,
     @Inject(CheckoutService) private readonly checkout: CheckoutService,
+    @Inject(RankingSchedulerService) private readonly rankings: RankingSchedulerService,
   ) {}
 
   /**
@@ -367,7 +369,17 @@ export class SellersService {
       ? { id: { in: selection.ids }, sellerId }
       : this.buildListingWhere(sellerId, selection.filter ?? {});
 
+    // Captured before the update, because a filter like `status: active` stops
+    // matching the very rows it just deactivated.
+    const affected = await this.prisma.listing.findMany({ where, select: { productId: true } });
+
     const { count } = await this.prisma.listing.updateMany({ where, data: { active: data.active } });
+
+    // Queued rather than awaited inline: a select-all edit can span thousands
+    // of products. Without it, a seller who deactivates stock keeps seeing it
+    // offered on the storefront until the hourly ranking pass.
+    await this.rankings.enqueueReindex(affected.map((l) => l.productId));
+
     return { updated: count };
   }
 

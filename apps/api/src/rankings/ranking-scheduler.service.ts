@@ -10,6 +10,14 @@ import type { RankingInput } from '@retail-os/rankings';
 const QUEUE_NAME = 'ranking';
 const JOB_NAME = 'rank-all-listings';
 const SEMANTIC_JOB_NAME = 'refresh-semantic-index';
+const REINDEX_JOB_NAME = 'reindex-products';
+
+/**
+ * Ids per reindex job. A bulk listing edit can span the seller's whole
+ * catalogue, and one job carrying thousands of ids would hold the single
+ * worker for minutes and lose everything if it failed near the end.
+ */
+const REINDEX_CHUNK = 200;
 
 // How many listings to process in each batch (avoids loading all into memory at once)
 const BATCH_SIZE = 100;
@@ -37,7 +45,11 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
 
     this.worker = new Worker(
       QUEUE_NAME,
-      (job: Job) => job.name === SEMANTIC_JOB_NAME ? this.processSemanticJob() : this.processJob(job),
+      (job: Job) => {
+        if (job.name === SEMANTIC_JOB_NAME) return this.processSemanticJob();
+        if (job.name === REINDEX_JOB_NAME) return this.processReindexJob(job);
+        return this.processJob(job);
+      },
       { connection: redisConnection, concurrency: 1 },
     );
 
@@ -173,6 +185,44 @@ export class RankingSchedulerService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ─── Worker ────────────────────────────────────────────────────────────────
+
+  /**
+   * Queue a targeted reindex of specific products.
+   *
+   * Callers that change many listings at once (bulk activate/deactivate) must
+   * not reindex inline: a select-all edit can touch thousands of products and
+   * would time out the request. Without any reindex, though, a seller who
+   * deactivates stock keeps seeing it offered on the storefront until the
+   * hourly pass — the storefront advertising something the seller has pulled.
+   * Queuing keeps the request fast and the index honest within seconds.
+   *
+   * Fire-and-forget by design: a failed enqueue must not fail the edit the
+   * seller just made, and the hourly ranking pass remains the backstop.
+   */
+  async enqueueReindex(productIds: string[]): Promise<void> {
+    const unique = [...new Set(productIds)].filter(Boolean);
+    if (unique.length === 0 || !this.queue) return;
+
+    try {
+      for (let i = 0; i < unique.length; i += REINDEX_CHUNK) {
+        await this.queue.add(
+          REINDEX_JOB_NAME,
+          { productIds: unique.slice(i, i + REINDEX_CHUNK) },
+          { removeOnComplete: true, removeOnFail: 50 },
+        );
+      }
+    } catch (err) {
+      this.log.warn(`Could not queue reindex for ${unique.length} products: ${String(err)}`);
+    }
+  }
+
+  private async processReindexJob(job: Job): Promise<void> {
+    const { productIds } = job.data as { productIds?: string[] };
+    if (!Array.isArray(productIds) || productIds.length === 0) return;
+
+    for (const id of productIds) await this.indexer.syncProductQuietly(id);
+    this.log.log(`Reindexed ${productIds.length} products from a bulk listing change`);
+  }
 
   private async processJob(_job: Job): Promise<void> {
     const startedAt = Date.now();

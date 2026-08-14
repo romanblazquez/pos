@@ -25,6 +25,8 @@ function setup() {
     listing: {
       findFirst: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockImplementation(({ data }) => ({ id: 'listing1', ...data })),
+      findMany: vi.fn().mockResolvedValue([{ productId: 'prodA' }, { productId: 'prodB' }]),
+      updateMany: vi.fn().mockResolvedValue({ count: 2 }),
     },
     sellerMarket: { findFirst: vi.fn().mockResolvedValue({ settlementCurrencyCode: 'ARS' }) },
   };
@@ -33,8 +35,11 @@ function setup() {
   const checkout = {
     refundOrder: vi.fn().mockResolvedValue({ status: 'refunded', refundId: '99', amountMinor: 5000 }),
   };
-  const service = new SellersService(prisma as never, indexer as never, loyalty as never, checkout as never);
-  return { service, prisma, loyalty, checkout, indexer };
+  const rankings = { enqueueReindex: vi.fn().mockResolvedValue(undefined) };
+  const service = new SellersService(
+    prisma as never, indexer as never, loyalty as never, checkout as never, rankings as never,
+  );
+  return { service, prisma, loyalty, checkout, indexer, rankings };
 }
 
 describe('SellersService.createListing', () => {
@@ -98,6 +103,39 @@ describe('SellersService.createListing', () => {
     expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ stock: 0, stockStatus: 'out_of_stock' }),
     }));
+  });
+});
+
+describe('SellersService.bulkUpdateListings', () => {
+  it('queues a reindex for every affected product instead of blocking the request', async () => {
+    const { service, rankings, indexer } = setup();
+
+    const result = await service.bulkUpdateListings('seller1', { ids: ['l1', 'l2'] }, { active: false });
+
+    expect(result).toEqual({ updated: 2 });
+    expect(rankings.enqueueReindex).toHaveBeenCalledWith(['prodA', 'prodB']);
+    // Inline reindexing a select-all edit would time out the request.
+    expect(indexer.syncProductQuietly).not.toHaveBeenCalled();
+  });
+
+  it('collects affected products BEFORE the update, while the filter still matches them', async () => {
+    const { service, prisma, rankings } = setup();
+    const order: string[] = [];
+    prisma.listing.findMany.mockImplementation(async () => {
+      order.push('read');
+      return [{ productId: 'prodA' }];
+    });
+    prisma.listing.updateMany.mockImplementation(async () => {
+      order.push('write');
+      return { count: 1 };
+    });
+
+    await service.bulkUpdateListings('seller1', { filter: { status: 'active' } }, { active: false });
+
+    // Deactivating via `status: active` stops matching the rows it just changed,
+    // so reading after the write would silently reindex nothing.
+    expect(order).toEqual(['read', 'write']);
+    expect(rankings.enqueueReindex).toHaveBeenCalledWith(['prodA']);
   });
 });
 

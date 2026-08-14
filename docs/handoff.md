@@ -325,6 +325,33 @@ price edit stayed invisible until the hourly ranking pass.
 - Deployed and verified live: `retail-os-api`, `retail-os-seo-web`,
   `retail-os-web`, `retail-os-bgg-enricher`.
 
+### 6. Bulk listing edits reindex via a queued job
+
+Bulk activate/deactivate updated Postgres but never touched the search
+index, so a seller who pulled stock kept seeing it offered on the storefront
+until the hourly ranking pass — the site advertising something the seller had
+withdrawn. Reindexing inline was not an option: a select-all edit can span
+the seller's whole catalogue and would time out the request.
+
+Added a `reindex-products` job to the existing BullMQ ranking queue
+(`enqueueReindex`), chunked at 200 ids so one failure cannot lose the whole
+batch and the single worker is never held for minutes. `bulkUpdateListings`
+collects affected `productId`s **before** the update — a filter like
+`status: active` stops matching the very rows it just deactivated, so
+reading afterwards would silently reindex nothing. Enqueueing is
+fire-and-forget: a queue failure must not fail the seller's edit, and the
+hourly pass remains the backstop.
+
+### Correction to an earlier assessment
+
+An earlier survey reported that `seller-portal` had no router and no
+deep-linking. That was wrong, and verifying before "fixing" it avoided
+rewriting working code: `Dashboard.tsx` already implements
+`parseNavFromPath` + `pushState` + `popstate`, and the nginx config already
+has `try_files $uri $uri/ /index.html` for all three SPAs. Deep links to
+`/orders`, `/listings`, `/markets`, `/settings` all return 200 in
+production.
+
 ### Incidental fix
 
 `retail-os-typesense` had been reporting unhealthy for 7,561 consecutive
@@ -338,11 +365,5 @@ was never recreated to pick it up. Recreated; data volume untouched.
   orders, markets, ranking, BGG import and analytics across 9 views with
   real URL routing — a greenfield Angular backoffice would duplicate a
   working surface, so ADR-0006 is worth revisiting before building it.
-- `seller-portal` has no router: it is a single-view tab switcher, so no
-  deep-linking or browser back. `admin-console` solves this with a
-  `pathname`/`popstate` pattern that could be lifted directly.
-- Bulk listing updates do not reindex (single updates now do); a select-all
-  bulk edit still waits for the hourly pass. Reindexing thousands of
-  products inline would time out the request — it needs a queued job.
 - Analytics has no date-range picker or export; Settings has no
   password/email change or self-deactivation.
