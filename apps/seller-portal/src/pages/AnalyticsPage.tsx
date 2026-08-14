@@ -95,19 +95,29 @@ function SkeletonChart() {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+const RANGES = [
+  { days: 7, label: '7 días' },
+  { days: 30, label: '30 días' },
+  { days: 90, label: '90 días' },
+  { days: 365, label: '1 año' },
+] as const;
+
 export default function AnalyticsPage({ session }: { session: SellerSession }) {
   const [orderStats, setOrderStats] = useState<OrderStats | null>(null);
   const [listingStats, setListingStats] = useState<ListingStats | null>(null);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(7);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const sid = session.seller.id;
+    setLoading(true);
 
     Promise.all([
-      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/orders/stats`).then((r) => r.ok ? r.json() : null),
+      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/orders/stats?days=${days}`).then((r) => r.ok ? r.json() : null),
       sellerApi.fetch(`${API}/api/v1/sellers/${sid}/listings/stats`).then((r) => r.ok ? r.json() : null),
-      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5`).then((r) => r.ok ? r.json() : []),
+      sellerApi.fetch(`${API}/api/v1/sellers/${sid}/analytics/top-products?limit=5&days=${days}`).then((r) => r.ok ? r.json() : []),
     ])
       .then(([os, ls, tp]) => {
         setOrderStats(os as OrderStats | null);
@@ -116,7 +126,37 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, [session.seller.id]);
+  }, [session.seller.id, days]);
+
+  /**
+   * The export is fetched, not linked. A plain <a href> cannot carry the
+   * Authorization header this endpoint requires, so a link would download an
+   * HTML 401 page named pedidos.csv — which looks like a working export until
+   * someone opens it.
+   */
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const res = await sellerApi.fetch(
+        `${API}/api/v1/sellers/${session.seller.id}/orders/export.csv?days=${days}`,
+      );
+      if (!res.ok) throw new Error('export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Deliberately quiet: the button returns to its resting state, which is
+      // the same signal the rest of this page uses for a failed fetch.
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const currency = 'ARS';
   const revenue = orderStats?.revenueMinorUnits ?? 0;
@@ -154,13 +194,46 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
         <div className="space-y-0.5">
           <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest">Panel</p>
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Analíticas</h1>
-          <p className="text-sm text-slate-500">Acumulado total · últimos 7 días</p>
+          <p className="text-sm text-slate-500">
+            Acumulado total · últimos {RANGES.find((r) => r.days === days)?.label ?? `${days} días`}
+          </p>
         </div>
         <div className="text-right hidden sm:block">
           <p className="text-xs text-slate-400">
             {new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rango de fechas">
+          {RANGES.map((r) => (
+            <button
+              key={r.days}
+              type="button"
+              onClick={() => setDays(r.days)}
+              aria-pressed={days === r.days}
+              className={
+                'min-h-9 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ' +
+                (days === r.days
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400')
+              }
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={exporting}
+          className="min-h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium
+                     text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+        >
+          {exporting ? 'Exportando…' : 'Exportar CSV'}
+        </button>
       </div>
 
       <Separator />
@@ -203,7 +276,7 @@ export default function AnalyticsPage({ session }: { session: SellerSession }) {
       <Card className="overflow-visible">
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Ingresos — últimos 7 días</CardTitle>
+            <CardTitle>Ingresos — últimos {RANGES.find((r) => r.days === days)?.label ?? `${days} días`}</CardTitle>
             {revenue > 0 && (
               <div className="flex items-center gap-1 text-emerald-600 text-xs font-semibold">
                 <IconTrendUp />

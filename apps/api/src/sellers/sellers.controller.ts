@@ -8,8 +8,10 @@ import {
   Param,
   Body,
   Query,
+  Res,
   NotFoundException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -316,8 +318,9 @@ export class SellersController {
       'Order KPIs plus 7-day daily buckets. ' +
       '{ total, pending, confirmed, shipped, cancelled, revenueMinorUnits, daily: [{ date, orders, revenueMinor }] }',
   })
-  getOrderStats(@Param('id') id: string) {
-    return this.svc.getOrderStats(id);
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Window for the daily series (1-365). Default 7.', example: 30 })
+  getOrderStats(@Param('id') id: string, @Query('days') days?: string) {
+    return this.svc.getOrderStats(id, days ? parseInt(days, 10) : undefined);
   }
 
   @Get(':id/orders')
@@ -394,8 +397,44 @@ export class SellersController {
     status: 200,
     description: 'Array of top products: [{ name, image, units, revenueMinor }]',
   })
-  getTopProducts(@Param('id') id: string, @Query('limit') limit = '5') {
-    return this.svc.getTopProducts(id, parseInt(limit, 10));
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Restrict to the last N days (1-365). Omit for all time.', example: 30 })
+  getTopProducts(
+    @Param('id') id: string,
+    @Query('limit') limit = '5',
+    @Query('days') days?: string,
+  ) {
+    return this.svc.getTopProducts(id, parseInt(limit, 10), days ? parseInt(days, 10) : undefined);
+  }
+
+  @Get(':id/orders/export.csv')
+  @ApiOperation({
+    summary: 'Export the seller\'s orders as CSV',
+    description:
+      'One row per order line, so the file reconciles against an accounting sheet without further work. ' +
+      'Money is emitted in MAJOR units with the currency in its own column — minor units in a spreadsheet ' +
+      'silently become 100x errors the moment someone sums them.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Restrict to the last N days (1-365). Omit for all time.', example: 90 })
+  @ApiQuery({ name: 'status', required: false, description: 'Filter by order status' })
+  @ApiResponse({ status: 200, description: 'text/csv attachment' })
+  async exportOrdersCsv(
+    @Res({ passthrough: true }) res: Response,
+    @Param('id') id: string,
+    @Query('days') days?: string,
+    @Query('status') status?: string,
+  ) {
+    const csv = await this.svc.exportOrdersCsv(id, {
+      days: days ? parseInt(days, 10) : undefined,
+      status,
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="pedidos-${stamp}.csv"`,
+      'Cache-Control': 'no-store',
+    });
+    return csv;
   }
 
   @Get(':id/rewards')

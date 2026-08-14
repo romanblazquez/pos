@@ -397,6 +397,38 @@ It now shows the result range ("193–240 de 1,427"), widens the window to ±2,
 and adds first/last shortcuts — on a 622-page listing, stepping is not a
 navigation strategy.
 
+### 9. Seller analytics: date ranges and CSV export
+
+Analytics was hardcoded to the last 7 days with no way out and no export.
+
+`GET :id/orders/stats?days=` and `.../analytics/top-products?days=` now take a
+window (7 / 30 / 90 / 365 in the UI), clamped 1-365 server-side — the daily
+series is assembled in memory from every order in the range, so an unbounded
+window is a way to ask the endpoint to load a seller's whole history into a
+Map. Empty days are seeded as zeros so the chart shows a gap as a gap rather
+than closing it up.
+
+`GET :id/orders/export.csv` returns **one row per order LINE**, because that
+is what reconciles against an accounting sheet; an order row containing three
+products cannot be matched to stock movements without re-deriving them.
+
+Three details in that file are load-bearing:
+
+- **Money is emitted in MAJOR units with the currency in its own column.**
+  The API speaks minor units throughout, but a spreadsheet does not know that
+  convention — pasting centavos into a `SUM()` produces a number 100x too
+  large and nothing in the file would say so.
+- **Formula injection is neutralised.** Excel executes a leading `=`, `+`,
+  `-` or `@` on open, so a product named `=HYPERLINK(...)` would run. Such
+  cells are prefixed with a quote to stay text.
+- **UTF-8 BOM + CRLF.** Without the BOM Excel opens the file as latin-1 and
+  every accented product name arrives mangled.
+
+The export is fetched and downloaded via a Blob rather than a plain `<a
+href>`: the endpoint needs an Authorization header, so a link would download
+an HTML 401 page named `pedidos.csv` — which looks like a working export
+until someone opens it.
+
 ### Correction to an earlier assessment
 
 An earlier survey reported that `seller-portal` had no router and no

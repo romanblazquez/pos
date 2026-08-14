@@ -18,6 +18,7 @@ function setup() {
   const prisma = {
     marketplaceOrder: {
       findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
       findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'order1', status: 'refunded', events: [] }),
       update: vi.fn().mockImplementation(({ data }) => ({ ...data })),
     },
@@ -29,6 +30,7 @@ function setup() {
       updateMany: vi.fn().mockResolvedValue({ count: 2 }),
     },
     sellerMarket: { findFirst: vi.fn().mockResolvedValue({ settlementCurrencyCode: 'ARS' }) },
+    marketplaceOrderLine: { findMany: vi.fn().mockResolvedValue([]) },
   };
   const indexer = { syncProductQuietly: vi.fn().mockResolvedValue(undefined) };
   const loyalty = { refundCredits: vi.fn().mockResolvedValue(undefined) };
@@ -103,6 +105,76 @@ describe('SellersService.createListing', () => {
     expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ stock: 0, stockStatus: 'out_of_stock' }),
     }));
+  });
+});
+
+describe('SellersService.exportOrdersCsv', () => {
+  function orderWith(lines: unknown[], over: Record<string, unknown> = {}) {
+    return {
+      id: 'o1', createdAt: new Date('2026-08-01T10:00:00Z'), status: 'confirmed',
+      currency: 'MXN', totalMinorUnits: 150000, commissionMinorUnits: 4500,
+      paidOutAt: null, lines, ...over,
+    };
+  }
+  const line = (name: string) => ({
+    quantity: 2, unitPriceMinor: 49900, lineTotalMinor: 99800,
+    listing: { product: { name, slug: 'catan' } },
+  });
+
+  it('emits one row per order line, in major units with the currency alongside', async () => {
+    const { service, prisma } = setup();
+    prisma.marketplaceOrder.findMany = vi.fn().mockResolvedValue([
+      orderWith([line('Catan'), line('Carcassonne')]),
+    ]);
+
+    const csv = await service.exportOrdersCsv('seller1');
+    const rows = csv.trim().split('\r\n');
+
+    expect(rows).toHaveLength(3); // header + 2 lines
+    expect(rows[0]).toContain('order_id,created_at,status,currency');
+    // 49900 centavos must read as 499.00. A spreadsheet has no concept of
+    // minor units and would sum raw centavos 100x too large.
+    expect(rows[1]).toContain('"499.00"');
+    expect(rows[1]).toContain('"1500.00"');
+    expect(rows[1]).toContain('"MXN"');
+    // seller_net = order total - commission
+    expect(rows[1]).toContain('"1455.00"');
+  });
+
+  it('neutralises spreadsheet formula injection in product names', async () => {
+    const { service, prisma } = setup();
+    prisma.marketplaceOrder.findMany = vi.fn().mockResolvedValue([
+      orderWith([line('=HYPERLINK("http://evil","click")')]),
+    ]);
+
+    const csv = await service.exportOrdersCsv('seller1');
+
+    // Excel executes a leading '=' on open; the cell must stay text.
+    expect(csv).toContain("\"'=HYPERLINK");
+    expect(csv).not.toMatch(/,"=HYPERLINK/);
+  });
+
+  it('escapes embedded quotes and leads with a BOM so Excel reads UTF-8', async () => {
+    const { service, prisma } = setup();
+    prisma.marketplaceOrder.findMany = vi.fn().mockResolvedValue([
+      orderWith([line('Cartografia "Deluxe"')]),
+    ]);
+
+    const csv = await service.exportOrdersCsv('seller1');
+
+    expect(csv.startsWith('﻿')).toBe(true);
+    expect(csv).toContain('"Cartografia ""Deluxe"""');
+  });
+
+  it('clamps an absurd day window instead of scanning all history', async () => {
+    const { service, prisma } = setup();
+    prisma.marketplaceOrder.findMany = vi.fn().mockResolvedValue([]);
+
+    await service.exportOrdersCsv('seller1', { days: 99999 });
+
+    const where = prisma.marketplaceOrder.findMany.mock.calls[0][0].where;
+    const days = Math.round((Date.now() - (where.createdAt.gte as Date).getTime()) / 86400000);
+    expect(days).toBe(365);
   });
 });
 

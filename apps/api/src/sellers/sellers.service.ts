@@ -383,7 +383,15 @@ export class SellersService {
     return { updated: count };
   }
 
-  async getOrderStats(sellerId: string) {
+  /**
+   * Order KPIs plus a daily breakdown over the requested window.
+   *
+   * `days` is clamped rather than trusted: the daily series is built in memory
+   * from every order in the range, so an unbounded window is a way to ask this
+   * endpoint to load a seller's entire order history into a Map.
+   */
+  async getOrderStats(sellerId: string, days = 7) {
+    const windowDays = Math.min(Math.max(Math.trunc(days) || 7, 1), 365);
     const [total, pending, confirmed, shipped, cancelled, revenue] = await Promise.all([
       this.prisma.marketplaceOrder.count({ where: { sellerId } }),
       this.prisma.marketplaceOrder.count({ where: { sellerId, status: 'pending' } }),
@@ -396,8 +404,8 @@ export class SellersService {
       }),
     ]);
 
-    // Last 7 days daily breakdown
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Daily breakdown over the requested window.
+    const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
     const recentOrders = await this.prisma.marketplaceOrder.findMany({
       where: { sellerId, createdAt: { gte: since }, status: { notIn: ['cancelled', 'refunded'] } },
       select: { createdAt: true, totalMinorUnits: true },
@@ -406,7 +414,9 @@ export class SellersService {
 
     // Aggregate into daily buckets
     const dailyMap = new Map<string, { orders: number; revenueMinor: number }>();
-    for (let i = 6; i >= 0; i--) {
+    // Seeded with every day in the window so a day with no orders is a zero in
+    // the series rather than a gap the chart silently closes up.
+    for (let i = windowDays - 1; i >= 0; i--) {
       const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       dailyMap.set(d.toISOString().slice(0, 10), { orders: 0, revenueMinor: 0 });
     }
@@ -426,6 +436,7 @@ export class SellersService {
       shipped,
       cancelled,
       revenueMinorUnits: revenue._sum.totalMinorUnits ?? 0,
+      windowDays,
       daily: Array.from(dailyMap.entries()).map(([date, v]) => ({ date, ...v })),
     };
   }
@@ -528,9 +539,95 @@ export class SellersService {
     });
   }
 
-  async getTopProducts(sellerId: string, limit = 5) {
+  /**
+   * Orders as CSV, one row per order LINE.
+   *
+   * Line-level rather than order-level because that is what reconciles against
+   * an accounting sheet: an order row with three products in it cannot be
+   * matched to stock movements without re-deriving them by hand.
+   *
+   * Money is emitted in MAJOR units with the currency in its own column. The
+   * API speaks minor units everywhere, but a spreadsheet has no idea of that
+   * convention — pasting centavos into a SUM() silently produces a figure 100x
+   * too large, and nothing in the file would say so.
+   */
+  async exportOrdersCsv(
+    sellerId: string,
+    opts: { days?: number; status?: string } = {},
+  ): Promise<string> {
+    const since = opts.days
+      ? new Date(Date.now() - Math.min(Math.max(Math.trunc(opts.days), 1), 365) * 86_400_000)
+      : undefined;
+
+    const orders = await this.prisma.marketplaceOrder.findMany({
+      where: {
+        sellerId,
+        ...(since ? { createdAt: { gte: since } } : {}),
+        ...(opts.status && opts.status !== 'all' ? { status: opts.status } : {}),
+      },
+      include: {
+        lines: { include: { listing: { include: { product: { select: { name: true, slug: true } } } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const major = (minor: number) => (minor / 100).toFixed(2);
+    // Excel treats a leading =, +, - or @ as a formula. A product called
+    // "=Catan" would execute on open, which is CSV injection — prefix a quote
+    // so the cell stays text.
+    const cell = (value: unknown): string => {
+      let text = value === null || value === undefined ? '' : String(value);
+      if (/^[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+
+    const header = [
+      'order_id', 'created_at', 'status', 'currency',
+      'product', 'product_slug', 'quantity',
+      'unit_price', 'line_total',
+      'order_total', 'commission', 'seller_net',
+      'paid_out_at',
+    ];
+
+    const rows = [header.join(',')];
+    for (const order of orders) {
+      const net = order.totalMinorUnits - order.commissionMinorUnits;
+      for (const line of order.lines) {
+        rows.push([
+          cell(order.id),
+          cell(order.createdAt.toISOString()),
+          cell(order.status),
+          cell(order.currency),
+          cell(line.listing.product.name),
+          cell(line.listing.product.slug),
+          cell(line.quantity),
+          cell(major(line.unitPriceMinor)),
+          cell(major(line.lineTotalMinor)),
+          cell(major(order.totalMinorUnits)),
+          cell(major(order.commissionMinorUnits)),
+          cell(major(net)),
+          cell(order.paidOutAt ? order.paidOutAt.toISOString() : ''),
+        ].join(','));
+      }
+    }
+
+    // CRLF and a UTF-8 BOM: without the BOM Excel opens the file as latin-1 and
+    // every accented product name arrives mangled.
+    return '\ufeff' + rows.join('\r\n') + '\r\n';
+  }
+
+  async getTopProducts(sellerId: string, limit = 5, days?: number) {
+    // No `days` means all time, which is what this endpoint has always meant —
+    // the window is opt-in so existing callers keep their behaviour.
+    const since = days ? new Date(Date.now() - Math.min(Math.max(Math.trunc(days), 1), 365) * 86_400_000) : undefined;
     const lines = await this.prisma.marketplaceOrderLine.findMany({
-      where: { order: { sellerId, status: { notIn: ['cancelled', 'refunded'] } } },
+      where: {
+        order: {
+          sellerId,
+          status: { notIn: ['cancelled', 'refunded'] },
+          ...(since ? { createdAt: { gte: since } } : {}),
+        },
+      },
       include: {
         listing: {
           include: { product: { select: { name: true, images: true } } },
