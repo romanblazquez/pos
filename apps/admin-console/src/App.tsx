@@ -7,7 +7,7 @@ import { AnalyticsView } from './analytics/AnalyticsView.js';
 const API = API_BASE;
 const MARKETPLACE_URL = import.meta.env.VITE_MARKETPLACE_URL ?? 'http://localhost:4300';
 
-type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets' | 'ai-usage' | 'analytics';
+type AdminView = 'sellers' | 'catalog' | 'mapping' | 'orders' | 'bgg' | 'ranking' | 'markets' | 'ai-usage' | 'analytics' | 'audit';
 
 const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'sellers',   icon: '🏪', label: 'Vendedores' },
@@ -19,9 +19,10 @@ const NAV: { id: AdminView; icon: string; label: string }[] = [
   { id: 'markets',   icon: '🌎', label: 'Mercados' },
   { id: 'ai-usage',  icon: '✦',  label: 'Uso de IA' },
   { id: 'analytics', icon: '📈', label: 'Visitor Intelligence' },
+  { id: 'audit',     icon: '🛡', label: 'Auditoría' },
 ];
 
-const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets', 'ai-usage', 'analytics']);
+const ADMIN_VIEWS = new Set<AdminView>(['sellers', 'catalog', 'mapping', 'orders', 'bgg', 'ranking', 'markets', 'ai-usage', 'analytics', 'audit']);
 
 function parseView(): AdminView {
   const segment = window.location.pathname.replace(/^\//, '') as AdminView;
@@ -109,6 +110,7 @@ export default function App() {
       <main className={`min-w-0 overflow-x-hidden transition-[margin] duration-200 lg:h-dvh lg:overflow-y-auto lg:overscroll-contain ${
         desktopSidebarOpen ? 'lg:ml-52' : 'lg:ml-0'
       }`}>
+        {view === 'audit'    && <AuditView />}
         {view === 'sellers'  && <SellersView />}
         {view === 'catalog'  && <CatalogView />}
         {view === 'mapping'  && <MappingRequestsView />}
@@ -1761,4 +1763,169 @@ interface MappingRequest {
   sellerNote: string | null;
   createdAt: string;
   seller: { id: string; name: string; slug: string };
+}
+
+// ─── Audit trail ──────────────────────────────────────────────────────────────
+
+interface AuditRow {
+  id: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  outcome: string;
+  ipAddress: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  actor: { id: string; email: string } | null;
+}
+
+const AUDIT_PAGE_SIZE = 50;
+
+/**
+ * The platform has always written audit events and nothing could read them.
+ * Notably `auth.refresh.reuse_detected` — a rotated refresh token replayed,
+ * the classic stolen-session signal — was accumulating unseen.
+ */
+function AuditView() {
+  const [action, setAction] = useState('');
+  const [outcome, setOutcome] = useState('');
+  const [includeRequests, setIncludeRequests] = useState(false);
+  const [page, setPage] = useState(0);
+
+  const actionsQuery = useQuery({
+    queryKey: ['audit-actions'],
+    queryFn: async () => {
+      const res = await adminApi.fetch(`${API}/api/v1/auth/admin/audit/actions`);
+      return res.ok ? (res.json() as Promise<string[]>) : [];
+    },
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['audit', action, outcome, includeRequests, page],
+    queryFn: async () => {
+      const qs = new URLSearchParams({
+        limit: String(AUDIT_PAGE_SIZE),
+        offset: String(page * AUDIT_PAGE_SIZE),
+        ...(action ? { action } : {}),
+        ...(outcome ? { outcome } : {}),
+        ...(includeRequests ? { includeRequests: 'true' } : {}),
+      });
+      const res = await adminApi.fetch(`${API}/api/v1/auth/admin/audit?${qs}`);
+      return res.ok
+        ? (res.json() as Promise<{ events: AuditRow[]; total: number }>)
+        : { events: [], total: 0 };
+    },
+  });
+
+  const rows = data?.events ?? [];
+  const total = data?.total ?? 0;
+  const pages = Math.ceil(total / AUDIT_PAGE_SIZE);
+
+  // Security-relevant actions are called out rather than left to be spotted in
+  // a wall of rows.
+  const severityOf = (row: AuditRow) => {
+    if (row.outcome === 'failure') return 'bg-red-50 text-red-700 border-red-200';
+    if (row.action.includes('reuse_detected')) return 'bg-red-50 text-red-700 border-red-200';
+    if (row.action.startsWith('seller.') || row.action.startsWith('auth.password'))
+      return 'bg-amber-50 text-amber-800 border-amber-200';
+    return 'bg-slate-50 text-slate-600 border-slate-200';
+  };
+
+  return (
+    <div className="space-y-4 p-4 sm:p-6 lg:p-8">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900">Auditoría</h2>
+        <p className="mt-0.5 text-sm text-slate-500">
+          {total.toLocaleString('es-MX')} eventos · cambios de estado, contraseñas, sesiones y reembolsos
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={action}
+          onChange={(e) => { setAction(e.target.value); setPage(0); }}
+          className="min-h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm"
+        >
+          <option value="">Todas las acciones</option>
+          {(actionsQuery.data ?? []).map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <select
+          value={outcome}
+          onChange={(e) => { setOutcome(e.target.value); setPage(0); }}
+          className="min-h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm"
+        >
+          <option value="">Cualquier resultado</option>
+          <option value="success">success</option>
+          <option value="failure">failure</option>
+        </select>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={includeRequests}
+            onChange={(e) => { setIncludeRequests(e.target.checked); setPage(0); }}
+          />
+          Incluir tráfico api.*
+        </label>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-slate-400">Cargando…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-500">Sin eventos con estos filtros.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((row) => (
+            <div key={row.id} className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${severityOf(row)}`}>
+                  {row.action}
+                </span>
+                {row.outcome !== 'success' && (
+                  <span className="text-xs font-semibold text-red-600">{row.outcome}</span>
+                )}
+                <span className="ml-auto text-xs text-slate-400">
+                  {new Date(row.createdAt).toLocaleString('es-MX')}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                {row.actor?.email && <span>actor: {row.actor.email}</span>}
+                {row.targetType && (
+                  <span>
+                    target: {row.targetType}
+                    {row.targetId ? ` · ${row.targetId.slice(-8)}` : ''}
+                  </span>
+                )}
+                {row.ipAddress && <span>ip: {row.ipAddress}</span>}
+              </div>
+              {row.metadata && Object.keys(row.metadata).length > 0 && (
+                <pre className="mt-1.5 overflow-x-auto rounded bg-slate-50 p-2 text-[11px] text-slate-600">
+                  {JSON.stringify(row.metadata)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div className="flex items-center gap-2">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+            className="min-h-9 rounded-lg border border-slate-300 px-3 text-sm disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span className="text-xs text-slate-500">{page + 1} / {pages}</span>
+          <button
+            disabled={page + 1 >= pages}
+            onClick={() => setPage((p) => p + 1)}
+            className="min-h-9 rounded-lg border border-slate-300 px-3 text-sm disabled:opacity-40"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

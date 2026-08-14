@@ -479,6 +479,34 @@ verification. That silently moves account recovery to an address the owner
 may not control — a typo locks them out permanently, and a hijacked session
 takes the account for good.
 
+### 12. The audit trail is readable now
+
+The platform has written audit events since launch and **nothing could ever
+read them back** — no endpoint, no UI. Production held 1,062 rows, including
+53 `auth.refresh.reuse_detected`: a rotated refresh token replayed, which is
+the classic stolen-session signal. Those had been accumulating unseen.
+
+`GET /api/v1/auth/admin/audit` (admin-only, paginated, filter by action /
+targetType / targetId / outcome) plus `.../audit/actions` for the filter
+control, and an "Auditoría" view in `admin-console`.
+
+Two decisions worth keeping:
+
+- **`api.*` rows are hidden by default.** The security interceptor writes one
+  per mutating request; they are ~85% of the table (890 of 1,062) and bury
+  the deliberate, human-meaningful events. `includeRequests=true` brings them
+  back.
+- **The actor's email is joined in.** A `actorPrincipalId` alone means one
+  extra lookup per line, which in practice means nobody reads the log.
+
+The view colours `failure` outcomes and `reuse_detected` red, and
+seller/password events amber, so a security signal is visible without
+reading every row.
+
+This also makes today's work observable: `seller.self_deactivated`,
+`auth.password.changed` (success *and* failure — a run of failures is what a
+brute-force looks like), and the refund events on orders.
+
 ### Correction to an earlier assessment
 
 An earlier survey reported that `seller-portal` had no router and no

@@ -2,7 +2,7 @@ import {
   BadRequestException, Body, Controller, Get, HttpCode, Inject,
   Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import {
@@ -161,6 +161,46 @@ export class AuthController {
       }).catch(() => undefined);
       throw err;
     }
+  }
+
+  @Get('admin/audit')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Read the audit trail',
+    description:
+      'Admin-only. `api.*` request-log rows are excluded unless includeRequests=true — the security interceptor writes ' +
+      'one per mutating request, so they are the large majority of the table and bury the deliberate events ' +
+      '(seller.suspended, seller.self_deactivated, auth.password.changed, auth.refresh.reuse_detected) under noise.',
+  })
+  @ApiQuery({ name: 'action', required: false, example: 'auth.refresh.reuse_detected' })
+  @ApiQuery({ name: 'targetType', required: false, example: 'seller' })
+  @ApiQuery({ name: 'targetId', required: false })
+  @ApiQuery({ name: 'outcome', required: false, example: 'failure' })
+  @ApiQuery({ name: 'includeRequests', required: false, example: 'false' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
+  @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
+  listAudit(
+    @Query('action') action?: string,
+    @Query('targetType') targetType?: string,
+    @Query('targetId') targetId?: string,
+    @Query('outcome') outcome?: string,
+    @Query('includeRequests') includeRequests?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.audit.list({
+      action, targetType, targetId, outcome,
+      includeRequests: includeRequests === 'true',
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
+  }
+
+  @Get('admin/audit/actions')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Distinct audit action names, for the filter control' })
+  listAuditActions() {
+    return this.audit.actions();
   }
 
   @Post('seller/onboarding')
