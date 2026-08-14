@@ -319,6 +319,30 @@ export function personLd(input: {
   };
 }
 
+/**
+ * Seller storefront page. `Organization`, not `LocalBusiness` — these are
+ * online marketplace sellers with no verified physical address to claim, and
+ * not `Store` with an `aggregateRating`: the only seller quality signal we
+ * have (SellerScore) is an internal operational metric, not a first-party
+ * customer review corpus, so — same reasoning as productLd() — asserting it
+ * as a public rating would misrepresent the page to Google.
+ */
+export function storeLd(input: {
+  name: string;
+  path: string;
+  description?: string;
+  logo?: string;
+}): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: input.name,
+    url: absoluteUrl(input.path),
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.logo ? { logo: input.logo } : {}),
+  };
+}
+
 export function faqLd(faqs: Array<{ q: string; a: string }>): Json {
   return {
     '@context': 'https://schema.org',

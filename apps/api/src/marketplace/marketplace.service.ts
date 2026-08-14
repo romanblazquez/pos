@@ -4,6 +4,7 @@ import { TypesenseService } from '../search/typesense.service.js';
 import { SemanticSearchService } from '../search/semantic-search.service.js';
 import {
   MARKET_COMMERCE,
+  SELLER_VISIBLE_STATUS,
   eligibleListingWhere,
   marketConfig,
   marketCurrency,
@@ -42,6 +43,8 @@ export interface ProductSearchParams {
    * real Argentine offers, it does not restate Mexican ones in pesos argentinos.
    */
   currencies?: string[];
+  /** Show only products with an active listing from this seller (slug). */
+  seller?: string;
 }
 
 // searchProducts and semanticSearchProducts call each other (semantic falls back
@@ -181,6 +184,7 @@ export class MarketplaceService {
       mechanics: params.mechanics,
       complexity: params.complexity,
       currencies: params.currencies,
+      seller: params.seller,
       sortBy: normalizeSort(params.sortBy),
       limit,
       offset,
@@ -207,6 +211,7 @@ export class MarketplaceService {
     // Prisma fallback — when Typesense is empty or unavailable
     const listingFilter = {
       active: true,
+      ...(params.seller ? { seller: { slug: params.seller } } : {}),
       ...(params.inStockOnly ? { stockStatus: { not: 'out_of_stock' } } : {}),
       ...((params.minPrice !== undefined || params.maxPrice !== undefined) ? {
         priceMinorUnits: {
@@ -484,6 +489,56 @@ export class MarketplaceService {
       ages: ages.filter((row) => row.minAge != null).map((row) => ({ value: row.minAge!, count: row._count._all })),
       durations: durations.filter((row) => row.playTimeMinutes != null).map((row) => ({ value: row.playTimeMinutes!, count: row._count._all })),
     };
+  }
+
+  /**
+   * Public seller directory — backs the /tiendas storefront hub. Only
+   * `active` sellers (never pending/suspended/churned — see
+   * SELLER_VISIBLE_STATUS) with at least one indexed product are listed;
+   * a suspended seller isn't a storefront anyone should land on.
+   */
+  async getSellers(): Promise<Array<{ slug: string; name: string; logoUrl: string | null; description: string | null; productCount: number }>> {
+    const sellers = await this.prisma.seller.findMany({
+      where: { status: SELLER_VISIBLE_STATUS },
+      select: { id: true, slug: true, name: true, logoUrl: true, description: true },
+    });
+
+    const indexed = await this.search.sellerCounts();
+    const countBySlug = indexed.size > 0
+      ? indexed
+      : await (async () => {
+        // Fallback groups by sellerId (Listing has no denormalized slug), so
+        // translate through the sellers list already fetched above.
+        const bySellerId = new Map(
+          (await this.prisma.listing.groupBy({
+            by: ['sellerId'],
+            where: { active: true, seller: { status: SELLER_VISIBLE_STATUS } },
+            _count: { _all: true },
+          })).map((row) => [row.sellerId, row._count._all]),
+        );
+        return new Map(sellers.map((s) => [s.slug, bySellerId.get(s.id) ?? 0]));
+      })();
+
+    return sellers
+      .map(({ id: _id, ...seller }) => ({ ...seller, productCount: countBySlug.get(seller.slug) ?? 0 }))
+      .filter((seller) => seller.productCount > 0)
+      .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name));
+  }
+
+  /** Public seller profile — backs /tiendas/{slug}. Null for anything not `active`. */
+  async getSeller(slug: string): Promise<{ slug: string; name: string; logoUrl: string | null; description: string | null; productCount: number } | null> {
+    const seller = await this.prisma.seller.findFirst({
+      where: { slug, status: SELLER_VISIBLE_STATUS },
+      select: { slug: true, name: true, logoUrl: true, description: true },
+    });
+    if (!seller) return null;
+
+    const indexed = await this.search.sellerCounts();
+    const productCount = indexed.size > 0
+      ? (indexed.get(slug) ?? 0)
+      : await this.prisma.listing.count({ where: { active: true, seller: { slug } } });
+
+    return { ...seller, productCount };
   }
 
   async getProduct(slug: string, locale?: string, market?: string) {

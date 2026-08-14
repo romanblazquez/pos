@@ -24,6 +24,12 @@ export interface ProductDocument {
   tags: string[];
   /** Real BGG mechanics only — `tags` blends these with categories. */
   mechanics?: string[];
+  /**
+   * Slugs of every visible (active, non-suspended) seller with an active
+   * listing on this product — a product can have several. Backs seller
+   * storefront pages and the `seller` search filter.
+   */
+  sellerSlugs?: string[];
   language: string;
   minPlayers: number;
   maxPlayers: number;
@@ -65,6 +71,7 @@ const COLLECTION_SCHEMA = {
     { name: 'categorySlugs',   type: 'string[]' as const, facet: true, optional: true },
     { name: 'tags',            type: 'string[]' as const, facet: true },
     { name: 'mechanics',       type: 'string[]' as const, facet: true, optional: true },
+    { name: 'sellerSlugs',     type: 'string[]' as const, facet: true, optional: true },
     { name: 'language',        type: 'string'  as const, facet: true, optional: true },
     { name: 'minPlayers',      type: 'int32'   as const, facet: true, optional: true },
     { name: 'maxPlayers',      type: 'int32'   as const, facet: true, optional: true },
@@ -157,6 +164,13 @@ export class TypesenseService implements OnModuleInit {
           fields: [{ name: 'mechanics', type: 'string[]', facet: true, optional: true }],
         } as never);
         this.log.log('Typesense collection extended with mechanics');
+        return;
+      }
+      if (!fields.some((f) => f.name === 'sellerSlugs')) {
+        await this.client.collections(COLLECTION).update({
+          fields: [{ name: 'sellerSlugs', type: 'string[]', facet: true, optional: true }],
+        } as never);
+        this.log.log('Typesense collection extended with sellerSlugs');
         return;
       }
       // `publisher` existed as a plain string field; making an already-present
@@ -287,6 +301,26 @@ export class TypesenseService implements OnModuleInit {
     return counts;
   }
 
+  /** How many indexed products each visible seller has an active listing on. */
+  async sellerCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    try {
+      const result = await this.client.collections(COLLECTION).documents().search({
+        q: '*',
+        query_by: 'name',
+        per_page: 1,
+        facet_by: 'sellerSlugs',
+        max_facet_values: 1000,
+      });
+      for (const facet of result.facet_counts ?? []) {
+        for (const value of facet.counts ?? []) counts.set(value.value, value.count);
+      }
+    } catch (err) {
+      this.log.warn(`Could not read seller counts: ${String(err)}`);
+    }
+    return counts;
+  }
+
   /**
    * Every indexed document's browse-category slugs, keyed by product id (a
    * document that predates the field maps to an empty array). Lets a caller
@@ -351,13 +385,15 @@ export class TypesenseService implements OnModuleInit {
     complexity?: string;
     /** Show only products with at least one offer in these currencies. */
     currencies?: string[];
+    /** Show only products with an active listing from this seller (slug). */
+    seller?: string;
     limit?: number;
     offset?: number;
     sortBy?: string;
   }): Promise<{ hits: ProductDocument[]; total: number }> {
     const {
       q, category, minPrice, maxPrice, minPlayers,
-      inStockOnly, mechanics, complexity, currencies,
+      inStockOnly, mechanics, complexity, currencies, seller,
       limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
     } = params;
 
@@ -383,6 +419,7 @@ export class TypesenseService implements OnModuleInit {
       filterParts.push(`currencies:=[${currencies.map((c) => `\`${c}\``).join(',')}]`);
     }
     if (mechanics && mechanics.length > 0) filterParts.push(`mechanics:=[${mechanics.join(',')}]`);
+    if (seller) filterParts.push(`sellerSlugs:=\`${seller}\``);
     if (complexity && isComplexityBand(complexity)) {
       const { min, max } = COMPLEXITY_BAND_RANGES[complexity];
       filterParts.push(max === null ? `bggWeight:>=${min}` : `bggWeight:>=${min} && bggWeight:<${max}`);

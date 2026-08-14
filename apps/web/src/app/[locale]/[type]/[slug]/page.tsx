@@ -7,6 +7,8 @@ import {
   getCategories,
   getMechanics,
   getProduct,
+  getSeller,
+  getSellers,
   listProducts,
   listSimilar,
   type ProductDetail,
@@ -15,7 +17,7 @@ import { buildMetadata, entityAlternates, socialImageUrl } from '@/lib/seo';
 import { APP_URL, absoluteUrl } from '@/lib/site';
 import { PlayerFitPanel, ProductGallery, buttonVariants } from '@retail-os/ui-react';
 import { formatMoney, formatRange } from '@/lib/format';
-import { articleLd, breadcrumbLd, faqLd, itemListLd, personLd, productLd, type Crumb } from '@/lib/jsonld';
+import { articleLd, breadcrumbLd, faqLd, itemListLd, personLd, productLd, storeLd, type Crumb } from '@/lib/jsonld';
 import {
   editorPath,
   getEditorialAuthor,
@@ -207,6 +209,28 @@ export async function generateMetadata({
           : `Board games featuring ${real} mechanics, with prices compared across verified stores.`,
       noindex: page > 1,
       alternates: page > 1 ? undefined : entityAlternates('mechanics', params.slug, market),
+    });
+  }
+
+  if (kind === 'stores') {
+    const seller = await getSeller(params.slug);
+    if (!seller) return {};
+    const basePath = entityPath('stores', locale, params.slug, market);
+    const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+    const baseTitle = locale === 'es' ? `${seller.name} — Tienda verificada` : `${seller.name} — Verified store`;
+    return buildMetadata({
+      locale,
+      market,
+      path,
+      title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
+      description:
+        seller.description ??
+        (locale === 'es'
+          ? `Catálogo de ${seller.name}, con precios y stock real comparados en Juegospedia.`
+          : `${seller.name}'s catalogue, with real prices and stock compared on Juegospedia.`),
+      images: seller.logoUrl ? [seller.logoUrl] : undefined,
+      noindex: page > 1,
+      alternates: page > 1 ? undefined : entityAlternates('stores', params.slug, market),
     });
   }
 
@@ -545,6 +569,88 @@ export default async function DetailPage({
               {siblings.map((m) => (
                 <Link key={m.mechanic} className="chip" href={entityPath('mechanics', locale, slugify(m.mechanic), market)}>
                   {m.mechanic}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+    );
+  }
+
+  if (kind === 'stores') {
+    const page = pageOf(searchParams);
+    const basePath = entityPath('stores', locale, params.slug, market);
+    const seller = await getSeller(params.slug);
+    if (!seller) notFound();
+
+    const { results, total } = await listProducts({
+      locale, market, seller: seller.slug, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE,
+    });
+    if (page > 1 && results.length === 0) notFound();
+
+    const lede = locale === 'es'
+      ? `Compara precios y stock real del catálogo de ${seller.name}, una tienda verificada en Juegospedia.`
+      : `Compare real prices and stock for ${seller.name}'s catalogue, a verified store on Juegospedia.`;
+
+    const allStores = await getSellers();
+    const siblings = allStores
+      .filter((s) => s.slug !== seller.slug)
+      .sort((a, b) => b.productCount - a.productCount)
+      .slice(0, 16);
+
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Tiendas' : 'Stores', path: listingPath('stores', locale, market) },
+      { name: seller.name, path: basePath },
+    ];
+    return (
+      <main className="container">
+        <LocaleAlternates alternates={entityAlternates('stores', params.slug, market)} />
+        <Breadcrumbs crumbs={crumbs} />
+        {page === 1 && (
+          <JsonLd
+            data={[
+              breadcrumbLd(crumbs),
+              storeLd({ name: seller.name, path: basePath, description: seller.description ?? undefined, logo: seller.logoUrl ?? undefined }),
+              itemListLd(results.map((p) => ({ name: p.name, path: entityPath('games', locale, p.slug, market) }))),
+            ]}
+          />
+        )}
+        <div className="editor-profile-heading">
+          {seller.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={seller.logoUrl} alt={seller.name} width={64} height={64} style={{ borderRadius: '0.5rem', objectFit: 'cover' }} />
+          ) : (
+            <span className="editor-profile-avatar" aria-hidden="true">
+              {seller.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}
+            </span>
+          )}
+          <div>
+            <h1 className="page-title" style={{ margin: 0 }}>{seller.name}</h1>
+            <p className="muted">
+              {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
+            </p>
+          </div>
+        </div>
+        {page === 1 && <p className="lede">{seller.description ?? lede}</p>}
+        {results.length > 0 ? (
+          <>
+            <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
+              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
+            </div>
+            <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
+          </>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('stores', locale, market)} />
+        )}
+        {siblings.length > 0 && (
+          <section aria-label={locale === 'es' ? 'Otras tiendas' : 'Other stores'}>
+            <h2 className="section-title">{locale === 'es' ? 'Otras tiendas' : 'Other stores'}</h2>
+            <div className="taglist">
+              {siblings.map((s) => (
+                <Link key={s.slug} className="chip" href={entityPath('stores', locale, s.slug, market)}>
+                  {s.name}
                 </Link>
               ))}
             </div>

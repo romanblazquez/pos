@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCatalogFacets, getCategories, getMechanics, listProducts } from '@/lib/api';
+import { getCatalogFacets, getCategories, getMechanics, getSellers, listProducts } from '@/lib/api';
 import { buildMetadata, socialImageUrl } from '@/lib/seo';
 import { breadcrumbLd, itemListLd, blogLd, type Crumb } from '@/lib/jsonld';
 import { JsonLd } from '@/components/JsonLd';
@@ -189,6 +189,20 @@ export async function generateMetadata({
           ? 'Explora el catálogo por mecánica de juego y compara precios y stock real entre tiendas verificadas.'
           : 'Browse the catalogue by game mechanic and compare real prices and stock across verified stores.',
       alternates: { es: listingPath('mechanics', 'es', market), en: listingPath('mechanics', 'en', market) },
+    });
+  }
+
+  if (kind === 'stores') {
+    return buildMetadata({
+      locale,
+      market,
+      path: listingPath('stores', locale, market),
+      title: locale === 'es' ? 'Tiendas verificadas' : 'Verified stores',
+      description:
+        locale === 'es'
+          ? 'Tiendas verificadas que venden juegos de mesa en Juegospedia, con su catálogo y stock real.'
+          : 'Verified stores selling board games on Juegospedia, with their catalogue and real stock.',
+      alternates: { es: listingPath('stores', 'es', market), en: listingPath('stores', 'en', market) },
     });
   }
 
@@ -579,6 +593,44 @@ export default async function ListingPage({
             {mechanics.map((m) => (
               <Link key={m.mechanic} className="chip" href={entityPath('mechanics', locale, slugify(m.mechanic), market)}>
                 {m.mechanic} <span className="muted">({m.count})</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
+        )}
+      </main>
+    );
+  }
+
+  // ── Store index ──────────────────────────────────────────────────────────
+  if (kind === 'stores') {
+    const storeBase = listingPath('stores', locale, market);
+    const stores = await getSellers();
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Tiendas' : 'Stores', path: storeBase },
+    ];
+    return (
+      <main className="container">
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(stores.map((s) => ({ name: s.name, path: entityPath('stores', locale, s.slug, market) }))),
+          ]}
+        />
+        <h1 className="page-title">{locale === 'es' ? 'Tiendas verificadas' : 'Verified stores'}</h1>
+        <p className="lede">
+          {locale === 'es'
+            ? 'Tiendas verificadas que venden juegos de mesa en Juegospedia, con su catálogo y stock real.'
+            : 'Verified stores selling board games on Juegospedia, with their catalogue and real stock.'}
+        </p>
+        {stores.length > 0 ? (
+          <div className="taglist">
+            {stores.map((s) => (
+              <Link key={s.slug} className="chip" href={entityPath('stores', locale, s.slug, market)}>
+                {s.name} <span className="muted">({s.productCount})</span>
               </Link>
             ))}
           </div>

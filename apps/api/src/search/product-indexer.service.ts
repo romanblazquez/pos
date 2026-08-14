@@ -67,6 +67,7 @@ export class ProductIndexerService {
             priceMinorUnits: true,
             currency: true,
             stockStatus: true,
+            seller: { select: { slug: true } },
           },
         },
         // Browse-category membership, so a category page filters the index
@@ -102,6 +103,7 @@ export class ProductIndexerService {
       categorySlugs: product.categories.map((link) => link.category.normalizedName),
       tags: product.tags,
       mechanics: product.mechanics,
+      sellerSlugs: [...new Set(listings.map((listing) => listing.seller.slug))],
       language: product.language ?? '',
       minPlayers: product.minPlayers ?? 0,
       maxPlayers: product.maxPlayers ?? 0,

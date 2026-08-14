@@ -126,8 +126,8 @@ export default function LocaleLayout({
   const { locale, market } = parsedLocale;
   const t =
     locale === 'es'
-      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', publishers: 'Editoriales', mechanics: 'Mecánicas', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
-      : { games: 'Games', cats: 'Categories', guides: 'Guides', publishers: 'Publishers', mechanics: 'Mechanics', search: 'Search', login: 'Log in', tagline: 'The board-game encyclopedia with the best price.' };
+      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', publishers: 'Editoriales', mechanics: 'Mecánicas', stores: 'Tiendas', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
+      : { games: 'Games', cats: 'Categories', guides: 'Guides', publishers: 'Publishers', mechanics: 'Mechanics', stores: 'Stores', search: 'Search', login: 'Log in', tagline: 'The board-game encyclopedia with the best price.' };
 
   return (
     <html
@@ -193,6 +193,7 @@ export default function LocaleLayout({
             <Link href={listingPath('categories', locale, market)}>{t.cats}</Link>
             <Link href={listingPath('publishers', locale, market)}>{t.publishers}</Link>
             <Link href={listingPath('mechanics', locale, market)}>{t.mechanics}</Link>
+            <Link href={listingPath('stores', locale, market)}>{t.stores}</Link>
             <PrivacyPreferencesButton label={locale === 'es' ? 'Privacidad' : 'Privacy'} />
           </div>
         </footer>

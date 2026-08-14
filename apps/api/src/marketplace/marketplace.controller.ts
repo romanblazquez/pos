@@ -37,6 +37,7 @@ export class MarketplaceController {
   @ApiQuery({ name: 'sortBy', required: false, description: 'Sort order for results', example: 'rank_score', enum: ['rank_score', 'price_asc', 'price_desc', 'name'] })
   @ApiQuery({ name: 'locale', required: false, description: 'UI locale for name/description overrides (falls back to Spanish when no approved translation exists)', example: 'en' })
   @ApiQuery({ name: 'mechanics', required: false, description: 'Filter by one or more game mechanics (repeat the param for multiple)', example: 'Deck Building' })
+  @ApiQuery({ name: 'seller', required: false, description: 'Filter to products with an active listing from this seller (slug)', example: 'blaz' })
   @ApiQuery({ name: 'complexity', required: false, description: 'Filter by BGG-weight complexity band', example: 'heavy', enum: ['light', 'medium-light', 'medium', 'heavy', 'expert'] })
   @ApiQuery({ name: 'semantic', required: false, type: String, description: 'Use meaning-based retrieval for an unfiltered natural-language query', example: 'true' })
   @ApiResponse({ status: 200, description: 'Returns { results: Product[], total: number, found: number }' })
@@ -56,6 +57,7 @@ export class MarketplaceController {
     @Query('sortBy')      sortBy?: string,
     @Query('locale')      locale?: string,
     @Query('mechanics')   mechanics?: string | string[],
+    @Query('seller')      seller?: string,
     @Query('complexity')  complexity?: string,
     @Query('semantic')    semantic?: string,
     @Query('market')      market?: string,
@@ -73,6 +75,7 @@ export class MarketplaceController {
       maxPrice: maxPrice ? parseInt(maxPrice, 10) : undefined,
       inStockOnly: inStock === 'true',
       mechanics: mechanics ? (Array.isArray(mechanics) ? mechanics : [mechanics]) : undefined,
+      seller,
       complexity,
       limit: limit ? parseInt(limit, 10) : 24,
       offset: offset ? parseInt(offset, 10) : 0,
@@ -117,6 +120,27 @@ export class MarketplaceController {
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 8 })
   getSuggestions(@Query('q') q?: string, @Query('limit') limit?: string) {
     return this.svc.getSuggestions(q, limit ? parseInt(limit, 10) : 8);
+  }
+
+  @Get('sellers')
+  @ApiOperation({
+    summary: 'List active sellers with a public storefront',
+    description: 'Backs the /tiendas storefront directory — only active sellers with at least one indexed product, ordered by product count.',
+  })
+  @ApiResponse({ status: 200, description: 'Array of { slug, name, logoUrl, description, productCount }' })
+  getSellers() {
+    return this.svc.getSellers();
+  }
+
+  @Get('sellers/:slug')
+  @ApiOperation({ summary: 'Public seller storefront profile' })
+  @ApiParam({ name: 'slug', example: 'blaz' })
+  @ApiResponse({ status: 200, description: '{ slug, name, logoUrl, description, productCount }' })
+  @ApiResponse({ status: 404, description: 'No active seller with that slug' })
+  async getSeller(@Param('slug') slug: string) {
+    const seller = await this.svc.getSeller(slug);
+    if (!seller) throw new NotFoundException(`No active seller: ${slug}`);
+    return seller;
   }
 
   @Get('semantic')

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Building2, ChevronRight, Dices, LayoutGrid, Menu, Puzzle, Search, User, X } from 'lucide-react';
+import { BookOpen, Building2, ChevronRight, Dices, LayoutGrid, Menu, Puzzle, Search, Store, User, X } from 'lucide-react';
 import { MeepleMark } from './MeepleMark';
 import { ThemeToggle } from './ThemeToggle';
 import { LocaleSwitcher } from './LocaleSwitcher';
@@ -16,12 +16,13 @@ const COPY = {
   es: {
     open: 'Abrir menú', close: 'Cerrar menú', nav: 'Menú principal',
     games: 'Juegos', categories: 'Categorías', guides: 'Guías', search: 'Buscar juegos',
-    publishers: 'Editoriales', mechanics: 'Mecánicas',
+    publishers: 'Editoriales', mechanics: 'Mecánicas', stores: 'Tiendas',
     gamesHint: 'Explora el catálogo completo',
     categoriesHint: 'Navega por tipo y temática',
     guidesHint: 'Rankings y mejores listas',
     publishersHint: 'Explora por editorial',
     mechanicsHint: 'Explora por mecánica de juego',
+    storesHint: 'Tiendas verificadas',
     login: 'Iniciar sesión',
     settings: 'Preferencias',
     market: 'Mercado y moneda',
@@ -29,12 +30,13 @@ const COPY = {
   en: {
     open: 'Open menu', close: 'Close menu', nav: 'Main menu',
     games: 'Games', categories: 'Categories', guides: 'Guides', search: 'Search games',
-    publishers: 'Publishers', mechanics: 'Mechanics',
+    publishers: 'Publishers', mechanics: 'Mechanics', stores: 'Stores',
     gamesHint: 'Browse the full catalogue',
     categoriesHint: 'Explore by type and theme',
     guidesHint: 'Rankings and best-of lists',
     publishersHint: 'Browse by publisher',
     mechanicsHint: 'Browse by game mechanic',
+    storesHint: 'Verified stores',
     login: 'Log in',
     settings: 'Preferences',
     market: 'Market & currency',
@@ -117,6 +119,7 @@ export function MobileMenu({
     { href: listingPath('guides', locale, market), label: t.guides, hint: t.guidesHint, Icon: BookOpen },
     { href: listingPath('publishers', locale, market), label: t.publishers, hint: t.publishersHint, Icon: Building2 },
     { href: listingPath('mechanics', locale, market), label: t.mechanics, hint: t.mechanicsHint, Icon: Puzzle },
+    { href: listingPath('stores', locale, market), label: t.stores, hint: t.storesHint, Icon: Store },
   ];
 
   return (

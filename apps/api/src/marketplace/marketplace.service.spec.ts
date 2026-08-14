@@ -26,6 +26,14 @@ function setup() {
       count: vi.fn().mockResolvedValue(1),
       groupBy: vi.fn().mockResolvedValue([]),
     },
+    seller: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
+    listing: {
+      groupBy: vi.fn().mockResolvedValue([]),
+      count: vi.fn().mockResolvedValue(0),
+    },
     language: { findFirst: vi.fn() },
     entityLocalization: { findMany: vi.fn() },
   };
@@ -34,6 +42,7 @@ function setup() {
     categoryCounts: vi.fn().mockResolvedValue(new Map()),
     mechanicCounts: vi.fn().mockResolvedValue(new Map()),
     publisherCounts: vi.fn().mockResolvedValue(new Map()),
+    sellerCounts: vi.fn().mockResolvedValue(new Map()),
   };
   const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
   const service = new MarketplaceService(prisma as never, search as never, semantic as never);
@@ -192,6 +201,48 @@ describe('MarketplaceService search filters', () => {
     const result = await service.getFacets();
 
     expect(result.publishers).toEqual([{ value: 'KOSMOS', count: 12 }]);
+  });
+
+  it('lists active sellers with product counts from the search index', async () => {
+    const { service, prisma, search } = setup();
+    prisma.seller.findMany.mockResolvedValue([
+      { id: 's1', slug: 'blaz', name: 'Blaz', logoUrl: null, description: 'A shop.' },
+      { id: 's2', slug: 'no-products', name: 'Empty Shop', logoUrl: null, description: null },
+    ]);
+    search.sellerCounts.mockResolvedValue(new Map([['blaz', 76]]));
+
+    const result = await service.getSellers();
+
+    // A seller with zero indexed products isn't a storefront to land on.
+    expect(result).toEqual([{ slug: 'blaz', name: 'Blaz', logoUrl: null, description: 'A shop.', productCount: 76 }]);
+    expect(prisma.seller.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { status: 'active' },
+    }));
+  });
+
+  it('falls back to counting active listings per seller when the search index is empty', async () => {
+    const { service, prisma, search } = setup();
+    prisma.seller.findMany.mockResolvedValue([
+      { id: 's1', slug: 'blaz', name: 'Blaz', logoUrl: null, description: null },
+    ]);
+    search.sellerCounts.mockResolvedValue(new Map());
+    prisma.listing.groupBy.mockResolvedValue([{ sellerId: 's1', _count: { _all: 5 } }]);
+
+    const result = await service.getSellers();
+
+    expect(result).toEqual([{ slug: 'blaz', name: 'Blaz', logoUrl: null, description: null, productCount: 5 }]);
+  });
+
+  it('returns null for a seller that is not active', async () => {
+    const { service, prisma } = setup();
+    prisma.seller.findFirst.mockResolvedValue(null);
+
+    const result = await service.getSeller('suspended-shop');
+
+    expect(result).toBeNull();
+    expect(prisma.seller.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { slug: 'suspended-shop', status: 'active' },
+    }));
   });
 
   it('uses semantic retrieval only for an unfiltered natural-language query', async () => {

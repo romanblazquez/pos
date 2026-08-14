@@ -1,4 +1,4 @@
-import { getCatalogFacets, getMechanics, listProducts, type ProductSummary } from '@/lib/api';
+import { getCatalogFacets, getMechanics, getSellers, listProducts, type ProductSummary } from '@/lib/api';
 import { editorPath, listEditorialAuthors, listGuides } from '@/lib/guides';
 import { INDEXABLE_THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
@@ -16,7 +16,15 @@ import {
 // product images are self-hosted now, so we want them eligible for Google Images.
 // Includes ONLY canonical, indexable URLs (iterates INDEXABLE_LOCALES; never emits
 // noindex/search/account/paginated pages).
-export const revalidate = 3600;
+//
+// `dynamic = 'force-dynamic'`, not `revalidate`: this fetches the full indexable
+// catalogue (tens of thousands of products, paged) plus every taxonomy vocabulary,
+// which `next build` was attempting to pre-render as a static route. That routinely
+// brushed the 60s static-worker timeout, then tipped over into a hard build
+// failure once one more fetch (getSellers) was added. The manual Cache-Control
+// header below already gives this the same "fresh, then cached" behaviour a
+// finite `revalidate` would — the build just never needs to run it.
+export const dynamic = 'force-dynamic';
 
 // The catalog API is Typesense-backed (per_page cap 250), so page through in
 // 250s up to `total`.
@@ -84,7 +92,7 @@ export async function GET(): Promise<Response> {
   const products = await allIndexableProducts();
   // Market-independent taxonomy vocabularies — fetched once, emitted per
   // market×locale below, same as `products`.
-  const [publishers, mechanics] = await Promise.all([getCatalogFacets(), getMechanics()]);
+  const [publishers, mechanics, stores] = await Promise.all([getCatalogFacets(), getMechanics(), getSellers()]);
 
   const entries: UrlEntry[] = [];
 
@@ -96,6 +104,7 @@ export async function GET(): Promise<Response> {
     entries.push({ loc: `${SITE_URL}${listingPath('categories', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
     entries.push({ loc: `${SITE_URL}${listingPath('publishers', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
     entries.push({ loc: `${SITE_URL}${listingPath('mechanics', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
+    entries.push({ loc: `${SITE_URL}${listingPath('stores', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
 
     // Curated theme landing pages (the real category SEO targets). The catch-all
     // shelf is browsable but noindex, so it never enters the sitemap.
@@ -118,6 +127,13 @@ export async function GET(): Promise<Response> {
       entries.push({
         loc: `${SITE_URL}${entityPath('mechanics', locale, slugify(m.mechanic), market)}`,
         changefreq: 'weekly',
+        priority: 0.6,
+      });
+    }
+    for (const s of stores) {
+      entries.push({
+        loc: `${SITE_URL}${entityPath('stores', locale, s.slug, market)}`,
+        changefreq: 'daily',
         priority: 0.6,
       });
     }

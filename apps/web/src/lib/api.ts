@@ -110,6 +110,14 @@ export interface CatalogFacets {
   durations: Array<{ value: number; count: number }>;
 }
 
+export interface Seller {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  description: string | null;
+  productCount: number;
+}
+
 async function api<T>(path: string, revalidate: number): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -157,6 +165,8 @@ export async function listProducts(opts: {
   minPriceMinor?: number;
   maxPriceMinor?: number;
   mechanics?: string[];
+  /** Filter to products with an active listing from this seller (slug). */
+  seller?: string;
   complexity?: string;
   /** UI locale for name/description overrides; without it cards show base English. */
   locale?: string;
@@ -191,6 +201,7 @@ export async function listProducts(opts: {
   if (opts.market) params.set('market', opts.market.toUpperCase());
   for (const currency of opts.currencies ?? []) params.append('currency', currency.toUpperCase());
   for (const mechanic of opts.mechanics ?? []) params.append('mechanics', mechanic);
+  if (opts.seller) params.set('seller', opts.seller);
   const data = await api<{ results: ProductSummary[]; total: number }>(
     `/api/v1/products?${params}`,
     REVALIDATE.listing,
@@ -231,6 +242,14 @@ export async function getCatalogFacets(): Promise<CatalogFacets> {
   return (await api<CatalogFacets>(`/api/v1/products/facets`, REVALIDATE.category)) ?? {
     publishers: [], years: [], ages: [], durations: [],
   };
+}
+
+export async function getSellers(): Promise<Seller[]> {
+  return (await api<Seller[]>(`/api/v1/products/sellers`, REVALIDATE.category)) ?? [];
+}
+
+export function getSeller(slug: string): Promise<Seller | null> {
+  return api<Seller>(`/api/v1/products/sellers/${encodeURIComponent(slug)}`, REVALIDATE.category);
 }
 
 // Best (lowest) in-stock price across listings, else lowest overall.
