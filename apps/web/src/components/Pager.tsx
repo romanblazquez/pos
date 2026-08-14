@@ -40,7 +40,8 @@ export function Pager({
 
   return (
     <div className="pager-wrap">
-    <p className="pager-summary muted">{summary}</p>
+    {/* A range is a count: Space Mono, per the type rules. */}
+    <p className="pager-summary muted"><span className="tabular">{summary}</span></p>
     <nav className="pager" aria-label={locale === 'es' ? 'Paginación' : 'Pagination'}>
       {/* First/last shortcuts: on a 622-page catalogue, stepping is not a
           navigation strategy. */}

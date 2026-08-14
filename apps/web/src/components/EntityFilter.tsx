@@ -98,8 +98,10 @@ export function EntityFilter({
       </div>
 
       <p className="entity-filter-count muted" aria-live="polite">
-        {t.showing} {shownCount.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')}{' '}
-        {t.of} {items.length.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')}
+        {t.showing}{' '}
+        <span className="tabular">{shownCount.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')}</span>{' '}
+        {t.of}{' '}
+        <span className="tabular">{items.length.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')}</span>
       </p>
 
       {filtered.length === 0 ? (
@@ -119,7 +121,7 @@ export function EntityFilter({
               className={i < shownCount ? 'chip' : 'chip is-folded'}
               href={item.href}
             >
-              {item.label} <span className="muted">({item.count.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')})</span>
+              {item.label} <span className="count">{item.count.toLocaleString(locale === 'es' ? 'es-MX' : 'en-US')}</span>
             </Link>
           ))}
         </div>

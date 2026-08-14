@@ -108,6 +108,31 @@ yet migrated** — see §7.
 
 ---
 
+## 2b. Taxonomy hubs (publishers / mechanics / stores)
+
+`EntityFilter` backs all three. Conformance points that were got wrong once and
+are easy to get wrong again:
+
+- **Counts are Space Mono.** The type rules reserve mono for "precios, counts,
+  heat", so chip counts use the existing `.chip .count`, and the "showing N of
+  M" / pager range use `.tabular` (mono + `tabular-nums`). A first pass used
+  `.muted`, which renders counts in the body face.
+- `.tabular` is defined in `apps/web/src/app/globals.css`. It did **not** exist
+  before — `className="tabular"` is a Tailwind utility in the *portals*, and
+  copying that idiom into `apps/web` (plain CSS, no tailwind.config) silently
+  produces a dead class.
+- **System radii only**: input `14px` (card), chips/buttons `999px` (pill).
+- **Touch targets ≥44px** on the input, sort toggles and "show more".
+- **Spacing by `gap`**, never sibling margins — the container is a flex column.
+- **The fold is CSS-only.** Every chip stays in the server-rendered HTML
+  (`.chip.is-folded { display: none }`). Slicing the array before render drops
+  875 crawlable publisher links and defeats the point of the hub.
+
+Verified in the deployed CSS/HTML: 995 `.count` spans, 995 links, 875 folded,
+`.tabular{}`, `border-radius:14px`, `min-height:44px` all present.
+
+---
+
 ## 3. The shelves (§06)
 
 `THEMES` (taxonomy: slug, label, BGG tag rules) is joined to `CATEGORY_IDENTITY`
