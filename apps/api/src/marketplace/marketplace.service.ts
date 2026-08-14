@@ -247,7 +247,7 @@ export class MarketplaceService {
         minPlayers: { lte: params.minPlayers },
         maxPlayers: { gte: params.minPlayers },
       } : {}),
-      ...(params.mechanics && params.mechanics.length > 0 ? { tags: { hasSome: params.mechanics } } : {}),
+      ...(params.mechanics && params.mechanics.length > 0 ? { mechanics: { hasSome: params.mechanics } } : {}),
       ...(complexityRange ? {
         bggWeight: {
           gte: complexityRange.min,
@@ -367,7 +367,7 @@ export class MarketplaceService {
     const categories = [...new Set(products.map((product) => product.category).filter((value): value is string => Boolean(value)))]
       .slice(0, 2)
       .map((label) => ({ kind: 'category' as const, label, value: label }));
-    const mechanics = [...new Set(suggestionProducts.flatMap((product) => product.tags ?? []))]
+    const mechanics = [...new Set(suggestionProducts.flatMap((product) => product.mechanics ?? []))]
       .slice(0, 2)
       .map((label) => ({ kind: 'mechanic' as const, label, value: label }));
 
@@ -414,18 +414,17 @@ export class MarketplaceService {
   }
 
   /**
-   * Distinct game mechanics (stored as MktProduct.tags), ordered by
-   * popularity — backs the mechanics filter chips AND the /mecanicas landing
-   * pages. Reads the Typesense index first, same as getCategories(): the
-   * encyclopedia's indexable catalogue is overwhelmingly larger than the
-   * handful of products with an active seller listing, and a plain
-   * verified+active Prisma query undercounted mechanics by two orders of
-   * magnitude (a landing-page hub listing 113 mechanics when the real catalog
-   * carries far more). Falls back to the narrow verified+active-listing count
-   * only when the index is empty or unreachable.
+   * Distinct game mechanics (MktProduct.mechanics — real mechanics only, not
+   * the blended `tags`), ordered by popularity — backs the mechanics filter
+   * chips AND the /mecanicas landing pages. Reads the Typesense index first,
+   * same as getCategories(): the encyclopedia's indexable catalogue is
+   * overwhelmingly larger than the handful of products with an active seller
+   * listing, and a plain verified+active Prisma query undercounted mechanics
+   * by two orders of magnitude. Falls back to the narrow verified+active-
+   * listing count only when the index is empty or unreachable.
    */
   async getMechanics(): Promise<{ mechanic: string; count: number }[]> {
-    const indexed = await this.search.tagCounts();
+    const indexed = await this.search.mechanicCounts();
     if (indexed.size > 0) {
       return [...indexed.entries()]
         .map(([mechanic, count]) => ({ mechanic, count }))
@@ -434,12 +433,12 @@ export class MarketplaceService {
 
     const products = await this.prisma.mktProduct.findMany({
       where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
-      select: { tags: true },
+      select: { mechanics: true },
     });
     const counts = new Map<string, number>();
     for (const product of products) {
-      for (const tag of product.tags) {
-        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      for (const mechanic of product.mechanics) {
+        counts.set(mechanic, (counts.get(mechanic) ?? 0) + 1);
       }
     }
     return [...counts.entries()]

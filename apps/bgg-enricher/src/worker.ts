@@ -286,6 +286,7 @@ export class BggEnrichmentWorker {
     const translation = await this.translateIfNeeded(product.id, game.name, description);
     const now = new Date();
     const tags = [...new Set([...(game.categories ?? []), ...(game.mechanics ?? [])])].slice(0, 12);
+    const mechanics = [...new Set(game.mechanics ?? [])];
 
     await this.prisma.$transaction(async (tx) => {
       await tx.mktProduct.update({
@@ -304,6 +305,7 @@ export class BggEnrichmentWorker {
           bggWeight: game.weight ?? undefined,
           images: game.image_url ? [game.image_url] : product.images,
           tags: tags.length > 0 ? tags : product.tags,
+          mechanics: mechanics.length > 0 ? mechanics : product.mechanics,
         },
       });
 

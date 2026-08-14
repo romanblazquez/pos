@@ -8,6 +8,7 @@ const product = {
   images: ['catan.jpg'],
   category: 'board-game',
   tags: ['trading'],
+  mechanics: ['trading'],
   description: 'Trade and build.',
   publisher: 'KOSMOS',
   minPlayers: 3,
@@ -31,7 +32,7 @@ function setup() {
   const search = {
     search: vi.fn().mockResolvedValue({ hits: [], total: 0 }),
     categoryCounts: vi.fn().mockResolvedValue(new Map()),
-    tagCounts: vi.fn().mockResolvedValue(new Map()),
+    mechanicCounts: vi.fn().mockResolvedValue(new Map()),
     publisherCounts: vi.fn().mockResolvedValue(new Map()),
   };
   const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
@@ -141,7 +142,7 @@ describe('MarketplaceService search filters', () => {
 
   it('reads mechanic counts from the search index instead of the verified+active-only DB path', async () => {
     const { service, prisma, search } = setup();
-    search.tagCounts.mockResolvedValue(new Map([['Deck Building', 900], ['Party Game', 40]]));
+    search.mechanicCounts.mockResolvedValue(new Map([['Deck Building', 900], ['Party Game', 40]]));
 
     const result = await service.getMechanics();
 
@@ -154,7 +155,7 @@ describe('MarketplaceService search filters', () => {
 
   it('falls back to the DB for mechanics when the search index is empty', async () => {
     const { service, prisma, search } = setup();
-    search.tagCounts.mockResolvedValue(new Map());
+    search.mechanicCounts.mockResolvedValue(new Map());
 
     const result = await service.getMechanics();
 

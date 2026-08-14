@@ -22,6 +22,8 @@ export interface ProductDocument {
    */
   categorySlugs?: string[];
   tags: string[];
+  /** Real BGG mechanics only — `tags` blends these with categories. */
+  mechanics?: string[];
   language: string;
   minPlayers: number;
   maxPlayers: number;
@@ -62,6 +64,7 @@ const COLLECTION_SCHEMA = {
     { name: 'category',        type: 'string'  as const, facet: true },
     { name: 'categorySlugs',   type: 'string[]' as const, facet: true, optional: true },
     { name: 'tags',            type: 'string[]' as const, facet: true },
+    { name: 'mechanics',       type: 'string[]' as const, facet: true, optional: true },
     { name: 'language',        type: 'string'  as const, facet: true, optional: true },
     { name: 'minPlayers',      type: 'int32'   as const, facet: true, optional: true },
     { name: 'maxPlayers',      type: 'int32'   as const, facet: true, optional: true },
@@ -149,6 +152,13 @@ export class TypesenseService implements OnModuleInit {
         this.log.log('Typesense collection extended with categorySlugs');
         return;
       }
+      if (!fields.some((f) => f.name === 'mechanics')) {
+        await this.client.collections(COLLECTION).update({
+          fields: [{ name: 'mechanics', type: 'string[]', facet: true, optional: true }],
+        } as never);
+        this.log.log('Typesense collection extended with mechanics');
+        return;
+      }
       // `publisher` existed as a plain string field; making an already-present
       // field facetable requires dropping and re-adding it in the same update —
       // Typesense then reindexes just that field's facet index in place, same as
@@ -230,28 +240,29 @@ export class TypesenseService implements OnModuleInit {
   }
 
   /**
-   * Every distinct tag (mechanics, mixed with categories — see MktProduct.tags)
-   * across the FULL indexed catalogue, with counts. Same shape and same reason
-   * as categoryCounts(): the mechanics landing pages and filter chips must see
-   * what the storefront actually lists, not the much narrower verified+active-
-   * listing subset a plain Prisma query would see. Empty when Typesense is
-   * unreachable, so callers can fall back to counting in the database.
+   * Every distinct real mechanic (the `mechanics` field, not the blended
+   * `tags`) across the FULL indexed catalogue, with counts. Same shape and
+   * same reason as categoryCounts(): the mechanics landing pages and filter
+   * chips must see what the storefront actually lists, not the much narrower
+   * verified+active-listing subset a plain Prisma query would see. Empty when
+   * Typesense is unreachable, so callers can fall back to counting in the
+   * database.
    */
-  async tagCounts(): Promise<Map<string, number>> {
+  async mechanicCounts(): Promise<Map<string, number>> {
     const counts = new Map<string, number>();
     try {
       const result = await this.client.collections(COLLECTION).documents().search({
         q: '*',
         query_by: 'name',
         per_page: 1,
-        facet_by: 'tags',
+        facet_by: 'mechanics',
         max_facet_values: 1000,
       });
       for (const facet of result.facet_counts ?? []) {
         for (const value of facet.counts ?? []) counts.set(value.value, value.count);
       }
     } catch (err) {
-      this.log.warn(`Could not read tag counts: ${String(err)}`);
+      this.log.warn(`Could not read mechanic counts: ${String(err)}`);
     }
     return counts;
   }
@@ -371,7 +382,7 @@ export class TypesenseService implements OnModuleInit {
     if (currencies && currencies.length > 0) {
       filterParts.push(`currencies:=[${currencies.map((c) => `\`${c}\``).join(',')}]`);
     }
-    if (mechanics && mechanics.length > 0) filterParts.push(`tags:=[${mechanics.join(',')}]`);
+    if (mechanics && mechanics.length > 0) filterParts.push(`mechanics:=[${mechanics.join(',')}]`);
     if (complexity && isComplexityBand(complexity)) {
       const { min, max } = COMPLEXITY_BAND_RANGES[complexity];
       filterParts.push(max === null ? `bggWeight:>=${min}` : `bggWeight:>=${min} && bggWeight:<${max}`);

@@ -466,6 +466,11 @@ model MktProduct {
   edition         String?
   condition       String                 @default("new") // new | used | damaged
   tags            String[]
+  // Real BGG mechanics only (Worker Placement, Deck Building, ...), distinct
+  // from `tags` — which blends categories and mechanics together and is kept
+  // only for legacy search/filter compatibility. See getMechanics() in
+  // marketplace.service.ts for why the split exists.
+  mechanics       String[]               @default([])
   // 'verified' = manually confirmed; 'pending' = auto-imported, needs review; 'duplicate' = merged
   canonicalStatus String                 @default("pending")
   bggRating       Float?

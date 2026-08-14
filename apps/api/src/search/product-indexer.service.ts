@@ -101,6 +101,7 @@ export class ProductIndexerService {
       category: product.category,
       categorySlugs: product.categories.map((link) => link.category.normalizedName),
       tags: product.tags,
+      mechanics: product.mechanics,
       language: product.language ?? '',
       minPlayers: product.minPlayers ?? 0,
       maxPlayers: product.maxPlayers ?? 0,

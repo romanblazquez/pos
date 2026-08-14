@@ -73,6 +73,7 @@ export class MktCatalogService {
           bggWeight: game.weight || undefined,
           images: game.image ? [game.image] : existing.images,
           tags: [...game.categories, ...game.mechanics].slice(0, 12),
+          mechanics: game.mechanics,
           canonicalStatus: status,
         },
       });
@@ -102,6 +103,7 @@ export class MktCatalogService {
         bggWeight: game.weight || undefined,
         images: game.image ? [game.image] : [],
         tags: [...game.categories, ...game.mechanics].slice(0, 12),
+        mechanics: game.mechanics,
         canonicalStatus: status,
       },
     });
