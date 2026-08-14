@@ -21,15 +21,85 @@ function setup() {
       findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'order1', status: 'refunded', events: [] }),
       update: vi.fn().mockImplementation(({ data }) => ({ ...data })),
     },
+    mktProduct: { findUnique: vi.fn().mockResolvedValue({ id: 'prod1', name: 'Catan' }) },
+    listing: {
+      findFirst: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation(({ data }) => ({ id: 'listing1', ...data })),
+    },
+    sellerMarket: { findFirst: vi.fn().mockResolvedValue({ settlementCurrencyCode: 'ARS' }) },
   };
-  const indexer = {};
+  const indexer = { syncProductQuietly: vi.fn().mockResolvedValue(undefined) };
   const loyalty = { refundCredits: vi.fn().mockResolvedValue(undefined) };
   const checkout = {
     refundOrder: vi.fn().mockResolvedValue({ status: 'refunded', refundId: '99', amountMinor: 5000 }),
   };
   const service = new SellersService(prisma as never, indexer as never, loyalty as never, checkout as never);
-  return { service, prisma, loyalty, checkout };
+  return { service, prisma, loyalty, checkout, indexer };
 }
+
+describe('SellersService.createListing', () => {
+  it('creates a listing against an existing product and reindexes it', async () => {
+    const { service, prisma, indexer } = setup();
+
+    const listing = await service.createListing('seller1', { productSlug: 'catan', priceMinorUnits: 150000, stock: 10 });
+
+    expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        sellerId: 'seller1', productId: 'prod1', priceMinorUnits: 150000,
+        stock: 10, stockStatus: 'in_stock', condition: 'new', active: true,
+      }),
+    }));
+    // Without the reindex the offer never reaches a product card.
+    expect(indexer.syncProductQuietly).toHaveBeenCalledWith('prod1');
+    expect(listing).toMatchObject({ id: 'listing1' });
+  });
+
+  it('defaults the currency to the seller\'s configured market, not the schema default', async () => {
+    const { service, prisma } = setup();
+
+    await service.createListing('seller1', { productSlug: 'catan', priceMinorUnits: 1000 });
+
+    expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ currency: 'ARS' }),
+    }));
+  });
+
+  it('refuses when the seller has no market and supplied no currency', async () => {
+    const { service, prisma } = setup();
+    prisma.sellerMarket.findFirst.mockResolvedValue(null);
+
+    await expect(service.createListing('seller1', { productSlug: 'catan', priceMinorUnits: 1000 }))
+      .rejects.toThrow(/price without a currency is not sellable/);
+    expect(prisma.listing.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown catalogue product rather than inventing one', async () => {
+    const { service, prisma } = setup();
+    prisma.mktProduct.findUnique.mockResolvedValue(null);
+
+    await expect(service.createListing('seller1', { productSlug: 'nope', priceMinorUnits: 1000 }))
+      .rejects.toThrow(/No catalogue product with slug "nope"/);
+  });
+
+  it('refuses a second listing for a product the seller already lists', async () => {
+    const { service, prisma } = setup();
+    prisma.listing.findFirst.mockResolvedValue({ id: 'existing' });
+
+    await expect(service.createListing('seller1', { productSlug: 'catan', priceMinorUnits: 1000 }))
+      .rejects.toThrow(/already have a listing for "Catan"/);
+    expect(prisma.listing.create).not.toHaveBeenCalled();
+  });
+
+  it('marks a zero-stock listing out_of_stock on creation', async () => {
+    const { service, prisma } = setup();
+
+    await service.createListing('seller1', { productSlug: 'catan', priceMinorUnits: 1000, stock: 0 });
+
+    expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ stock: 0, stockStatus: 'out_of_stock' }),
+    }));
+  });
+});
 
 describe('SellersService.updateOrderStatus', () => {
   it('throws 404 when the order does not belong to this seller', async () => {

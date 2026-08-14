@@ -245,6 +245,92 @@ export class SellersService {
     return { listings, total, page: params.page, limit: params.limit };
   }
 
+  /**
+   * Create a listing by hand, against a product that already exists in the
+   * master catalogue.
+   *
+   * Until now every listing arrived through connector sync, so a seller
+   * without a connector — or with a game the connector never carried — had no
+   * way to sell anything at all. This is the manual path.
+   *
+   * Deliberately restricted to existing MktProducts: letting sellers invent
+   * catalogue entries is how a marketplace ends up with six spellings of
+   * Catan competing for the same page. Creating genuinely new catalogue
+   * products stays an admin/BGG-import concern.
+   *
+   * Currency defaults to the seller's own configured market rather than the
+   * schema's MXN default — a seller selling in ARS would otherwise silently
+   * publish MXN-labelled prices.
+   */
+  async createListing(sellerId: string, data: {
+    productSlug: string;
+    priceMinorUnits: number;
+    currency?: string;
+    stock?: number;
+    condition?: string;
+    sellerSku?: string;
+  }) {
+    const product = await this.prisma.mktProduct.findUnique({
+      where: { slug: data.productSlug },
+      select: { id: true, name: true },
+    });
+    if (!product) throw new NotFoundException(`No catalogue product with slug "${data.productSlug}"`);
+
+    const existing = await this.prisma.listing.findFirst({
+      where: { sellerId, productId: product.id },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `You already have a listing for "${product.name}" — edit that one instead of creating a second.`,
+      );
+    }
+
+    if (data.sellerSku) {
+      const skuTaken = await this.prisma.listing.findFirst({
+        where: { sellerId, sellerSku: data.sellerSku },
+        select: { id: true },
+      });
+      if (skuTaken) throw new ConflictException(`SKU "${data.sellerSku}" is already used by another of your listings`);
+    }
+
+    const currency = data.currency?.toUpperCase()
+      ?? (await this.prisma.sellerMarket.findFirst({
+        where: { sellerId, active: true },
+        select: { settlementCurrencyCode: true },
+      }))?.settlementCurrencyCode;
+    if (!currency) {
+      throw new ConflictException(
+        'Configure a market for your store (or pass a currency) before creating a listing — a price without a currency is not sellable.',
+      );
+    }
+
+    const stock = data.stock ?? 0;
+    const listing = await this.prisma.listing.create({
+      data: {
+        sellerId,
+        productId: product.id,
+        priceMinorUnits: data.priceMinorUnits,
+        currency,
+        stock,
+        stockStatus: stock === 0 ? 'out_of_stock' : stock <= 3 ? 'low_stock' : 'in_stock',
+        condition: data.condition ?? 'new',
+        sellerSku: data.sellerSku ?? null,
+        active: true,
+        // Manually entered, so it is accurate right now by definition — unlike a
+        // connector row whose confidence decays with sync recency.
+        stockConfidence: 1,
+        lastSyncedAt: new Date(),
+      },
+    });
+
+    // Product cards read prices from the search index, so a listing that never
+    // reindexes is invisible on the storefront no matter what the DB says.
+    await this.indexer.syncProductQuietly(product.id);
+
+    return listing;
+  }
+
   async updateListing(sellerId: string, listingId: string, data: {
     priceMinorUnits?: number;
     stock?: number;
@@ -263,7 +349,14 @@ export class SellersService {
       patch['stockStatus'] = data.stock === 0 ? 'out_of_stock' : data.stock <= 3 ? 'low_stock' : 'in_stock';
     }
 
-    return this.prisma.listing.update({ where: { id: listingId }, data: patch });
+    const updated = await this.prisma.listing.update({ where: { id: listingId }, data: patch });
+
+    // Same reason createListing reindexes: cards are served from the index, so
+    // without this a price or availability edit stayed invisible on the
+    // storefront until the hourly ranking pass happened to pick it up.
+    await this.indexer.syncProductQuietly(listing.productId);
+
+    return updated;
   }
 
   async bulkUpdateListings(sellerId: string, selection: {

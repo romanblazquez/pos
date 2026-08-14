@@ -43,6 +43,32 @@ export class UpdateListingDto {
   active?: boolean;
 }
 
+export class CreateListingDto {
+  @ApiProperty({ type: 'string', description: 'Slug of the catalogue product (MktProduct) being listed', example: 'catan' })
+  @IsString() @MinLength(1)
+  productSlug: string;
+
+  @ApiProperty({ type: 'integer', description: 'Price in minor currency units (centavos). E.g. 150000 = $1,500.00', example: 150000 })
+  @IsInt() @Min(1)
+  priceMinorUnits: number;
+
+  @ApiPropertyOptional({ type: 'string', description: 'ISO-4217 code. Defaults to the seller\'s configured market currency.', example: 'MXN' })
+  @IsOptional() @IsString() @MinLength(3) @MaxLength(3)
+  currency?: string;
+
+  @ApiPropertyOptional({ type: 'integer', description: 'Stock count. Use 999 for unlimited/unmanaged stock', example: 10 })
+  @IsOptional() @IsInt() @Min(0)
+  stock?: number;
+
+  @ApiPropertyOptional({ enum: ['new', 'used', 'damaged'], example: 'new' })
+  @IsOptional() @IsIn(['new', 'used', 'damaged'])
+  condition?: string;
+
+  @ApiPropertyOptional({ type: 'string', description: 'Your own SKU. Must be unique within your store.', example: 'SKU-CATAN-01' })
+  @IsOptional() @IsString() @MaxLength(120)
+  sellerSku?: string;
+}
+
 export class BulkUpdateListingsDto {
   @ApiPropertyOptional({ type: [String], description: 'Explicit listing CUIDs to update. Takes precedence over `filter`.' })
   @IsOptional() @IsString({ each: true })

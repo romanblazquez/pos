@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
 import { SellerMappingService } from './seller-mapping.service.js';
-import { BulkUpdateListingsDto, CreateSellerDto, UpdateListingDto, UpdateOrderStatusDto, UpdateSellerProfileDto } from './sellers.dto.js';
+import { BulkUpdateListingsDto, CreateListingDto, CreateSellerDto, UpdateListingDto, UpdateOrderStatusDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Roles } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
@@ -588,6 +588,24 @@ export class SellersController {
     @Body() body: BulkUpdateListingsDto,
   ) {
     return this.svc.bulkUpdateListings(id, { ids: body.ids, filter: body.filter }, { active: body.active });
+  }
+
+  @Post(':id/listings')
+  @ApiOperation({
+    summary: 'Create a listing by hand against an existing catalogue product',
+    description:
+      'The manual alternative to connector sync — the only way for a seller without a connector to sell anything. ' +
+      'Takes the slug of a product that already exists in the master catalogue; creating new catalogue entries is not a seller operation. ' +
+      'Currency defaults to the seller\'s configured market currency. Returns 409 if the seller already lists that product, ' +
+      'if the SKU is taken, or if the store has no market configured and no currency was supplied.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiBody({ type: CreateListingDto })
+  @ApiResponse({ status: 201, description: 'The created listing' })
+  @ApiResponse({ status: 404, description: 'No catalogue product with that slug' })
+  @ApiResponse({ status: 409, description: 'Duplicate listing, duplicate SKU, or no resolvable currency' })
+  createListing(@Param('id') id: string, @Body() dto: CreateListingDto) {
+    return this.svc.createListing(id, dto);
   }
 
   @Patch(':id/listings/:listingId')

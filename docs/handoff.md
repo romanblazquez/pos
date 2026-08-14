@@ -200,3 +200,149 @@
 - Service runs the seller portal Vite dev server on `4400:4400` with host
   binding and points `VITE_API_URL` at `http://localhost:3002` so it can reach
   the host-mapped API from the browser.
+
+## 2026-08-14 — Marketplace SEO surface + seller fulfillment
+
+Four related pieces of work, all deployed to production and verified live.
+
+### 1. Publisher and mechanic landing pages (`apps/web`)
+
+Shipped `/editoriales` (es) / `/publishers` (en) and `/mecanicas` /
+`/mechanics`: a hub per taxonomy plus a landing page per entity, reusing the
+`EntityKind`/`SEGMENTS` routing that already existed but was never
+implemented. Each carries breadcrumbs, `BreadcrumbList` + `ItemList` JSON-LD,
+canonical + hreflang, pagination-aware noindex, and sibling cross-links.
+Added to `sitemap.xml`, the footer, and the mobile nav.
+
+**Bug found while shipping it.** `getMechanics()` and `getFacets()` were
+scoped to `verified` products with an active seller listing — a few dozen
+rows — while the sitemap, detail pages and search all treat the full ~178k
+product encyclopedia as indexable. The hub pages were therefore listing 28
+publishers and 113 mechanics out of hundreds. Both now read Typesense facet
+counts first (the pattern `getCategories()` already used), falling back to
+the old query only when the index is empty. Publisher faceting required
+marking that field facetable, migrated in place. Result: 28 → 995
+publishers. BGG's bracketed non-publishers (`(Self-Published)`,
+`(Web published)`, `(Unknown)`) are filtered — they are not entities that
+deserve a landing page.
+
+### 2. Real mechanics, split from categories
+
+`MktProduct.tags` blended BGG categories and mechanics into one 12-item
+array, so "mechanics" pages ranked `Card Game`, `Wargame` and
+`Expansion for Base-game` as top mechanics, and longer games lost real
+mechanics to the cap.
+
+Added a dedicated `MktProduct.mechanics` column
+(migration `20260814180000_mkt_product_mechanics`), written at ingestion by
+both `mkt-catalog.service.ts` and the `bgg-enricher` worker, with a matching
+Typesense facet field. `getMechanics()` and the mechanics search filter read
+it instead of `tags`; the legacy column is untouched for compatibility.
+
+Historical rows were backfilled by intersecting existing `tags` against
+BGG's official mechanic vocabulary — precision over recall, since the
+original per-product split was never stored and cannot be perfectly
+reconstructed. `apps/api/scripts/backfill-mechanics.ts`, run once against
+production: **154,890 Postgres rows, 133,748 Typesense documents**.
+Mechanics went 274 (polluted) → 178 (real); `/mecanicas/card-game` now 404s
+instead of rendering a category as a mechanic.
+
+### 3. Public seller storefronts
+
+Shipped `/tiendas` (es) / `/stores` (en): a hub of active sellers and a
+landing page each, listing their real catalogue. Typesense gained a
+`sellerSlugs` facet per product (populated from visible active listings,
+same rule `ProductIndexerService` already applies to pricing), plus a
+`seller` search filter and two public endpoints
+(`GET /products/sellers`, `GET /products/sellers/:slug`). Only `active`
+sellers are ever public — pending/suspended/churned are not storefronts.
+Backfill for pre-existing indexed docs:
+`apps/api/scripts/backfill-seller-slugs.ts`.
+
+JSON-LD is `Organization`, deliberately **not** `Store` with an
+`aggregateRating`: the only seller quality signal available (`SellerScore`)
+is an internal operational metric, not a first-party review corpus, and
+`jsonld.ts` already forbids asserting fabricated ratings.
+
+**Build fragility fixed.** Adding one more fetch to `sitemap.xml` tipped a
+pre-existing problem into a hard build failure: the route was still being
+statically pre-rendered at `next build` while fetching the entire indexable
+catalogue, routinely brushing Next's 60s static-worker timeout. Switched
+from `revalidate = 3600` to `dynamic = 'force-dynamic'`. It already sets its
+own `Cache-Control`, so runtime caching is unchanged — the build simply
+stops trying to render tens of thousands of URLs.
+
+### 4. Seller order fulfillment and refunds
+
+`OrdersPage` was read-only and the API had no mutation endpoint at all:
+sellers could see orders but could not ship, track or cancel them.
+
+Added `PATCH /api/v1/sellers/:id/orders/:orderId` with a transition table
+(`confirmed→shipped|cancelled`, `shipped→delivered`,
+`pending|reserved→cancelled`), carrier/tracking on shipment and reason on
+cancellation, both recorded on the existing `OrderEvent` trail rather than
+new columns. The portal mirrors the same table so it never offers a move the
+API would reject.
+
+Cancelling a gateway-paid order performs a **real MercadoPago refund**
+(`checkout.refundOrder`), issued against the account that *collected* the
+money — a connected seller's payment was taken with their own OAuth token,
+so refunding it with the platform token would 404 against an account the
+payment does not exist under. Such orders end as `refunded`, not
+`cancelled`. A refund failure propagates rather than being swallowed: the
+order keeps its previous status instead of reading cancelled while the buyer
+is still charged.
+
+**Money bug this surfaced.** `awardCashback` fires on confirmation and
+nothing reversed it, so buy-then-refund returned the buyer's money *and*
+left them the credits the purchase earned — free credits, repeatable. Added
+`loyalty.clawbackCashback`, clamped to the balance actually present in both
+pots (the buyer may already have spent it). Credits are not a debt we can
+chase, so it recovers what is there and records the real figure on the order
+event rather than driving a wallet negative.
+
+### 5. Manual listing creation
+
+Every listing previously arrived through connector sync, so a seller without
+a connector — or with a game the connector never carried — could not sell
+anything. Added `POST /api/v1/sellers/:id/listings` plus a catalogue-picker
+modal in the portal.
+
+Restricted to products already in the master catalogue: letting sellers
+invent catalogue entries is how a marketplace ends up with six spellings of
+Catan competing for one page. Currency defaults to the seller's configured
+market rather than the schema's `MXN`, so an ARS seller cannot silently
+publish MXN-labelled prices. Both create and update now reindex the product
+— cards are served from the search index, so without it a new listing or a
+price edit stayed invisible until the hourly ranking pass.
+
+### Validation
+
+- `api`, `web`, `seller-portal` typecheck: pass.
+- `apps/api` vitest: 98 tests pass, including new
+  `sellers.service.spec.ts` (13) and `loyalty.service.spec.ts` (5) —
+  neither module had tests before.
+- Deployed and verified live: `retail-os-api`, `retail-os-seo-web`,
+  `retail-os-web`, `retail-os-bgg-enricher`.
+
+### Incidental fix
+
+`retail-os-typesense` had been reporting unhealthy for 7,561 consecutive
+checks. The healthcheck fix was committed in July but the running container
+was never recreated to pick it up. Recreated; data volume untouched.
+
+### Known gaps (not started)
+
+- `apps/backoffice` is still a README with no source. Note that
+  `apps/admin-console` (React, deployed) already covers sellers, catalog,
+  orders, markets, ranking, BGG import and analytics across 9 views with
+  real URL routing — a greenfield Angular backoffice would duplicate a
+  working surface, so ADR-0006 is worth revisiting before building it.
+- `seller-portal` has no router: it is a single-view tab switcher, so no
+  deep-linking or browser back. `admin-console` solves this with a
+  `pathname`/`popstate` pattern that could be lifted directly.
+- Bulk listing updates do not reindex (single updates now do); a select-all
+  bulk edit still waits for the hourly pass. Reindexing thousands of
+  products inline would time out the request — it needs a queued job.
+- Analytics has no date-range picker or export; Settings has no
+  password/email change or self-deactivation.

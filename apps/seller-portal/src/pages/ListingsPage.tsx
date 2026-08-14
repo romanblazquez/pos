@@ -45,6 +45,7 @@ interface Listing {
 
 interface RelinkSearchResult {
   id: string;
+  slug: string;
   name: string;
   yearPublished: number | null;
   publisher: string | null;
@@ -121,6 +122,7 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
   const [sort, setSort] = useState<SortKey>('recent');
 
   const [editListing, setEditListing] = useState<Listing | null>(null);
+  const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   // tracks which listing IDs have at least one currently-active promo (lazy, populated when modal opens)
   const [promoMap, setPromoMap] = useState<Record<string, boolean>>({});
@@ -275,14 +277,23 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
               {total.toLocaleString('es-AR')} productos en catálogo
             </p>
           </div>
-          <button
-            onClick={fetchListings}
-            disabled={loading}
-            className="min-h-10 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 sm:px-4
-                       rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Actualizando…' : 'Actualizar'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCreating(true)}
+              className="min-h-10 px-3 py-2 text-sm font-medium text-white bg-slate-900 sm:px-4
+                         rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              + Publicar producto
+            </button>
+            <button
+              onClick={fetchListings}
+              disabled={loading}
+              className="min-h-10 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 sm:px-4
+                         rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Actualizando…' : 'Actualizar'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -496,6 +507,14 @@ export default function ListingsPage({ session }: { session: SellerSession }) {
             setEditListing(null);
           }}
           onPromosFetched={handlePromosFetched}
+        />
+      )}
+
+      {creating && (
+        <CreateListingModal
+          sellerId={session.seller.id}
+          onClose={() => setCreating(false)}
+          onCreated={() => { setCreating(false); fetchListings(); }}
         />
       )}
     </div>
@@ -1658,6 +1677,239 @@ function DiffRow({ label, before, after, multiline }: {
       ) : (
         <p className="text-xs text-slate-500 leading-relaxed">{before || '(vacío)'} <span className="text-slate-300">— sin cambios</span></p>
       )}
+    </div>
+  );
+}
+
+// ─── Create listing ───────────────────────────────────────────────────────────
+
+/**
+ * Publish a product by hand, without waiting for a connector sync.
+ *
+ * The product must already exist in the shared catalogue — sellers pick from
+ * it rather than typing a name, which is what keeps six spellings of the same
+ * game from competing for one page. Reuses the catalogue search that backs
+ * the relink picker.
+ */
+function CreateListingModal({ sellerId, onClose, onCreated }: {
+  sellerId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<RelinkSearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<RelinkSearchResult | null>(null);
+  const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('1');
+  const [condition, setCondition] = useState('new');
+  const [sellerSku, setSellerSku] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function handler(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!query.trim() || selected) { setResults(null); return; }
+    timer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await sellerApi.fetch(
+          `${API}/api/v1/sellers/${sellerId}/product-mappings/search?q=${encodeURIComponent(query)}`,
+        );
+        setResults(res.ok ? await res.json() as RelinkSearchResult[] : []);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [query, sellerId, selected]);
+
+  async function submit() {
+    if (!selected) return;
+    // Entered in major units because that is how a seller thinks about price;
+    // the API contract is minor units throughout.
+    const priceMinorUnits = Math.round(parseFloat(price.replace(',', '.')) * 100);
+    if (!Number.isFinite(priceMinorUnits) || priceMinorUnits <= 0) {
+      setError('Ingresá un precio válido mayor a 0');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/listings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productSlug: selected.slug,
+          priceMinorUnits,
+          stock: Math.max(0, parseInt(stock, 10) || 0),
+          condition,
+          ...(sellerSku.trim() ? { sellerSku: sellerSku.trim() } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(data.message ?? 'No se pudo publicar el producto');
+      }
+      onCreated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error desconocido');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <div className="relative flex max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+          <h2 className="font-semibold text-slate-900">Publicar un producto</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+          {!selected ? (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Buscá el juego en el catálogo</label>
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Catan, Wingspan, Azul…"
+                  className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                />
+              </div>
+              {searching && <p className="text-xs text-slate-400">Buscando…</p>}
+              {results && results.length === 0 && !searching && (
+                <p className="text-xs text-slate-500">
+                  No encontramos ese juego en el catálogo. Solo se pueden publicar productos que ya existen —
+                  pedile al equipo que lo agregue si falta.
+                </p>
+              )}
+              <div className="space-y-1.5">
+                {results?.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setSelected(r)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-2 text-left hover:border-slate-400 transition-colors"
+                  >
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
+                      {r.images[0] ? (
+                        <img src={r.images[0]} alt="" className="h-full w-full object-cover" />
+                      ) : <div className="h-full w-full bg-slate-200" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">{r.name}</p>
+                      <p className="truncate text-xs text-slate-400">
+                        {[r.publisher, r.yearPublished].filter(Boolean).join(' · ') || '—'}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                  {selected.images[0] ? (
+                    <img src={selected.images[0]} alt="" className="h-full w-full object-cover" />
+                  ) : <div className="h-full w-full bg-slate-200" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">{selected.name}</p>
+                  <p className="truncate text-xs text-slate-400">
+                    {[selected.publisher, selected.yearPublished].filter(Boolean).join(' · ') || '—'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setSelected(null); setResults(null); }}
+                  className="shrink-0 text-xs text-slate-500 underline hover:text-slate-700"
+                >
+                  Cambiar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Precio</label>
+                  <input
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="1500.00"
+                    className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Stock</label>
+                  <input
+                    inputMode="numeric"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Estado</label>
+                  <select
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                    className="min-h-10 w-full rounded-lg border border-slate-300 px-2 text-sm"
+                  >
+                    <option value="new">Nuevo</option>
+                    <option value="used">Usado</option>
+                    <option value="damaged">Dañado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">SKU (opcional)</label>
+                  <input
+                    value={sellerSku}
+                    onChange={(e) => setSellerSku(e.target.value)}
+                    placeholder="SKU-001"
+                    className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">
+                Se publica en la moneda configurada en tus mercados.
+              </p>
+            </>
+          )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-4 py-3 sm:px-6">
+          <button
+            onClick={submit}
+            disabled={!selected || saving}
+            className="min-h-10 flex-1 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
+          >
+            {saving ? 'Publicando…' : 'Publicar'}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

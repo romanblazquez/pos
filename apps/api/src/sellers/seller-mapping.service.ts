@@ -36,7 +36,10 @@ export class SellerMappingService {
     return this.prisma.mktProduct.findMany({
       where: { name: { contains: q, mode: 'insensitive' } },
       take: limit,
-      select: { id: true, name: true, yearPublished: true, publisher: true, bggId: true, images: true },
+      // `slug` is here for the manual create-listing picker, which addresses
+      // products by slug like the rest of the public product API; relink still
+      // uses `id`.
+      select: { id: true, slug: true, name: true, yearPublished: true, publisher: true, bggId: true, images: true },
     });
   }
 
