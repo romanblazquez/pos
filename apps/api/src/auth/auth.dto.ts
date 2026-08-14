@@ -87,3 +87,13 @@ export class SessionAppDto {
   @IsIn(['marketplace', 'admin', 'seller'])
   app: 'marketplace' | 'admin' | 'seller';
 }
+
+export class ChangePasswordDto {
+  @ApiProperty({ type: 'string', description: 'The password you sign in with today', example: 'S3cur3P@ss!' })
+  @IsString() @MinLength(1)
+  currentPassword: string;
+
+  @ApiProperty({ type: 'string', description: 'New password (min 8 characters)', example: 'N3wS3cur3P@ss!' })
+  @IsString() @MinLength(8) @MaxLength(128)
+  newPassword: string;
+}

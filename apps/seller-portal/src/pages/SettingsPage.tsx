@@ -168,7 +168,119 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      <ChangePasswordCard />
     </div>
+  );
+}
+
+/**
+ * Password change. Deliberately its own card and its own form state — it does
+ * not share the profile form's save button, because "I edited my phone
+ * number" and "I am locking someone out of my account" should not be one
+ * ambiguous action.
+ */
+function ChangePasswordCard() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  const tooShort = newPassword.length > 0 && newPassword.length < 8;
+  const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
+  const canSubmit = currentPassword.length > 0 && newPassword.length >= 8
+    && newPassword === confirmPassword && !saving;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await sellerApi.fetch(`${API}/api/v1/auth/seller/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(body.message ?? 'No se pudo cambiar la contraseña');
+      }
+      const body = await res.json() as { otherSessionsRevoked: number };
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setResult(
+        body.otherSessionsRevoked > 0
+          ? `Contraseña actualizada. Se cerró la sesión en ${body.otherSessionsRevoked} dispositivo(s).`
+          : 'Contraseña actualizada.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Contraseña</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Contraseña actual</label>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Nueva contraseña</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            />
+            {tooShort && <p className="mt-1 text-xs text-amber-600">Mínimo 8 caracteres.</p>}
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Repetir nueva contraseña</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            />
+            {mismatch && <p className="mt-1 text-xs text-amber-600">Las contraseñas no coinciden.</p>}
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Al cambiarla, se cerrará la sesión en tus otros dispositivos. Esta sesión sigue abierta.
+          </p>
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          {result && <p className="text-xs text-emerald-600">{result}</p>}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="min-h-10 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40 transition-colors"
+          >
+            {saving ? 'Guardando…' : 'Cambiar contraseña'}
+          </button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

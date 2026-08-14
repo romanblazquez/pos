@@ -126,6 +126,72 @@ export class AuthService {
     };
   }
 
+  /**
+   * Change a seller's own password.
+   *
+   * Requires the current password even though the caller already holds a valid
+   * session: a session can be a borrowed laptop or a stolen token, and the
+   * whole value of a password change is that it locks those out. Proving
+   * knowledge of the existing password is what makes it a recovery action
+   * rather than a second way to use a compromised session.
+   *
+   * Every OTHER session family is revoked on success, which is the point — if
+   * the reason for changing is "someone else got in", leaving their refresh
+   * token alive makes the change cosmetic. The caller's own family survives so
+   * changing a password in Settings does not immediately log you out of the
+   * tab you are standing in.
+   */
+  async changeSellerPassword(
+    sellerId: string,
+    principalId: string,
+    currentSessionId: string | undefined,
+    dto: { currentPassword: string; newPassword: string },
+  ): Promise<{ ok: true; otherSessionsRevoked: number }> {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: { id: true, passwordHash: true },
+    });
+    if (!seller) throw new UnauthorizedException('Invalid credentials');
+
+    // A Google-provisioned account has no password to verify against. Silently
+    // setting one here would create a second, unverified way into the account.
+    if (!seller.passwordHash) {
+      throw new BadRequestException(
+        'This account signs in with Google and has no password to change. Set one through account recovery instead.',
+      );
+    }
+
+    if (!await bcrypt.compare(dto.currentPassword, seller.passwordHash)) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    if (await bcrypt.compare(dto.newPassword, seller.passwordHash)) {
+      throw new BadRequestException('The new password must be different from the current one');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.seller.update({ where: { id: sellerId }, data: { passwordHash } });
+
+    // Sessions rotate on refresh, so the token's `sid` may already be replaced;
+    // the family is the stable identity of "this device's login".
+    const current = currentSessionId
+      ? await this.prisma.authSession.findUnique({
+          where: { id: currentSessionId },
+          select: { familyId: true },
+        })
+      : null;
+
+    const { count } = await this.prisma.authSession.updateMany({
+      where: {
+        principalId,
+        revokedAt: null,
+        ...(current ? { familyId: { not: current.familyId } } : {}),
+      },
+      data: { revokedAt: new Date() },
+    });
+
+    return { ok: true, otherSessionsRevoked: count };
+  }
+
   async registerCustomer(dto: RegisterCustomerDto): Promise<SessionIdentity> {
     const email = normalizeEmail(dto.email);
     const existing = await this.prisma.mktCustomer.findFirst({

@@ -342,6 +342,39 @@ reading afterwards would silently reindex nothing. Enqueueing is
 fire-and-forget: a queue failure must not fail the seller's edit, and the
 hourly pass remains the backstop.
 
+### 7. Sellers can change their own password
+
+`SettingsPage` could edit a name, phone and timezone but not a password, and
+there was no endpoint for it either. A seller who suspected their account was
+compromised had no self-service way to lock anyone out.
+
+`PATCH /api/v1/auth/seller/password` requires the **current** password even
+though the caller already holds a valid session. That is the point: a live
+session can be a borrowed laptop or a stolen refresh token, and proving
+knowledge of the existing password is what makes this a lockout rather than
+another use of the compromised session.
+
+On success every *other* session family is revoked. Sessions rotate on
+refresh, so the JWT's `sid` may already point at a replaced row — the
+`familyId` is the stable identity of "this device's login", so the caller's
+own family is preserved (changing your password in Settings should not log
+you out of the tab you are standing in) and all others die. If the current
+family cannot be resolved, it revokes everything rather than skipping
+revocation: the safe default when identity is uncertain is to log everyone
+out.
+
+Two refusals worth knowing about: a Google-provisioned account has no
+password to verify, so it is rejected rather than silently having one set
+(that would create a second, unverified door into the account); and setting
+the new password equal to the old one is rejected rather than reported as
+success. Both success and failure are written to the audit log — a run of
+failures is what a brute-force attempt looks like.
+
+`apps/api/src/auth/change-password.spec.ts` covers the wrong-current-password
+refusal, the same-password refusal, the Google-only refusal, that the hash
+actually changes and verifies against the new value, and that other sessions
+are revoked (including the unresolved-family fallback).
+
 ### Correction to an earlier assessment
 
 An earlier survey reported that `seller-portal` had no router and no
@@ -365,5 +398,20 @@ was never recreated to pick it up. Recreated; data volume untouched.
   orders, markets, ranking, BGG import and analytics across 9 views with
   real URL routing — a greenfield Angular backoffice would duplicate a
   working surface, so ADR-0006 is worth revisiting before building it.
-- Analytics has no date-range picker or export; Settings has no
-  password/email change or self-deactivation.
+- Analytics has no date-range picker or CSV export (hardcoded to the last 7
+  days).
+- Settings still has no **email** change or self-deactivation. Both are
+  deliberately harder than the password change that landed: an email change
+  needs a verify-new-address round trip before it takes effect (otherwise a
+  typo or a hijacked session silently moves account recovery to an address
+  the owner does not control), and deactivation has to decide what happens
+  to live listings and in-flight orders first.
+- `bgg-enricher` throughput is the thing to watch, not its health flag. It
+  runs ~250-560 products/hour when BGG is not blocking, and there are
+  ~22,900 products still unenriched. BGG returns HTTP 403 periodically
+  (circuit-open records exist for Jul 11, Jul 25 and Aug 14); the breaker
+  then reports 503 by design and half-opens every 120 minutes. An
+  `unhealthy` container is therefore normal and self-healing — the real
+  signal is the hourly enrichment count going to ~0 and staying there,
+  which means the block is persistent rather than a rate-limit window and
+  pacing or the scraper fingerprint needs attention.

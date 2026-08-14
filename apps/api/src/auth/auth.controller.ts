@@ -1,17 +1,18 @@
 import {
   BadRequestException, Body, Controller, Get, HttpCode, Inject,
-  Post, Query, Req, Res, UseGuards,
+  Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import {
-  GoogleCredentialDto, LoginDto, RegisterCustomerDto, RegisterSellerDto, SessionAppDto,
+  ChangePasswordDto, GoogleCredentialDto, LoginDto, RegisterCustomerDto, RegisterSellerDto, SessionAppDto,
 } from './auth.dto.js';
 import { AuthGuard, Public, Roles } from './auth.guard.js';
 import type { JwtPayload } from './jwt.js';
 import { GoogleAuthService } from './google-auth.service.js';
 import { SessionService, type SessionResponse } from './session.service.js';
+import { AuditService } from './audit.service.js';
 import { APP_SECURITY, refreshCookieOptions, type AuthApp } from './auth.constants.js';
 import { Throttle } from '@nestjs/throttler';
 
@@ -27,6 +28,7 @@ export class AuthController {
     @Inject(AuthService) private readonly authService: AuthService,
     @Inject(GoogleAuthService) private readonly googleAuth: GoogleAuthService,
     @Inject(SessionService) private readonly sessions: SessionService,
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
   @Public()
@@ -116,6 +118,49 @@ export class AuthController {
   @Roles('seller')
   getLegacySellerMe(@Req() req: AuthRequest) {
     return this.authService.getSellerProfile(req.user.sellerId!);
+  }
+
+  @Patch('seller/password')
+  @Roles('seller')
+  @ApiOperation({
+    summary: 'Change your own seller password',
+    description:
+      'Requires the current password even though the caller is authenticated — a live session can be a stolen token, ' +
+      'and proving knowledge of the existing password is what makes this a lockout rather than another use of it. ' +
+      'On success every OTHER session family is revoked, so other devices are signed out; the calling session survives.',
+  })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({ status: 200, description: '{ ok: true, otherSessionsRevoked: number }' })
+  @ApiResponse({ status: 400, description: 'Google-only account, or the new password matches the old one' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect' })
+  async changeSellerPassword(@Req() req: AuthRequest, @Body() dto: ChangePasswordDto) {
+    try {
+      const result = await this.authService.changeSellerPassword(
+        req.user.sellerId!, req.user.sub, req.user.sid, dto,
+      );
+      await this.audit.write({
+        actorPrincipalId: req.user.sub,
+        sessionId: req.user.sid,
+        action: 'auth.password.changed',
+        targetType: 'seller',
+        targetId: req.user.sellerId!,
+        outcome: 'success',
+        metadata: { otherSessionsRevoked: result.otherSessionsRevoked },
+      });
+      return result;
+    } catch (err) {
+      // A failed attempt is the signal worth keeping: it is what a brute-force
+      // or a probing session looks like in the audit log.
+      await this.audit.write({
+        actorPrincipalId: req.user.sub,
+        sessionId: req.user.sid,
+        action: 'auth.password.changed',
+        targetType: 'seller',
+        targetId: req.user.sellerId!,
+        outcome: 'failure',
+      }).catch(() => undefined);
+      throw err;
+    }
   }
 
   @Post('seller/onboarding')
