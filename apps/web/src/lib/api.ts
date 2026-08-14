@@ -118,10 +118,17 @@ export interface Seller {
   productCount: number;
 }
 
-async function api<T>(path: string, revalidate: number): Promise<T | null> {
+/**
+ * `revalidate` in seconds, or 'fresh' to bypass Next's fetch data cache
+ * entirely. The sitemap needs 'fresh': it derives how many pages of the
+ * catalogue to walk from the first response's `total`, so a cached total
+ * silently truncates the whole file to whatever the catalogue size was when
+ * that entry was written.
+ */
+async function api<T>(path: string, revalidate: number | 'fresh'): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
-      next: { revalidate },
+      ...(revalidate === 'fresh' ? { cache: 'no-store' as const } : { next: { revalidate } }),
       headers: { accept: 'application/json' },
     });
     if (!res.ok) return null;
@@ -167,6 +174,8 @@ export async function listProducts(opts: {
   mechanics?: string[];
   /** Filter to products with an active listing from this seller (slug). */
   seller?: string;
+  /** Bypass the fetch data cache — see `api()`. Used by the sitemap. */
+  fresh?: boolean;
   complexity?: string;
   /** UI locale for name/description overrides; without it cards show base English. */
   locale?: string;
@@ -179,7 +188,7 @@ export async function listProducts(opts: {
    * A filter, not a converter — nothing is restated in another currency.
    */
   currencies?: string[];
-}): Promise<{ results: ProductSummary[]; total: number }> {
+}): Promise<{ results: ProductSummary[]; total: number; source?: string }> {
   const params = new URLSearchParams({
     limit: String(opts.limit ?? 24),
     offset: String(opts.offset ?? 0),
@@ -202,9 +211,9 @@ export async function listProducts(opts: {
   for (const currency of opts.currencies ?? []) params.append('currency', currency.toUpperCase());
   for (const mechanic of opts.mechanics ?? []) params.append('mechanics', mechanic);
   if (opts.seller) params.set('seller', opts.seller);
-  const data = await api<{ results: ProductSummary[]; total: number }>(
+  const data = await api<{ results: ProductSummary[]; total: number; source?: string }>(
     `/api/v1/products?${params}`,
-    REVALIDATE.listing,
+    opts.fresh ? 'fresh' : REVALIDATE.listing,
   );
   return data ?? { results: [], total: 0 };
 }

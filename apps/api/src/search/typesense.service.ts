@@ -383,6 +383,8 @@ export class TypesenseService implements OnModuleInit {
     inStockOnly?: boolean;
     mechanics?: string[];
     complexity?: string;
+    /** Exact publisher name, as stored on the product. */
+    publisher?: string;
     /** Show only products with at least one offer in these currencies. */
     currencies?: string[];
     /** Show only products with an active listing from this seller (slug). */
@@ -393,7 +395,7 @@ export class TypesenseService implements OnModuleInit {
   }): Promise<{ hits: ProductDocument[]; total: number }> {
     const {
       q, category, minPrice, maxPrice, minPlayers,
-      inStockOnly, mechanics, complexity, currencies, seller,
+      inStockOnly, mechanics, complexity, currencies, seller, publisher,
       limit = 24, offset = 0, sortBy = 'inStockListings:desc,bggRating:desc',
     } = params;
 
@@ -420,6 +422,10 @@ export class TypesenseService implements OnModuleInit {
     }
     if (mechanics && mechanics.length > 0) filterParts.push(`mechanics:=[${mechanics.join(',')}]`);
     if (seller) filterParts.push(`sellerSlugs:=\`${seller}\``);
+    // Publisher pages used to bypass the index entirely and fall to Prisma,
+    // which sees only verified products with an active listing — so a chip
+    // reading "1,442" opened a page listing nothing at all.
+    if (publisher) filterParts.push(`publisher:=\`${publisher}\``);
     if (complexity && isComplexityBand(complexity)) {
       const { min, max } = COMPLEXITY_BAND_RANGES[complexity];
       filterParts.push(max === null ? `bggWeight:>=${min}` : `bggWeight:>=${min} && bggWeight:<${max}`);

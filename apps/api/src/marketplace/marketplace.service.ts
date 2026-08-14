@@ -171,8 +171,12 @@ export class MarketplaceService {
     // catalogue the rest of the storefront searches (the Prisma path sees only
     // verified products with an active listing, which made a category of 466
     // games render as 11 and its pagination collapse to a single page).
+    // `publisher` is NOT in this list any more: the index carries a facetable
+    // `publisher` field, so a publisher page now pages over the same catalogue
+    // the storefront searches. Routing it through Prisma made every publisher
+    // landing page render empty while its chip advertised thousands of games.
     const databaseOnlyFilters = Boolean(
-      params.publisher || params.yearPublished || params.minAge || params.playTimeMinutes,
+      params.yearPublished || params.minAge || params.playTimeMinutes,
     );
     const { hits, total } = databaseOnlyFilters ? { hits: [], total: 0 } : await this.search.search({
       q,
@@ -183,6 +187,7 @@ export class MarketplaceService {
       inStockOnly: params.inStockOnly,
       mechanics: params.mechanics,
       complexity: params.complexity,
+      publisher: params.publisher,
       currencies: params.currencies,
       seller: params.seller,
       sortBy: normalizeSort(params.sortBy),
