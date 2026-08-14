@@ -1,4 +1,4 @@
-import { listProducts, type ProductSummary } from '@/lib/api';
+import { getCatalogFacets, getMechanics, listProducts, type ProductSummary } from '@/lib/api';
 import { editorPath, listEditorialAuthors, listGuides } from '@/lib/guides';
 import { INDEXABLE_THEMES } from '@/lib/themes';
 import { SITE_URL } from '@/lib/site';
@@ -8,6 +8,7 @@ import {
   entityPath,
   homePath,
   listingPath,
+  slugify,
 } from '@/lib/segments';
 
 // Custom XML sitemap (spec §7). Next 14.2's MetadataRoute.Sitemap silently drops
@@ -81,6 +82,9 @@ function renderUrl({ loc, changefreq, priority, image }: UrlEntry): string {
 
 export async function GET(): Promise<Response> {
   const products = await allIndexableProducts();
+  // Market-independent taxonomy vocabularies — fetched once, emitted per
+  // market×locale below, same as `products`.
+  const [publishers, mechanics] = await Promise.all([getCatalogFacets(), getMechanics()]);
 
   const entries: UrlEntry[] = [];
 
@@ -90,6 +94,8 @@ export async function GET(): Promise<Response> {
     entries.push({ loc: `${SITE_URL}${homePath(locale, market)}`, changefreq: 'daily', priority: 1 });
     entries.push({ loc: `${SITE_URL}${listingPath('games', locale, market)}`, changefreq: 'daily', priority: 0.9 });
     entries.push({ loc: `${SITE_URL}${listingPath('categories', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
+    entries.push({ loc: `${SITE_URL}${listingPath('publishers', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
+    entries.push({ loc: `${SITE_URL}${listingPath('mechanics', locale, market)}`, changefreq: 'weekly', priority: 0.6 });
 
     // Curated theme landing pages (the real category SEO targets). The catch-all
     // shelf is browsable but noindex, so it never enters the sitemap.
@@ -98,6 +104,21 @@ export async function GET(): Promise<Response> {
         loc: `${SITE_URL}${entityPath('categories', locale, theme.slug[locale], market)}`,
         changefreq: 'weekly',
         priority: 0.7,
+      });
+    }
+
+    for (const p of publishers.publishers) {
+      entries.push({
+        loc: `${SITE_URL}${entityPath('publishers', locale, slugify(p.value), market)}`,
+        changefreq: 'weekly',
+        priority: 0.6,
+      });
+    }
+    for (const m of mechanics) {
+      entries.push({
+        loc: `${SITE_URL}${entityPath('mechanics', locale, slugify(m.mechanic), market)}`,
+        changefreq: 'weekly',
+        priority: 0.6,
       });
     }
 

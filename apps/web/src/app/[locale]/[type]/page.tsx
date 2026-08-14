@@ -23,6 +23,7 @@ import {
   isLocale,
   listingPath,
   resolveKind,
+  slugify,
   type Locale,
   parseLocalePrefix,
 } from '@/lib/segments';
@@ -160,6 +161,34 @@ export async function generateMetadata({
           ? 'Quién escribe las guías de Juegospedia: su especialidad, su criterio de evaluación y las guías que firman.'
           : 'Who writes the Juegospedia guides: their beat, the criteria they review against and the guides they sign.',
       alternates: { es: listingPath('editors', 'es', market), en: listingPath('editors', 'en', market) },
+    });
+  }
+
+  if (kind === 'publishers') {
+    return buildMetadata({
+      locale,
+      market,
+      path: listingPath('publishers', locale, market),
+      title: locale === 'es' ? 'Editoriales de juegos de mesa' : 'Board game publishers',
+      description:
+        locale === 'es'
+          ? 'Explora el catálogo por editorial y compara precios y stock real entre tiendas verificadas.'
+          : 'Browse the catalogue by publisher and compare real prices and stock across verified stores.',
+      alternates: { es: listingPath('publishers', 'es', market), en: listingPath('publishers', 'en', market) },
+    });
+  }
+
+  if (kind === 'mechanics') {
+    return buildMetadata({
+      locale,
+      market,
+      path: listingPath('mechanics', locale, market),
+      title: locale === 'es' ? 'Mecánicas de juegos de mesa' : 'Board game mechanics',
+      description:
+        locale === 'es'
+          ? 'Explora el catálogo por mecánica de juego y compara precios y stock real entre tiendas verificadas.'
+          : 'Browse the catalogue by game mechanic and compare real prices and stock across verified stores.',
+      alternates: { es: listingPath('mechanics', 'es', market), en: listingPath('mechanics', 'en', market) },
     });
   }
 
@@ -480,6 +509,82 @@ export default async function ListingPage({
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
         )}
         <PromoStrip locale={locale} />
+      </main>
+    );
+  }
+
+  // ── Publisher index ──────────────────────────────────────────────────────
+  if (kind === 'publishers') {
+    const pubBase = listingPath('publishers', locale, market);
+    const publishers = [...(await getCatalogFacets()).publishers].sort((a, b) => b.count - a.count);
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Editoriales' : 'Publishers', path: pubBase },
+    ];
+    return (
+      <main className="container">
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(publishers.map((p) => ({ name: p.value, path: entityPath('publishers', locale, slugify(p.value), market) }))),
+          ]}
+        />
+        <h1 className="page-title">{locale === 'es' ? 'Editoriales de juegos de mesa' : 'Board game publishers'}</h1>
+        <p className="lede">
+          {locale === 'es'
+            ? 'Explora el catálogo por editorial y compara precios y stock real entre tiendas verificadas.'
+            : 'Browse the catalogue by publisher and compare real prices and stock across verified stores.'}
+        </p>
+        {publishers.length > 0 ? (
+          <div className="taglist">
+            {publishers.map((p) => (
+              <Link key={p.value} className="chip" href={entityPath('publishers', locale, slugify(p.value), market)}>
+                {p.value} <span className="muted">({p.count})</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
+        )}
+      </main>
+    );
+  }
+
+  // ── Mechanic index ───────────────────────────────────────────────────────
+  if (kind === 'mechanics') {
+    const mechBase = listingPath('mechanics', locale, market);
+    const mechanics = [...(await getMechanics())].sort((a, b) => b.count - a.count);
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Mecánicas' : 'Mechanics', path: mechBase },
+    ];
+    return (
+      <main className="container">
+        <Breadcrumbs crumbs={crumbs} />
+        <JsonLd
+          data={[
+            breadcrumbLd(crumbs),
+            itemListLd(mechanics.map((m) => ({ name: m.mechanic, path: entityPath('mechanics', locale, slugify(m.mechanic), market) }))),
+          ]}
+        />
+        <h1 className="page-title">{locale === 'es' ? 'Mecánicas de juegos de mesa' : 'Board game mechanics'}</h1>
+        <p className="lede">
+          {locale === 'es'
+            ? 'Explora el catálogo por mecánica de juego y compara precios y stock real entre tiendas verificadas.'
+            : 'Browse the catalogue by game mechanic and compare real prices and stock across verified stores.'}
+        </p>
+        {mechanics.length > 0 ? (
+          <div className="taglist">
+            {mechanics.map((m) => (
+              <Link key={m.mechanic} className="chip" href={entityPath('mechanics', locale, slugify(m.mechanic), market)}>
+                {m.mechanic} <span className="muted">({m.count})</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
+        )}
       </main>
     );
   }

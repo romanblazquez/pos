@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import {
   bestOffer,
+  getCatalogFacets,
   getCategories,
+  getMechanics,
   getProduct,
   listProducts,
   listSimilar,
@@ -168,6 +170,46 @@ export async function generateMetadata({
     });
   }
 
+  if (kind === 'publishers') {
+    const real = await resolvePublisher(params.slug);
+    if (!real) return {};
+    const basePath = entityPath('publishers', locale, params.slug, market);
+    const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+    const baseTitle = locale === 'es' ? `Juegos de mesa de ${real}` : `${real} board games`;
+    return buildMetadata({
+      locale,
+      market,
+      path,
+      title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
+      description:
+        locale === 'es'
+          ? `Todos los juegos de mesa publicados por ${real}, con precios comparados entre tiendas verificadas.`
+          : `All board games published by ${real}, with prices compared across verified stores.`,
+      noindex: page > 1,
+      alternates: page > 1 ? undefined : entityAlternates('publishers', params.slug, market),
+    });
+  }
+
+  if (kind === 'mechanics') {
+    const real = await resolveMechanic(params.slug);
+    if (!real) return {};
+    const basePath = entityPath('mechanics', locale, params.slug, market);
+    const path = page > 1 ? `${basePath}?page=${page}` : basePath;
+    const baseTitle = locale === 'es' ? `Juegos de mesa con mecánica de ${real}` : `${real} board games`;
+    return buildMetadata({
+      locale,
+      market,
+      path,
+      title: page > 1 ? `${baseTitle} — ${locale === 'es' ? 'página' : 'page'} ${page}` : baseTitle,
+      description:
+        locale === 'es'
+          ? `Juegos de mesa con la mecánica ${real}, con precios comparados entre tiendas verificadas.`
+          : `Board games featuring ${real} mechanics, with prices compared across verified stores.`,
+      noindex: page > 1,
+      alternates: page > 1 ? undefined : entityAlternates('mechanics', params.slug, market),
+    });
+  }
+
   if (kind === 'guides') {
     const guide = await getGuide(params.slug, locale);
     if (!guide) return {};
@@ -223,6 +265,19 @@ async function resolveCategory(slug: string): Promise<string | null> {
   // to render this page so a product breadcrumb never leads to a false 404.
   const { results } = await listProducts({ category: slug, limit: 1 });
   return results.find((product) => slugify(product.category) === slug)?.category ?? null;
+}
+
+// Reverse-map a URL slug to the real publisher/mechanic name (never fabricate
+// one) — same shape as resolveCategory above, backed by the facets/mechanics
+// endpoints rather than the category list.
+async function resolvePublisher(slug: string): Promise<string | null> {
+  const facets = await getCatalogFacets();
+  return facets.publishers.find((p) => slugify(p.value) === slug)?.value ?? null;
+}
+
+async function resolveMechanic(slug: string): Promise<string | null> {
+  const mechanics = await getMechanics();
+  return mechanics.find((m) => slugify(m.mechanic) === slug)?.mechanic ?? null;
 }
 
 export default async function DetailPage({
@@ -355,6 +410,146 @@ export default async function DetailPage({
             })}
           </div>
         </section>
+      </main>
+    );
+  }
+
+  if (kind === 'publishers') {
+    const page = pageOf(searchParams);
+    const basePath = entityPath('publishers', locale, params.slug, market);
+    const real = await resolvePublisher(params.slug);
+    if (!real) notFound();
+
+    const { results, total } = await listProducts({
+      locale, market, publisher: real, limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE,
+    });
+    if (page > 1 && results.length === 0) notFound();
+
+    const lede = locale === 'es'
+      ? `Compara precios y stock real de juegos de mesa publicados por ${real} entre tiendas verificadas.`
+      : `Compare real prices and stock for board games published by ${real} across verified stores.`;
+
+    // Sibling publishers, same spirit as the category page's "explore by theme"
+    // strip — denser internal linking between the new taxonomy hubs.
+    const facets = await getCatalogFacets();
+    const siblings = [...facets.publishers]
+      .filter((p) => p.value !== real)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 16);
+
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Editoriales' : 'Publishers', path: listingPath('publishers', locale, market) },
+      { name: real, path: basePath },
+    ];
+    return (
+      <main className="container">
+        <LocaleAlternates alternates={entityAlternates('publishers', params.slug, market)} />
+        <Breadcrumbs crumbs={crumbs} />
+        {page === 1 && (
+          <JsonLd
+            data={[
+              breadcrumbLd(crumbs),
+              itemListLd(results.map((p) => ({ name: p.name, path: entityPath('games', locale, p.slug, market) }))),
+            ]}
+          />
+        )}
+        <h1 className="page-title">{real}</h1>
+        <p className="muted">
+          {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
+        </p>
+        {page === 1 && <p className="lede">{lede}</p>}
+        {results.length > 0 ? (
+          <>
+            <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
+              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
+            </div>
+            <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
+          </>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('publishers', locale, market)} />
+        )}
+        {siblings.length > 0 && (
+          <section aria-label={locale === 'es' ? 'Otras editoriales' : 'Other publishers'}>
+            <h2 className="section-title">{locale === 'es' ? 'Otras editoriales' : 'Other publishers'}</h2>
+            <div className="taglist">
+              {siblings.map((p) => (
+                <Link key={p.value} className="chip" href={entityPath('publishers', locale, slugify(p.value), market)}>
+                  {p.value}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+    );
+  }
+
+  if (kind === 'mechanics') {
+    const page = pageOf(searchParams);
+    const basePath = entityPath('mechanics', locale, params.slug, market);
+    const real = await resolveMechanic(params.slug);
+    if (!real) notFound();
+
+    const { results, total } = await listProducts({
+      locale, market, mechanics: [real], limit: CATEGORY_PAGE_SIZE, offset: (page - 1) * CATEGORY_PAGE_SIZE,
+    });
+    if (page > 1 && results.length === 0) notFound();
+
+    const lede = locale === 'es'
+      ? `Compara precios y stock real de juegos de mesa con la mecánica ${real} entre tiendas verificadas.`
+      : `Compare real prices and stock for board games featuring ${real} mechanics across verified stores.`;
+
+    const allMechanics = await getMechanics();
+    const siblings = allMechanics
+      .filter((m) => m.mechanic !== real)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 16);
+
+    const crumbs: Crumb[] = [
+      { name: homeName, path: homePath(locale, market) },
+      { name: locale === 'es' ? 'Mecánicas' : 'Mechanics', path: listingPath('mechanics', locale, market) },
+      { name: real, path: basePath },
+    ];
+    return (
+      <main className="container">
+        <LocaleAlternates alternates={entityAlternates('mechanics', params.slug, market)} />
+        <Breadcrumbs crumbs={crumbs} />
+        {page === 1 && (
+          <JsonLd
+            data={[
+              breadcrumbLd(crumbs),
+              itemListLd(results.map((p) => ({ name: p.name, path: entityPath('games', locale, p.slug, market) }))),
+            ]}
+          />
+        )}
+        <h1 className="page-title">{real}</h1>
+        <p className="muted">
+          {total} {locale === 'es' ? (total === 1 ? 'juego' : 'juegos') : (total === 1 ? 'game' : 'games')}
+        </p>
+        {page === 1 && <p className="lede">{lede}</p>}
+        {results.length > 0 ? (
+          <>
+            <div className="catalog-grid" style={{ marginTop: '1.25rem' }}>
+              {results.map((p) => <ProductCard key={p.id} product={p} locale={locale} market={market} />)}
+            </div>
+            <Pager base={basePath} page={page} total={total} locale={locale} pageSize={CATEGORY_PAGE_SIZE} />
+          </>
+        ) : (
+          <CatalogEmpty locale={locale} clearHref={listingPath('mechanics', locale, market)} />
+        )}
+        {siblings.length > 0 && (
+          <section aria-label={locale === 'es' ? 'Otras mecánicas' : 'Other mechanics'}>
+            <h2 className="section-title">{locale === 'es' ? 'Otras mecánicas' : 'Other mechanics'}</h2>
+            <div className="taglist">
+              {siblings.map((m) => (
+                <Link key={m.mechanic} className="chip" href={entityPath('mechanics', locale, slugify(m.mechanic), market)}>
+                  {m.mechanic}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     );
   }
@@ -743,6 +938,10 @@ async function renderProduct(
   // fold, the notice below it and the buy button.
   const availability = availabilityState(product);
   const categoryLink = productCategoryLink(product, locale, market);
+  // product.tags mixes categories and mechanics (see mkt-catalog.service.ts);
+  // only the ones that resolve to a real mechanic get the landing-page link,
+  // everything else keeps the search fallback below.
+  const mechanicNames = new Set((await getMechanics()).map((m) => m.mechanic));
   const best = bestOffer(product.listings);
   const range = priceRange(product, locale);
   const relatedGuides = await guidesMentioning(product.slug, locale);
@@ -760,7 +959,14 @@ async function renderProduct(
   const gamesWith = (key: string, value: string | number) =>
     `${listingPath('games', locale, market)}?${key}=${encodeURIComponent(String(value))}`;
   const attrs: Array<{ label: string; value: string | number | undefined; wide?: boolean; href?: string }> = [
-    { label: locale === 'es' ? 'Editorial' : 'Publisher', value: product.publisher, wide: true, href: product.publisher ? gamesWith('publisher', product.publisher) : undefined },
+    {
+      label: locale === 'es' ? 'Editorial' : 'Publisher',
+      value: product.publisher,
+      wide: true,
+      // A real landing page, not a filtered (noindex, robots-disallowed) query
+      // string — this is the link crawlers actually follow into the publisher hub.
+      href: product.publisher ? entityPath('publishers', locale, slugify(product.publisher), market) : undefined,
+    },
     { label: locale === 'es' ? 'Diseñador' : 'Designer', value: product.designer, wide: true, href: product.designer ? searchFor(product.designer) : undefined },
     { label: locale === 'es' ? 'Año' : 'Year', value: product.yearPublished, href: product.yearPublished ? gamesWith('year', product.yearPublished) : undefined },
     {
@@ -949,10 +1155,19 @@ async function renderProduct(
           )}
           {product.tags?.length > 0 && (
             <div className="taglist">
-              {/* Mechanic landing pages need a new API filter; until then tags
-                  link to real search results rather than a 404. */}
+              {/* A tag that resolves to a real mechanic gets the indexable
+                  landing page; anything else (categories not already linked
+                  above, or a stray tag) falls back to search rather than a 404. */}
               {product.tags.map((tag) => (
-                <Link key={tag} className="chip" href={`${listingPath('search', locale, market)}?q=${encodeURIComponent(tag)}`}>
+                <Link
+                  key={tag}
+                  className="chip"
+                  href={
+                    mechanicNames.has(tag)
+                      ? entityPath('mechanics', locale, slugify(tag), market)
+                      : `${listingPath('search', locale, market)}?q=${encodeURIComponent(tag)}`
+                  }
+                >
                   {tag}
                 </Link>
               ))}
