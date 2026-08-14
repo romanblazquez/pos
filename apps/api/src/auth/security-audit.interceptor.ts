@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import { randomUUID } from 'node:crypto';
 import { catchError, from, mergeMap, Observable, throwError } from 'rxjs';
 import { AuditService } from './audit.service.js';
+import { clientIp } from '../common/client-ip.js';
 import type { JwtPayload } from './jwt.js';
 
 @Injectable()
@@ -23,7 +24,7 @@ export class SecurityAuditInterceptor implements NestInterceptor {
       targetType: request.route?.path ? String(request.route.path) : request.path,
       targetId: Object.values(request.params)[0],
       correlationId,
-      ipAddress: request.ip,
+      ipAddress: clientIp(request),
       metadata: { role: request.user.role },
     };
 

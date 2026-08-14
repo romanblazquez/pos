@@ -90,7 +90,7 @@ validate the integration. **Revisit ADR-0006 before writing code.**
 
 ---
 
-## 3. Diagnosed, not fixed: spurious session-family revocation
+## 3. FIXED 2026-08-14 late — spurious session-family revocation
 
 This is the most actionable open bug and the evidence is already gathered.
 
@@ -114,23 +114,36 @@ once. The first rotates the token; the others present the now-rotated token;
 (`session.service.ts`, the `updateMany` on `familyId`). So a concurrent
 refresh logs the user out of everything. Random unexplained logouts are this.
 
-**Fix direction** (not implemented, deliberately — it is a real security
-control and deserves its own change):
+**Fix shipped:** a 30-second grace window in `SessionService.rotate`
+(`absorbRefreshRace`). A replayed token is treated as a race only when all
+three hold, each ruling out a different way it could be genuine reuse:
 
-- Add a short grace window: a token replayed within N seconds of its own
-  rotation, from the same family, is a race, not theft. Return the *already
-  issued* successor instead of nuking the family.
-- Or serialise refreshes client-side so only one in-flight refresh exists per
-  tab group. `BrowserApiClient` already has a `refreshPromise` guard, so this
-  is likely cross-tab, which points at the server-side grace window.
-- Keep hard revocation for a token replayed *outside* that window — that case
-  really is theft.
+1. `replacedBySessionId` is set — the row was **rotated**, not revoked by
+   logout, password change, or an earlier reuse cascade. Those leave it null
+   and must keep failing closed.
+2. the rotation happened inside the window.
+3. the successor is still live, unexpired, and on the same app audience.
 
-**Second, separate finding:** `AuditEvent.ipAddress` records **Cloudflare's
-edge IP, not the client's**. Every audit row's IP is currently useless for
-forensics. Needs Express `trust proxy` plus reading `CF-Connecting-IP` /
-`X-Forwarded-For`. Worth fixing before anyone relies on that column in an
-incident.
+It returns an access token bound to the successor and **no new refresh
+token**; `attachSession` skips the cookie write via `refreshCookieUnchanged`,
+because the winning request already set the cookie every tab shares. Writing
+this response's empty token would clobber the live one — the exact logout the
+fix exists to prevent. Audited as `auth.refresh.race_absorbed`, deliberately
+distinct from `reuse_detected` so filing races there stops hiding real theft.
+
+Covered by `apps/api/src/auth/refresh-race.spec.ts`, which is mostly about
+what must STILL hard-revoke: replay outside the window, logout/password-change
+revocations, an already-revoked successor, and a cross-audience successor.
+
+**Second finding, also fixed:** `AuditEvent.ipAddress` was recording
+Cloudflare's edge IP. `trust proxy = 1` was already set, but the chain is
+client → Cloudflare → Traefik → API, so `X-Forwarded-For` arrives as
+`<client>, <cf-edge>` and one trusted hop resolves to Cloudflare. Now uses
+`CF-Connecting-IP` (`apps/api/src/common/client-ip.ts`), falling back to the
+left-most XFF entry then `req.ip`. **Rows written before this are still
+Cloudflare IPs** — do not read historical audit IPs as client addresses. The
+CF-Connecting-IP guarantee holds only while the origin is reachable solely
+through Cloudflare; re-check if the API is ever exposed directly.
 
 Query to re-check any of this:
 
@@ -203,12 +216,13 @@ Cheap to re-learn the hard way; all are now load-bearing comments in code.
 
 ## 6. Suggested order for the next session
 
-1. **Session-family revocation grace window** (§3). Highest user-visible value,
-   evidence already gathered, self-contained.
-2. **Real client IP in audit rows** (§3). Small, and everything forensic
-   depends on it.
-3. Whichever of §2.1 / §2.2 / §2.3 the owner has decided.
-4. BGG enricher pacing, only if §4's throughput query still reads ~0.
+1. Whichever of §2.1 / §2.2 / §2.3 the owner has decided.
+2. BGG enricher pacing, only if §4's throughput query still reads ~0.
+3. Watch `auth.refresh.race_absorbed` vs `auth.refresh.reuse_detected` in
+   **Auditoría** for a few days. Races should now land in the first and the
+   second should go quiet. If `reuse_detected` keeps firing for one principal
+   after this, that is worth taking seriously — the noise that was masking it
+   is gone.
 
 Everything in §1-§5 is verified against production as of 2026-08-14 23:15
 local. Re-verify before trusting it — the catalogue grows hourly.

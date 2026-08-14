@@ -13,6 +13,7 @@ import type { JwtPayload } from './jwt.js';
 import { GoogleAuthService } from './google-auth.service.js';
 import { SessionService, type SessionResponse } from './session.service.js';
 import { AuditService } from './audit.service.js';
+import { clientIp } from '../common/client-ip.js';
 import { APP_SECURITY, refreshCookieOptions, type AuthApp } from './auth.constants.js';
 import { Throttle } from '@nestjs/throttler';
 
@@ -244,15 +245,21 @@ export class AuthController {
   }
 
   private attachSession(res: Response, app: AuthApp, session: SessionResponse) {
-    res.cookie(APP_SECURITY[app].cookieName, session.refreshToken, refreshCookieOptions());
-    const { refreshToken: _, token, ...publicSession } = session;
+    // An absorbed concurrent-refresh race carries no new refresh token: the
+    // request that won the rotation already set the cookie. Writing this
+    // response's empty token would overwrite the live value with a stale one
+    // and log the user out — the exact failure the grace window exists to stop.
+    if (!session.refreshCookieUnchanged) {
+      res.cookie(APP_SECURITY[app].cookieName, session.refreshToken, refreshCookieOptions());
+    }
+    const { refreshToken: _, refreshCookieUnchanged: __, token, ...publicSession } = session;
     return app === 'seller' ? { ...publicSession, token } : publicSession;
   }
 
   private metadata(req: Request) {
     return {
       userAgent: req.get('user-agent'),
-      ipAddress: req.ip,
+      ipAddress: clientIp(req),
     };
   }
 }

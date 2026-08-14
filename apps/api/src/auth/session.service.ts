@@ -59,7 +59,30 @@ export interface SessionResponse {
   customer?: SessionIdentity['customer'];
   seller?: SessionIdentity['seller'];
   refreshToken: string;
+  /**
+   * Set when this response absorbed a concurrent-refresh race. The winning
+   * request already rotated the cookie; this straggler must NOT overwrite it,
+   * or it would clobber the live refresh token with a stale one.
+   */
+  refreshCookieUnchanged?: boolean;
 }
+
+/**
+ * How long after a normal rotation a replayed token is treated as a race
+ * rather than theft.
+ *
+ * Refresh tokens live in a cookie shared by every tab. Two tabs reading that
+ * cookie before the winner's Set-Cookie lands will both present the same
+ * value; the loser arrives holding a token that was legitimately rotated
+ * moments ago. Observed bursts here were 1.8-18s apart, all from one
+ * principal, all via Cloudflare edge IPs.
+ *
+ * Treating that as theft revoked the entire session family and logged the
+ * user out everywhere — a self-inflicted logout with a security-shaped
+ * signature. Outside this window a replay really is suspicious and still
+ * hard-revokes.
+ */
+const REFRESH_RACE_GRACE_MS = 30_000;
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -112,6 +135,9 @@ export class SessionService {
     if (!current) throw new UnauthorizedException('Invalid refresh session');
 
     if (current.revokedAt) {
+      const absorbed = await this.absorbRefreshRace(current, app, metadata);
+      if (absorbed) return absorbed;
+
       await this.prisma.authSession.updateMany({
         where: { familyId: current.familyId, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -163,6 +189,17 @@ export class SessionService {
       });
     } catch (error) {
       if (!(error instanceof ConcurrentRefreshReuseError)) throw error;
+      // Lost the claim to a simultaneous rotation. Re-read: if the winner just
+      // replaced this row, the caller is the same straggler as above, not a
+      // thief — absorb it rather than logging the user out of every device.
+      const reread = await this.prisma.authSession.findUnique({
+        where: { id: current.id },
+        include: { principal: { include: { customer: true, seller: true, adminMembership: true } } },
+      });
+      if (reread) {
+        const absorbed = await this.absorbRefreshRace(reread, app, metadata);
+        if (absorbed) return absorbed;
+      }
       await this.prisma.authSession.updateMany({
         where: { familyId: current.familyId, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -218,6 +255,59 @@ export class SessionService {
       role,
       ...(current.principal.customer ? { customer: publicCustomer(current.principal.customer) } : {}),
       ...(current.principal.seller ? { seller: publicSeller(current.principal.seller) } : {}),
+    };
+  }
+
+  /**
+   * Decide whether a replayed refresh token is a concurrent-refresh race and,
+   * if so, hand back a working access token instead of destroying the session
+   * family.
+   *
+   * All three conditions must hold, and each rules out a different way this
+   * could be genuine reuse:
+   *  - `replacedBySessionId` is set — the row was ROTATED, not revoked by
+   *    logout, a password change, or an earlier reuse cascade. Those leave it
+   *    null, and must keep failing closed.
+   *  - the rotation happened within the grace window.
+   *  - the successor is still live and unexpired — if the family has since
+   *    been revoked, this replay is arriving into an already-closed session
+   *    and gets no help.
+   *
+   * No new refresh token is issued: the winning request already set the
+   * cookie, which every tab shares, so the straggler's next refresh uses it.
+   */
+  private async absorbRefreshRace(
+    current: { id: string; revokedAt: Date | null; replacedBySessionId: string | null; principalId: string; familyId: string },
+    app: AuthApp,
+    metadata: SessionMetadata,
+  ): Promise<SessionResponse | null> {
+    if (!current.revokedAt || !current.replacedBySessionId) return null;
+    if (Date.now() - current.revokedAt.getTime() > REFRESH_RACE_GRACE_MS) return null;
+
+    const successor = await this.prisma.authSession.findUnique({
+      where: { id: current.replacedBySessionId },
+      include: { principal: { include: { customer: true, seller: true, adminMembership: true } } },
+    });
+    if (!successor || successor.revokedAt || successor.expiresAt <= new Date()) return null;
+    if (successor.principal.status !== 'active') return null;
+
+    const policy = APP_SECURITY[app];
+    if (successor.audience !== policy.audience || successor.role !== policy.role) return null;
+
+    await this.audit.write({
+      actorPrincipalId: current.principalId,
+      sessionId: current.id,
+      // Distinct from reuse_detected on purpose: this is an absorbed race, and
+      // filing it under the theft signal would keep hiding real ones.
+      action: 'auth.refresh.race_absorbed',
+      outcome: 'success',
+      ipAddress: metadata.ipAddress,
+      metadata: { successorSessionId: successor.id },
+    });
+
+    return {
+      ...this.response(this.identityFromSession(successor), app, successor.id, ''),
+      refreshCookieUnchanged: true,
     };
   }
 
