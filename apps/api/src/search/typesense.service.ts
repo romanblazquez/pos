@@ -56,7 +56,7 @@ const COLLECTION_SCHEMA = {
     // to the empty Prisma path — so "Nombre (A–Z)" silently showed 0 results.
     { name: 'name',            type: 'string'  as const, sort: true },
     { name: 'nameEs',          type: 'string'  as const, optional: true },
-    { name: 'publisher',       type: 'string'  as const, optional: true },
+    { name: 'publisher',       type: 'string'  as const, optional: true, facet: true },
     { name: 'description',     type: 'string'  as const, optional: true },
     { name: 'descriptionEs',   type: 'string'  as const, optional: true },
     { name: 'category',        type: 'string'  as const, facet: true },
@@ -81,7 +81,7 @@ const COLLECTION_SCHEMA = {
 };
 
 type ExistingCollectionShape = {
-  fields?: Array<{ name: string; sort?: boolean }>;
+  fields?: Array<{ name: string; sort?: boolean; facet?: boolean }>;
   default_sorting_field?: string;
   num_documents?: number;
 };
@@ -149,6 +149,20 @@ export class TypesenseService implements OnModuleInit {
         this.log.log('Typesense collection extended with categorySlugs');
         return;
       }
+      // `publisher` existed as a plain string field; making an already-present
+      // field facetable requires dropping and re-adding it in the same update —
+      // Typesense then reindexes just that field's facet index in place, same as
+      // the categorySlugs backfill above, without touching any other document data.
+      if (!fields.some((f) => f.name === 'publisher' && f.facet)) {
+        await this.client.collections(COLLECTION).update({
+          fields: [
+            { name: 'publisher', drop: true },
+            { name: 'publisher', type: 'string', optional: true, facet: true },
+          ],
+        } as never);
+        this.log.log('Typesense collection extended with publisher facet');
+        return;
+      }
       this.log.log('Typesense collection ready');
     } catch {
       try {
@@ -211,6 +225,53 @@ export class TypesenseService implements OnModuleInit {
       }
     } catch (err) {
       this.log.warn(`Could not read category counts: ${String(err)}`);
+    }
+    return counts;
+  }
+
+  /**
+   * Every distinct tag (mechanics, mixed with categories — see MktProduct.tags)
+   * across the FULL indexed catalogue, with counts. Same shape and same reason
+   * as categoryCounts(): the mechanics landing pages and filter chips must see
+   * what the storefront actually lists, not the much narrower verified+active-
+   * listing subset a plain Prisma query would see. Empty when Typesense is
+   * unreachable, so callers can fall back to counting in the database.
+   */
+  async tagCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    try {
+      const result = await this.client.collections(COLLECTION).documents().search({
+        q: '*',
+        query_by: 'name',
+        per_page: 1,
+        facet_by: 'tags',
+        max_facet_values: 1000,
+      });
+      for (const facet of result.facet_counts ?? []) {
+        for (const value of facet.counts ?? []) counts.set(value.value, value.count);
+      }
+    } catch (err) {
+      this.log.warn(`Could not read tag counts: ${String(err)}`);
+    }
+    return counts;
+  }
+
+  /** Same as tagCounts(), faceted on publisher instead. */
+  async publisherCounts(): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    try {
+      const result = await this.client.collections(COLLECTION).documents().search({
+        q: '*',
+        query_by: 'name',
+        per_page: 1,
+        facet_by: 'publisher',
+        max_facet_values: 1000,
+      });
+      for (const facet of result.facet_counts ?? []) {
+        for (const value of facet.counts ?? []) counts.set(value.value, value.count);
+      }
+    } catch (err) {
+      this.log.warn(`Could not read publisher counts: ${String(err)}`);
     }
     return counts;
   }

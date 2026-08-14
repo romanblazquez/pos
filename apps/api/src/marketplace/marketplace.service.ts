@@ -414,12 +414,24 @@ export class MarketplaceService {
   }
 
   /**
-   * Distinct game mechanics (stored as MktProduct.tags) with active listings,
-   * ordered by popularity — backs the mechanics filter chips. `tags` is a
-   * string[] column so this needs JS-side aggregation rather than groupBy,
-   * same reasoning as CatalogSearch's suggestion facets.
+   * Distinct game mechanics (stored as MktProduct.tags), ordered by
+   * popularity — backs the mechanics filter chips AND the /mecanicas landing
+   * pages. Reads the Typesense index first, same as getCategories(): the
+   * encyclopedia's indexable catalogue is overwhelmingly larger than the
+   * handful of products with an active seller listing, and a plain
+   * verified+active Prisma query undercounted mechanics by two orders of
+   * magnitude (a landing-page hub listing 113 mechanics when the real catalog
+   * carries far more). Falls back to the narrow verified+active-listing count
+   * only when the index is empty or unreachable.
    */
   async getMechanics(): Promise<{ mechanic: string; count: number }[]> {
+    const indexed = await this.search.tagCounts();
+    if (indexed.size > 0) {
+      return [...indexed.entries()]
+        .map(([mechanic, count]) => ({ mechanic, count }))
+        .sort((a, b) => b.count - a.count || a.mechanic.localeCompare(b.mechanic));
+    }
+
     const products = await this.prisma.mktProduct.findMany({
       where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
       select: { tags: true },
@@ -438,14 +450,37 @@ export class MarketplaceService {
   /** Compact, cache-friendly facet vocabulary for the server-rendered filters. */
   async getFacets() {
     const active = { canonicalStatus: 'verified' as const, listings: { some: { active: true } } };
-    const [publishers, years, ages, durations] = await Promise.all([
-      this.prisma.mktProduct.groupBy({ by: ['publisher'], where: { ...active, publisher: { not: null } }, _count: { _all: true }, orderBy: { _count: { publisher: 'desc' } }, take: 100 }),
+    const [indexedPublishers, years, ages, durations] = await Promise.all([
+      this.search.publisherCounts(),
       this.prisma.mktProduct.groupBy({ by: ['yearPublished'], where: { ...active, yearPublished: { not: null } }, _count: { _all: true }, orderBy: { yearPublished: 'desc' } }),
       this.prisma.mktProduct.groupBy({ by: ['minAge'], where: { ...active, minAge: { not: null } }, _count: { _all: true }, orderBy: { minAge: 'asc' } }),
       this.prisma.mktProduct.groupBy({ by: ['playTimeMinutes'], where: { ...active, playTimeMinutes: { not: null } }, _count: { _all: true }, orderBy: { playTimeMinutes: 'asc' } }),
     ]);
+
+    // Same reasoning as getMechanics(): the publisher hub/landing pages need
+    // the full indexed encyclopedia, not just products with an active seller
+    // listing. Falls back to the old verified+active groupBy when the index
+    // is empty or unreachable.
+    //
+    // BGG's own publisher credit isn't always a real publisher — "(Self-
+    // Published)", "(Web published)", "(Unknown)" etc. are BGG's catch-all
+    // placeholders for games without one, always bracketed. A landing page
+    // for "(Unknown)" isn't a useful entity page, so those are filtered here
+    // rather than at ingestion (still wanted verbatim for search/filtering).
+    const isRealPublisher = (value: string) => !value.startsWith('(');
+    let publishers: { value: string; count: number }[];
+    if (indexedPublishers.size > 0) {
+      publishers = [...indexedPublishers.entries()]
+        .filter(([value]) => isRealPublisher(value))
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+    } else {
+      const rows = await this.prisma.mktProduct.groupBy({ by: ['publisher'], where: { ...active, publisher: { not: null } }, _count: { _all: true }, orderBy: { _count: { publisher: 'desc' } }, take: 100 });
+      publishers = rows.filter((row) => row.publisher && isRealPublisher(row.publisher)).map((row) => ({ value: row.publisher!, count: row._count._all }));
+    }
+
     return {
-      publishers: publishers.filter((row) => row.publisher).map((row) => ({ value: row.publisher!, count: row._count._all })),
+      publishers,
       years: years.filter((row) => row.yearPublished != null).map((row) => ({ value: row.yearPublished!, count: row._count._all })),
       ages: ages.filter((row) => row.minAge != null).map((row) => ({ value: row.minAge!, count: row._count._all })),
       durations: durations.filter((row) => row.playTimeMinutes != null).map((row) => ({ value: row.playTimeMinutes!, count: row._count._all })),

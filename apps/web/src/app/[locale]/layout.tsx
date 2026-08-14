@@ -126,8 +126,8 @@ export default function LocaleLayout({
   const { locale, market } = parsedLocale;
   const t =
     locale === 'es'
-      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
-      : { games: 'Games', cats: 'Categories', guides: 'Guides', search: 'Search', login: 'Log in', tagline: 'The board-game encyclopedia with the best price.' };
+      ? { games: 'Juegos', cats: 'Categorías', guides: 'Guías', publishers: 'Editoriales', mechanics: 'Mecánicas', search: 'Buscar', login: 'Iniciar sesión', tagline: 'La enciclopedia de juegos de mesa con el mejor precio.' }
+      : { games: 'Games', cats: 'Categories', guides: 'Guides', publishers: 'Publishers', mechanics: 'Mechanics', search: 'Search', login: 'Log in', tagline: 'The board-game encyclopedia with the best price.' };
 
   return (
     <html
@@ -191,6 +191,8 @@ export default function LocaleLayout({
             <span className="nav-spacer" />
             <Link href={listingPath('games', locale, market)}>{t.games}</Link>
             <Link href={listingPath('categories', locale, market)}>{t.cats}</Link>
+            <Link href={listingPath('publishers', locale, market)}>{t.publishers}</Link>
+            <Link href={listingPath('mechanics', locale, market)}>{t.mechanics}</Link>
             <PrivacyPreferencesButton label={locale === 'es' ? 'Privacidad' : 'Privacy'} />
           </div>
         </footer>

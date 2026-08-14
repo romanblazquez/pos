@@ -23,6 +23,7 @@ function setup() {
     mktProduct: {
       findMany: vi.fn().mockResolvedValue([product]),
       count: vi.fn().mockResolvedValue(1),
+      groupBy: vi.fn().mockResolvedValue([]),
     },
     language: { findFirst: vi.fn() },
     entityLocalization: { findMany: vi.fn() },
@@ -30,6 +31,8 @@ function setup() {
   const search = {
     search: vi.fn().mockResolvedValue({ hits: [], total: 0 }),
     categoryCounts: vi.fn().mockResolvedValue(new Map()),
+    tagCounts: vi.fn().mockResolvedValue(new Map()),
+    publisherCounts: vi.fn().mockResolvedValue(new Map()),
   };
   const semantic = { search: vi.fn().mockResolvedValue([]), similar: vi.fn().mockResolvedValue([]) };
   const service = new MarketplaceService(prisma as never, search as never, semantic as never);
@@ -134,6 +137,60 @@ describe('MarketplaceService search filters', () => {
 
     expect(prisma.mktProduct.findMany).not.toHaveBeenCalled();
     expect(result).toMatchObject({ results: [], total: 466 });
+  });
+
+  it('reads mechanic counts from the search index instead of the verified+active-only DB path', async () => {
+    const { service, prisma, search } = setup();
+    search.tagCounts.mockResolvedValue(new Map([['Deck Building', 900], ['Party Game', 40]]));
+
+    const result = await service.getMechanics();
+
+    expect(prisma.mktProduct.findMany).not.toHaveBeenCalled();
+    expect(result).toEqual([
+      { mechanic: 'Deck Building', count: 900 },
+      { mechanic: 'Party Game', count: 40 },
+    ]);
+  });
+
+  it('falls back to the DB for mechanics when the search index is empty', async () => {
+    const { service, prisma, search } = setup();
+    search.tagCounts.mockResolvedValue(new Map());
+
+    const result = await service.getMechanics();
+
+    expect(prisma.mktProduct.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { canonicalStatus: 'verified', listings: { some: { active: true } } },
+    }));
+    expect(result).toEqual([{ mechanic: 'trading', count: 1 }]);
+  });
+
+  it('reads publisher facets from the search index instead of the verified+active-only DB path', async () => {
+    const { service, prisma, search } = setup();
+    search.publisherCounts.mockResolvedValue(new Map([['KOSMOS', 12], ['Asmodee', 5]]));
+
+    const result = await service.getFacets();
+
+    expect(prisma.mktProduct.groupBy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ by: ['publisher'] }),
+    );
+    expect(result.publishers).toEqual([
+      { value: 'KOSMOS', count: 12 },
+      { value: 'Asmodee', count: 5 },
+    ]);
+  });
+
+  it('drops BGG\'s bracketed non-publisher placeholders from the publisher facet', async () => {
+    const { service, search } = setup();
+    search.publisherCounts.mockResolvedValue(new Map([
+      ['KOSMOS', 12],
+      ['(Self-Published)', 900],
+      ['(Web published)', 400],
+      ['(Unknown)', 200],
+    ]));
+
+    const result = await service.getFacets();
+
+    expect(result.publishers).toEqual([{ value: 'KOSMOS', count: 12 }]);
   });
 
   it('uses semantic retrieval only for an unfiltered natural-language query', async () => {
