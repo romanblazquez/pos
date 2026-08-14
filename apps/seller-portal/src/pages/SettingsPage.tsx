@@ -170,6 +170,8 @@ export function SettingsPage({ session, onSessionUpdate }: Props) {
       </Card>
 
       <ChangePasswordCard />
+
+      <DeactivateCard sellerId={session.seller.id} />
     </div>
   );
 }
@@ -515,6 +517,116 @@ function RewardsCard({ session }: { session: SellerSession }) {
               )}
             </div>
           </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Closing the store. Separated, destructive-styled, and behind an explicit
+ * typed confirmation — this is the one control on the page that takes the
+ * business offline.
+ */
+function DeactivateCard({ sellerId }: { sellerId: string }) {
+  const CONFIRM = 'CERRAR';
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await sellerApi.fetch(`${API}/api/v1/sellers/${sellerId}/deactivate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: password }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(body.message ?? 'No se pudo cerrar la tienda');
+      }
+      // Every session is revoked server-side, so there is nothing left to
+      // stay on this page for — a reload lands on the login screen.
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Cerrar la tienda</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {!open ? (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Tus productos dejan de aparecer en Juegospedia y se cierra tu sesión en todos los
+              dispositivos. No se borra nada: el historial de pedidos se conserva y la tienda puede
+              reabrirse.
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="min-h-10 rounded-lg border border-red-200 bg-white px-4 text-sm font-medium
+                         text-red-600 hover:bg-red-50 transition-colors"
+            >
+              Cerrar mi tienda
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Si tenés pedidos en curso, primero hay que enviarlos, entregarlos o cancelarlos.
+            </p>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Contraseña actual</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                Escribí <span className="font-mono font-semibold">{CONFIRM}</span> para confirmar
+              </label>
+              <input
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                className="min-h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+            </div>
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={busy || confirm !== CONFIRM || password.length === 0}
+                className="min-h-10 rounded-lg bg-red-600 px-4 text-sm font-medium text-white
+                           hover:bg-red-500 disabled:opacity-40 transition-colors"
+              >
+                {busy ? 'Cerrando…' : 'Cerrar definitivamente'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOpen(false); setError(null); setPassword(''); setConfirm(''); }}
+                disabled={busy}
+                className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium
+                           text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Volver
+              </button>
+            </div>
+          </form>
         )}
       </CardContent>
     </Card>

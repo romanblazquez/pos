@@ -429,6 +429,56 @@ href>`: the endpoint needs an Authorization header, so a link would download
 an HTML 401 page named `pedidos.csv` — which looks like a working export
 until someone opens it.
 
+### 10. Sellers can close their own store
+
+`POST /api/v1/sellers/:id/deactivate` sets the store to `suspended` — the
+existing reversible state — and deactivates every listing. It never deletes:
+order history is a financial record and a buyer's purchase history, which is
+why `deleteSeller` already refuses once orders exist.
+
+Requires the current password, for the same reason the password change does:
+a live session can be a borrowed laptop, and closing a shop is not something
+a borrowed tab should do.
+
+**Refuses with 409 while any order is pending/reserved/confirmed/shipped.** A
+seller vanishing mid-fulfilment strands buyers who have already paid, and no
+UI copy repairs that afterwards — those orders have to be shipped, delivered
+or cancelled first.
+
+On success: listings deactivated, affected products reindexed (cards come
+from the search index, so without it a closed store's offers linger until the
+hourly pass), and every session revoked including the caller's. Audited as
+`seller.self_deactivated`, deliberately distinct from `seller.suspended` — in
+the status column they look identical but they mean opposite things when
+someone later audits why a store went dark.
+
+The UI is behind a typed `CERRAR` confirmation and states plainly that
+nothing is deleted and the store can reopen.
+
+### 11. Email change — BLOCKED, and why
+
+Not built, deliberately. Changing the address an account recovers through is
+only safe behind a verify-the-new-address round trip, and **this platform
+cannot send email**: no mail dependency in any `package.json`, no SMTP or
+provider credentials in the deployed env, and no mailer service anywhere in
+`apps/api`. `Seller.emailVerified` exists but is only ever written by the
+Google OAuth path, where Google did the verifying.
+
+So there are exactly two honest options, and both need a decision that is not
+a coding one:
+
+1. **Add an email provider** (Resend/SES/Postmark/SMTP) — needs an account,
+   credentials, and SPF/DKIM DNS on juegospedia.com. Once that exists, the
+   change-email flow is small: pending address + single-use token + confirm
+   endpoint, and notify the OLD address too.
+2. **Google-only re-auth** for accounts that signed in with Google, which
+   sidesteps mail entirely but covers only those accounts.
+
+What must NOT happen is shipping a change-email endpoint without
+verification. That silently moves account recovery to an address the owner
+may not control — a typo locks them out permanently, and a hijacked session
+takes the account for good.
+
 ### Correction to an earlier assessment
 
 An earlier survey reported that `seller-portal` had no router and no

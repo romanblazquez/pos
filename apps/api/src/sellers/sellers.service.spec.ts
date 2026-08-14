@@ -20,6 +20,7 @@ function setup() {
       findFirst: vi.fn(),
       findMany: vi.fn().mockResolvedValue([]),
       findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'order1', status: 'refunded', events: [] }),
+      count: vi.fn().mockResolvedValue(0),
       update: vi.fn().mockImplementation(({ data }) => ({ ...data })),
     },
     mktProduct: { findUnique: vi.fn().mockResolvedValue({ id: 'prod1', name: 'Catan' }) },
@@ -31,6 +32,13 @@ function setup() {
     },
     sellerMarket: { findFirst: vi.fn().mockResolvedValue({ settlementCurrencyCode: 'ARS' }) },
     marketplaceOrderLine: { findMany: vi.fn().mockResolvedValue([]) },
+    seller: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({}),
+    },
+    authSession: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    auditEvent: { create: vi.fn().mockResolvedValue({}) },
+    $transaction: vi.fn().mockResolvedValue([]),
   };
   const indexer = { syncProductQuietly: vi.fn().mockResolvedValue(undefined) };
   const loyalty = { refundCredits: vi.fn().mockResolvedValue(undefined) };
@@ -105,6 +113,79 @@ describe('SellersService.createListing', () => {
     expect(prisma.listing.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ stock: 0, stockStatus: 'out_of_stock' }),
     }));
+  });
+});
+
+describe('SellersService.deactivateOwnAccount', () => {
+  const PASS = 'currentPassw0rd!';
+
+  async function withSeller(over: Record<string, unknown> = {}, inFlight = 0) {
+    const bcrypt = (await import('bcryptjs')).default;
+    const ctx = setup();
+    ctx.prisma.seller.findUnique = vi.fn().mockResolvedValue({
+      id: 's1', name: 'Blaz', status: 'active',
+      passwordHash: await bcrypt.hash(PASS, 4), ...over,
+    });
+    ctx.prisma.seller.update = vi.fn().mockResolvedValue({});
+    ctx.prisma.marketplaceOrder.count = vi.fn().mockResolvedValue(inFlight);
+    ctx.prisma.listing.findMany = vi.fn().mockResolvedValue([{ productId: 'p1' }, { productId: 'p2' }]);
+    ctx.prisma.listing.updateMany = vi.fn().mockResolvedValue({ count: 2 });
+    ctx.prisma.authSession = { updateMany: vi.fn().mockResolvedValue({ count: 4 }) };
+    ctx.prisma.auditEvent = { create: vi.fn().mockResolvedValue({}) };
+    ctx.prisma.$transaction = vi.fn().mockResolvedValue([]);
+    return ctx;
+  }
+
+  it('refuses while orders are still in flight, so paid buyers are not stranded', async () => {
+    const { service, prisma } = await withSeller({}, 3);
+
+    await expect(service.deactivateOwnAccount('s1', 'p1', PASS))
+      .rejects.toThrow(/3 order\(s\) still in progress/);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.seller.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a wrong password even though the caller holds a valid session', async () => {
+    const { service, prisma } = await withSeller();
+
+    await expect(service.deactivateOwnAccount('s1', 'p1', 'wrong'))
+      .rejects.toThrow('Current password is incorrect');
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('suspends rather than deletes, and reindexes so listings leave the storefront', async () => {
+    const { service, prisma, indexer } = await withSeller();
+
+    const result = await service.deactivateOwnAccount('s1', 'princ1', PASS);
+
+    expect(result).toMatchObject({ ok: true, sessionsRevoked: 4 });
+    // Never delete: order history is a financial record.
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(indexer.syncProductQuietly).toHaveBeenCalledWith('p1');
+    expect(indexer.syncProductQuietly).toHaveBeenCalledWith('p2');
+    // Every session dies, including the caller's.
+    expect(prisma.authSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { principalId: 'princ1', revokedAt: null },
+    }));
+  });
+
+  it('records self-closure distinctly from a platform ban', async () => {
+    const { service, prisma } = await withSeller();
+
+    await service.deactivateOwnAccount('s1', 'princ1', PASS);
+
+    expect(prisma.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: 'seller.self_deactivated' }),
+    }));
+  });
+
+  it('rejects an already-deactivated store', async () => {
+    const { service } = await withSeller({ status: 'suspended' });
+
+    await expect(service.deactivateOwnAccount('s1', 'p1', PASS))
+      .rejects.toThrow(/already deactivated/);
   });
 });
 

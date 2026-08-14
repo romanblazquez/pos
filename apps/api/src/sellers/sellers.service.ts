@@ -1,4 +1,5 @@
-import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Inject, ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import bcrypt from 'bcryptjs';
 import { PrismaService } from '@retail-os/db-postgres';
 import { ProductIndexerService } from '../search/product-indexer.service.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
@@ -106,6 +107,90 @@ export class SellersService {
     }).catch(() => undefined);
 
     return { id, deleted: true };
+  }
+
+  /**
+   * Seller closes their own store.
+   *
+   * Maps to `suspended`, the existing reversible state — not deletion. Deleting
+   * would destroy order history that is a financial record and a buyer's
+   * purchase history, which is exactly why `deleteSeller` already refuses once
+   * orders exist.
+   *
+   * Requires the current password for the same reason a password change does:
+   * a live session can be someone else's, and closing a shop is not something
+   * a borrowed tab should be able to do.
+   *
+   * Refuses outright while orders are in flight. A seller vanishing mid-
+   * fulfilment strands buyers who have already paid, and no amount of UI
+   * copy fixes that after the fact — those orders have to be shipped or
+   * refunded first.
+   */
+  async deactivateOwnAccount(
+    sellerId: string,
+    principalId: string,
+    currentPassword: string,
+  ): Promise<{ ok: true; listingsDeactivated: number; sessionsRevoked: number }> {
+    const seller = await this.prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: { id: true, name: true, passwordHash: true, status: true },
+    });
+    if (!seller) throw new NotFoundException(`Seller "${sellerId}" not found`);
+    if (seller.status === 'suspended') {
+      throw new ConflictException('This store is already deactivated.');
+    }
+    if (!seller.passwordHash) {
+      throw new BadRequestException(
+        'This account signs in with Google and has no password to confirm with. Contact support to close it.',
+      );
+    }
+    if (!await bcrypt.compare(currentPassword, seller.passwordHash)) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const inFlight = await this.prisma.marketplaceOrder.count({
+      where: { sellerId, status: { in: ['pending', 'reserved', 'confirmed', 'shipped'] } },
+    });
+    if (inFlight > 0) {
+      throw new ConflictException(
+        `You have ${inFlight} order(s) still in progress. Ship, deliver or cancel them before closing the store — ` +
+        'deactivating now would leave buyers who already paid with nothing.',
+      );
+    }
+
+    const productIds = await this.sellerProductIds(sellerId);
+
+    await this.prisma.$transaction([
+      this.prisma.listing.updateMany({ where: { sellerId }, data: { active: false } }),
+      this.prisma.seller.update({ where: { id: sellerId }, data: { status: 'suspended' } }),
+    ]);
+    const listingsDeactivated = productIds.length;
+
+    // Cards are served from the search index, so without this the closed
+    // store's offers keep appearing on product pages until the hourly pass.
+    for (const productId of productIds) await this.indexer.syncProductQuietly(productId);
+
+    // Every session, including the caller's — the account is closed, so there
+    // is nothing left to stay signed in to.
+    const { count: sessionsRevoked } = await this.prisma.authSession.updateMany({
+      where: { principalId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    await this.prisma.auditEvent.create({
+      data: {
+        targetType: 'seller',
+        targetId: sellerId,
+        // Distinct from `seller.suspended`: that is a platform ban, this is the
+        // owner leaving. They read the same in the status column and mean
+        // opposite things when someone audits why a store went dark.
+        action: 'seller.self_deactivated',
+        actorPrincipalId: principalId,
+        metadata: { sellerName: seller.name, listingsDeactivated },
+      },
+    }).catch(() => undefined);
+
+    return { ok: true, listingsDeactivated, sessionsRevoked };
   }
 
   private async sellerProductIds(sellerId: string): Promise<string[]> {

@@ -165,6 +165,12 @@ export class UpdateOrderStatusDto {
   reason?: string;
 }
 
+export class DeactivateAccountDto {
+  @ApiProperty({ type: 'string', description: 'Your current password, to confirm it is really you', example: 'S3cur3P@ss!' })
+  @IsString() @MinLength(1)
+  currentPassword: string;
+}
+
 export class SyncResultDto {
   @ApiProperty({ type: 'string', description: 'Seller CUID', example: 'clx1234abcd' })
   sellerId: string;

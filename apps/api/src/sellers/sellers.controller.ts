@@ -8,10 +8,14 @@ import {
   Param,
   Body,
   Query,
+  Req,
   Res,
   NotFoundException,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import type { JwtPayload } from '../auth/jwt.js';
+
+type AuthRequest = Request & { user: JwtPayload };
 import {
   ApiTags,
   ApiOperation,
@@ -23,7 +27,7 @@ import {
 } from '@nestjs/swagger';
 import { SellersService } from './sellers.service.js';
 import { SellerMappingService } from './seller-mapping.service.js';
-import { BulkUpdateListingsDto, CreateListingDto, CreateSellerDto, UpdateListingDto, UpdateOrderStatusDto, UpdateSellerProfileDto } from './sellers.dto.js';
+import { BulkUpdateListingsDto, CreateListingDto, CreateSellerDto, DeactivateAccountDto, UpdateListingDto, UpdateOrderStatusDto, UpdateSellerProfileDto } from './sellers.dto.js';
 import { Roles } from '../auth/auth.guard.js';
 import { paginate } from '../common/pagination.js';
 import { LoyaltyService } from '../loyalty/loyalty.service.js';
@@ -435,6 +439,28 @@ export class SellersController {
       'Cache-Control': 'no-store',
     });
     return csv;
+  }
+
+  @Post(':id/deactivate')
+  @ApiOperation({
+    summary: 'Close your own store',
+    description:
+      'Sets the store to `suspended` (reversible) and deactivates every listing — never deletes, because order history is ' +
+      'a financial record and a buyer\'s purchase history. Requires the current password: closing a shop is not something a ' +
+      'borrowed session should be able to do. Refused with 409 while any order is still pending/confirmed/shipped, since ' +
+      'deactivating mid-fulfilment strands buyers who already paid. All sessions are revoked on success.',
+  })
+  @ApiParam({ name: 'id', description: 'Seller CUID', example: 'clx1abc2def3ghi4jkl' })
+  @ApiBody({ type: DeactivateAccountDto })
+  @ApiResponse({ status: 201, description: '{ ok: true, listingsDeactivated, sessionsRevoked }' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect' })
+  @ApiResponse({ status: 409, description: 'Orders still in flight, or already deactivated' })
+  deactivateOwnAccount(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: DeactivateAccountDto,
+  ) {
+    return this.svc.deactivateOwnAccount(id, req.user.sub, dto.currentPassword);
   }
 
   @Get(':id/rewards')
