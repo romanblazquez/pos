@@ -1,13 +1,13 @@
 # Agent handoff — marketplace SEO surface, seller operations, audit
 
 Continuation notes for `/home/pi/pos` (Nx monorepo, Juegospedia). Written
-2026-08-14. Branch `main`, last commit `79d2fa2`, everything deployed and
-pushed.
+2026-08-14. Branch `main`, everything deployed and pushed — check `git log`
+for the head; this file is updated in place as items close.
 
 Full narrative of what shipped is in `docs/handoff.md` under
 **"2026-08-14 — Marketplace SEO surface + seller fulfillment"** (sections 1-12).
 This file is the *forward-looking* half: what is open, what is blocked on a
-human decision, and the one diagnosed-but-unfixed bug.
+human decision, and what was found and fixed late in the session (§3).
 
 ---
 
@@ -20,7 +20,7 @@ human decision, and the one diagnosed-but-unfixed bug.
 | SPAs (marketplace / seller / admin) | `retail-os-web` | 8081 | healthy |
 | BGG enrichment worker | `retail-os-bgg-enricher` | 3003 | **unhealthy by design — see §4** |
 
-- 119 API tests pass (`npx vitest run apps/api/src`).
+- 124 API tests pass (`npx vitest run apps/api/src`).
 - `api`, `web`, `seller-portal`, `admin-console` all typecheck.
 - Catalogue: **155,379 indexable products**, ~22,900 still unenriched.
 
@@ -92,7 +92,9 @@ validate the integration. **Revisit ADR-0006 before writing code.**
 
 ## 3. FIXED 2026-08-14 late — spurious session-family revocation
 
-This is the most actionable open bug and the evidence is already gathered.
+Recorded in full because the diagnosis is the valuable part: the signal looked
+exactly like session theft and was not, and the same evidence will be needed
+if `reuse_detected` starts firing again.
 
 **Symptom:** 53 `auth.refresh.reuse_detected` audit events. Refresh-token
 reuse detection is the classic stolen-session signal, so this looks alarming.
