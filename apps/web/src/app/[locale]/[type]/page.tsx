@@ -12,6 +12,7 @@ import { guideCover } from '@/lib/guide-cover';
 import { AUTHORS_BY_ID } from '@/content/editorial/authors';
 import { ProductCard } from '@/components/ProductCard';
 import { CatalogEmpty } from '@/components/CatalogEmpty';
+import { EntityFilter } from '@/components/EntityFilter';
 import { CatalogSearchField } from '@/components/CatalogSearchField';
 import { Pager } from '@/components/Pager';
 import { SearchFilters, categoryFromParam, filterActiveCount, filterSheetLabels, type FilterState } from '@/components/SearchFilters';
@@ -551,13 +552,15 @@ export default async function ListingPage({
             : 'Browse the catalogue by publisher and compare real prices and stock across verified stores.'}
         </p>
         {publishers.length > 0 ? (
-          <div className="taglist">
-            {publishers.map((p) => (
-              <Link key={p.value} className="chip" href={entityPath('publishers', locale, slugify(p.value), market)}>
-                {p.value} <span className="muted">({p.count})</span>
-              </Link>
-            ))}
-          </div>
+          <EntityFilter
+            locale={locale}
+            placeholder={locale === 'es' ? 'Buscar editorial…' : 'Search publishers…'}
+            items={publishers.map((p) => ({
+              label: p.value,
+              href: entityPath('publishers', locale, slugify(p.value), market),
+              count: p.count,
+            }))}
+          />
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
         )}
@@ -589,13 +592,15 @@ export default async function ListingPage({
             : 'Browse the catalogue by game mechanic and compare real prices and stock across verified stores.'}
         </p>
         {mechanics.length > 0 ? (
-          <div className="taglist">
-            {mechanics.map((m) => (
-              <Link key={m.mechanic} className="chip" href={entityPath('mechanics', locale, slugify(m.mechanic), market)}>
-                {m.mechanic} <span className="muted">({m.count})</span>
-              </Link>
-            ))}
-          </div>
+          <EntityFilter
+            locale={locale}
+            placeholder={locale === 'es' ? 'Buscar mecánica…' : 'Search mechanics…'}
+            items={mechanics.map((m) => ({
+              label: m.mechanic,
+              href: entityPath('mechanics', locale, slugify(m.mechanic), market),
+              count: m.count,
+            }))}
+          />
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
         )}
@@ -627,13 +632,15 @@ export default async function ListingPage({
             : 'Verified stores selling board games on Juegospedia, with their catalogue and real stock.'}
         </p>
         {stores.length > 0 ? (
-          <div className="taglist">
-            {stores.map((s) => (
-              <Link key={s.slug} className="chip" href={entityPath('stores', locale, s.slug, market)}>
-                {s.name} <span className="muted">({s.productCount})</span>
-              </Link>
-            ))}
-          </div>
+          <EntityFilter
+            locale={locale}
+            placeholder={locale === 'es' ? 'Buscar tienda…' : 'Search stores…'}
+            items={stores.map((store) => ({
+              label: store.name,
+              href: entityPath('stores', locale, store.slug, market),
+              count: store.productCount,
+            }))}
+          />
         ) : (
           <CatalogEmpty locale={locale} clearHref={listingPath('games', locale, market)} />
         )}

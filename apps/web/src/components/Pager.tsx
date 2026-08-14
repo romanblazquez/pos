@@ -26,12 +26,25 @@ export function Pager({
     const parts = [query, p > 1 ? `page=${p}` : ''].filter(Boolean);
     return parts.length ? `${base}?${parts.join('&')}` : base;
   };
-  // Window of page numbers around the current page.
-  const nums = new Set<number>([1, pages, page, page - 1, page + 1]);
+  // Window of page numbers around the current page. Two either side rather
+  // than one: with 622 pages a single neighbour gives nothing to aim at, and
+  // the jump from "2" to the last page is the only other option on offer.
+  const nums = new Set<number>([1, pages, page, page - 1, page + 1, page - 2, page + 2]);
   const list = [...nums].filter((p) => p >= 1 && p <= pages).sort((a, b) => a - b);
 
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const summary = locale === 'es'
+    ? `${from.toLocaleString('es-MX')}–${to.toLocaleString('es-MX')} de ${total.toLocaleString('es-MX')}`
+    : `${from.toLocaleString('en-US')}–${to.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`;
+
   return (
+    <div className="pager-wrap">
+    <p className="pager-summary muted">{summary}</p>
     <nav className="pager" aria-label={locale === 'es' ? 'Paginación' : 'Pagination'}>
+      {/* First/last shortcuts: on a 622-page catalogue, stepping is not a
+          navigation strategy. */}
+      {page > 2 && <Link href={href(1)} aria-label={locale === 'es' ? 'Primera página' : 'First page'}>«</Link>}
       {page > 1 && <Link href={href(page - 1)} rel="prev">‹</Link>}
       {list.map((p, i) => {
         const gap = i > 0 && p - list[i - 1] > 1;
@@ -47,6 +60,8 @@ export function Pager({
         );
       })}
       {page < pages && <Link href={href(page + 1)} rel="next">›</Link>}
+      {page < pages - 1 && <Link href={href(pages)} aria-label={locale === 'es' ? 'Última página' : 'Last page'}>»</Link>}
     </nav>
+    </div>
   );
 }

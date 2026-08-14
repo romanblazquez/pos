@@ -375,6 +375,28 @@ refusal, the same-password refusal, the Google-only refusal, that the hash
 actually changes and verifies against the new value, and that other sessions
 are revoked (including the unresolved-family fallback).
 
+### 8. Taxonomy hubs: findable, and pagination you can navigate
+
+The publisher hub rendered 995 chips as one flat wall — no search, no
+ordering, no sense of which publishers carry a catalogue. Same shape for
+mechanics (178) and stores.
+
+`EntityFilter` (client component) adds an accent-insensitive search box, a
+"most games / A–Z" sort toggle, and a live "showing N of M" count, reused by
+all three hubs.
+
+The important constraint is that these hubs exist for internal linking, so
+**every chip stays in the server-rendered HTML** and the fold is CSS-only
+(`.chip.is-folded { display: none }`). An earlier draft sliced the array to
+120 before render, which would have deleted 875 crawlable publisher links
+from the page — the opposite of the point. Verified in production HTML: 995
+links present, 120 visible, 875 folded.
+
+Pagination was a ±1 window with no context, on catalogues up to 622 pages.
+It now shows the result range ("193–240 de 1,427"), widens the window to ±2,
+and adds first/last shortcuts — on a 622-page listing, stepping is not a
+navigation strategy.
+
 ### Correction to an earlier assessment
 
 An earlier survey reported that `seller-portal` had no router and no
