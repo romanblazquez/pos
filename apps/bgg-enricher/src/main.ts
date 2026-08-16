@@ -11,8 +11,13 @@ const server = createServer((request, response) => {
     response.writeHead(404).end();
     return;
   }
-  const circuitOpen = worker.status.state === 'circuit_open';
-  response.writeHead(circuitOpen ? 503 : 200, { 'Content-Type': 'application/json' });
+  // An open circuit is the expected response to BGG rate-limiting us, not a
+  // fault: the worker is alive and will retry half-open once the cooldown
+  // elapses. Reporting 503 made a normal cooldown indistinguishable from a
+  // genuinely broken enricher in `docker ps` and anything alerting on it.
+  // Liveness is "the process is up and serving"; the cooldown remains
+  // observable via `state` in the body below.
+  response.writeHead(200, { 'Content-Type': 'application/json' });
   response.end(JSON.stringify(worker.status));
 });
 
